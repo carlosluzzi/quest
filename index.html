@@ -16,7 +16,8 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background-color:#FBFBFA;color:#111;font-size:var(--fs-d)}
+html{height:100%;overflow:hidden;overscroll-behavior:none}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background-color:#FBFBFA;color:#111;font-size:var(--fs-d);height:100%;position:fixed;inset:0;width:100%;overflow:hidden;overscroll-behavior:none}
 #bg-fixed{position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;background-color:#FBFBFA;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cg fill='none' stroke='%230C447C' stroke-width='0.5' opacity='0.045'%3E%3Cline x1='0' y1='0' x2='140' y2='0'/%3E%3Cline x1='0' y1='0' x2='0' y2='140'/%3E%3C/g%3E%3C/svg%3E");background-repeat:repeat}
 .appname{font-size:var(--fs-h);font-weight:400;display:flex;align-items:center;gap:6px;color:#0B1D45;letter-spacing:-0.6px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .appname b{font-weight:700}
@@ -26,7 +27,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .config-title{font-size:var(--fs-f);font-weight:500;margin-bottom:16px;color:#111}
 button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none}
 button:active{transform:scale(0.96)}
-input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
+input,select,textarea{font-family:inherit;font-size:16px}
 
 .hidden{display:none !important}
 
@@ -34,15 +35,15 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
 .card-inicio{background:#fff;border-radius:18px;padding:13px;box-shadow:0 1px 4px rgba(0,0,0,0.05);margin-bottom:14px;position:relative;overflow:hidden}
 
 /* --- Botões --- */
-.btn-primario{background:var(--azul-marca);color:#fff;border-radius:14px;padding:14px 20px;font-size:var(--fs-e);font-weight:600;width:100%}
-.btn-secundario{background:#EEE;color:#111;border-radius:14px;padding:12px 18px;font-size:var(--fs-d)}
+.btn-primario{background:#111;color:#fff;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;width:100%;border:none;cursor:pointer;font-family:inherit}
+.btn-secundario{background:#f0f0ee;color:#111;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;border:none;cursor:pointer;font-family:inherit}
 .filter-btn{font-size:var(--fs-c);padding:4px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;margin:4px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
 
 /* --- Telas de auth/onboarding --- */
-#view-login,#view-onboarding{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:24px;background:#fff}
+#view-login,#view-onboarding{height:100%;height:100svh;height:100dvh;max-width:480px;margin:0 auto;display:flex;flex-direction:column;justify-content:center;padding:24px;background:#fff;overflow:hidden;position:relative}
 #view-login h1,#view-onboarding h1{font-size:var(--fs-h);color:var(--azul-marca);margin-bottom:4px}
-#view-login input{padding:14px;border-radius:12px;border:1px solid #DDD;margin-bottom:10px;width:100%}
+#view-login input{padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;margin-bottom:10px;width:100%;background:#fff;color:#111}
 #view-login .erro{color:#B00020;font-size:var(--fs-c);margin-bottom:8px}
 .onboarding-step{display:none}
 .onboarding-step.ativo{display:block}
@@ -51,13 +52,13 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
 .onboarding-dots span.ativo{background:var(--azul-marca)}
 
 /* --- App shell --- */
-#app-shell{display:none;min-height:100vh;padding-bottom:calc(70px + var(--safe-bottom))}
-#app-shell.ativo{display:block}
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;position:sticky;top:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
+#app-shell{display:none;max-width:480px;margin:0 auto;height:100%;height:100svh;height:100dvh;position:relative;flex-direction:column;overflow:hidden}
+#app-shell.ativo{display:flex}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;flex-shrink:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
 .topbar h2{font-size:var(--fs-g);margin:0;color:var(--azul-marca);display:none}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:var(--azul-marca);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0}
 
-.view-conteudo{padding:0 16px}
+.content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px;padding-bottom:calc(70px + var(--safe-bottom))}
 
 /* --- Bottom nav --- */
 #bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
@@ -80,7 +81,7 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
   #bottom-nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;border-radius:9px;width:100%}
   #bottom-nav .icone{width:18px;height:18px}
   #bottom-nav span:last-child{font-size:var(--fs-e)}
-  .view-conteudo{grid-column:2;grid-row:2;padding:32px 48px;max-width:1000px;width:100%}
+  .content{grid-column:2;grid-row:2;padding:32px 48px;max-width:1000px;width:100%}
 }
 
 /* --- Módulo: paleta por módulo (reaproveitada exatamente do app pessoal) --- */
@@ -209,8 +210,10 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
     <button class="avatar-btn" onclick="abrirModal('modal-perfil')" id="avatar-inicial">?</button>
   </div>
 
+  <div class="content" id="content">
+
   <!-- ===== INÍCIO ===== -->
-  <div class="view-conteudo view-aba" id="aba-inicio">
+  <div class="view-aba" id="aba-inicio">
     <div class="card-inicio" style="background:var(--azul-marca);color:#fff">
       <div style="font-size:var(--fs-f);font-weight:600" id="inicio-saudacao">Olá!</div>
       <div style="font-size:var(--fs-c);opacity:0.85">Bora estudar hoje?</div>
@@ -232,7 +235,7 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
   </div>
 
   <!-- ===== GERAR QUESTS (filtros + resolução) ===== -->
-  <div class="view-conteudo view-aba hidden" id="aba-quests">
+  <div class="view-aba hidden" id="aba-quests">
 
     <div id="quests-filtros">
       <div class="section-title">Módulo</div>
@@ -270,18 +273,20 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
   </div>
 
   <!-- ===== COMUNIDADE ===== -->
-  <div class="view-conteudo view-aba hidden" id="aba-comunidade">
+  <div class="view-aba hidden" id="aba-comunidade">
     <div class="section-title">⚠️ Correções pendentes</div>
     <div id="lista-correcoes-pendentes"><div class="loading-spinner"></div></div>
   </div>
 
   <!-- ===== COMO VOCÊ TÁ INDO (placar) ===== -->
-  <div class="view-conteudo view-aba hidden" id="aba-placar">
+  <div class="view-aba hidden" id="aba-placar">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div class="section-title" style="margin:0">Placar entre amigos</div>
       <span class="info-icone" onclick="abrirModal('modal-info-wilson')">ℹ️ Como é calculado?</span>
     </div>
     <div id="lista-placar"><div class="loading-spinner"></div></div>
+  </div>
+
   </div>
 
   <div id="bottom-nav">
@@ -585,6 +590,7 @@ function trocarAba(nome){
   document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
   document.getElementById('aba-'+nome).classList.remove('hidden');
   document.querySelectorAll('#bottom-nav button').forEach(b=>b.classList.toggle('ativo', b.dataset.aba===nome));
+  document.getElementById('content').scrollTop = 0;
   if(nome==='comunidade') carregarComunidade();
   if(nome==='placar') carregarPlacar();
 }
