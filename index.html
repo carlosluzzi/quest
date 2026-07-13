@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Claude Quest</title>
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --fs-a:11px; --fs-b:12px; --fs-c:13px; --fs-d:14px;
@@ -13,7 +16,14 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#F7F7F8;color:#111;font-size:var(--fs-d)}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background-color:#FBFBFA;color:#111;font-size:var(--fs-d)}
+#bg-fixed{position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;background-color:#FBFBFA;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cg fill='none' stroke='%230C447C' stroke-width='0.5' opacity='0.045'%3E%3Cline x1='0' y1='0' x2='140' y2='0'/%3E%3Cline x1='0' y1='0' x2='0' y2='140'/%3E%3C/g%3E%3C/svg%3E");background-repeat:repeat}
+.appname{font-size:var(--fs-h);font-weight:400;display:flex;align-items:center;gap:6px;color:#0B1D45;letter-spacing:-0.6px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.appname b{font-weight:700}
+.saudacao{font-size:15px;font-weight:500;color:#0B1D45;margin-top:6px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.section-title{font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:14px;margin-top:24px}
+.section-title:first-child{margin-top:0}
+.config-title{font-size:var(--fs-f);font-weight:500;margin-bottom:16px;color:#111}
 button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none}
 button:active{transform:scale(0.96)}
 input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
@@ -26,7 +36,7 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
 /* --- Botões --- */
 .btn-primario{background:var(--azul-marca);color:#fff;border-radius:14px;padding:14px 20px;font-size:var(--fs-e);font-weight:600;width:100%}
 .btn-secundario{background:#EEE;color:#111;border-radius:14px;padding:12px 18px;font-size:var(--fs-d)}
-.filter-btn{background:#F0F0F0;color:#333;border-radius:20px;padding:8px 14px;font-size:var(--fs-c);margin:4px}
+.filter-btn{font-size:var(--fs-c);padding:4px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;margin:4px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
 
 /* --- Telas de auth/onboarding --- */
@@ -43,17 +53,17 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
 /* --- App shell --- */
 #app-shell{display:none;min-height:100vh;padding-bottom:calc(70px + var(--safe-bottom))}
 #app-shell.ativo{display:block}
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:16px;position:sticky;top:0;background:#F7F7F8;z-index:10}
-.topbar h2{font-size:var(--fs-g);margin:0;color:var(--azul-marca)}
-.avatar-btn{width:36px;height:36px;border-radius:50%;background:var(--azul-marca);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d)}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;position:sticky;top:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
+.topbar h2{font-size:var(--fs-g);margin:0;color:var(--azul-marca);display:none}
+.avatar-btn{width:36px;height:36px;border-radius:50%;background:var(--azul-marca);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0}
 
 .view-conteudo{padding:0 16px}
 
 /* --- Bottom nav --- */
-#bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #EEE;display:flex;padding-bottom:var(--safe-bottom);z-index:20}
-#bottom-nav button{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;color:#999;font-size:var(--fs-a)}
-#bottom-nav button.ativo{color:var(--azul-marca)}
-#bottom-nav .icone{width:22px;height:22px}
+#bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;padding-bottom:var(--safe-bottom);z-index:20}
+#bottom-nav button{flex:1;padding:14px 4px calc(16px + var(--safe-bottom));display:flex;flex-direction:column;align-items:center;gap:4px;color:#888;font-size:var(--fs-a);border-radius:0}
+#bottom-nav button.ativo{background:#f0f0ee;color:var(--azul-marca)}
+#bottom-nav .icone{width:21px;height:21px}
 
 /* --- Módulo: paleta por módulo (reaproveitada exatamente do app pessoal) --- */
 .mod-tag{display:inline-flex;align-items:center;gap:6px;border-radius:10px;padding:4px 10px;font-size:var(--fs-b);font-weight:600}
@@ -80,9 +90,9 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
 .linha-placar{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #EEE}
 
 /* --- Modal genérico --- */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:flex-end;z-index:50}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
 .modal-overlay.hidden{display:none}
-.modal-conteudo{background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:85vh;overflow-y:auto}
+.modal-conteudo{background:#fff;border-radius:14px;padding:20px;width:100%;max-width:340px;max-height:85vh;overflow-y:auto}
 
 /* --- Alternativas de questão (padrão herdado do app pessoal) --- */
 .banco-alternativas{display:flex;flex-direction:column;gap:8px;margin-top:14px}
@@ -103,6 +113,7 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
 </style>
 </head>
 <body>
+<div id="bg-fixed"></div>
 
 <!-- ============================================================ -->
 <!-- CONFIGURAÇÃO — troque pelos valores reais do seu projeto Supabase -->
@@ -176,7 +187,7 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
 <div id="app-shell">
 
   <div class="topbar">
-    <h2 id="topbar-titulo">Início</h2>
+    <span class="appname">🧭<span><b>Claude</b>&nbsp;Quest</span></span>
     <button class="avatar-btn" onclick="abrirModal('modal-perfil')" id="avatar-inicial">?</button>
   </div>
 
@@ -206,13 +217,13 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
   <div class="view-conteudo view-aba hidden" id="aba-quests">
 
     <div id="quests-filtros">
-      <h3>Módulo</h3>
+      <div class="section-title">Módulo</div>
       <div id="filtro-modulo"></div>
 
-      <h3>Publicação</h3>
+      <div class="section-title">Publicação</div>
       <div id="filtro-publicacao"><span style="color:#999;font-size:var(--fs-c)">Escolha um módulo primeiro</span></div>
 
-      <h3>Capítulo</h3>
+      <div class="section-title">Capítulo</div>
       <div id="filtro-capitulo"><span style="color:#999;font-size:var(--fs-c)">Escolha uma publicação primeiro</span></div>
 
       <div style="margin:16px 0">
@@ -242,14 +253,14 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
 
   <!-- ===== COMUNIDADE ===== -->
   <div class="view-conteudo view-aba hidden" id="aba-comunidade">
-    <h3>⚠️ Correções pendentes</h3>
+    <div class="section-title">⚠️ Correções pendentes</div>
     <div id="lista-correcoes-pendentes"><div class="loading-spinner"></div></div>
   </div>
 
   <!-- ===== COMO VOCÊ TÁ INDO (placar) ===== -->
   <div class="view-conteudo view-aba hidden" id="aba-placar">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <h3 style="margin-bottom:0">Placar entre amigos</h3>
+      <div class="section-title" style="margin:0">Placar entre amigos</div>
       <span class="info-icone" onclick="abrirModal('modal-info-wilson')">ℹ️ Como é calculado?</span>
     </div>
     <div id="lista-placar"><div class="loading-spinner"></div></div>
@@ -269,7 +280,7 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
 
 <div class="modal-overlay hidden" id="modal-perfil">
   <div class="modal-conteudo">
-    <h3 id="perfil-nome">—</h3>
+    <h3 class="config-title" id="perfil-nome">—</h3>
     <button class="btn-secundario" style="width:100%;margin-bottom:10px" onclick="sair()">Sair</button>
     <button class="btn-secundario hidden" id="btn-abrir-admin" style="width:100%;margin-bottom:10px" onclick="abrirModal('modal-admin')">Painel admin</button>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-perfil')">Fechar</button>
@@ -278,7 +289,7 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
 
 <div class="modal-overlay hidden" id="modal-upload">
   <div class="modal-conteudo">
-    <h3>Adicionar questões</h3>
+    <h3 class="config-title">Adicionar questões</h3>
     <p style="color:#666;font-size:var(--fs-c)">Selecione um PDF com questões. A extração é automática e as questões entram direto no banco.</p>
     <input type="file" id="upload-arquivo" accept="application/pdf" style="margin:14px 0">
     <div id="upload-status"></div>
@@ -289,7 +300,7 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
 
 <div class="modal-overlay hidden" id="modal-info-wilson">
   <div class="modal-conteudo">
-    <h3>Wilson Score</h3>
+    <h3 class="config-title">Wilson Score</h3>
     <p>É a fórmula usada pra calcular a % de acerto e pra saber quais questões você mais erra. Diferente de uma % simples, ela leva em conta <em>quantas vezes</em> você já tentou aquela questão — errar 1 de 1 tentativa pesa menos do que errar 8 de 10, mesmo a % "crua" sendo parecida. Isso evita que uma questão respondida só uma vez pareça mais confiável do que realmente é.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-wilson')">Fechar</button>
   </div>
@@ -301,7 +312,7 @@ input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
 
 <div class="modal-overlay hidden" id="modal-admin">
   <div class="modal-conteudo">
-    <h3>Painel admin</h3>
+    <h3 class="config-title">Painel admin</h3>
     <div class="filter-btn active" onclick="trocarAbaAdmin('erros')">Erros técnicos</div>
     <div class="filter-btn" onclick="trocarAbaAdmin('malformadas')">Questões malformadas</div>
     <div class="filter-btn" onclick="trocarAbaAdmin('caderno')">Buscar caderno</div>
@@ -548,8 +559,6 @@ function trocarAba(nome){
   document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
   document.getElementById('aba-'+nome).classList.remove('hidden');
   document.querySelectorAll('#bottom-nav button').forEach(b=>b.classList.toggle('ativo', b.dataset.aba===nome));
-  const titulos = {inicio:'Início', quests:'Gerar quests', comunidade:'Comunidade', placar:'Como você tá indo'};
-  document.getElementById('topbar-titulo').textContent = titulos[nome];
   if(nome==='comunidade') carregarComunidade();
   if(nome==='placar') carregarPlacar();
 }
