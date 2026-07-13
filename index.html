@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Claude Quest</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --fs-a:11px; --fs-b:12px; --fs-c:13px; --fs-d:14px;
+  --fs-e:16px; --fs-f:18px; --fs-g:19px; --fs-h:24px;
+  --azul-marca:#0A2882;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#F7F7F8;color:#111;font-size:var(--fs-d)}
+button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none}
+button:active{transform:scale(0.96)}
+input,select,textarea{font-family:inherit;font-size:var(--fs-d)}
+
+.hidden{display:none !important}
+
+/* --- Cards --- */
+.card-inicio{background:#fff;border-radius:18px;padding:13px;box-shadow:0 1px 4px rgba(0,0,0,0.05);margin-bottom:14px;position:relative;overflow:hidden}
+
+/* --- Botões --- */
+.btn-primario{background:var(--azul-marca);color:#fff;border-radius:14px;padding:14px 20px;font-size:var(--fs-e);font-weight:600;width:100%}
+.btn-secundario{background:#EEE;color:#111;border-radius:14px;padding:12px 18px;font-size:var(--fs-d)}
+.filter-btn{background:#F0F0F0;color:#333;border-radius:20px;padding:8px 14px;font-size:var(--fs-c);margin:4px}
+.filter-btn.active{background:#111;color:#fff;border-color:#111}
+
+/* --- Telas de auth/onboarding --- */
+#view-login,#view-onboarding{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:24px;background:#fff}
+#view-login h1,#view-onboarding h1{font-size:var(--fs-h);color:var(--azul-marca);margin-bottom:4px}
+#view-login input{padding:14px;border-radius:12px;border:1px solid #DDD;margin-bottom:10px;width:100%}
+#view-login .erro{color:#B00020;font-size:var(--fs-c);margin-bottom:8px}
+.onboarding-step{display:none}
+.onboarding-step.ativo{display:block}
+.onboarding-dots{display:flex;gap:6px;justify-content:center;margin:20px 0}
+.onboarding-dots span{width:7px;height:7px;border-radius:50%;background:#DDD}
+.onboarding-dots span.ativo{background:var(--azul-marca)}
+
+/* --- App shell --- */
+#app-shell{display:none;min-height:100vh;padding-bottom:calc(70px + var(--safe-bottom))}
+#app-shell.ativo{display:block}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:16px;position:sticky;top:0;background:#F7F7F8;z-index:10}
+.topbar h2{font-size:var(--fs-g);margin:0;color:var(--azul-marca)}
+.avatar-btn{width:36px;height:36px;border-radius:50%;background:var(--azul-marca);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d)}
+
+.view-conteudo{padding:0 16px}
+
+/* --- Bottom nav --- */
+#bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #EEE;display:flex;padding-bottom:var(--safe-bottom);z-index:20}
+#bottom-nav button{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;color:#999;font-size:var(--fs-a)}
+#bottom-nav button.ativo{color:var(--azul-marca)}
+#bottom-nav .icone{width:22px;height:22px}
+
+/* --- Módulo: paleta por módulo (reaproveitada exatamente do app pessoal) --- */
+.mod-tag{display:inline-flex;align-items:center;gap:6px;border-radius:10px;padding:4px 10px;font-size:var(--fs-b);font-weight:600}
+.mod-Manobrabilidade{background:#EEEDFE;color:#3C3489}
+.mod-Arte-Naval{background:#E6F1FB;color:#0C447C}
+.mod-Navegação-em-Águas-Restritas{background:#EAF3DE;color:#27500A}
+.mod-Legislação{background:#FAEEDA;color:#633806}
+.mod-Meteorologia-e-Oceanografia{background:#FCEBEB;color:#791F1F}
+.mod-Comunicações{background:#F1EFE8;color:#444441}
+.mod-Conhecimentos-Gerais{background:#FAECE7;color:#4A1B0C}
+
+/* --- Questão --- */
+.card-questao{background:#fff;border-radius:18px;padding:18px;margin-bottom:14px}
+.card-questao .enunciado{font-size:var(--fs-e);line-height:1.5;margin:12px 0}
+.alternativa{display:block;width:100%;text-align:left;background:#F5F5F6;border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:var(--fs-d)}
+.alternativa.correta{background:#E1F5E1;color:#1B5E20;font-weight:600}
+.alternativa.errada-escolhida{background:#FBE1E1;color:#9E1B1B;font-weight:600}
+.autor-tag{font-size:var(--fs-b);color:#888}
+.selo-correcao{background:#FFF3CD;color:#856404;font-size:var(--fs-b);padding:3px 8px;border-radius:8px;font-weight:600}
+
+.info-icone{cursor:pointer;font-size:var(--fs-c);color:#888}
+
+/* --- Placar --- */
+.linha-placar{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #EEE}
+
+/* --- Modal genérico --- */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:flex-end;z-index:50}
+.modal-overlay.hidden{display:none}
+.modal-conteudo{background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:85vh;overflow-y:auto}
+
+/* --- Loading --- */
+.loading-spinner{border:3px solid #EEE;border-top-color:var(--azul-marca);border-radius:50%;width:28px;height:28px;animation:girar 0.8s linear infinite;margin:20px auto}
+@keyframes girar{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- CONFIGURAÇÃO — troque pelos valores reais do seu projeto Supabase -->
+<!-- ============================================================ -->
+<script>
+  const SUPABASE_URL = "https://jenzxycerdtjpkrzesia.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_ne9lVc82Tdp6tloAbqm4xA_imwugeXg";
+</script>
+
+<!-- ============================================================ -->
+<!-- TELA: LOGIN / DEFINIR SENHA -->
+<!-- ============================================================ -->
+<div id="view-login">
+  <h1>Claude Quest</h1>
+  <p style="color:#666;margin-bottom:24px">Banco de questões PSCPP</p>
+
+  <div id="login-form-entrar">
+    <input type="email" id="login-email" placeholder="Email">
+    <input type="password" id="login-senha" placeholder="Senha">
+    <div class="erro hidden" id="login-erro"></div>
+    <button class="btn-primario" onclick="entrar()">Entrar</button>
+  </div>
+
+  <div id="login-form-definir-senha" class="hidden">
+    <p style="margin-bottom:16px">Defina sua senha pra começar a usar o Claude Quest.</p>
+    <input type="password" id="nova-senha" placeholder="Nova senha">
+    <input type="password" id="nova-senha-confirmar" placeholder="Confirmar senha">
+    <div class="erro hidden" id="definir-senha-erro"></div>
+    <button class="btn-primario" onclick="definirSenha()">Definir senha e entrar</button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TELA: ONBOARDING (só primeira vez) -->
+<!-- ============================================================ -->
+<div id="view-onboarding" class="hidden">
+  <div class="onboarding-step ativo" data-step="0">
+    <h1>Bem-vindo(a) ao Claude Quest 👋</h1>
+    <p>Aqui é onde vocês 5 vão estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
+  </div>
+  <div class="onboarding-step" data-step="1">
+    <h1>Como funciona o banco</h1>
+    <p>Todo mundo pode subir PDFs de questões, que entram direto no banco compartilhado. Todo mundo estuda das mesmas questões, mas cada um tem suas próprias estatísticas.</p>
+  </div>
+  <div class="onboarding-step" data-step="2">
+    <h1>A exclusão é só sua</h1>
+    <p>Se uma questão parecer errada ou malformada, você pode excluir — mas isso some <strong>só pra você</strong>. Ela continua existindo pros outros. Quanto mais gente excluir a mesma questão, mais evidente fica que ela tem um problema.</p>
+    <button class="btn-secundario" onclick="avancarOnboarding()">Entendi</button>
+  </div>
+  <div class="onboarding-step" data-step="3">
+    <h1>Fórum e correções</h1>
+    <p>Cada questão tem um espaço de discussão. Se algo estiver errado de fato (gabarito, digitação), use "Reportar correção" — isso avisa todo mundo com um selo, até alguém corrigir.</p>
+  </div>
+  <div class="onboarding-step" data-step="4">
+    <h1>Placar entre amigos</h1>
+    <p>Vocês veem, lado a lado, quantas questões cada um respondeu e a % de acerto — sem ranking, só os números.</p>
+  </div>
+  <div class="onboarding-step" data-step="5">
+    <h1>Instalar como app</h1>
+    <p id="instrucao-instalacao">Carregando instruções pro seu aparelho...</p>
+    <button class="btn-primario" onclick="concluirOnboarding()" style="margin-top:16px">Concluir e começar</button>
+  </div>
+
+  <div class="onboarding-dots" id="onboarding-dots"></div>
+  <button class="btn-primario" id="btn-onboarding-avancar" onclick="avancarOnboarding()">Próximo</button>
+</div>
+
+<!-- ============================================================ -->
+<!-- APP SHELL (pós-login) -->
+<!-- ============================================================ -->
+<div id="app-shell">
+
+  <div class="topbar">
+    <h2 id="topbar-titulo">Início</h2>
+    <button class="avatar-btn" onclick="abrirModal('modal-perfil')" id="avatar-inicial">?</button>
+  </div>
+
+  <!-- ===== INÍCIO ===== -->
+  <div class="view-conteudo view-aba" id="aba-inicio">
+    <div class="card-inicio" style="background:var(--azul-marca);color:#fff">
+      <div style="font-size:var(--fs-f);font-weight:600" id="inicio-saudacao">Olá!</div>
+      <div style="font-size:var(--fs-c);opacity:0.85">Bora estudar hoje?</div>
+    </div>
+
+    <button class="card-inicio" style="display:flex;align-items:center;justify-content:space-between;width:100%" onclick="abrirModal('modal-upload')">
+      <div>
+        <div style="font-weight:600;font-size:var(--fs-e)">➕ Adicionar questões</div>
+        <div style="color:#888;font-size:var(--fs-c)">Suba um PDF e a gente extrai as questões pra você</div>
+      </div>
+    </button>
+
+    <div id="caderno-em-andamento" class="hidden">
+      <button class="card-inicio" style="width:100%;text-align:left" onclick="retomarCaderno()">
+        <div style="font-weight:600">📖 Continuar caderno em andamento</div>
+        <div style="color:#888;font-size:var(--fs-c)" id="caderno-em-andamento-info"></div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== GERAR QUESTS (filtros + resolução) ===== -->
+  <div class="view-conteudo view-aba hidden" id="aba-quests">
+
+    <div id="quests-filtros">
+      <h3>Módulo</h3>
+      <div id="filtro-modulo"></div>
+
+      <h3>Publicação</h3>
+      <div id="filtro-publicacao"><span style="color:#999;font-size:var(--fs-c)">Escolha um módulo primeiro</span></div>
+
+      <h3>Capítulo</h3>
+      <div id="filtro-capitulo"><span style="color:#999;font-size:var(--fs-c)">Escolha uma publicação primeiro</span></div>
+
+      <div style="margin:16px 0">
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <input type="checkbox" id="toggle-ineditas"> Apenas questões que eu nunca respondi
+        </label>
+        <label style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="toggle-priorizar-erro">
+          Priorizar questões que eu mais erro
+          <span class="info-icone" onclick="abrirModal('modal-info-wilson')">ℹ️</span>
+        </label>
+      </div>
+
+      <button class="btn-primario" onclick="montarCaderno()">Montar caderno</button>
+      <div id="quests-sem-resultado" class="hidden" style="text-align:center;color:#888;margin-top:16px">
+        Poucas ou nenhuma questão com esses filtros ainda —
+        <button style="color:var(--azul-marca);font-weight:600;text-decoration:underline" onclick="abrirModal('modal-upload')">que tal subir um PDF?</button>
+      </div>
+    </div>
+
+    <div id="quests-resolucao" class="hidden">
+      <div id="questao-atual"></div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-secundario" style="flex:1" onclick="questaoAnterior()">← Anterior</button>
+        <button class="btn-secundario" style="flex:1" onclick="proximaQuestao()">Próxima →</button>
+      </div>
+      <button class="btn-primario" style="margin-top:16px;background:#1B5E20" onclick="finalizarCaderno()">Finalizar caderno</button>
+    </div>
+  </div>
+
+  <!-- ===== COMUNIDADE ===== -->
+  <div class="view-conteudo view-aba hidden" id="aba-comunidade">
+    <h3>⚠️ Correções pendentes</h3>
+    <div id="lista-correcoes-pendentes"><div class="loading-spinner"></div></div>
+  </div>
+
+  <!-- ===== COMO VOCÊ TÁ INDO (placar) ===== -->
+  <div class="view-conteudo view-aba hidden" id="aba-placar">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 style="margin-bottom:0">Placar entre amigos</h3>
+      <span class="info-icone" onclick="abrirModal('modal-info-wilson')">ℹ️ Como é calculado?</span>
+    </div>
+    <div id="lista-placar"><div class="loading-spinner"></div></div>
+  </div>
+
+  <div id="bottom-nav">
+    <button class="ativo" data-aba="inicio" onclick="trocarAba('inicio')">🏠<span>Início</span></button>
+    <button data-aba="quests" onclick="trocarAba('quests')">📚<span>Gerar quests</span></button>
+    <button data-aba="comunidade" onclick="trocarAba('comunidade')">💬<span>Comunidade</span></button>
+    <button data-aba="placar" onclick="trocarAba('placar')">📊<span>Como você tá indo</span></button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MODAIS -->
+<!-- ============================================================ -->
+
+<div class="modal-overlay hidden" id="modal-perfil">
+  <div class="modal-conteudo">
+    <h3 id="perfil-nome">—</h3>
+    <button class="btn-secundario" style="width:100%;margin-bottom:10px" onclick="sair()">Sair</button>
+    <button class="btn-secundario hidden" id="btn-abrir-admin" style="width:100%;margin-bottom:10px" onclick="abrirModal('modal-admin')">Painel admin</button>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-perfil')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-upload">
+  <div class="modal-conteudo">
+    <h3>Adicionar questões</h3>
+    <p style="color:#666;font-size:var(--fs-c)">Selecione um PDF com questões. A extração é automática e as questões entram direto no banco.</p>
+    <input type="file" id="upload-arquivo" accept="application/pdf" style="margin:14px 0">
+    <div id="upload-status"></div>
+    <button class="btn-primario" onclick="enviarUpload()">Extrair questões</button>
+    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-upload')">Cancelar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-wilson">
+  <div class="modal-conteudo">
+    <h3>Wilson Score</h3>
+    <p>É a fórmula usada pra calcular a % de acerto e pra saber quais questões você mais erra. Diferente de uma % simples, ela leva em conta <em>quantas vezes</em> você já tentou aquela questão — errar 1 de 1 tentativa pesa menos do que errar 8 de 10, mesmo a % "crua" sendo parecida. Isso evita que uma questão respondida só uma vez pareça mais confiável do que realmente é.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-wilson')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-questao-detalhe">
+  <div class="modal-conteudo" id="modal-questao-detalhe-conteudo"></div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-admin">
+  <div class="modal-conteudo">
+    <h3>Painel admin</h3>
+    <div class="filter-btn active" onclick="trocarAbaAdmin('erros')">Erros técnicos</div>
+    <div class="filter-btn" onclick="trocarAbaAdmin('malformadas')">Questões malformadas</div>
+    <div class="filter-btn" onclick="trocarAbaAdmin('caderno')">Buscar caderno</div>
+    <div id="admin-conteudo" style="margin-top:14px"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-admin')">Fechar</button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SDK do Supabase -->
+<!-- ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+<script>
+/* ============================================================
+   ESTADO GLOBAL
+   ============================================================ */
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let usuarioAtual = null;       // linha da tabela usuarios
+let modulosPscpp = [];
+let bibliografiaCache = [];
+let cadernoAtual = null;       // linha da tabela cadernos
+let questoesCaderno = [];      // array de questões do caderno atual
+let indiceQuestaoAtual = 0;
+let respostasPendentes = [];   // acumula respostas até finalizar (Promise.all no fim)
+
+/* ============================================================
+   CÓDIGO REAPROVEITADO DO APP PESSOAL (ver dossiê)
+   ============================================================ */
+function embaralharFisherYates(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function wilsonScoreLowerBound(k,n){
+  if(n===0) return 50;
+  const z=1.96;
+  const p=k/n;
+  const denom=1+(z*z)/n;
+  const centro=p+(z*z)/(2*n);
+  const margem=z*Math.sqrt((p*(1-p))/n+(z*z)/(4*n*n));
+  return Math.max(0,Math.round(((centro-margem)/denom)*100));
+}
+
+function escapeHtml(texto){
+  if(!texto) return '';
+  return texto.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function formatQuestaoCompleta(texto){
+  if(!texto) return '';
+  const escaped=escapeHtml(texto);
+  const altMatch=escaped.match(/\s\([a-e]\)/);
+  const idxAlt=altMatch?altMatch.index:-1;
+  const zonaEnunciado=idxAlt===-1?escaped:escaped.slice(0,idxAlt);
+  const zonaAlternativas=idxAlt===-1?'':escaped.slice(idxAlt).trim();
+  const temRomanos=/\s\(?[IVXLCDM]{1,6}\)/.test(zonaEnunciado);
+  const padraoQuebra=temRomanos?/(?=\s(?:\(?[IVXLCDM]{1,6}\)|\(\s*\)))/:/(?=\s(?:\(\s*\)|[A-F]\.\s))/;
+  const partesEnun=zonaEnunciado.split(padraoQuebra).map(p=>p.trim()).filter(Boolean);
+  const partesAlt=zonaAlternativas?zonaAlternativas.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean):[];
+  return {enunciado:[partesEnun[0]||'', ...partesEnun.slice(1)].join('<br>'), alternativas:partesAlt};
+}
+
+const modIconesCustomSvg={
+  'Legislação':(cor)=>`<span class="mod-tag mod-Legislação">Legislação</span>`,
+  'Navegação em Águas Restritas':(cor)=>`<span class="mod-tag mod-Navegação-em-Águas-Restritas">Águas Restritas</span>`,
+  'Comunicações':(cor)=>`<span class="mod-tag mod-Comunicações">Comunicações</span>`,
+  'Arte Naval':(cor)=>`<span class="mod-tag mod-Arte-Naval">Arte Naval</span>`,
+  'Manobrabilidade':(cor)=>`<span class="mod-tag mod-Manobrabilidade">Manobrabilidade</span>`,
+  'Meteorologia e Oceanografia':(cor)=>`<span class="mod-tag mod-Meteorologia-e-Oceanografia">Meteorologia</span>`,
+  'Conhecimentos Gerais':(cor)=>`<span class="mod-tag mod-Conhecimentos-Gerais">Conhecimentos Gerais</span>`,
+};
+function tagModulo(nomeModulo){
+  return modIconesCustomSvg[nomeModulo] ? modIconesCustomSvg[nomeModulo]() : `<span class="mod-tag">${escapeHtml(nomeModulo||'')}</span>`;
+}
+/* NOTA: os ícones SVG completos (path complexo) estão no dossiê e no schema
+   de referência do app pessoal — troque as tags acima pelos SVGs reais
+   quando for polir a interface. Aqui usei versão simplificada (só texto +
+   cor) pra manter este primeiro rascunho de código legível. */
+
+/* ============================================================
+   AUTENTICAÇÃO
+   ============================================================ */
+window.addEventListener('DOMContentLoaded', async ()=>{
+  // Se veio de link de convite, o Supabase te devolve com type=invite no hash da URL
+  if(window.location.hash.includes('type=invite') || window.location.hash.includes('type=recovery')){
+    document.getElementById('login-form-entrar').classList.add('hidden');
+    document.getElementById('login-form-definir-senha').classList.remove('hidden');
+    return;
+  }
+  const {data:{session}} = await sb.auth.getSession();
+  if(session) await posLogin();
+});
+
+async function entrar(){
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const {error} = await sb.auth.signInWithPassword({email, password:senha});
+  const erroEl = document.getElementById('login-erro');
+  if(error){
+    erroEl.textContent = 'Email ou senha incorretos.';
+    erroEl.classList.remove('hidden');
+    return;
+  }
+  erroEl.classList.add('hidden');
+  await posLogin();
+}
+
+async function definirSenha(){
+  const s1 = document.getElementById('nova-senha').value;
+  const s2 = document.getElementById('nova-senha-confirmar').value;
+  const erroEl = document.getElementById('definir-senha-erro');
+  if(s1.length < 6){
+    erroEl.textContent = 'Senha precisa ter pelo menos 6 caracteres.';
+    erroEl.classList.remove('hidden');
+    return;
+  }
+  if(s1 !== s2){
+    erroEl.textContent = 'As senhas não são iguais.';
+    erroEl.classList.remove('hidden');
+    return;
+  }
+  const {error} = await sb.auth.updateUser({password:s1});
+  if(error){
+    erroEl.textContent = 'Erro ao definir senha: ' + error.message;
+    erroEl.classList.remove('hidden');
+    return;
+  }
+  await posLogin();
+}
+
+async function sair(){
+  await sb.auth.signOut();
+  location.reload();
+}
+
+async function posLogin(){
+  const {data:{user}} = await sb.auth.getUser();
+  if(!user) return;
+
+  let {data: perfil} = await sb.from('usuarios').select('*').eq('id', user.id).single();
+  if(!perfil){
+    // primeira vez desse usuário — cria a linha de perfil
+    const nome = user.email.split('@')[0];
+    const {data: novo} = await sb.from('usuarios').insert({id:user.id, nome}).select().single();
+    perfil = novo;
+  }
+  usuarioAtual = perfil;
+
+  document.getElementById('view-login').classList.add('hidden');
+
+  if(!usuarioAtual.onboarding_concluido){
+    mostrarOnboarding();
+  }else{
+    mostrarAppShell();
+  }
+}
+
+/* ============================================================
+   ONBOARDING
+   ============================================================ */
+let passoOnboarding = 0;
+function mostrarOnboarding(){
+  document.getElementById('view-onboarding').classList.remove('hidden');
+  renderizarDots();
+  detectarDispositivoOnboarding();
+}
+function renderizarDots(){
+  const total = document.querySelectorAll('.onboarding-step').length;
+  const dotsEl = document.getElementById('onboarding-dots');
+  dotsEl.innerHTML = '';
+  for(let i=0;i<total;i++){
+    dotsEl.innerHTML += `<span class="${i===passoOnboarding?'ativo':''}"></span>`;
+  }
+}
+function avancarOnboarding(){
+  const passos = document.querySelectorAll('.onboarding-step');
+  passos[passoOnboarding].classList.remove('ativo');
+  passoOnboarding = Math.min(passoOnboarding+1, passos.length-1);
+  passos[passoOnboarding].classList.add('ativo');
+  renderizarDots();
+  document.getElementById('btn-onboarding-avancar').classList.toggle('hidden', passoOnboarding === passos.length-1);
+}
+function detectarDispositivoOnboarding(){
+  const ua = navigator.userAgent;
+  const el = document.getElementById('instrucao-instalacao');
+  if(/iPhone|iPad|iPod/.test(ua)){
+    el.textContent = 'No Safari, toque no ícone de compartilhar e depois em "Adicionar à Tela de Início".';
+  }else if(/Android/.test(ua)){
+    el.textContent = 'No Chrome, toque nos três pontinhos no canto e depois em "Instalar app" (ou "Adicionar à tela inicial").';
+  }else{
+    el.textContent = 'No seu navegador de computador, procure o ícone de instalar na barra de endereço, ou o menu de opções.';
+  }
+}
+async function concluirOnboarding(){
+  await sb.from('usuarios').update({onboarding_concluido:true}).eq('id', usuarioAtual.id);
+  usuarioAtual.onboarding_concluido = true;
+  document.getElementById('view-onboarding').classList.add('hidden');
+  mostrarAppShell();
+}
+
+/* ============================================================
+   APP SHELL / NAVEGAÇÃO
+   ============================================================ */
+async function mostrarAppShell(){
+  document.getElementById('app-shell').classList.add('ativo');
+  document.getElementById('inicio-saudacao').textContent = `Olá, ${usuarioAtual.nome}!`;
+  document.getElementById('avatar-inicial').textContent = usuarioAtual.nome[0].toUpperCase();
+  document.getElementById('perfil-nome').textContent = usuarioAtual.nome;
+  if(usuarioAtual.is_admin){
+    document.getElementById('btn-abrir-admin').classList.remove('hidden');
+  }
+  await carregarBibliografia();
+  await verificarCadernoEmAndamento();
+}
+
+function trocarAba(nome){
+  document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
+  document.getElementById('aba-'+nome).classList.remove('hidden');
+  document.querySelectorAll('#bottom-nav button').forEach(b=>b.classList.toggle('ativo', b.dataset.aba===nome));
+  const titulos = {inicio:'Início', quests:'Gerar quests', comunidade:'Comunidade', placar:'Como você tá indo'};
+  document.getElementById('topbar-titulo').textContent = titulos[nome];
+  if(nome==='comunidade') carregarComunidade();
+  if(nome==='placar') carregarPlacar();
+}
+
+function abrirModal(id){ document.getElementById(id).classList.remove('hidden'); }
+function fecharModal(id){ document.getElementById(id).classList.add('hidden'); }
+
+/* ============================================================
+   INÍCIO — caderno em andamento
+   ============================================================ */
+async function verificarCadernoEmAndamento(){
+  const {data} = await sb.from('cadernos').select('*').eq('usuario_id', usuarioAtual.id).eq('status','em_andamento').order('criado_em',{ascending:false}).limit(1);
+  if(data && data.length){
+    cadernoAtual = data[0];
+    document.getElementById('caderno-em-andamento').classList.remove('hidden');
+    document.getElementById('caderno-em-andamento-info').textContent = `Iniciado em ${new Date(cadernoAtual.criado_em).toLocaleDateString('pt-BR')}`;
+  }
+}
+function retomarCaderno(){
+  trocarAba('quests');
+  // TODO: recarregar questões restantes do caderno em andamento a partir de filtros_aplicados
+}
+
+/* ============================================================
+   GERAR QUESTS — filtros em cascata
+   ============================================================ */
+async function carregarBibliografia(){
+  const {data} = await sb.from('bibliografia').select('*');
+  bibliografiaCache = data || [];
+  modulosPscpp = [...new Set(bibliografiaCache.map(b=>b.modulo_pscpp))];
+  const el = document.getElementById('filtro-modulo');
+  el.innerHTML = modulosPscpp.map(m=>`<button class="filter-btn" data-valor="${escapeHtml(m)}" onclick="selecionarFiltro('modulo', this)">${escapeHtml(m)}</button>`).join('');
+}
+
+let filtroSelecionado = {modulo:null, publicacao:null, capitulo:null};
+
+function selecionarFiltro(nivel, botao){
+  const valor = botao.dataset.valor;
+  const container = botao.parentElement;
+  container.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  botao.classList.add('active');
+  filtroSelecionado[nivel] = valor;
+
+  if(nivel==='modulo'){
+    filtroSelecionado.publicacao = null;
+    filtroSelecionado.capitulo = null;
+    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===valor);
+    const el = document.getElementById('filtro-publicacao');
+    el.innerHTML = pubs.map(p=>`<button class="filter-btn" data-valor="${p.id}" onclick="selecionarFiltro('publicacao', this)">${escapeHtml(p.titulo)}</button>`).join('') || '<span style="color:#999;font-size:var(--fs-c)">Nenhuma publicação nesse módulo</span>';
+    document.getElementById('filtro-capitulo').innerHTML = '<span style="color:#999;font-size:var(--fs-c)">Escolha uma publicação primeiro</span>';
+  }
+
+  if(nivel==='publicacao'){
+    filtroSelecionado.capitulo = null;
+    // capítulos vêm das próprias questões já cadastradas com essa bibliografia (campo livre por questão)
+    sb.from('questoes').select('capitulo').eq('bibliografia_id', valor).then(({data})=>{
+      const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))];
+      const el = document.getElementById('filtro-capitulo');
+      el.innerHTML = caps.length
+        ? caps.map(c=>`<button class="filter-btn" data-valor="${escapeHtml(c)}" onclick="selecionarFiltro('capitulo', this)">${escapeHtml(c)}</button>`).join('')
+        : '<span style="color:#999;font-size:var(--fs-c)">Sem capítulos catalogados ainda (opcional)</span>';
+    });
+  }
+}
+
+async function montarCaderno(){
+  let query = sb.from('questoes').select('*');
+  if(filtroSelecionado.modulo) query = query.eq('modulo_pscpp', filtroSelecionado.modulo);
+  if(filtroSelecionado.publicacao) query = query.eq('bibliografia_id', filtroSelecionado.publicacao);
+  if(filtroSelecionado.capitulo) query = query.eq('capitulo', filtroSelecionado.capitulo);
+
+  const {data: todasQuestoes, error} = await query;
+  if(error){ alert('Erro ao buscar questões: '+error.message); return; }
+
+  // remove questões excluídas por este usuário
+  const {data: exclusoes} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id);
+  const idsExcluidos = new Set((exclusoes||[]).map(e=>e.questao_id));
+  let questoesFiltradas = (todasQuestoes||[]).filter(q=>!idsExcluidos.has(q.id));
+
+  if(document.getElementById('toggle-ineditas').checked){
+    const {data: respondidas} = await sb.from('respostas').select('questao_id').eq('usuario_id', usuarioAtual.id);
+    const idsRespondidos = new Set((respondidas||[]).map(r=>r.questao_id));
+    questoesFiltradas = questoesFiltradas.filter(q=>!idsRespondidos.has(q.id));
+  }
+
+  if(questoesFiltradas.length === 0){
+    document.getElementById('quests-sem-resultado').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('quests-sem-resultado').classList.add('hidden');
+
+  if(document.getElementById('toggle-priorizar-erro').checked){
+    const {data: minhasRespostas} = await sb.from('respostas_finalizadas').select('questao_id, correta').eq('usuario_id', usuarioAtual.id);
+    const stats = {};
+    (minhasRespostas||[]).forEach(r=>{
+      if(!stats[r.questao_id]) stats[r.questao_id] = {k:0,n:0};
+      stats[r.questao_id].n++;
+      if(!r.correta) stats[r.questao_id].k++;
+    });
+    questoesFiltradas = questoesFiltradas.map(q=>{
+      const s = stats[q.id] || {k:0,n:0};
+      return {...q, _wilson: wilsonScoreLowerBound(s.k, s.n)};
+    }).sort((a,b)=>b._wilson - a._wilson);
+  }else{
+    questoesFiltradas = embaralharFisherYates(questoesFiltradas);
+  }
+
+  // cria o caderno
+  const {data: novoCaderno} = await sb.from('cadernos').insert({
+    usuario_id: usuarioAtual.id,
+    filtros_aplicados: filtroSelecionado,
+    status: 'em_andamento'
+  }).select().single();
+  cadernoAtual = novoCaderno;
+  questoesCaderno = questoesFiltradas;
+  indiceQuestaoAtual = 0;
+  respostasPendentes = [];
+
+  document.getElementById('quests-filtros').classList.add('hidden');
+  document.getElementById('quests-resolucao').classList.remove('hidden');
+  renderizarQuestaoAtual();
+}
+
+function renderizarQuestaoAtual(){
+  const q = questoesCaderno[indiceQuestaoAtual];
+  if(!q){ document.getElementById('questao-atual').innerHTML = '<p>Fim do caderno.</p>'; return; }
+  const partes = formatQuestaoCompleta(q.enunciado + ' ' + (q.alternativas||''));
+  const html = `
+    <div class="card-questao" data-questao-id="${q.id}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        ${tagModulo(q.modulo_pscpp)}
+        <button onclick="excluirQuestao('${q.id}')" style="color:#B00020;font-size:var(--fs-c)">🗑️ Excluir pra mim</button>
+      </div>
+      <div class="enunciado">${escapeHtml(q.enunciado||'(enunciado vazio — questão pode estar malformada)')}</div>
+      <div id="alternativas-questao">
+        ${(['a','b','c','d','e']).map(letra=>`<button class="alternativa" data-letra="${letra}" onclick="responderQuestao('${q.id}','${letra}')">(${letra}) — </button>`).join('')}
+      </div>
+      <div id="resultado-questao"></div>
+    </div>`;
+  document.getElementById('questao-atual').innerHTML = html;
+  // NOTA: neste rascunho as alternativas mostram só a letra — falta extrair o texto
+  // de cada alternativa a partir de q.alternativas usando o parser reaproveitado
+  // (formatQuestaoCompleta já devolve partes.alternativas prontas pra isso).
+}
+
+async function responderQuestao(questaoId, letraEscolhida){
+  const q = questoesCaderno.find(x=>x.id===questaoId);
+  const correta = letraEscolhida === (q.gabarito||'').toLowerCase();
+  respostasPendentes.push({
+    caderno_id: cadernoAtual.id,
+    questao_id: questaoId,
+    usuario_id: usuarioAtual.id,
+    resposta_dada: letraEscolhida,
+    correta
+  });
+  const resultadoEl = document.getElementById('resultado-questao');
+  let explicacaoHtml = '';
+  if(q.explicacao_origem === 'fonte_original'){
+    explicacaoHtml = `<p style="margin-top:10px">${escapeHtml(q.explicacao)}</p>`;
+  }else if(q.explicacao_origem === 'gerada_web'){
+    explicacaoHtml = `<button class="btn-secundario" onclick="mostrarExplicacaoSalva('${q.id}')">Mostrar explicação (baseada na web) 👁️</button>`;
+  }else{
+    explicacaoHtml = `<button class="btn-secundario" onclick="gerarExplicacao('${q.id}')">Gerar explicação (busca na web) 🔍</button>`;
+  }
+  resultadoEl.innerHTML = `<p style="margin-top:10px;font-weight:600">${correta?'✅ Você acertou!':'❌ Gabarito: '+(q.gabarito||'?')}</p>${explicacaoHtml}`;
+}
+
+function gerarExplicacao(questaoId){
+  // TODO: chamar função serverless equivalente à de extração, mas pra pesquisa web
+  // via Claude + web search, salvar em questoes.explicacao e mudar explicacao_origem
+  // pra 'gerada_web'. Fora do escopo deste primeiro rascunho de código.
+  alert('Geração de explicação via busca na web: a implementar numa próxima função serverless.');
+}
+function mostrarExplicacaoSalva(questaoId){
+  const q = questoesCaderno.find(x=>x.id===questaoId);
+  alert(q.explicacao || '(sem explicação salva)');
+}
+
+async function excluirQuestao(questaoId){
+  await sb.from('exclusoes').insert({usuario_id: usuarioAtual.id, questao_id: questaoId});
+  questoesCaderno = questoesCaderno.filter(q=>q.id!==questaoId);
+  if(indiceQuestaoAtual >= questoesCaderno.length) indiceQuestaoAtual = Math.max(0, questoesCaderno.length-1);
+  renderizarQuestaoAtual();
+}
+
+function proximaQuestao(){
+  indiceQuestaoAtual = Math.min(indiceQuestaoAtual+1, questoesCaderno.length-1);
+  renderizarQuestaoAtual();
+}
+function questaoAnterior(){
+  indiceQuestaoAtual = Math.max(indiceQuestaoAtual-1, 0);
+  renderizarQuestaoAtual();
+}
+
+async function finalizarCaderno(){
+  await Promise.all([
+    sb.from('cadernos').update({status:'finalizado', finalizado_em:new Date().toISOString()}).eq('id', cadernoAtual.id),
+    ...respostasPendentes.map(r => sb.from('respostas').insert(r))
+  ]);
+  cadernoAtual = null;
+  questoesCaderno = [];
+  respostasPendentes = [];
+  document.getElementById('quests-resolucao').classList.add('hidden');
+  document.getElementById('quests-filtros').classList.remove('hidden');
+  document.getElementById('caderno-em-andamento').classList.add('hidden');
+  trocarAba('inicio');
+}
+
+/* ============================================================
+   COMUNIDADE — correções pendentes
+   ============================================================ */
+async function carregarComunidade(){
+  const {data} = await sb.from('correcoes').select('*, questoes(enunciado)').eq('status','pendente').order('criado_em',{ascending:false});
+  const el = document.getElementById('lista-correcoes-pendentes');
+  if(!data || !data.length){
+    el.innerHTML = '<p style="color:#888">Nenhuma correção pendente agora.</p>';
+    return;
+  }
+  el.innerHTML = data.map(c=>`
+    <div class="card-questao">
+      <span class="selo-correcao">⚠️ Correção sugerida</span>
+      <p>${escapeHtml((c.questoes?.enunciado||'').slice(0,120))}...</p>
+      <button class="btn-secundario" onclick="abrirThreadCorrecao('${c.id}','${c.questao_id}')">Ver discussão</button>
+    </div>`).join('');
+}
+function abrirThreadCorrecao(correcaoId, questaoId){
+  // TODO: modal com fórum geral (comentarios.correcao_id = null) e a thread
+  // específica dessa correção (comentarios.correcao_id = correcaoId), mais
+  // botão "Aplicar edição" que atualiza a questão e marca a correção como
+  // resolvida. Fora do escopo deste primeiro rascunho de código.
+  alert('Abrir thread de correção: tela de detalhe a implementar na próxima passada.');
+}
+
+/* ============================================================
+   PLACAR
+   ============================================================ */
+async function carregarPlacar(){
+  const {data, error} = await sb.rpc('get_placar');
+  const el = document.getElementById('lista-placar');
+  if(error){ el.innerHTML = '<p style="color:#B00020">Erro ao carregar placar.</p>'; return; }
+  el.innerHTML = (data||[]).map(p=>`
+    <div class="linha-placar">
+      <span>${escapeHtml(p.nome)}</span>
+      <span>${p.total_respondidas} respondidas · ${p.pct_acerto}%</span>
+    </div>`).join('');
+}
+
+/* ============================================================
+   UPLOAD / EXTRAÇÃO DE PDF
+   ============================================================ */
+async function enviarUpload(){
+  const input = document.getElementById('upload-arquivo');
+  const status = document.getElementById('upload-status');
+  if(!input.files.length){ status.textContent = 'Escolha um PDF primeiro.'; return; }
+
+  status.innerHTML = '<div class="loading-spinner"></div><p style="text-align:center">Extraindo questões...</p>';
+
+  const arquivo = input.files[0];
+  const base64 = await new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(arquivo);
+  });
+
+  let resposta;
+  try{
+    resposta = await fetch('/api/extrair-pdf', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({pdfBase64: base64, nomeArquivo: arquivo.name})
+    });
+  }catch(e){
+    status.innerHTML = `<p style="color:#B00020">Erro de rede: ${e.message}</p>`;
+    return;
+  }
+
+  if(!resposta.ok){
+    status.innerHTML = `<p style="color:#B00020">Erro na extração (status ${resposta.status}).</p>`;
+    return;
+  }
+
+  const {questoes} = await resposta.json();
+  if(!questoes || !questoes.length){
+    status.innerHTML = '<p style="color:#B00020">Nenhuma questão identificada nesse PDF.</p>';
+    return;
+  }
+
+  await Promise.all(questoes.map(q => sb.from('questoes').insert({
+    enunciado: q.enunciado,
+    alternativas: q.alternativas,
+    gabarito: q.gabarito,
+    autor_id: usuarioAtual.id,
+    capitulo: q.capitulo || null,
+    tipo_questao: q.tipo_questao || 'Outro',
+    modulo_pscpp: q.modulo_pscpp || 'Conhecimentos Gerais',
+    explicacao: q.explicacao || null,
+    explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada'
+  })));
+
+  // NOTA: checagem de duplicata via pg_trgm ainda não implementada aqui —
+  // precisa de uma função RPC no Postgres (similaridade de enunciado) que
+  // ainda não foi criada no schema. A adicionar numa próxima passada.
+
+  status.innerHTML = `<p style="color:#1B5E20">${questoes.length} questões cadastradas!</p>`;
+}
+
+/* ============================================================
+   ADMIN
+   ============================================================ */
+function trocarAbaAdmin(aba){
+  document.querySelectorAll('#modal-admin .filter-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  const el = document.getElementById('admin-conteudo');
+  el.innerHTML = '<div class="loading-spinner"></div>';
+
+  if(aba==='erros'){
+    sb.from('erros_app').select('*').order('criado_em',{ascending:false}).limit(50).then(({data})=>{
+      el.innerHTML = (data||[]).map(e=>`<div class="card-questao"><strong>${escapeHtml(e.tela||'?')}</strong><p>${escapeHtml(e.mensagem)}</p><span style="font-size:var(--fs-a);color:#888">${new Date(e.criado_em).toLocaleString('pt-BR')}</span></div>`).join('') || '<p>Sem erros registrados.</p>';
+    });
+  }
+  if(aba==='malformadas'){
+    sb.from('questoes').select('*').or('gabarito.is.null,alternativas.is.null').then(({data})=>{
+      el.innerHTML = (data||[]).map(q=>`<div class="card-questao"><p>${escapeHtml((q.enunciado||'(vazio)').slice(0,100))}</p></div>`).join('') || '<p>Nenhuma questão malformada encontrada.</p>';
+    });
+  }
+  if(aba==='caderno'){
+    el.innerHTML = `
+      <input type="text" id="admin-usuario-id" placeholder="ID do usuário" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid #DDD">
+      <input type="text" id="admin-caderno-id" placeholder="ID do caderno" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid #DDD">
+      <button class="btn-secundario" onclick="buscarCadernoAdmin()">Buscar</button>
+      <div id="admin-caderno-resultado"></div>`;
+  }
+}
+async function buscarCadernoAdmin(){
+  const uid = document.getElementById('admin-usuario-id').value.trim();
+  const cid = document.getElementById('admin-caderno-id').value.trim();
+  const {data, error} = await sb.rpc('ver_caderno_de', {p_usuario_id: uid, p_caderno_id: cid});
+  const el = document.getElementById('admin-caderno-resultado');
+  if(error || !data || !data.length){ el.innerHTML = '<p>Nada encontrado (ou você não tem permissão admin).</p>'; return; }
+  el.innerHTML = data.map(r=>`<div class="card-questao">Resposta: ${r.resposta_dada} — ${r.correta?'✅':'❌'}</div>`).join('');
+}
+</script>
+</body>
+</html>
