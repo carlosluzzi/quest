@@ -41,8 +41,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
 
 /* --- Telas de auth/onboarding --- */
-#view-login,#view-onboarding{height:100%;height:100svh;height:100dvh;height:var(--vh-real, 100dvh);max-width:480px;margin:0 auto;display:flex;flex-direction:column;justify-content:center;padding:24px;background:#fff;overflow:hidden;position:relative}
-#view-login{background:#F4F1EA}
+#view-login,#view-onboarding{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;padding:24px;box-sizing:border-box}
+.login-inner{width:100%;max-width:432px}
+#view-login{background:#F9F9F7}
 #view-login .erro{color:#B00020;font-size:var(--fs-c);margin-bottom:8px}
 #view-login p{color:#666}
 #view-login h1,#view-onboarding h1{font-size:var(--fs-h);color:var(--azul-marca);margin-bottom:4px}
@@ -158,7 +159,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <!-- TELA: LOGIN / DEFINIR SENHA -->
 <!-- ============================================================ -->
 <div id="view-login">
-  <div style="text-align:center;margin-bottom:36px">
+<div class="login-inner">
+  <div style="text-align:center;margin-bottom:16px">
     <span style="font-size:44px;font-weight:800;color:#D97757;font-family:'Manrope',-apple-system,sans-serif;letter-spacing:-1px">Claude</span>
   </div>
 
@@ -177,11 +179,13 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <button class="btn-primario" onclick="definirSenha()">Definir senha e entrar</button>
   </div>
 </div>
+</div>
 
 <!-- ============================================================ -->
 <!-- TELA: ONBOARDING (só primeira vez) -->
 <!-- ============================================================ -->
 <div id="view-onboarding" class="hidden">
+<div class="login-inner">
   <div class="onboarding-step ativo" data-step="0">
     <h1>Bem-vindo(a) ao Claude Quest 👋</h1>
     <p>Aqui é onde vocês 5 vão estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
@@ -211,6 +215,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <div class="onboarding-dots" id="onboarding-dots"></div>
   <button class="btn-primario" id="btn-onboarding-avancar" onclick="avancarOnboarding()">Próximo</button>
+</div>
 </div>
 
 <!-- ============================================================ -->
