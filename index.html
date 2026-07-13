@@ -359,6 +359,18 @@ function formatQuestaoCompleta(texto){
   return {enunciado:[partesEnun[0]||'', ...partesEnun.slice(1)].join('<br>'), alternativas:partesAlt};
 }
 
+// extrai {letra, texto} de cada alternativa a partir do campo "alternativas" da questão,
+// que já vem normalizado no formato "(a) texto. (b) texto. ..." (ver molde padrão de questão no dossiê)
+function extrairAlternativas(alternativasTexto){
+  if(!alternativasTexto) return [];
+  const escaped = escapeHtml(alternativasTexto);
+  const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
+  return partes.map(p=>{
+    const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
+    return m ? {letra:m[1], texto:m[2]} : {letra:'?', texto:p};
+  });
+}
+
 const modIconesCustomSvg={
   'Legislação':(cor)=>`<span class="mod-tag mod-Legislação">Legislação</span>`,
   'Navegação em Águas Restritas':(cor)=>`<span class="mod-tag mod-Navegação-em-Águas-Restritas">Águas Restritas</span>`,
@@ -644,7 +656,7 @@ async function montarCaderno(){
 function renderizarQuestaoAtual(){
   const q = questoesCaderno[indiceQuestaoAtual];
   if(!q){ document.getElementById('questao-atual').innerHTML = '<p>Fim do caderno.</p>'; return; }
-  const partes = formatQuestaoCompleta(q.enunciado + ' ' + (q.alternativas||''));
+  const alternativas = extrairAlternativas(q.alternativas);
   const html = `
     <div class="card-questao" data-questao-id="${q.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -653,19 +665,19 @@ function renderizarQuestaoAtual(){
       </div>
       <div class="enunciado">${escapeHtml(q.enunciado||'(enunciado vazio — questão pode estar malformada)')}</div>
       <div id="alternativas-questao">
-        ${(['a','b','c','d','e']).map(letra=>`<button class="alternativa" data-letra="${letra}" onclick="responderQuestao('${q.id}','${letra}')">(${letra}) — </button>`).join('')}
+        ${alternativas.length
+          ? alternativas.map(alt=>`<button class="alternativa" data-letra="${alt.letra}" onclick="responderQuestao('${q.id}','${alt.letra}')">(${alt.letra}) ${alt.texto}</button>`).join('')
+          : '<p style="color:#B00020;font-size:var(--fs-c)">Alternativas não identificadas nessa questão (pode estar malformada) — considere excluir pra você.</p>'}
       </div>
       <div id="resultado-questao"></div>
     </div>`;
   document.getElementById('questao-atual').innerHTML = html;
-  // NOTA: neste rascunho as alternativas mostram só a letra — falta extrair o texto
-  // de cada alternativa a partir de q.alternativas usando o parser reaproveitado
-  // (formatQuestaoCompleta já devolve partes.alternativas prontas pra isso).
 }
 
 async function responderQuestao(questaoId, letraEscolhida){
   const q = questoesCaderno.find(x=>x.id===questaoId);
-  const correta = letraEscolhida === (q.gabarito||'').toLowerCase();
+  const gabarito = (q.gabarito||'').toLowerCase().trim();
+  const correta = letraEscolhida === gabarito;
   respostasPendentes.push({
     caderno_id: cadernoAtual.id,
     questao_id: questaoId,
@@ -673,6 +685,15 @@ async function responderQuestao(questaoId, letraEscolhida){
     resposta_dada: letraEscolhida,
     correta
   });
+
+  document.querySelectorAll('#alternativas-questao .alternativa').forEach(btn=>{
+    btn.onclick = null;
+    btn.style.pointerEvents = 'none';
+    const letra = btn.dataset.letra;
+    if(letra === gabarito) btn.classList.add('correta');
+    else if(letra === letraEscolhida) btn.classList.add('errada-escolhida');
+  });
+
   const resultadoEl = document.getElementById('resultado-questao');
   let explicacaoHtml = '';
   if(q.explicacao_origem === 'fonte_original'){
