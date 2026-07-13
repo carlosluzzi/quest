@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&family=Manrope:wght@800&display=swap" rel="stylesheet">
 <style>
 :root{
   --fs-a:11px; --fs-b:12px; --fs-c:13px; --fs-d:14px;
@@ -41,7 +41,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
 
 /* --- Telas de auth/onboarding --- */
-#view-login,#view-onboarding{height:100%;height:100svh;height:100dvh;max-width:480px;margin:0 auto;display:flex;flex-direction:column;justify-content:center;padding:24px;background:#fff;overflow:hidden;position:relative}
+#view-login,#view-onboarding{height:100%;height:100svh;height:100dvh;height:var(--vh-real, 100dvh);max-width:480px;margin:0 auto;display:flex;flex-direction:column;justify-content:center;padding:24px;background:#fff;overflow:hidden;position:relative}
+#view-login{background:#F4F1EA}
+#view-login .erro{color:#B00020;font-size:var(--fs-c);margin-bottom:8px}
+#view-login p{color:#666}
 #view-login h1,#view-onboarding h1{font-size:var(--fs-h);color:var(--azul-marca);margin-bottom:4px}
 #view-login input{padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;margin-bottom:10px;width:100%;background:#fff;color:#111}
 #view-login .erro{color:#B00020;font-size:var(--fs-c);margin-bottom:8px}
@@ -52,7 +55,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .onboarding-dots span.ativo{background:var(--azul-marca)}
 
 /* --- App shell --- */
-#app-shell{display:none;max-width:480px;margin:0 auto;height:100%;height:100svh;height:100dvh;position:relative;flex-direction:column;overflow:hidden}
+#app-shell{display:none;max-width:480px;margin:0 auto;height:100%;height:100svh;height:100dvh;height:var(--vh-real, 100dvh);position:relative;flex-direction:column;overflow:hidden}
 #app-shell.ativo{display:flex}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;flex-shrink:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
 .topbar h2{font-size:var(--fs-g);margin:0;color:var(--azul-marca);display:none}
@@ -132,6 +135,15 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </style>
 </head>
 <body>
+<script>
+  // 100dvh não é 100% confiável em todo navegador/contexto (espelhamento de tela, etc.)
+  // Medimos a altura real da janela via JS e usamos isso como fonte de verdade.
+  function ajustarAlturaReal(){
+    document.documentElement.style.setProperty('--vh-real', window.innerHeight + 'px');
+  }
+  ajustarAlturaReal();
+  window.addEventListener('resize', ajustarAlturaReal);
+</script>
 <div id="bg-fixed"></div>
 
 <!-- ============================================================ -->
@@ -146,8 +158,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <!-- TELA: LOGIN / DEFINIR SENHA -->
 <!-- ============================================================ -->
 <div id="view-login">
-  <h1>Claude Quest</h1>
-  <p style="color:#666;margin-bottom:24px">Banco de questões PSCPP</p>
+  <div style="text-align:center;margin-bottom:36px">
+    <span style="font-size:44px;font-weight:800;color:#D97757;font-family:'Manrope',-apple-system,sans-serif;letter-spacing:-1px">Claude</span>
+  </div>
 
   <div id="login-form-entrar">
     <input type="email" id="login-email" placeholder="Email">
