@@ -23,6 +23,7 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 *{box-sizing:border-box}
+input[type=checkbox],input[type=radio]{accent-color:#D97757}
 html{height:100%;overflow:hidden;overscroll-behavior:none}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background-color:#FBFBFA;color:#111;font-size:var(--fs-d);height:100%;position:fixed;inset:0;width:100%;overflow:hidden;overscroll-behavior:none}
 #bg-fixed{position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;background-color:#FBFBFA;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cg fill='none' stroke='%230C447C' stroke-width='0.5' opacity='0.045'%3E%3Cline x1='0' y1='0' x2='140' y2='0'/%3E%3Cline x1='0' y1='0' x2='0' y2='140'/%3E%3C/g%3E%3C/svg%3E");background-repeat:repeat}
@@ -100,7 +101,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* --- Bottom nav --- */
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
 .nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative}
-.badge-notificacao{position:absolute;top:10px;right:calc(50% - 24px);background:#E24B4A;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
+.badge-notificacao{position:absolute;top:10px;right:calc(50% - 24px);background:#E24B4A;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:16px}
 .nav-item.active{background:#f0f0ee}
 .nav-icon{width:21px;height:21px;color:#888;display:flex;align-items:center;justify-content:center}
 .nav-icon svg{width:100%;height:100%}
@@ -355,28 +356,28 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div id="caderno-em-andamento" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="retomarCaderno()">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 0 2-2z"/></svg> Cadernos em andamento</div>
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 0 2-2z"/></svg> Cadernos em andamento</div>
         <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px" id="caderno-em-andamento-info"></div>
       </button>
     </div>
 
     <div id="card-notificacao-forum" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="trocarAba('forum')">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h4a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1v3l-3-3h-6a1 1 0 0 1-1-1v-2"/><path d="M14 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h1v3l4-3h6a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1z"/></svg> Novidades no Fórum</div>
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h4a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1v3l-3-3h-6a1 1 0 0 1-1-1v-2"/><path d="M14 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h1v3l4-3h6a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1z"/></svg> Novidades no Fórum</div>
         <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px" id="texto-notificacao-forum"></div>
       </button>
     </div>
 
     <div id="card-notificacao-anulacao" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarAnulacaoVista()">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg> Questão anulada</div>
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg> Questão anulada</div>
         <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px" id="texto-notificacao-anulacao"></div>
       </button>
     </div>
 
     <div id="card-notificacao-resposta-discussao" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirTopicoNotificado()">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Responderam sua discussão</div>
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Responderam sua discussão</div>
         <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px" id="texto-notificacao-resposta-discussao"></div>
       </button>
     </div>
@@ -385,7 +386,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div id="card-notificacao-pdf-novo" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarPdfNovoVisto()">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Questões novas no banco</div>
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Questões novas no banco</div>
         <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px" id="texto-notificacao-pdf-novo"></div>
       </button>
     </div>
@@ -1284,15 +1285,22 @@ window.addEventListener('resize', medirAlturaNav);
 // campo de texto ganha foco. Solução: esconder a barra enquanto o teclado
 // estiver aberto, e mostrar de volta ao fechar. Restrito ao #app-shell (não
 // à tela de login), e com trava de segurança pra nunca ficar presa escondida.
+// Só conta como "abriu teclado" campo de texto de verdade — checkbox, radio
+// e select nunca chamam teclado no celular, então nunca podem esconder o menu.
+function ehCampoDeTeclado(el){
+  if(el.tagName === 'TEXTAREA') return true;
+  if(el.tagName !== 'INPUT') return false;
+  return !['checkbox','radio'].includes(el.type);
+}
 document.addEventListener('focusin', (e)=>{
-  if(e.target.matches('input, textarea, select') && e.target.closest('#app-shell')){
+  if(ehCampoDeTeclado(e.target) && e.target.closest('#app-shell')){
     const nav = document.getElementById('bottom-nav');
     if(nav) nav.classList.add('teclado-aberto');
     setTimeout(()=>{ e.target.scrollIntoView({block:'center', behavior:'smooth'}); }, 300);
   }
 });
 document.addEventListener('focusout', (e)=>{
-  if(e.target.matches('input, textarea, select') && e.target.closest('#app-shell')){
+  if(ehCampoDeTeclado(e.target) && e.target.closest('#app-shell')){
     const nav = document.getElementById('bottom-nav');
     if(nav) nav.classList.remove('teclado-aberto');
   }
@@ -1460,7 +1468,7 @@ async function verificarNotificacaoQuestaoCorrigida(){
     return `
     <div>
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarCorrigidasVistas('${cadernoId}')">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Questão corrigida</div>
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Questão corrigida</div>
         <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px">${texto}</div>
       </button>
     </div>`;
