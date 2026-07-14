@@ -772,9 +772,9 @@ function saudacaoHora(){
   return 'Boa noite';
 }
 
-function sobrenomeDe(nomeCompleto){
+function primeiroNomeDe(nomeCompleto){
   const partes = (nomeCompleto||'').trim().split(/\s+/);
-  return partes[partes.length-1] || nomeCompleto;
+  return partes[0] || nomeCompleto;
 }
 
 function escapeHtml(texto){
@@ -1098,8 +1098,9 @@ async function salvarNomePerfil(){
   const {error} = await sb.from('usuarios').update({nome: novoNome}).eq('id', usuarioAtual.id);
   if(error){ alert('Erro ao salvar nome: '+error.message); return; }
   usuarioAtual.nome = novoNome;
-  document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${sobrenomeDe(novoNome)}!`;
+  document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${primeiroNomeDe(novoNome)}!`;
   atualizarAvatarUI();
+  await carregarPlacar();
 }
 
 async function sair(){
@@ -1158,7 +1159,6 @@ function renderizarDotsOnboarding(){
 }
 function avancarOnboarding(){
   const passos = document.querySelectorAll('.onboarding-step');
-  if(passoOnboarding === passos.length-1){ concluirOnboarding(); return; }
   passos[passoOnboarding].classList.remove('ativo');
   passoOnboarding = Math.min(passoOnboarding+1, passos.length-1);
   passos[passoOnboarding].classList.add('ativo');
@@ -1250,7 +1250,7 @@ async function concluirOnboarding(){
 async function mostrarAppShell(){
   document.getElementById('app-shell').classList.add('ativo');
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança
-  document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${sobrenomeDe(usuarioAtual.nome)}!`;
+  document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${primeiroNomeDe(usuarioAtual.nome)}!`;
   atualizarAvatarUI();
   document.getElementById('perfil-nome-input').value = usuarioAtual.nome;
   if(usuarioAtual.is_admin){
