@@ -48,7 +48,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
 .chev.open{transform:rotate(180deg)}
-#barra-adicionar-questoes{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav-height, 76px) + 12px);width:calc(100% - 32px);max-width:448px;box-sizing:border-box;background:#fff;border-radius:28px;box-shadow:0 2px 8px rgba(0,0,0,0.08);padding:14px 16px;z-index:15;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.icone-modulo-mini{width:14px;height:14px;display:inline-flex;flex-shrink:0}
+.icone-modulo-mini svg{width:100%;height:100%;display:block}
+#barra-adicionar-questoes{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav-height, 76px) + 12px);width:calc(100% - 32px);max-width:448px;box-sizing:border-box;background:#fff;border-radius:18px;box-shadow:0 2px 8px rgba(0,0,0,0.08);padding:14px 16px;z-index:15;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
 .conteudo-colapsavel{display:none}
 .conteudo-colapsavel.open{display:block}
 
@@ -74,7 +76,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .topbar h2{font-size:var(--fs-g);margin:0;color:var(--azul-marca);display:none}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:#D97757;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0}
 
-.content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px 0 16px;padding-bottom:calc(70px + var(--safe-bottom))}
+.content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
 
 /* --- Bottom nav --- */
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
@@ -188,7 +190,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="view-login">
 <div class="login-inner">
   <div style="text-align:center;margin-bottom:16px">
-    <img src="assets/logo.png" alt="Claude Quest" style="height:36px;width:auto">
+    <img src="assets/logo.png" alt="Claude Quest" style="height:32px;width:auto">
   </div>
 
   <form id="login-form-entrar" onsubmit="event.preventDefault(); entrar();">
@@ -252,7 +254,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="app-shell">
 
   <div class="topbar">
-    <img src="assets/logo.png" alt="Claude Quest" style="height:36px;width:auto;display:block">
+    <img src="assets/logo.png" alt="Claude Quest" style="height:32px;width:auto;display:block">
     <button class="avatar-btn" onclick="abrirModalPerfil()" id="avatar-inicial">?</button>
   </div>
 
@@ -272,10 +274,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
       </button>
     </div>
 
-    <div id="card-notificacao-comunidade" class="hidden">
-      <button class="card-inicio" style="width:100%;text-align:left" onclick="trocarAba('comunidade')">
-        <div style="font-weight:600">💬 Novidades na Comunidade</div>
-        <div style="color:#888;font-size:var(--fs-c)" id="texto-notificacao-comunidade"></div>
+    <div id="card-notificacao-forum" class="hidden">
+      <button class="card-inicio" style="width:100%;text-align:left" onclick="trocarAba('forum')">
+        <div style="font-weight:600">💬 Novidades no Fórum</div>
+        <div style="color:#888;font-size:var(--fs-c)" id="texto-notificacao-forum"></div>
       </button>
     </div>
     <div style="height:76px"></div>
@@ -370,10 +372,15 @@ input,select,textarea{font-family:inherit;font-size:16px}
     </div>
   </div>
 
-  <!-- ===== COMUNIDADE ===== -->
-  <div class="view-aba hidden" id="aba-comunidade">
-    <div class="section-title">⚠️ Correções pendentes</div>
+  <!-- ===== FÓRUM ===== -->
+  <div class="view-aba hidden" id="aba-forum">
+    <div id="resumo-forum" style="color:#888;font-size:var(--fs-c);margin-bottom:16px">Carregando...</div>
+
+    <div class="section-title" style="margin-top:0">⚠️ Correções pendentes</div>
     <div id="lista-correcoes-pendentes"><div class="loading-spinner"></div></div>
+
+    <div class="section-title">💬 Comentários recentes</div>
+    <div id="lista-comentarios-recentes"><div class="loading-spinner"></div></div>
   </div>
 
   <!-- ===== COMO VOCÊ TÁ INDO (placar) ===== -->
@@ -388,8 +395,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 
   <button id="barra-adicionar-questoes" onclick="abrirModal('modal-upload')">
-    <span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#D97757"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-    <span style="font-weight:600;font-size:var(--fs-e);color:#D97757">Adicionar questões</span>
+    <span style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#D97757"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+    <span style="font-weight:700;font-size:var(--fs-e);color:#D97757;text-transform:uppercase;letter-spacing:0.02em">Adicionar questões</span>
   </button>
 
   <div class="bottom-nav" id="bottom-nav">
@@ -399,12 +406,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
     </div>
-    <div class="nav-item" data-aba="comunidade" onclick="trocarAba('comunidade')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span><span class="nav-label">Comunidade</span>
-      <span id="badge-comunidade" class="badge-notificacao hidden">0</span>
-    </div>
     <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></span><span class="nav-label">Métricas</span>
+    </div>
+    <div class="nav-item" data-aba="forum" onclick="trocarAba('forum')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/><line x1="7.5" y1="9.5" x2="15.5" y2="9.5"/><line x1="7.5" y1="13" x2="12.5" y2="13"/></svg></span><span class="nav-label">Fórum</span>
+      <span id="badge-forum" class="badge-notificacao hidden">0</span>
     </div>
   </div>
 </div>
@@ -413,8 +420,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <!-- MODAIS -->
 <!-- ============================================================ -->
 
-<div class="modal-overlay hidden" id="modal-perfil">
-  <div class="modal-conteudo">
+<div class="modal-overlay hidden" id="modal-perfil" onclick="if(event.target===this) fecharModal('modal-perfil')">
+  <div class="modal-conteudo" style="position:relative">
+    <button onclick="fecharModal('modal-perfil')" style="position:absolute;top:10px;right:10px;font-size:20px;color:#999;line-height:1;padding:6px" aria-label="Fechar">✕</button>
     <h3 class="config-title">Seu perfil</h3>
 
     <div style="text-align:center;margin-bottom:14px">
@@ -423,11 +431,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <button type="button" class="btn-secundario" onclick="document.getElementById('upload-foto-perfil').click()">Trocar foto</button>
     </div>
 
-    <input type="text" id="perfil-nome-input" class="filter-select" placeholder="Seu nome">
-    <button class="btn-secundario" style="width:100%;margin-bottom:14px" onclick="salvarNomePerfil()">Salvar nome</button>
-    <button class="btn-secundario" style="width:100%;margin-bottom:10px" onclick="sair()">Sair</button>
+    <input type="text" id="perfil-nome-input" class="filter-select" placeholder="Seu nome" onblur="salvarNomePerfil()">
+
+    <div style="border-top:0.5px solid #eee;margin:20px 0 14px"></div>
+
     <button class="btn-secundario hidden" id="btn-abrir-admin" style="width:100%;margin-bottom:10px" onclick="abrirModal('modal-admin')">Painel admin</button>
-    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-perfil')">Fechar</button>
+    <button class="btn-secundario" style="width:100%;color:#B00020" onclick="sair()">Sair da conta</button>
   </div>
 </div>
 
@@ -437,7 +446,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <p style="color:#666;font-size:var(--fs-c)">Selecione o PDF com as questões que você deseja adicionar ao banco.</p>
     <input type="file" id="upload-arquivo" accept="application/pdf" class="hidden" onchange="atualizarNomeArquivoSelecionado()">
     <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 6px" onclick="document.getElementById('upload-arquivo').click()">Escolher arquivo</button>
-    <div id="nome-arquivo-selecionado" style="color:#888;font-size:var(--fs-c);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:10px">Nenhum arquivo selecionado</div>
+    <div id="nome-arquivo-selecionado" style="color:#888;font-size:var(--fs-c);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:20px">Nenhum arquivo selecionado</div>
     <div id="upload-status"></div>
     <button class="btn-primario" onclick="enviarUpload()">Extrair questões</button>
     <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-upload')">Cancelar</button>
@@ -588,7 +597,7 @@ function tagModulo(nomeModulo){
   const cls = modClasseCss[nomeModulo] || '';
   const cor = modCorTexto[nomeModulo] || '#5F5E5A';
   const svg = modIconesCustomSvg[nomeModulo] ? modIconesCustomSvg[nomeModulo](cor) : '';
-  return `<span class="mod-tag ${cls}" style="display:inline-flex;align-items:center;gap:5px">${svg?`<span style="width:14px;height:14px;display:inline-flex;flex-shrink:0">${svg}</span>`:''}${escapeHtml(nomeModulo||'')}</span>`;
+  return `<span class="mod-tag ${cls}" style="display:inline-flex;align-items:center;gap:5px">${svg?`<span class="icone-modulo-mini">${svg}</span>`:''}${escapeHtml(nomeModulo||'')}</span>`;
 }
 
 /* ============================================================
@@ -694,7 +703,6 @@ async function salvarNomePerfil(){
   usuarioAtual.nome = novoNome;
   document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${sobrenomeDe(novoNome)}!`;
   atualizarAvatarUI();
-  fecharModal('modal-perfil');
 }
 
 async function sair(){
@@ -781,8 +789,8 @@ async function mostrarAppShell(){
   medirAlturaNav();
   await carregarBibliografia();
   await verificarCadernoEmAndamento();
-  await atualizarNotificacoesComunidade();
-  iniciarRealtimeComunidade();
+  await atualizarNotificacoesForum();
+  iniciarRealtimeForum();
 }
 
 function medirAlturaNav(){
@@ -797,7 +805,7 @@ function trocarAba(nome){
   document.querySelectorAll('#bottom-nav .nav-item').forEach(item=>item.classList.toggle('active', item.dataset.aba===nome));
   document.getElementById('barra-adicionar-questoes').classList.toggle('hidden', nome!=='inicio');
   document.getElementById('content').scrollTop = 0;
-  if(nome==='comunidade'){ carregarComunidade(); marcarComunidadeVista(); }
+  if(nome==='forum'){ carregarForum(); marcarForumVisto(); }
   if(nome==='placar') carregarPlacar();
 }
 
@@ -1144,13 +1152,6 @@ async function excluirQuestao(questaoId){
   renderizarQuestaoAtual();
 }
 
-function abrirDetalheQuestao(questaoId){
-  // TODO: modal com fórum geral + thread de correção específica dessa questão,
-  // reaproveitando o mesmo padrão de abrirThreadCorrecao(). A implementar na
-  // próxima passada — por enquanto, atalho rápido pra aba Comunidade.
-  alert('Tela de discussão da questão: a implementar na próxima passada. Por enquanto, veja correções pendentes na aba Comunidade.');
-}
-
 async function finalizarCaderno(){
   await Promise.all([
     sb.from('cadernos').update({status:'finalizado', finalizado_em:new Date().toISOString()}).eq('id', cadernoAtual.id),
@@ -1168,18 +1169,18 @@ async function finalizarCaderno(){
 }
 
 /* ============================================================
-   COMUNIDADE — correções pendentes
+   FÓRUM — correções pendentes
    ============================================================ */
 /* ============================================================
-   NOTIFICAÇÕES DA COMUNIDADE — Nível 1 (Realtime, só com app aberto)
+   NOTIFICAÇÕES DO FÓRUM — Nível 1 (Realtime, só com app aberto)
    ============================================================ */
-async function atualizarNotificacoesComunidade(){
+async function atualizarNotificacoesForum(){
   const {data: correcoesPendentes} = await sb.from('correcoes').select('id').eq('status','pendente');
   const totalCorrecoes = (correcoesPendentes||[]).length;
 
   let totalComentarios = 0;
-  if(usuarioAtual.comunidade_visto_em){
-    const {data: comentariosNovos} = await sb.from('comentarios').select('id').gt('criado_em', usuarioAtual.comunidade_visto_em).neq('usuario_id', usuarioAtual.id);
+  if(usuarioAtual.forum_visto_em){
+    const {data: comentariosNovos} = await sb.from('comentarios').select('id').gt('criado_em', usuarioAtual.forum_visto_em).neq('usuario_id', usuarioAtual.id);
     totalComentarios = (comentariosNovos||[]).length;
   }else{
     const {data: todosComentarios} = await sb.from('comentarios').select('id').neq('usuario_id', usuarioAtual.id);
@@ -1187,7 +1188,7 @@ async function atualizarNotificacoesComunidade(){
   }
 
   const totalBadge = totalCorrecoes + totalComentarios;
-  const badgeEl = document.getElementById('badge-comunidade');
+  const badgeEl = document.getElementById('badge-forum');
   if(totalBadge > 0){
     badgeEl.textContent = totalBadge > 9 ? '9+' : totalBadge;
     badgeEl.classList.remove('hidden');
@@ -1195,56 +1196,160 @@ async function atualizarNotificacoesComunidade(){
     badgeEl.classList.add('hidden');
   }
 
-  const cardEl = document.getElementById('card-notificacao-comunidade');
+  const cardEl = document.getElementById('card-notificacao-forum');
   if(totalCorrecoes > 0 || totalComentarios > 0){
     const partes = [];
     if(totalCorrecoes>0) partes.push(`${totalCorrecoes} ${totalCorrecoes===1?'correção pendente':'correções pendentes'}`);
     if(totalComentarios>0) partes.push(`${totalComentarios} ${totalComentarios===1?'comentário novo':'comentários novos'}`);
-    document.getElementById('texto-notificacao-comunidade').textContent = partes.join(' · ');
+    document.getElementById('texto-notificacao-forum').textContent = partes.join(' · ');
     cardEl.classList.remove('hidden');
   }else{
     cardEl.classList.add('hidden');
   }
 }
 
-async function marcarComunidadeVista(){
+async function marcarForumVisto(){
   const agora = new Date().toISOString();
-  await sb.from('usuarios').update({comunidade_visto_em: agora}).eq('id', usuarioAtual.id);
-  usuarioAtual.comunidade_visto_em = agora;
-  await atualizarNotificacoesComunidade();
+  await sb.from('usuarios').update({forum_visto_em: agora}).eq('id', usuarioAtual.id);
+  usuarioAtual.forum_visto_em = agora;
+  await atualizarNotificacoesForum();
 }
 
-function iniciarRealtimeComunidade(){
-  sb.channel('comunidade-realtime')
+function iniciarRealtimeForum(){
+  sb.channel('forum-realtime')
     .on('postgres_changes', {event:'INSERT', schema:'public', table:'comentarios'}, (payload)=>{
-      if(payload.new.usuario_id !== usuarioAtual.id) atualizarNotificacoesComunidade();
+      if(payload.new.usuario_id !== usuarioAtual.id) atualizarNotificacoesForum();
     })
     .on('postgres_changes', {event:'INSERT', schema:'public', table:'correcoes'}, ()=>{
-      atualizarNotificacoesComunidade();
+      atualizarNotificacoesForum();
     })
     .subscribe();
 }
 
-async function carregarComunidade(){
-  const {data} = await sb.from('correcoes').select('*, questoes(enunciado)').eq('status','pendente').order('criado_em',{ascending:false});
-  const el = document.getElementById('lista-correcoes-pendentes');
-  if(!data || !data.length){
-    el.innerHTML = '<p style="color:#888">Nenhuma correção pendente agora.</p>';
-    return;
-  }
-  el.innerHTML = data.map(c=>`
-    <div class="card-questao">
+async function carregarForum(){
+  const {data: correcoes} = await sb.from('correcoes').select('*, questoes(enunciado)').eq('status','pendente').order('criado_em',{ascending:false});
+  const totalCorrecoes = (correcoes||[]).length;
+
+  const elCorrecoes = document.getElementById('lista-correcoes-pendentes');
+  elCorrecoes.innerHTML = totalCorrecoes ? correcoes.map(c=>`
+    <div class="card-questao" style="cursor:pointer" onclick="abrirThreadCorrecao('${c.id}','${c.questao_id}')">
       <span class="selo-correcao">⚠️ Correção sugerida</span>
       <p>${escapeHtml((c.questoes?.enunciado||'').slice(0,120))}...</p>
-      <button class="btn-secundario" onclick="abrirThreadCorrecao('${c.id}','${c.questao_id}')">Ver discussão</button>
+    </div>`).join('') : '<p style="color:#888">Nenhuma correção pendente agora.</p>';
+
+  const {data: comentarios} = await sb.from('comentarios').select('*, usuarios(nome), questoes(enunciado)').order('criado_em',{ascending:false}).limit(15);
+  const elComentarios = document.getElementById('lista-comentarios-recentes');
+  elComentarios.innerHTML = (comentarios && comentarios.length) ? comentarios.map(c=>`
+    <div class="card-questao" style="cursor:pointer" onclick="abrirDetalheQuestao('${c.questao_id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span class="autor-tag" style="font-weight:600;color:#111">${escapeHtml(c.usuarios?.nome||'?')}</span>
+        <span style="font-size:var(--fs-a);color:#999">${new Date(c.criado_em).toLocaleString('pt-BR')}</span>
+      </div>
+      <p style="font-size:var(--fs-d);margin:4px 0">${escapeHtml(c.texto)}</p>
+      <p style="color:#888;font-size:var(--fs-b)">em: ${escapeHtml((c.questoes?.enunciado||'').slice(0,80))}...</p>
+    </div>`).join('') : '<p style="color:#888">Nenhum comentário ainda.</p>';
+
+  document.getElementById('resumo-forum').textContent =
+    `${totalCorrecoes} ${totalCorrecoes===1?'correção pendente':'correções pendentes'} · ${(comentarios||[]).length} comentários recentes`;
+}
+
+function renderizarListaComentarios(lista){
+  if(!lista.length) return '<p style="color:#999;font-size:var(--fs-c)">Nenhum comentário ainda.</p>';
+  return lista.map(c=>`
+    <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:0.5px solid #eee">
+      <div class="autor-tag" style="font-weight:600;color:#111">${escapeHtml(c.usuarios?.nome||'?')}</div>
+      <div style="font-size:var(--fs-d)">${escapeHtml(c.texto)}</div>
+      <div style="font-size:var(--fs-a);color:#999">${new Date(c.criado_em).toLocaleString('pt-BR')}</div>
     </div>`).join('');
 }
+
+async function renderizarDetalheQuestao(questaoId){
+  const {data: questao} = await sb.from('questoes').select('*').eq('id', questaoId).single();
+  const {data: comentarios} = await sb.from('comentarios').select('*, usuarios(nome)').eq('questao_id', questaoId).order('criado_em',{ascending:true});
+  const {data: correcoesPendentes} = await sb.from('correcoes').select('*').eq('questao_id', questaoId).eq('status','pendente');
+  const correcaoAtual = (correcoesPendentes||[])[0] || null;
+
+  const comentariosGerais = (comentarios||[]).filter(c=>!c.correcao_id);
+  const comentariosCorrecao = correcaoAtual ? (comentarios||[]).filter(c=>c.correcao_id===correcaoAtual.id) : [];
+
+  const html = `
+    <button class="btn-secundario" style="margin-bottom:12px" onclick="fecharModal('modal-questao-detalhe')">Fechar</button>
+    ${tagModulo(questao.modulo_pscpp)}
+    ${correcaoAtual ? '<span class="selo-correcao" style="margin-left:8px">⚠️ Correção sugerida</span>' : ''}
+    <div class="enunciado" style="margin:12px 0">${escapeHtml(questao.enunciado||'')}</div>
+
+    ${correcaoAtual ? `
+      <div class="section-title" style="margin-top:20px">Thread de correção</div>
+      <div>${renderizarListaComentarios(comentariosCorrecao)}</div>
+      <textarea id="novo-comentario-correcao" class="filter-select" placeholder="Comentar na correção..." style="min-height:60px"></textarea>
+      <button class="btn-secundario" style="width:100%;margin-bottom:8px" onclick="enviarComentario('${questaoId}','${correcaoAtual.id}','novo-comentario-correcao')">Comentar</button>
+      <button class="btn-primario" onclick="abrirFormularioEdicao('${questaoId}','${correcaoAtual.id}')">Aplicar edição</button>
+    ` : `
+      <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="reportarCorrecao('${questaoId}')">⚠️ Reportar correção</button>
+    `}
+
+    <div class="section-title" style="margin-top:24px">Discussão geral</div>
+    <div>${renderizarListaComentarios(comentariosGerais)}</div>
+    <textarea id="novo-comentario-geral" class="filter-select" placeholder="Comentar..." style="min-height:60px"></textarea>
+    <button class="btn-primario" onclick="enviarComentario('${questaoId}',null,'novo-comentario-geral')">Comentar</button>
+  `;
+  document.getElementById('modal-questao-detalhe-conteudo').innerHTML = html;
+}
+
+async function abrirDetalheQuestao(questaoId){
+  document.getElementById('modal-questao-detalhe-conteudo').innerHTML = '<div class="loading-spinner"></div>';
+  abrirModal('modal-questao-detalhe');
+  await renderizarDetalheQuestao(questaoId);
+}
+
 function abrirThreadCorrecao(correcaoId, questaoId){
-  // TODO: modal com fórum geral (comentarios.correcao_id = null) e a thread
-  // específica dessa correção (comentarios.correcao_id = correcaoId), mais
-  // botão "Aplicar edição" que atualiza a questão e marca a correção como
-  // resolvida. Fora do escopo deste primeiro rascunho de código.
-  alert('Abrir thread de correção: tela de detalhe a implementar na próxima passada.');
+  abrirDetalheQuestao(questaoId);
+}
+
+async function enviarComentario(questaoId, correcaoId, campoId){
+  const campo = document.getElementById(campoId);
+  const texto = campo.value.trim();
+  if(!texto) return;
+  await sb.from('comentarios').insert({questao_id: questaoId, usuario_id: usuarioAtual.id, texto, correcao_id: correcaoId || null});
+  await renderizarDetalheQuestao(questaoId);
+}
+
+async function reportarCorrecao(questaoId){
+  const {error} = await sb.from('correcoes').insert({questao_id: questaoId, status: 'pendente'});
+  if(error){
+    alert('Já existe uma correção pendente pra essa questão. Só dá pra abrir outra depois que essa for resolvida.');
+    return;
+  }
+  await renderizarDetalheQuestao(questaoId);
+  await atualizarNotificacoesForum();
+}
+
+async function abrirFormularioEdicao(questaoId, correcaoId){
+  const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
+  const html = `
+    <div class="section-title" style="margin-top:0">Aplicar edição</div>
+    <label style="font-size:var(--fs-c);color:#888">Enunciado</label>
+    <textarea id="edicao-enunciado" class="filter-select" style="min-height:90px">${escapeHtml(q.enunciado||'')}</textarea>
+    <label style="font-size:var(--fs-c);color:#888">Alternativas</label>
+    <textarea id="edicao-alternativas" class="filter-select" style="min-height:90px">${escapeHtml(q.alternativas||'')}</textarea>
+    <label style="font-size:var(--fs-c);color:#888">Gabarito (uma letra, a-e)</label>
+    <input type="text" id="edicao-gabarito" class="filter-select" value="${escapeHtml(q.gabarito||'')}" maxlength="1">
+    <button class="btn-primario" onclick="salvarEdicaoCorrecao('${questaoId}','${correcaoId}')">Salvar correção</button>
+    <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="renderizarDetalheQuestao('${questaoId}')">Cancelar</button>
+  `;
+  document.getElementById('modal-questao-detalhe-conteudo').innerHTML = html;
+}
+
+async function salvarEdicaoCorrecao(questaoId, correcaoId){
+  const enunciado = document.getElementById('edicao-enunciado').value.trim();
+  const alternativas = document.getElementById('edicao-alternativas').value.trim();
+  const gabarito = document.getElementById('edicao-gabarito').value.trim().toLowerCase();
+  await Promise.all([
+    sb.from('questoes').update({enunciado, alternativas, gabarito}).eq('id', questaoId),
+    sb.from('correcoes').update({status:'resolvida', resolvida_em: new Date().toISOString()}).eq('id', correcaoId)
+  ]);
+  await renderizarDetalheQuestao(questaoId);
+  await atualizarNotificacoesForum();
 }
 
 /* ============================================================
