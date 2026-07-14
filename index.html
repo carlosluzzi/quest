@@ -43,6 +43,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .btn-secundario{background:#f0f0ee;color:#111;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;border:none;cursor:pointer;font-family:inherit}
 .filter-btn{font-size:var(--fs-c);padding:4px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;margin:4px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
+.filter-select{font-size:var(--fs-d);padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
+.filter-select:disabled{opacity:0.5;cursor:not-allowed}
+.chev{font-size:16px;color:#888;transition:transform 0.2s;display:inline-block}
+.chev.open{transform:rotate(180deg)}
 
 /* --- Telas de auth/onboarding --- */
 #view-login,#view-onboarding{position:fixed;top:var(--vv-top, 0px);left:0;width:100%;height:var(--vh-real, 100vh);display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 24px) 24px;box-sizing:border-box}
@@ -276,55 +280,53 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div id="quests-filtros">
 
       <div class="card-inicio" id="card-cadernos-existentes">
-        <div id="tituloSecaoAndamento" class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0">
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0;cursor:pointer" onclick="toggleCadernosLista('andamento')">
           <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-          <span>Cadernos em andamento</span>
+          <span id="titulo-cadernos-andamento">Cadernos em andamento (0)</span>
+          <span class="chev" id="chev-andamento" style="margin-left:auto">▾</span>
         </div>
-        <div id="lista-cadernos-andamento"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno em andamento.</span></div>
+        <div id="lista-cadernos-andamento" class="hidden"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno em andamento.</span></div>
 
-        <div class="section-title" style="display:flex;align-items:center;gap:8px">
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleCadernosLista('concluidos')">
           <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M20 6 9 17l-5-5"/></svg></span>
-          <span>Cadernos concluídos</span>
+          <span id="titulo-cadernos-concluidos">Cadernos concluídos (0)</span>
+          <span class="chev" id="chev-concluidos" style="margin-left:auto">▾</span>
         </div>
-        <div id="lista-cadernos-concluidos"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno concluído ainda.</span></div>
+        <div id="lista-cadernos-concluidos" class="hidden"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno concluído ainda.</span></div>
       </div>
 
       <div class="card-inicio">
         <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0">
           <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 4h16l-6 8v6l-4 2v-8L4 4z"/></svg></span>
-          <span>Módulo</span>
+          <span>Filtros</span>
         </div>
-        <div id="filtro-modulo"></div>
 
-        <div class="section-title" style="display:flex;align-items:center;gap:8px">
-          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 0 2-2z"/></svg></span>
-          <span>Publicação</span>
-        </div>
-        <div id="filtro-publicacao"><span style="color:#999;font-size:var(--fs-c)">Escolha um módulo primeiro</span></div>
+        <input type="text" id="nome-caderno" class="filter-select" placeholder="Nome do caderno (opcional)">
 
-        <div class="section-title" style="display:flex;align-items:center;gap:8px">
-          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/><line x1="7" y1="17" x2="13" y2="17"/></svg></span>
-          <span>Capítulo</span>
-        </div>
-        <div id="filtro-capitulo"><span style="color:#999;font-size:var(--fs-c)">Escolha uma publicação primeiro</span></div>
+        <select class="filter-select" id="filtro-modulo" onchange="selecionarFiltroSelect('modulo', this.value)">
+          <option value="">Todos os módulos</option>
+        </select>
 
-        <div style="margin:16px 0">
-          <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-            <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões que eu nunca respondi
-          </label>
-          <label style="display:flex;align-items:center;gap:8px">
-            <input type="checkbox" id="toggle-priorizar-erro" onchange="atualizarContadorDisponiveis()">
-            Priorizar questões que eu mais erro
-            <span class="info-icone" onclick="abrirModal('modal-info-wilson')">ℹ️</span>
-          </label>
-        </div>
+        <select class="filter-select" id="filtro-publicacao" onchange="selecionarFiltroSelect('publicacao', this.value)" disabled>
+          <option value="">Todas as publicações</option>
+        </select>
+
+        <select class="filter-select" id="filtro-capitulo" onchange="selecionarFiltroSelect('capitulo', this.value)" disabled>
+          <option value="">Todos os capítulos</option>
+        </select>
+
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <input type="checkbox" id="toggle-priorizar-erro" onchange="atualizarContadorDisponiveis()">
+          Priorizar questões que eu mais erro
+          <span class="info-icone" onclick="abrirModal('modal-info-wilson')">ℹ️</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões que eu nunca respondi
+        </label>
 
         <div id="contador-disponiveis" style="text-align:center;color:#888;font-size:var(--fs-c);margin-bottom:14px">Escolha os filtros acima pra ver quantas questões estão disponíveis.</div>
 
-        <div class="section-title" style="display:flex;align-items:center;gap:8px">
-          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="12" width="3" height="8"/><rect x="11" y="7" width="3" height="13"/><rect x="16" y="3" width="3" height="17"/></svg></span>
-          <span>Quantas questões</span>
-        </div>
+        <div class="section-title">Quantas questões</div>
         <div class="filter-row" id="filtro-quantidade">
           <button class="filter-btn active" data-qtd="5" onclick="selecionarQuantidade(this,5)">5</button>
           <button class="filter-btn" data-qtd="10" onclick="selecionarQuantidade(this,10)">10</button>
@@ -333,12 +335,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
           <button class="filter-btn" data-qtd="todas" onclick="selecionarQuantidade(this,'todas')">Todas</button>
         </div>
         <input type="number" min="1" id="quantidade-customizada" placeholder="Ou digite uma quantidade (ex: 35)" style="width:100%;padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;margin:8px 0 14px" oninput="if(this.value)selecionarQuantidade(null,parseInt(this.value,10))">
-
-        <div class="section-title" style="display:flex;align-items:center;gap:8px">
-          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 4h13l3 3v13H4z"/><path d="M17 4v5h3"/></svg></span>
-          <span>Nome do caderno</span>
-        </div>
-        <input type="text" id="nome-caderno" placeholder="Nome do caderno (opcional)" style="width:100%;padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;margin-bottom:14px">
 
         <button class="btn-primario" onclick="montarCaderno()">Montar caderno</button>
         <div style="text-align:center;margin-top:8px">
@@ -719,45 +715,49 @@ async function carregarBibliografia(){
   bibliografiaCache = data || [];
   modulosPscpp = [...new Set(bibliografiaCache.map(b=>b.modulo_pscpp))];
   const el = document.getElementById('filtro-modulo');
-  el.innerHTML = modulosPscpp.map(m=>{
-    const cls = modClasseCss[m] || '';
-    const cor = modCorTexto[m] || '#5F5E5A';
-    const svg = modIconesCustomSvg[m] ? modIconesCustomSvg[m](cor) : '';
-    return `<button class="filter-btn ${cls}" data-valor="${escapeHtml(m)}" onclick="selecionarFiltro('modulo', this)" style="display:inline-flex;align-items:center;gap:5px"><span style="width:14px;height:14px;display:inline-flex;flex-shrink:0">${svg}</span>${escapeHtml(m)}</button>`;
-  }).join('');
+  el.innerHTML = '<option value="">Todos os módulos</option>' + modulosPscpp.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
   await carregarCadernosExistentes();
 }
 
 let filtroSelecionado = {modulo:null, publicacao:null, capitulo:null};
 let quantidadeSelecionada = 5;
 
-function selecionarFiltro(nivel, botao){
-  const valor = botao.dataset.valor;
-  const container = botao.parentElement;
-  container.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  botao.classList.add('active');
-  filtroSelecionado[nivel] = valor;
+function selecionarFiltroSelect(nivel, valor){
+  filtroSelecionado[nivel] = valor || null;
 
   if(nivel==='modulo'){
     filtroSelecionado.publicacao = null;
     filtroSelecionado.capitulo = null;
-    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===valor);
-    const el = document.getElementById('filtro-publicacao');
-    el.innerHTML = pubs.map(p=>`<button class="filter-btn" data-valor="${p.id}" onclick="selecionarFiltro('publicacao', this)">${escapeHtml(p.titulo)}</button>`).join('') || '<span style="color:#999;font-size:var(--fs-c)">Nenhuma publicação nesse módulo</span>';
-    document.getElementById('filtro-capitulo').innerHTML = '<span style="color:#999;font-size:var(--fs-c)">Escolha uma publicação primeiro</span>';
+    const elPub = document.getElementById('filtro-publicacao');
+    const elCap = document.getElementById('filtro-capitulo');
+    elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+    elCap.disabled = true;
+    if(valor){
+      const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===valor);
+      elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>`<option value="${p.id}">${escapeHtml(p.titulo)}</option>`).join('');
+      elPub.disabled = false;
+    }else{
+      elPub.innerHTML = '<option value="">Todas as publicações</option>';
+      elPub.disabled = true;
+    }
+    elPub.value = '';
   }
 
   if(nivel==='publicacao'){
     filtroSelecionado.capitulo = null;
-    // capítulos vêm das próprias questões já cadastradas com essa bibliografia (campo livre por questão)
-    sb.from('questoes').select('capitulo').eq('bibliografia_id', valor).then(({data})=>{
-      const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))];
-      const el = document.getElementById('filtro-capitulo');
-      el.innerHTML = caps.length
-        ? caps.map(c=>`<button class="filter-btn" data-valor="${escapeHtml(c)}" onclick="selecionarFiltro('capitulo', this)">${escapeHtml(c)}</button>`).join('')
-        : '<span style="color:#999;font-size:var(--fs-c)">Sem capítulos catalogados ainda (opcional)</span>';
-      atualizarContadorDisponiveis();
-    });
+    const elCap = document.getElementById('filtro-capitulo');
+    if(valor){
+      // capítulos vêm das próprias questões já cadastradas com essa bibliografia (campo livre por questão)
+      sb.from('questoes').select('capitulo').eq('bibliografia_id', valor).then(({data})=>{
+        const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))];
+        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+        elCap.disabled = false;
+        atualizarContadorDisponiveis();
+      });
+    }else{
+      elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+      elCap.disabled = true;
+    }
   }
 
   atualizarContadorDisponiveis();
@@ -865,6 +865,9 @@ async function carregarCadernosExistentes(){
   const andamento = todos.filter(c=>c.status==='em_andamento');
   const concluidos = todos.filter(c=>c.status==='finalizado');
 
+  document.getElementById('titulo-cadernos-andamento').textContent = `Cadernos em andamento (${andamento.length})`;
+  document.getElementById('titulo-cadernos-concluidos').textContent = `Cadernos concluídos (${concluidos.length})`;
+
   const elA = document.getElementById('lista-cadernos-andamento');
   elA.innerHTML = andamento.length ? andamento.map(c=>`
     <div class="prox-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid #eee">
@@ -878,6 +881,14 @@ async function carregarCadernosExistentes(){
       <span style="font-size:var(--fs-d)">${escapeHtml(c.nome||'Caderno sem nome')}</span>
       <span style="color:#B00020;font-size:var(--fs-c);cursor:pointer" onclick="excluirCadernoExistente('${c.id}')">✕</span>
     </div>`).join('') : '<span style="color:#999;font-size:var(--fs-c)">Nenhum caderno concluído ainda.</span>';
+}
+
+function toggleCadernosLista(tipo){
+  const el = document.getElementById('lista-cadernos-'+tipo);
+  const chev = document.getElementById('chev-'+tipo);
+  const abrir = el.classList.contains('hidden');
+  el.classList.toggle('hidden', !abrir);
+  chev.classList.toggle('open', abrir);
 }
 
 async function retomarCadernoEspecifico(cadernoId){
