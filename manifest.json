@@ -1,0 +1,10 @@
+{
+  "name": "Claude Quest",
+  "short_name": "Quest",
+  "description": "Banco de questões colaborativo pro PSCPP",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "portrait"
+}
