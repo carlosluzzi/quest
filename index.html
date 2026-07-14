@@ -48,6 +48,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
 .chev.open{transform:rotate(180deg)}
+#bottom-nav.teclado-aberto{display:none}
 .icone-modulo-mini{width:14px;height:14px;display:inline-flex;flex-shrink:0}
 .icone-modulo-mini svg{width:100%;height:100%;display:block}
 #barra-adicionar-questoes{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav-height, 76px) + 12px);width:calc(100% - 32px);max-width:448px;box-sizing:border-box;background:#fff;border-radius:18px;box-shadow:0 2px 8px rgba(0,0,0,0.08);padding:14px 16px;z-index:15;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
@@ -55,7 +56,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .conteudo-colapsavel.open{display:block}
 
 /* --- Telas de auth/onboarding --- */
-#view-login,#view-onboarding{position:fixed;top:var(--vv-top, 0px);left:0;width:100%;height:var(--vh-real, 100vh);display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 24px) 24px;box-sizing:border-box}
+#view-login,#view-onboarding{position:fixed;top:var(--vv-top, 0px);left:0;width:100%;height:var(--vh-real, 100vh);display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;padding:calc(env(safe-area-inset-top, 0px) + 86px) 24px calc(env(safe-area-inset-bottom, 0px) + 24px) 24px;box-sizing:border-box}
 .login-inner{width:100%;max-width:432px}
 #view-login{background:#F9F9F7}
 #view-login .erro{color:#B00020;font-size:var(--fs-c);margin-bottom:8px}
@@ -339,11 +340,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
           <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões inéditas
         </label>
 
-        <div id="contador-disponiveis" style="text-align:center;color:#888;font-size:var(--fs-c);margin-bottom:14px"></div>
+        <div id="contador-disponiveis" style="text-align:center;color:#888;font-size:var(--fs-c);margin-bottom:14px;min-height:18px"></div>
 
         <input type="number" min="1" id="quantidade-customizada" class="filter-select" placeholder="Quantidade de questões" oninput="if(this.value)selecionarQuantidade(null,parseInt(this.value,10))">
 
-        <button class="btn-primario" onclick="montarCaderno()">Gerar caderno ⬈</button>
+        <button class="btn-primario" onclick="montarCaderno()">Gerar caderno ↗</button>
         <div style="text-align:center;margin-top:8px">
           <span class="info-icone" onclick="abrirModal('modal-info-fisher-yates')" style="font-size:var(--fs-b)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Como a ordem das questões é sorteada?</span>
         </div>
@@ -933,6 +934,22 @@ function medirAlturaNav(){
   if(nav) document.documentElement.style.setProperty('--nav-height', nav.offsetHeight + 'px');
 }
 window.addEventListener('resize', medirAlturaNav);
+
+// Some navegadores mobile "flutuam" a barra fixa em cima do teclado quando um
+// campo de texto ganha foco. Solução mais confiável: esconder a barra
+// enquanto o teclado estiver aberto, e mostrar de volta ao fechar.
+document.addEventListener('focusin', (e)=>{
+  if(e.target.matches('input, textarea, select')){
+    const nav = document.getElementById('bottom-nav');
+    if(nav) nav.classList.add('teclado-aberto');
+  }
+});
+document.addEventListener('focusout', (e)=>{
+  if(e.target.matches('input, textarea, select')){
+    const nav = document.getElementById('bottom-nav');
+    if(nav) nav.classList.remove('teclado-aberto');
+  }
+});
 
 function trocarAba(nome){
   document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
