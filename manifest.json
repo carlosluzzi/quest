@@ -4,6 +4,7 @@
   "description": "Banco de questões colaborativo pro PSCPP",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["standalone"],
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "orientation": "portrait"
