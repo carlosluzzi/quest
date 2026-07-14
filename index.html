@@ -155,7 +155,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .banco-resultado{font-size:var(--fs-e);font-weight:600;margin-top:14px;padding:10px 0;text-align:center;height:44px;box-sizing:border-box}
 .btn-icone-pequeno{width:24px;height:24px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#888;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
 .banco-acoes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:20px}
-.banco-acao-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:12px;border:0.5px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#666}
+.banco-acao-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:12px;border:0.5px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#666;position:relative}
+.badge-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#E24B4A}
 .banco-acao-btn.ativo{background:#FBEEE8;border-color:#D97757;color:#D97757}
 .banco-acao-btn.favoritada{background:#FEF6E4;border-color:#EF9F27;color:#854F0B}
 .banco-acao-btn svg{width:19px;height:19px}
@@ -300,7 +301,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div id="caderno-em-andamento" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left" onclick="retomarCaderno()">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 0 2-2z"/></svg> Continuar caderno em andamento</div>
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 0 2-2z"/></svg> Cadernos em andamento</div>
         <div style="color:#888;font-size:var(--fs-c)" id="caderno-em-andamento-info"></div>
       </button>
     </div>
@@ -389,14 +390,14 @@ input,select,textarea{font-family:inherit;font-size:16px}
           <span id="titulo-cadernos-andamento">Cadernos em andamento (0)</span>
           <span class="chev" id="chev-andamento" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
         </div>
-        <div id="lista-cadernos-andamento" class="conteudo-colapsavel"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno em andamento.</span></div>
+        <div id="lista-cadernos-andamento" class="conteudo-colapsavel" style="padding-left:10px"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno em andamento.</span></div>
 
         <div class="section-title" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:16px" onclick="toggleCadernosLista('concluidos')">
           <span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M20 6 9 17l-5-5"/></svg></span>
           <span id="titulo-cadernos-concluidos">Cadernos concluídos (0)</span>
           <span class="chev" id="chev-concluidos" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
         </div>
-        <div id="lista-cadernos-concluidos" class="conteudo-colapsavel"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno concluído ainda.</span></div>
+        <div id="lista-cadernos-concluidos" class="conteudo-colapsavel" style="padding-left:10px"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno concluído ainda.</span></div>
       </div>
     </div>
 
@@ -418,7 +419,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <option value="">Todos os módulos</option>
     </select>
     <label style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-      <input type="checkbox" id="filtro-forum-so-correcao" onchange="renderizarListaForum()"> Só questões com correção pendente
+      <input type="checkbox" id="filtro-forum-so-correcao" onchange="renderizarListaForum()"> Só erros em aberto
     </label>
 
     <div id="lista-forum"><div class="loading-spinner"></div></div>
@@ -566,6 +567,32 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-detalhe-caderno" onclick="if(event.target===this) fecharModal('modal-detalhe-caderno')">
+  <div class="modal-conteudo" id="modal-detalhe-caderno-conteudo"></div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-novo-topico" onclick="if(event.target===this) fecharModal('modal-novo-topico')">
+  <div class="modal-conteudo">
+    <h3 class="config-title" id="titulo-modal-novo-topico">Nova discussão</h3>
+    <input type="text" id="novo-topico-titulo" class="filter-select" placeholder="Resumo curto do problema">
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-novo-topico')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="confirmarNovoTopico()">Abrir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-confirmar-anulacao" onclick="if(event.target===this) fecharModal('modal-confirmar-anulacao')">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Anular questão</h3>
+    <p>Isso remove a questão de cadernos futuros pra sempre. Quem já respondeu essa questão (de qualquer jeito) passa a ter a resposta contada como acerto, mesmo quem errou — igual acontece numa anulação de prova de verdade.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-anulacao')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="executarAnulacaoQuestao()">Anular</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-questao-detalhe" onclick="if(event.target===this) fecharModal('modal-questao-detalhe')">
   <div class="modal-conteudo" id="modal-questao-detalhe-conteudo" style="position:relative"></div>
 </div>
@@ -603,7 +630,6 @@ let bibliografiaCache = [];
 let cadernoAtual = null;       // linha da tabela cadernos
 let questoesCaderno = [];      // array de questões do caderno atual
 let indiceQuestaoAtual = 0;
-let respostasPendentes = [];   // acumula respostas até finalizar (Promise.all no fim)
 let respostasPorQuestao = {};  // {questaoId: {letra, correta}} — pra colorir a navegação numerada
 
 /* ============================================================
@@ -1076,7 +1102,7 @@ function trocarAba(nome){
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança, nunca fica presa escondida
   document.getElementById('barra-adicionar-questoes').classList.toggle('hidden', nome!=='inicio');
   document.getElementById('content').scrollTop = 0;
-  if(nome==='forum'){ carregarForum(); marcarForumVisto(); }
+  if(nome==='forum'){ carregarForum(); }
   if(nome==='placar') carregarMetricasPessoais();
 }
 
@@ -1087,19 +1113,18 @@ function fecharModal(id){ document.getElementById(id).classList.add('hidden'); }
    INÍCIO — caderno em andamento
    ============================================================ */
 async function verificarCadernoEmAndamento(){
-  const {data} = await sb.from('cadernos').select('*').eq('usuario_id', usuarioAtual.id).eq('status','em_andamento').order('criado_em',{ascending:false}).limit(1);
-  if(data && data.length){
-    cadernoAtual = data[0];
-    document.getElementById('caderno-em-andamento').classList.remove('hidden');
-    document.getElementById('caderno-em-andamento-info').textContent = `Iniciado em ${new Date(cadernoAtual.criado_em).toLocaleDateString('pt-BR')}`;
+  const {data} = await sb.from('cadernos').select('id').eq('usuario_id', usuarioAtual.id).eq('status','em_andamento');
+  const total = (data||[]).length;
+  const cardEl = document.getElementById('caderno-em-andamento');
+  if(total > 0){
+    cardEl.classList.remove('hidden');
+    document.getElementById('caderno-em-andamento-info').textContent = total===1 ? '1 caderno esperando você' : `${total} cadernos esperando você`;
+  }else{
+    cardEl.classList.add('hidden');
   }
 }
 function retomarCaderno(){
-  if(cadernoAtual && cadernoAtual.id){
-    retomarCadernoEspecifico(cadernoAtual.id);
-  }else{
-    trocarAba('quests');
-  }
+  trocarAba('quests');
 }
 
 /* ============================================================
@@ -1169,7 +1194,7 @@ function selecionarQuantidade(botao, valor){
 // busca as questões que batem com os filtros atuais, sem criar caderno — reaproveitada
 // pelo contador ao vivo e pelo montarCaderno de verdade, pra nunca ficarem dessincronizados
 async function buscarQuestoesFiltradas(){
-  let query = sb.from('questoes').select('*');
+  let query = sb.from('questoes').select('*').eq('anulada', false);
   if(filtroSelecionado.modulo) query = query.eq('modulo_pscpp', filtroSelecionado.modulo);
   if(filtroSelecionado.publicacao) query = query.eq('bibliografia_id', filtroSelecionado.publicacao);
   if(filtroSelecionado.capitulo) query = query.eq('capitulo', filtroSelecionado.capitulo);
@@ -1207,7 +1232,7 @@ function atualizarContadorDisponiveis(){
 const QUANTIDADE_SUPERQUEST = 70;
 
 async function gerarSuperQuest(){
-  const {data: todasQuestoes, error} = await sb.from('questoes').select('*');
+  const {data: todasQuestoes, error} = await sb.from('questoes').select('*').eq('anulada', false);
   if(error){ alert('Erro ao buscar questões: '+error.message); return; }
 
   const {data: exclusoes} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id);
@@ -1232,7 +1257,6 @@ async function gerarSuperQuest(){
   cadernoAtual = novoCaderno;
   questoesCaderno = pool;
   indiceQuestaoAtual = 0;
-  respostasPendentes = [];
   respostasPorQuestao = {};
   alternativaSelecionadaAtual = null;
   await carregarFavoritosENotas(pool.map(q=>q.id));
@@ -1290,7 +1314,6 @@ async function montarCaderno(){
   cadernoAtual = novoCaderno;
   questoesCaderno = questoesFiltradas;
   indiceQuestaoAtual = 0;
-  respostasPendentes = [];
   respostasPorQuestao = {};
   alternativaSelecionadaAtual = null;
   await carregarFavoritosENotas(questoesFiltradas.map(q=>q.id));
@@ -1314,19 +1337,48 @@ async function carregarCadernosExistentes(){
   document.getElementById('titulo-cadernos-andamento').textContent = `Cadernos em andamento (${andamento.length})`;
   document.getElementById('titulo-cadernos-concluidos').textContent = `Cadernos concluídos (${concluidos.length})`;
 
-  const itensAndamento = andamento.map(c=>`
-    <div class="prox-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid #eee;color:#888">
-      <span style="cursor:pointer;font-size:var(--fs-d);color:#111" onclick="retomarCadernoEspecifico('${c.id}')">${escapeHtml(c.nome||'Caderno sem nome')}</span>
-      <span class="tx" style="font-size:16px;padding:4px;cursor:pointer" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">✕</span>
-    </div>`);
+  // busca todas as respostas desse usuário de uma vez só, pra montar a
+  // estatística de cada caderno sem precisar de uma consulta por caderno
+  const idsRelevantes = todos.map(c=>c.id);
+  const respostasPorCaderno = {};
+  if(idsRelevantes.length){
+    const {data: todasRespostas} = await sb.from('respostas').select('caderno_id, correta').in('caderno_id', idsRelevantes);
+    (todasRespostas||[]).forEach(r=>{
+      if(!respostasPorCaderno[r.caderno_id]) respostasPorCaderno[r.caderno_id] = {total:0, acertos:0};
+      respostasPorCaderno[r.caderno_id].total++;
+      if(r.correta) respostasPorCaderno[r.caderno_id].acertos++;
+    });
+  }
+
+  const itensAndamento = andamento.map(c=>{
+    const totalQuestoes = (c.filtros_aplicados && c.filtros_aplicados.questao_ids) ? c.filtros_aplicados.questao_ids.length : null;
+    const stats = respostasPorCaderno[c.id] || {total:0, acertos:0};
+    const progresso = totalQuestoes ? `${stats.total} de ${totalQuestoes} respondidas` : `${stats.total} respondidas`;
+    return `
+    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="cursor:pointer;font-size:var(--fs-d);color:#111" onclick="retomarCadernoEspecifico('${c.id}')">${escapeHtml(c.nome||'Caderno sem nome')}</span>
+        <span class="tx" style="font-size:16px;padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+      </div>
+      <span style="color:#888;font-size:var(--fs-c)">${progresso}</span>
+    </div>`;
+  });
   const elA = document.getElementById('lista-cadernos-andamento');
   elA.innerHTML = itensAndamento.length ? montarCarrosselCadernos(itensAndamento, 'carrossel-andamento') : '<span style="color:#999;font-size:var(--fs-c)">Nenhum caderno em andamento.</span>';
 
-  const itensConcluidos = concluidos.map(c=>`
-    <div class="prox-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid #eee;opacity:0.7;color:#888">
-      <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
-      <span class="tx" style="font-size:16px;padding:4px;cursor:pointer" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="finalizado" onclick="abrirConfirmacaoExclusaoCaderno(this)">✕</span>
-    </div>`);
+  const itensConcluidos = concluidos.map(c=>{
+    const stats = respostasPorCaderno[c.id] || {total:0, acertos:0};
+    const pct = stats.total ? Math.round((stats.acertos/stats.total)*100) : 0;
+    const dataFinal = c.finalizado_em ? new Date(c.finalizado_em).toLocaleDateString('pt-BR') : '';
+    return `
+    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;opacity:0.85;cursor:pointer" onclick="abrirDetalheCadernoConcluido('${c.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
+        <span class="tx" style="font-size:16px;padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="finalizado" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+      </div>
+      <span style="color:#888;font-size:var(--fs-c)">${stats.total} questões · ${pct}% de acerto · finalizado ${dataFinal}</span>
+    </div>`;
+  });
   const elC = document.getElementById('lista-cadernos-concluidos');
   elC.innerHTML = itensConcluidos.length ? montarCarrosselCadernos(itensConcluidos, 'carrossel-concluidos') : '<span style="color:#999;font-size:var(--fs-c)">Nenhum caderno concluído ainda.</span>';
 }
@@ -1408,7 +1460,6 @@ async function retomarCadernoEspecifico(cadernoId){
   respostasPorQuestao = {};
   alternativaSelecionadaAtual = null;
   (respostasDoCaderno||[]).forEach(r=>{ respostasPorQuestao[r.questao_id] = {letra:r.resposta_dada, correta:r.correta}; });
-  respostasPendentes = [];
 
   questoesCaderno = questoes || [];
   await carregarFavoritosENotas(questoesCaderno.map(q=>q.id));
@@ -1450,15 +1501,29 @@ async function confirmarExclusaoCaderno(){
 let alternativaSelecionadaAtual = null; // marcada mas ainda não confirmada — reseta a cada troca de questão
 let favoritosDoUsuario = new Set();
 let notasDoUsuario = new Set();
+let topicosPendentesDoUsuario = new Set();
 
 async function carregarFavoritosENotas(idsQuestoes){
-  if(!idsQuestoes.length){ favoritosDoUsuario = new Set(); notasDoUsuario = new Set(); return; }
-  const [{data: favs}, {data: nts}] = await Promise.all([
+  if(!idsQuestoes.length){ favoritosDoUsuario = new Set(); notasDoUsuario = new Set(); topicosPendentesDoUsuario = new Set(); return; }
+  const [{data: favs}, {data: nts}, {data: topicosDasQuestoes}] = await Promise.all([
     sb.from('favoritos').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
-    sb.from('notas').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes)
+    sb.from('notas').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
+    sb.from('topicos').select('id, questao_id, status').in('questao_id', idsQuestoes)
   ]);
   favoritosDoUsuario = new Set((favs||[]).map(f=>f.questao_id));
   notasDoUsuario = new Set((nts||[]).map(n=>n.questao_id));
+
+  // uma questão tem "bolinha" de Discutir se tiver algum tópico ainda ativo
+  // pra esse usuário: aberto, ou resolvido mas que ele ainda não votou/concordou
+  const idsTopicos = (topicosDasQuestoes||[]).map(t=>t.id);
+  let idsVotados = new Set();
+  if(idsTopicos.length){
+    const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id).in('topico_id', idsTopicos);
+    idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
+  }
+  topicosPendentesDoUsuario = new Set(
+    (topicosDasQuestoes||[]).filter(t => t.status==='aberto' || !idsVotados.has(t.id)).map(t=>t.questao_id)
+  );
 }
 
 async function toggleFavorito(questaoId){
@@ -1582,10 +1647,12 @@ function renderizarQuestaoAtual(){
       <button class="banco-acao-btn" onclick="abrirDetalheQuestao('${q.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
         <span>Discutir</span>
+        ${topicosPendentesDoUsuario.has(q.id)?'<span class="badge-dot"></span>':''}
       </button>
-      <button class="banco-acao-btn ${notasDoUsuario.has(q.id)?'ativo':''}" onclick="abrirNotaQuestao('${q.id}')">
+      <button class="banco-acao-btn" onclick="abrirNotaQuestao('${q.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M17 4v5h3"/></svg>
         <span>Notas</span>
+        ${notasDoUsuario.has(q.id)?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
     </div>`;
   document.getElementById('questao-atual').innerHTML = html;
@@ -1609,7 +1676,11 @@ async function responderQuestao(questaoId, letraEscolhida){
   const correta = letraEscolhida === gabarito;
 
   respostasPorQuestao[questaoId] = {letra: letraEscolhida, correta};
-  respostasPendentes.push({
+
+  // salva direto no banco — a view "respostas_finalizadas" já garante que isso
+  // só conta pras estatísticas depois que o caderno for finalizado, então não
+  // precisa mais bufferizar em memória até o fim
+  await sb.from('respostas').insert({
     caderno_id: cadernoAtual.id,
     questao_id: questaoId,
     usuario_id: usuarioAtual.id,
@@ -1665,42 +1736,41 @@ async function excluirQuestao(questaoId){
 }
 
 async function finalizarCaderno(){
-  await Promise.all([
-    sb.from('cadernos').update({status:'finalizado', finalizado_em:new Date().toISOString()}).eq('id', cadernoAtual.id),
-    ...respostasPendentes.map(r => sb.from('respostas').insert(r))
-  ]);
+  await sb.from('cadernos').update({status:'finalizado', finalizado_em:new Date().toISOString()}).eq('id', cadernoAtual.id);
   cadernoAtual = null;
   questoesCaderno = [];
-  respostasPendentes = [];
   respostasPorQuestao = {};
   alternativaSelecionadaAtual = null;
   document.getElementById('quests-resolucao').classList.add('hidden');
   document.getElementById('quests-filtros').classList.remove('hidden');
   await carregarCadernosExistentes();
-  document.getElementById('caderno-em-andamento').classList.add('hidden');
+  await verificarCadernoEmAndamento(); // recalcula a contagem certa, pode ainda sobrar outros em andamento
   trocarAba('inicio');
 }
 
 /* ============================================================
-   FÓRUM — correções pendentes
+   FÓRUM — sistema de tópicos (unifica "erro reportado" e "discussão
+   geral"). Toda discussão nasce intencional (com título), precisa de
+   troca mínima (1+ resposta) antes de poder ser votada como resolvida,
+   e resolução é por votação com maioria fixa de 3 de 5 — não depende de
+   quantos participaram. "Resolvido" é por pessoa: quem votou já para de
+   ver o tópico; quem não votou continua vendo até dar seu próprio
+   veredito (concordar ou reabrir, mesmo com maioria já formada).
    ============================================================ */
+const VOTOS_PRA_RESOLVER = 3;
+
 /* ============================================================
    NOTIFICAÇÕES DO FÓRUM — Nível 1 (Realtime, só com app aberto)
    ============================================================ */
 async function atualizarNotificacoesForum(){
-  const {data: correcoesPendentes} = await sb.from('correcoes').select('id').eq('status','pendente');
-  const totalCorrecoes = (correcoesPendentes||[]).length;
+  const {data: todosTopicos} = await sb.from('topicos').select('id, status');
+  const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id);
+  const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
 
-  let totalComentarios = 0;
-  if(usuarioAtual.forum_visto_em){
-    const {data: comentariosNovos} = await sb.from('comentarios').select('id').gt('criado_em', usuarioAtual.forum_visto_em).neq('usuario_id', usuarioAtual.id);
-    totalComentarios = (comentariosNovos||[]).length;
-  }else{
-    const {data: todosComentarios} = await sb.from('comentarios').select('id').neq('usuario_id', usuarioAtual.id);
-    totalComentarios = (todosComentarios||[]).length;
-  }
+  // "ativo pra mim" = aberto, OU resolvido mas eu ainda não votei/concordei
+  const ativos = (todosTopicos||[]).filter(t => t.status==='aberto' || !idsVotados.has(t.id));
+  const totalBadge = ativos.length;
 
-  const totalBadge = totalCorrecoes + totalComentarios;
   const badgeEl = document.getElementById('badge-forum');
   if(totalBadge > 0){
     badgeEl.textContent = totalBadge > 9 ? '9+' : totalBadge;
@@ -1710,22 +1780,12 @@ async function atualizarNotificacoesForum(){
   }
 
   const cardEl = document.getElementById('card-notificacao-forum');
-  if(totalCorrecoes > 0 || totalComentarios > 0){
-    const partes = [];
-    if(totalCorrecoes>0) partes.push(`${totalCorrecoes} ${totalCorrecoes===1?'correção pendente':'correções pendentes'}`);
-    if(totalComentarios>0) partes.push(`${totalComentarios} ${totalComentarios===1?'comentário novo':'comentários novos'}`);
-    document.getElementById('texto-notificacao-forum').textContent = partes.join(' · ');
+  if(totalBadge > 0){
+    document.getElementById('texto-notificacao-forum').textContent = `${totalBadge} ${totalBadge===1?'discussão ativa':'discussões ativas'}`;
     cardEl.classList.remove('hidden');
   }else{
     cardEl.classList.add('hidden');
   }
-}
-
-async function marcarForumVisto(){
-  const agora = new Date().toISOString();
-  await sb.from('usuarios').update({forum_visto_em: agora}).eq('id', usuarioAtual.id);
-  usuarioAtual.forum_visto_em = agora;
-  await atualizarNotificacoesForum();
 }
 
 function iniciarRealtimeForum(){
@@ -1733,7 +1793,7 @@ function iniciarRealtimeForum(){
     .on('postgres_changes', {event:'INSERT', schema:'public', table:'comentarios'}, (payload)=>{
       if(payload.new.usuario_id !== usuarioAtual.id) atualizarNotificacoesForum();
     })
-    .on('postgres_changes', {event:'INSERT', schema:'public', table:'correcoes'}, ()=>{
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'topicos'}, ()=>{
       atualizarNotificacoesForum();
     })
     .subscribe();
@@ -1742,69 +1802,75 @@ function iniciarRealtimeForum(){
 let forumCache = [];
 
 async function carregarForum(){
-  const [{data: comentarios}, {data: correcoesPendentes}] = await Promise.all([
-    sb.from('comentarios').select('*, usuarios(nome), questoes(enunciado, modulo_pscpp)').order('criado_em', {ascending:false}),
-    sb.from('correcoes').select('*, questoes(enunciado, modulo_pscpp)').eq('status','pendente').order('criado_em', {ascending:false})
-  ]);
+  const {data: todosTopicos} = await sb.from('topicos').select('*, questoes(enunciado, modulo_pscpp)').order('criado_em', {ascending:false});
+  const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id);
+  const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
 
-  const mapa = {};
-  function garanteEntrada(id, dadosQuestao){
-    if(!mapa[id]){
-      mapa[id] = {questao_id:id, enunciado: dadosQuestao?.enunciado||'', modulo: dadosQuestao?.modulo_pscpp||'', totalComentarios:0, ultimoAutor:null, ultimaAtividadeEm:null, temCorrecaoPendente:false};
-    }
-    return mapa[id];
+  const ativos = (todosTopicos||[]).filter(t => t.status==='aberto' || !idsVotados.has(t.id));
+
+  const idsTopicos = ativos.map(t=>t.id);
+  const infoComentarios = {};
+  if(idsTopicos.length){
+    const {data: comentariosTodos} = await sb.from('comentarios').select('topico_id, criado_em').in('topico_id', idsTopicos).order('criado_em',{ascending:false});
+    (comentariosTodos||[]).forEach(c=>{
+      if(!infoComentarios[c.topico_id]) infoComentarios[c.topico_id] = {total:0, ultima:c.criado_em};
+      infoComentarios[c.topico_id].total++;
+    });
   }
 
-  (comentarios||[]).forEach(c=>{
-    const entrada = garanteEntrada(c.questao_id, c.questoes);
-    entrada.totalComentarios++;
-    if(!entrada.ultimaAtividadeEm || c.criado_em > entrada.ultimaAtividadeEm){
-      entrada.ultimaAtividadeEm = c.criado_em;
-      entrada.ultimoAutor = c.usuarios?.nome || '?';
-    }
-  });
-  (correcoesPendentes||[]).forEach(c=>{
-    const entrada = garanteEntrada(c.questao_id, c.questoes);
-    entrada.temCorrecaoPendente = true;
-    if(!entrada.ultimaAtividadeEm || c.criado_em > entrada.ultimaAtividadeEm) entrada.ultimaAtividadeEm = c.criado_em;
-  });
-
-  forumCache = Object.values(mapa).sort((a,b)=>(b.ultimaAtividadeEm||'').localeCompare(a.ultimaAtividadeEm||''));
+  forumCache = ativos.map(t=>({
+    ...t,
+    totalComentarios: infoComentarios[t.id]?.total || 0,
+    ultimaAtividade: infoComentarios[t.id]?.ultima || t.criado_em
+  })).sort((a,b)=>(b.ultimaAtividade||'').localeCompare(a.ultimaAtividade||''));
 
   const elModulo = document.getElementById('filtro-forum-modulo');
   if(elModulo.options.length <= 1){
-    const modulos = [...new Set(forumCache.map(f=>f.modulo).filter(Boolean))];
+    const modulos = [...new Set(forumCache.map(f=>f.questoes?.modulo_pscpp).filter(Boolean))];
     elModulo.innerHTML = '<option value="">Todos os módulos</option>' + modulos.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
   }
 
-  const totalCorrecoes = (correcoesPendentes||[]).length;
+  const totalErros = forumCache.filter(f=>f.tipo==='erro').length;
   document.getElementById('resumo-forum').textContent =
-    `${totalCorrecoes} ${totalCorrecoes===1?'correção pendente':'correções pendentes'} · ${forumCache.length} ${forumCache.length===1?'questão em discussão':'questões em discussão'}`;
+    `${totalErros} ${totalErros===1?'erro em aberto':'erros em aberto'} · ${forumCache.length} ${forumCache.length===1?'discussão ativa':'discussões ativas'}`;
 
   renderizarListaForum();
 }
 
+function badgeTipoTopico(tipo){
+  return tipo==='erro'
+    ? '<span class="selo-correcao" style="display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Erro</span>'
+    : '<span class="selo-correcao" style="background:#EEF2FF;color:#3730A3;display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Discussão</span>';
+}
+
 function renderizarListaForum(){
   const moduloFiltro = document.getElementById('filtro-forum-modulo').value;
-  const soCorrecao = document.getElementById('filtro-forum-so-correcao').checked;
+  const soErro = document.getElementById('filtro-forum-so-correcao').checked;
   let lista = forumCache;
-  if(moduloFiltro) lista = lista.filter(f=>f.modulo===moduloFiltro);
-  if(soCorrecao) lista = lista.filter(f=>f.temCorrecaoPendente);
+  if(moduloFiltro) lista = lista.filter(f=>f.questoes?.modulo_pscpp===moduloFiltro);
+  if(soErro) lista = lista.filter(f=>f.tipo==='erro');
 
   const el = document.getElementById('lista-forum');
-  if(!lista.length){ el.innerHTML = '<p style="color:#888">Nenhuma discussão encontrada com esses filtros.</p>'; return; }
+  if(!lista.length){ el.innerHTML = '<p style="color:#888">Nenhuma discussão ativa com esses filtros.</p>'; return; }
   el.innerHTML = lista.map(f=>`
-    <div class="card-questao" style="cursor:pointer" onclick="abrirDetalheQuestao('${f.questao_id}')">
+    <div class="card-questao" style="cursor:pointer" onclick="abrirTopicoDoForum('${f.id}')">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        ${tagModulo(f.modulo)}
-        ${f.temCorrecaoPendente ? '<span class="selo-correcao" style="display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Correção</span>' : ''}
+        ${tagModulo(f.questoes?.modulo_pscpp)}
+        ${badgeTipoTopico(f.tipo)}
       </div>
-      <p style="font-size:var(--fs-d)">${escapeHtml((f.enunciado||'').slice(0,120))}...</p>
+      <div style="font-size:var(--fs-d);font-weight:600;color:#111">${escapeHtml(f.titulo)}</div>
+      <p style="font-size:var(--fs-c);color:#888;margin-top:2px">${escapeHtml((f.questoes?.enunciado||'').slice(0,90))}...</p>
       <div style="display:flex;justify-content:space-between;color:#888;font-size:var(--fs-b);margin-top:8px">
-        <span>${f.totalComentarios} ${f.totalComentarios===1?'comentário':'comentários'}${f.ultimoAutor?' · último: '+escapeHtml(f.ultimoAutor):''}</span>
-        <span>${tempoRelativo(f.ultimaAtividadeEm)}</span>
+        <span>${f.totalComentarios} ${f.totalComentarios===1?'comentário':'comentários'}</span>
+        <span>${tempoRelativo(f.ultimaAtividade)}</span>
       </div>
     </div>`).join('');
+}
+
+function abrirTopicoDoForum(topicoId){
+  document.getElementById('modal-questao-detalhe-conteudo').innerHTML = '<div class="loading-spinner"></div>';
+  abrirModal('modal-questao-detalhe');
+  renderizarTopico(topicoId);
 }
 
 let buscaForumDebounce = null;
@@ -1860,35 +1926,42 @@ function renderizarListaComentarios(lista){
     </div>`).join('');
 }
 
+/* ============================================================
+   Lista de tópicos de UMA questão (abre a partir do botão "Discutir")
+   ============================================================ */
 async function renderizarDetalheQuestao(questaoId){
-  const {data: questao} = await sb.from('questoes').select('*').eq('id', questaoId).single();
-  const {data: comentarios} = await sb.from('comentarios').select('*, usuarios(nome, foto_url)').eq('questao_id', questaoId).order('criado_em',{ascending:true});
-  const {data: correcoesPendentes} = await sb.from('correcoes').select('*').eq('questao_id', questaoId).eq('status','pendente');
-  const correcaoAtual = (correcoesPendentes||[])[0] || null;
+  const {data: topicosDaQuestao} = await sb.from('topicos').select('*').eq('questao_id', questaoId).order('criado_em', {ascending:false});
+  const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id);
+  const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
 
-  const comentariosGerais = (comentarios||[]).filter(c=>!c.correcao_id);
-  const comentariosCorrecao = correcaoAtual ? (comentarios||[]).filter(c=>c.correcao_id===correcaoAtual.id) : [];
+  const idsTopicos = (topicosDaQuestao||[]).map(t=>t.id);
+  const contagemComentarios = {};
+  if(idsTopicos.length){
+    const {data: comentariosTodos} = await sb.from('comentarios').select('topico_id').in('topico_id', idsTopicos);
+    (comentariosTodos||[]).forEach(c=>{ contagemComentarios[c.topico_id] = (contagemComentarios[c.topico_id]||0)+1; });
+  }
+
+  const temErroAberto = (topicosDaQuestao||[]).some(t=>t.tipo==='erro' && t.status==='aberto');
 
   const html = `
-    ${correcaoAtual ? '<span class="selo-correcao" style="display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Correção sugerida</span>' : ''}
+    <div class="section-title" style="margin-top:0">Discussões dessa questão</div>
+    ${(topicosDaQuestao||[]).length ? (topicosDaQuestao||[]).map(t=>{
+      const resolvidoPraMim = t.status==='resolvido' && idsVotados.has(t.id);
+      return `<div class="card-questao" style="cursor:pointer${resolvidoPraMim?';opacity:0.6':''}" onclick="abrirTopico('${t.id}')">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          ${badgeTipoTopico(t.tipo)}
+          <span style="color:#888;font-size:var(--fs-a)">${t.status==='resolvido'?'Resolvido':'Aberto'}</span>
+        </div>
+        <div style="font-size:var(--fs-d);font-weight:600;color:#111">${escapeHtml(t.titulo)}</div>
+        <div style="color:#888;font-size:var(--fs-b);margin-top:4px">${contagemComentarios[t.id]||0} ${contagemComentarios[t.id]===1?'comentário':'comentários'} · ${tempoRelativo(t.criado_em)}</div>
+      </div>`;
+    }).join('') : '<p style="color:#999;font-size:var(--fs-c)">Nenhuma discussão ainda nessa questão.</p>'}
 
-    ${correcaoAtual ? `
-      <div class="section-title" style="margin-top:20px">Thread de correção</div>
-      <div>${renderizarListaComentarios(comentariosCorrecao)}</div>
-      <textarea id="novo-comentario-correcao" class="textarea-padrao" placeholder="Comentar na correção..." style="min-height:130px"></textarea>
-      <button class="btn-secundario" style="width:100%;margin-bottom:8px" onclick="enviarComentario('${questaoId}','${correcaoAtual.id}','novo-comentario-correcao')">Comentar</button>
-      <button class="btn-primario" onclick="abrirFormularioEdicao('${questaoId}','${correcaoAtual.id}')">Aplicar edição</button>
-    ` : `
-      <button class="btn-secundario" style="width:100%;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="reportarCorrecao('${questaoId}')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Reportar correção</button>
-    `}
-
-    <div class="section-title" style="margin-top:24px">Discussão geral</div>
-    <div>${renderizarListaComentarios(comentariosGerais)}</div>
-    <textarea id="novo-comentario-geral" class="textarea-padrao" placeholder="Comentar..." style="min-height:130px"></textarea>
-    <div style="display:flex;gap:8px">
-      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-questao-detalhe')">Cancelar</button>
-      <button class="btn-primario" style="flex:1" onclick="enviarComentario('${questaoId}',null,'novo-comentario-geral')">Comentar</button>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      ${!temErroAberto ? `<button class="btn-secundario" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px" onclick="abrirModalNovoTopico('${questaoId}','erro')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Reportar erro</button>` : ''}
+      <button class="btn-primario" style="flex:1" onclick="abrirModalNovoTopico('${questaoId}','geral')">Abrir discussão</button>
     </div>
+    <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="fecharModal('modal-questao-detalhe')">Fechar</button>
   `;
   document.getElementById('modal-questao-detalhe-conteudo').innerHTML = html;
 }
@@ -1899,29 +1972,152 @@ async function abrirDetalheQuestao(questaoId){
   await renderizarDetalheQuestao(questaoId);
 }
 
-function abrirThreadCorrecao(correcaoId, questaoId){
-  abrirDetalheQuestao(questaoId);
+/* ============================================================
+   Abrir um tópico novo — sempre com título (nasce intencional)
+   ============================================================ */
+let novoTopicoContexto = null;
+
+function abrirModalNovoTopico(questaoId, tipo){
+  novoTopicoContexto = {questaoId, tipo};
+  document.getElementById('titulo-modal-novo-topico').textContent = tipo==='erro' ? 'Reportar erro' : 'Abrir discussão';
+  const campo = document.getElementById('novo-topico-titulo');
+  campo.value = '';
+  campo.placeholder = tipo==='erro' ? 'O que está errado? (ex: gabarito incorreto)' : 'Resumo curto do que você quer discutir';
+  abrirModal('modal-novo-topico');
 }
 
-async function enviarComentario(questaoId, correcaoId, campoId){
-  const campo = document.getElementById(campoId);
-  const texto = campo.value.trim();
-  if(!texto) return;
-  await sb.from('comentarios').insert({questao_id: questaoId, usuario_id: usuarioAtual.id, texto, correcao_id: correcaoId || null});
-  await renderizarDetalheQuestao(questaoId);
-}
-
-async function reportarCorrecao(questaoId){
-  const {error} = await sb.from('correcoes').insert({questao_id: questaoId, status: 'pendente'});
+async function confirmarNovoTopico(){
+  const titulo = document.getElementById('novo-topico-titulo').value.trim();
+  if(!titulo){ alert('Escreve um resumo curto antes de abrir.'); return; }
+  const {questaoId, tipo} = novoTopicoContexto;
+  const {data, error} = await sb.from('topicos').insert({questao_id: questaoId, tipo, titulo, criado_por: usuarioAtual.id}).select().single();
   if(error){
-    alert('Já existe uma correção pendente pra essa questão. Só dá pra abrir outra depois que essa for resolvida.');
+    alert(tipo==='erro'
+      ? 'Já existe um erro reportado em aberto pra essa questão. Só dá pra abrir outro depois que esse for resolvido.'
+      : 'Erro ao abrir discussão: '+error.message);
     return;
   }
-  await renderizarDetalheQuestao(questaoId);
+  fecharModal('modal-novo-topico');
+  await atualizarNotificacoesForum();
+  abrirTopico(data.id);
+}
+
+/* ============================================================
+   Thread de UM tópico — comentários + votação de resolução
+   ============================================================ */
+function abrirTopico(topicoId){
+  document.getElementById('modal-questao-detalhe-conteudo').innerHTML = '<div class="loading-spinner"></div>';
+  renderizarTopico(topicoId);
+}
+
+async function renderizarTopico(topicoId){
+  const {data: topico} = await sb.from('topicos').select('*, questoes(id, enunciado)').eq('id', topicoId).single();
+  if(!topico){ document.getElementById('modal-questao-detalhe-conteudo').innerHTML = '<p>Tópico não encontrado.</p>'; return; }
+  const [{data: comentarios}, {data: votos}] = await Promise.all([
+    sb.from('comentarios').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).order('criado_em', {ascending:true}),
+    sb.from('votos_resolucao').select('*, usuarios(nome)').eq('topico_id', topicoId)
+  ]);
+
+  const totalVotos = (votos||[]).length;
+  const meuVoto = (votos||[]).find(v=>v.usuario_id===usuarioAtual.id);
+  const temComentario = (comentarios||[]).length > 0;
+  const listaVotantes = (votos||[]).map(v=>escapeHtml(v.usuarios?.nome||'?')).join(', ');
+
+  let blocoVotacao = '';
+  if(!temComentario){
+    blocoVotacao = `<p style="color:#888;font-size:var(--fs-c);text-align:center;margin-top:14px">Precisa de pelo menos uma resposta na discussão antes de poder ser marcada como resolvida.</p>`;
+  }else if(meuVoto){
+    blocoVotacao = `
+      <div style="text-align:center;margin-top:14px;padding:12px;background:#F5F5F4;border-radius:10px">
+        <div style="font-size:var(--fs-c);color:#666">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver${listaVotantes?' — '+listaVotantes:''}</div>
+        <div style="font-size:var(--fs-c);color:#3B6D11;margin-top:4px;font-weight:600">Você votou que está resolvido</div>
+        <button class="btn-secundario" style="margin-top:8px" onclick="desfazerVotoResolucao('${topicoId}')">Desfazer meu voto</button>
+      </div>`;
+  }else if(topico.status==='resolvido'){
+    blocoVotacao = `
+      <div style="text-align:center;margin-top:14px;padding:12px;background:#FEF6E4;border-radius:10px">
+        <div style="font-size:var(--fs-c);color:#666">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver — ${listaVotantes}</div>
+        <div style="font-size:var(--fs-d);font-weight:600;margin-top:4px">A maioria já considera isso resolvido. Você concorda?</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn-secundario" style="flex:1" onclick="reabrirTopico('${topicoId}')">Reabrir</button>
+          <button class="btn-primario" style="flex:1" onclick="votarResolvido('${topicoId}')">Concordar</button>
+        </div>
+      </div>`;
+  }else{
+    blocoVotacao = `
+      <div style="text-align:center;margin-top:14px">
+        <div style="font-size:var(--fs-c);color:#666;margin-bottom:8px">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver${listaVotantes?' — '+listaVotantes:''}</div>
+        <button class="btn-secundario" onclick="votarResolvido('${topicoId}')">Marcar como resolvido</button>
+      </div>`;
+  }
+
+  const acoesErro = (topico.tipo==='erro' && topico.status==='aberto') ? `
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-secundario" style="flex:1;color:#A32D2D;border-color:#F7C1C1" onclick="confirmarAnularQuestao('${topico.questoes.id}','${topicoId}')">Anular questão</button>
+      <button class="btn-primario" style="flex:1" onclick="abrirFormularioEdicao('${topico.questoes.id}','${topicoId}')">Aplicar edição</button>
+    </div>` : '';
+
+  const html = `
+    <button onclick="abrirDetalheQuestao('${topico.questoes.id}')" style="color:#888;font-size:var(--fs-c);cursor:pointer;margin-bottom:12px;background:none;border:none;padding:0;text-decoration:underline">← Discussões dessa questão</button>
+    ${badgeTipoTopico(topico.tipo)}
+    <h3 class="config-title" style="margin-top:8px">${escapeHtml(topico.titulo)}</h3>
+    <div>${renderizarListaComentarios(comentarios||[])}</div>
+    <textarea id="novo-comentario-topico" class="textarea-padrao" placeholder="Comentar..." style="min-height:100px"></textarea>
+    <button class="btn-primario" style="width:100%" onclick="enviarComentarioTopico('${topicoId}')">Comentar</button>
+    ${blocoVotacao}
+    ${acoesErro}
+  `;
+  document.getElementById('modal-questao-detalhe-conteudo').innerHTML = html;
+}
+
+async function enviarComentarioTopico(topicoId){
+  const campo = document.getElementById('novo-comentario-topico');
+  const texto = campo.value.trim();
+  if(!texto) return;
+  await sb.from('comentarios').insert({topico_id: topicoId, usuario_id: usuarioAtual.id, texto});
+  await renderizarTopico(topicoId);
+}
+
+async function votarResolvido(topicoId){
+  await sb.from('votos_resolucao').insert({topico_id: topicoId, usuario_id: usuarioAtual.id});
+  await verificarMaioriaTopico(topicoId);
+  await renderizarTopico(topicoId);
   await atualizarNotificacoesForum();
 }
 
-async function abrirFormularioEdicao(questaoId, correcaoId){
+async function desfazerVotoResolucao(topicoId){
+  await sb.from('votos_resolucao').delete().eq('topico_id', topicoId).eq('usuario_id', usuarioAtual.id);
+  await verificarMaioriaTopico(topicoId);
+  await renderizarTopico(topicoId);
+  await atualizarNotificacoesForum();
+}
+
+async function reabrirTopico(topicoId){
+  await sb.from('votos_resolucao').delete().eq('topico_id', topicoId);
+  await sb.from('topicos').update({status:'aberto'}).eq('id', topicoId);
+  await renderizarTopico(topicoId);
+  await atualizarNotificacoesForum();
+}
+
+async function verificarMaioriaTopico(topicoId){
+  const {data: votos} = await sb.from('votos_resolucao').select('id').eq('topico_id', topicoId);
+  const total = (votos||[]).length;
+  await sb.from('topicos').update({status: total >= VOTOS_PRA_RESOLVER ? 'resolvido' : 'aberto'}).eq('id', topicoId);
+}
+
+/* ============================================================
+   Aplicar edição — ação concreta que já resolve o tópico de erro na
+   hora (não precisa esperar votação de mais 2 pessoas), mas quem não
+   participou ainda vê o tópico até dar seu próprio veredito, igual
+   qualquer outra resolução
+   ============================================================ */
+async function resolverTopicoPorAcao(topicoId){
+  await sb.from('topicos').update({status:'resolvido'}).eq('id', topicoId);
+  await sb.from('votos_resolucao').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id}, {onConflict:'topico_id,usuario_id'});
+  await atualizarNotificacoesForum();
+}
+
+async function abrirFormularioEdicao(questaoId, topicoId){
   const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
   const html = `
     <div class="section-title" style="margin-top:0">Aplicar edição</div>
@@ -1931,22 +2127,45 @@ async function abrirFormularioEdicao(questaoId, correcaoId){
     <textarea id="edicao-alternativas" class="filter-select" style="min-height:90px">${escapeHtml(q.alternativas||'')}</textarea>
     <label style="font-size:var(--fs-c);color:#888">Gabarito (uma letra, a-e)</label>
     <input type="text" id="edicao-gabarito" class="filter-select" value="${escapeHtml(q.gabarito||'')}" maxlength="1">
-    <button class="btn-primario" onclick="salvarEdicaoCorrecao('${questaoId}','${correcaoId}')">Salvar correção</button>
-    <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="renderizarDetalheQuestao('${questaoId}')">Cancelar</button>
+    <button class="btn-primario" onclick="salvarEdicaoTopico('${questaoId}','${topicoId}')">Salvar edição</button>
+    <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="renderizarTopico('${topicoId}')">Cancelar</button>
   `;
   document.getElementById('modal-questao-detalhe-conteudo').innerHTML = html;
 }
 
-async function salvarEdicaoCorrecao(questaoId, correcaoId){
+async function salvarEdicaoTopico(questaoId, topicoId){
   const enunciado = document.getElementById('edicao-enunciado').value.trim();
   const alternativas = document.getElementById('edicao-alternativas').value.trim();
   const gabarito = document.getElementById('edicao-gabarito').value.trim().toLowerCase();
+  await sb.from('questoes').update({enunciado, alternativas, gabarito}).eq('id', questaoId);
+  await resolverTopicoPorAcao(topicoId);
+  await renderizarTopico(topicoId);
+}
+
+/* ============================================================
+   Anular questão — outro desfecho possível de um tópico de erro. Quem
+   já respondeu ganha o ponto como acerto (mesmo quem errou), igual
+   anulação de prova de verdade; a questão nunca mais entra em cadernos
+   novos.
+   ============================================================ */
+let questaoParaAnular = null;
+
+function confirmarAnularQuestao(questaoId, topicoId){
+  questaoParaAnular = {questaoId, topicoId};
+  abrirModal('modal-confirmar-anulacao');
+}
+
+async function executarAnulacaoQuestao(){
+  if(!questaoParaAnular) return;
+  const {questaoId, topicoId} = questaoParaAnular;
   await Promise.all([
-    sb.from('questoes').update({enunciado, alternativas, gabarito}).eq('id', questaoId),
-    sb.from('correcoes').update({status:'resolvida', resolvida_em: new Date().toISOString()}).eq('id', correcaoId)
+    sb.from('questoes').update({anulada:true}).eq('id', questaoId),
+    sb.from('respostas').update({correta:true}).eq('questao_id', questaoId)
   ]);
-  await renderizarDetalheQuestao(questaoId);
-  await atualizarNotificacoesForum();
+  await resolverTopicoPorAcao(topicoId);
+  questaoParaAnular = null;
+  fecharModal('modal-confirmar-anulacao');
+  await renderizarTopico(topicoId);
 }
 
 /* ============================================================
@@ -2002,6 +2221,65 @@ async function carregarMetricasPessoais(){
       <div style="color:#888;font-size:var(--fs-c)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
     </div>`;
   }).join('');
+}
+
+// Tela de detalhe de um caderno CONCLUÍDO específico — mesma lógica de
+// estatística por módulo de carregarMetricasPessoais(), só que filtrada por
+// um caderno_id em vez do histórico inteiro do usuário
+async function abrirDetalheCadernoConcluido(cadernoId){
+  document.getElementById('modal-detalhe-caderno-conteudo').innerHTML = '<div class="loading-spinner"></div>';
+  abrirModal('modal-detalhe-caderno');
+
+  const {data: caderno} = await sb.from('cadernos').select('*').eq('id', cadernoId).single();
+  const {data: respostas} = await sb.from('respostas').select('questao_id, correta').eq('caderno_id', cadernoId);
+  const el = document.getElementById('modal-detalhe-caderno-conteudo');
+
+  if(!respostas || !respostas.length){
+    el.innerHTML = `<h3 class="config-title">${escapeHtml(caderno?.nome||'Caderno')}</h3><p style="color:#888">Nenhuma resposta registrada nesse caderno.</p><button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-detalhe-caderno')">Fechar</button>`;
+    return;
+  }
+
+  const idsQuestoes = [...new Set(respostas.map(r=>r.questao_id))];
+  const {data: questoes} = await sb.from('questoes').select('id, modulo_pscpp').in('id', idsQuestoes);
+  const moduloPorQuestao = {};
+  (questoes||[]).forEach(q=>{ moduloPorQuestao[q.id] = q.modulo_pscpp || 'Sem módulo'; });
+
+  const stats = {};
+  respostas.forEach(r=>{
+    const mod = moduloPorQuestao[r.questao_id] || 'Sem módulo';
+    if(!stats[mod]) stats[mod] = {total: 0, acertos: 0};
+    stats[mod].total++;
+    if(r.correta) stats[mod].acertos++;
+  });
+
+  const totalGeral = respostas.length;
+  const acertosGeral = respostas.filter(r=>r.correta).length;
+  const pctGeral = Math.round((acertosGeral / totalGeral) * 100);
+  const corGeral = pctGeral >= 70 ? '#3B6D11' : pctGeral >= 50 ? '#854F0B' : '#A32D2D';
+
+  const linhas = Object.entries(stats).map(([modulo, s])=>({
+    modulo, total: s.total, pctAcerto: s.total ? Math.round((s.acertos / s.total) * 100) : 0
+  })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
+
+  el.innerHTML = `
+    <h3 class="config-title">${escapeHtml(caderno?.nome||'Caderno')}</h3>
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:32px;font-weight:700;color:${corGeral}">${pctGeral}%</div>
+      <div style="color:#888;font-size:var(--fs-c)">${totalGeral} questões respondidas</div>
+    </div>
+    <div class="section-title" style="margin-top:0">Por módulo</div>
+    ${linhas.map(l=>{
+      const cor = l.pctAcerto >= 70 ? '#3B6D11' : l.pctAcerto >= 50 ? '#854F0B' : '#A32D2D';
+      return `<div class="card-questao">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          ${tagModulo(l.modulo)}
+          <span style="font-weight:700;color:${cor}">${l.pctAcerto}%</span>
+        </div>
+        <div style="color:#888;font-size:var(--fs-c)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
+      </div>`;
+    }).join('')}
+    <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-detalhe-caderno')">Fechar</button>
+  `;
 }
 
 /* ============================================================
