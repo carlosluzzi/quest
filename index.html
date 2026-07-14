@@ -45,7 +45,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
 .filter-select{font-size:var(--fs-d);padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
-.chev{font-size:16px;color:#888;transition:transform 0.2s;display:inline-block}
+.chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
+.chev svg{width:16px;height:16px;display:block}
+.chev.open{transform:rotate(180deg)}
+.conteudo-colapsavel{display:none}
+.conteudo-colapsavel.open{display:block}
 .chev.open{transform:rotate(180deg)}
 
 /* --- Telas de auth/onboarding --- */
@@ -186,20 +190,20 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <span style="font-size:44px;font-weight:800;color:#D97757;font-family:'Manrope',-apple-system,sans-serif;letter-spacing:-1px">Claude</span>
   </div>
 
-  <div id="login-form-entrar">
-    <input type="email" id="login-email" placeholder="Email">
-    <input type="password" id="login-senha" placeholder="Senha">
+  <form id="login-form-entrar" onsubmit="event.preventDefault(); entrar();">
+    <input type="email" id="login-email" placeholder="Email" autocomplete="username" required>
+    <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" required>
     <div class="erro hidden" id="login-erro"></div>
-    <button class="btn-primario" onclick="entrar()">Entrar</button>
-  </div>
+    <button class="btn-primario" type="submit">Entrar</button>
+  </form>
 
-  <div id="login-form-definir-senha" class="hidden">
+  <form id="login-form-definir-senha" class="hidden" onsubmit="event.preventDefault(); definirSenha();">
     <p style="margin-bottom:16px">Defina sua senha pra começar a usar o Claude Quest.</p>
-    <input type="password" id="nova-senha" placeholder="Nova senha">
-    <input type="password" id="nova-senha-confirmar" placeholder="Confirmar senha">
+    <input type="password" id="nova-senha" placeholder="Nova senha" autocomplete="new-password" required>
+    <input type="password" id="nova-senha-confirmar" placeholder="Confirmar senha" autocomplete="new-password" required>
     <div class="erro hidden" id="definir-senha-erro"></div>
-    <button class="btn-primario" onclick="definirSenha()">Definir senha e entrar</button>
-  </div>
+    <button class="btn-primario" type="submit">Definir senha e entrar</button>
+  </form>
 </div>
 </div>
 
@@ -283,16 +287,16 @@ input,select,textarea{font-family:inherit;font-size:16px}
         <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0;cursor:pointer" onclick="toggleCadernosLista('andamento')">
           <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
           <span id="titulo-cadernos-andamento">Cadernos em andamento (0)</span>
-          <span class="chev" id="chev-andamento" style="margin-left:auto">▾</span>
+          <span class="chev" id="chev-andamento" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
         </div>
-        <div id="lista-cadernos-andamento" class="hidden"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno em andamento.</span></div>
+        <div id="lista-cadernos-andamento" class="conteudo-colapsavel"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno em andamento.</span></div>
 
         <div class="section-title" style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleCadernosLista('concluidos')">
           <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M20 6 9 17l-5-5"/></svg></span>
           <span id="titulo-cadernos-concluidos">Cadernos concluídos (0)</span>
-          <span class="chev" id="chev-concluidos" style="margin-left:auto">▾</span>
+          <span class="chev" id="chev-concluidos" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
         </div>
-        <div id="lista-cadernos-concluidos" class="hidden"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno concluído ainda.</span></div>
+        <div id="lista-cadernos-concluidos" class="conteudo-colapsavel"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno concluído ainda.</span></div>
       </div>
 
       <div class="card-inicio">
@@ -468,7 +472,13 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* ============================================================
    ESTADO GLOBAL
    ============================================================ */
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    storage: window.localStorage
+  }
+});
 let usuarioAtual = null;       // linha da tabela usuarios
 let modulosPscpp = [];
 let bibliografiaCache = [];
@@ -919,11 +929,8 @@ async function carregarCadernosExistentes(){
 }
 
 function toggleCadernosLista(tipo){
-  const el = document.getElementById('lista-cadernos-'+tipo);
-  const chev = document.getElementById('chev-'+tipo);
-  const abrir = el.classList.contains('hidden');
-  el.classList.toggle('hidden', !abrir);
-  chev.classList.toggle('open', abrir);
+  document.getElementById('lista-cadernos-'+tipo).classList.toggle('open');
+  document.getElementById('chev-'+tipo).classList.toggle('open');
 }
 
 async function retomarCadernoEspecifico(cadernoId){
