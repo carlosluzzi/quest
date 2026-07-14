@@ -68,7 +68,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .carrossel-dot.ativo{background:#D97757}
 
 /* --- Telas de auth/onboarding --- */
-#view-login,#view-onboarding{position:fixed;top:var(--vv-top, 0px);left:0;width:100%;height:var(--vh-real, 100vh);display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 86px) 24px;box-sizing:border-box}
+#view-login,#view-instalar-app{position:fixed;top:var(--vv-top, 0px);left:0;width:100%;height:var(--vh-real, 100vh);display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 86px) 24px;box-sizing:border-box}
+#view-onboarding{position:fixed;top:var(--vv-top, 0px);left:0;width:100%;height:var(--vh-real, 100vh);display:flex;flex-direction:column;background:#fff;overflow:hidden;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 86px) 24px;box-sizing:border-box}
+.onboarding-conteudo{flex:1;display:flex;flex-direction:column;justify-content:center;overflow:hidden;touch-action:pan-y;width:100%;max-width:432px;margin:0 auto}
+.onboarding-rodape{width:100%;max-width:432px;margin:0 auto;flex-shrink:0}
 .login-inner{width:100%;max-width:432px}
 #view-login{background:#F9F9F7}
 #view-login .erro{color:#B00020;font-size:var(--fs-c);margin-bottom:8px}
@@ -81,9 +84,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #view-login .erro{color:#B00020;font-size:var(--fs-c);margin-bottom:8px}
 .onboarding-step{display:none}
 .onboarding-step.ativo{display:block}
-.onboarding-dots{display:flex;gap:6px;justify-content:center;margin:20px 0}
-.onboarding-dots span{width:7px;height:7px;border-radius:50%;background:#DDD}
-.onboarding-dots span.ativo{background:var(--azul-marca)}
 
 /* --- App shell --- */
 #app-shell{display:none;max-width:480px;margin:0 auto;position:fixed;top:var(--vv-top, 0px);left:50%;transform:translateX(-50%);width:100%;height:var(--vh-real, 100vh);flex-direction:column;overflow:hidden}
@@ -234,7 +234,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div class="campo-senha-wrapper">
       <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" required>
       <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('login-senha', this)" aria-label="Mostrar senha">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
       </button>
     </div>
     <div class="erro hidden" id="login-erro"></div>
@@ -247,13 +247,13 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div class="campo-senha-wrapper">
       <input type="password" id="nova-senha" placeholder="Nova senha" autocomplete="new-password" required>
       <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('nova-senha', this)" aria-label="Mostrar senha">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
       </button>
     </div>
     <div class="campo-senha-wrapper">
       <input type="password" id="nova-senha-confirmar" placeholder="Confirmar senha" autocomplete="new-password" required>
       <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('nova-senha-confirmar', this)" aria-label="Mostrar senha">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
       </button>
     </div>
     <div class="erro hidden" id="definir-senha-erro"></div>
@@ -265,41 +265,52 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <!-- ============================================================ -->
 <!-- TELA: ONBOARDING (só primeira vez) -->
 <!-- ============================================================ -->
-<div id="view-onboarding" class="hidden">
+<div id="view-instalar-app" class="hidden">
 <div class="login-inner">
-  <div class="onboarding-step ativo" data-step="0">
-    <h1>Bem-vindo(a) ao Claude Quest</h1>
-    <p>Aqui é onde vocês 5 vão estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
-  </div>
-  <div class="onboarding-step" data-step="1">
-    <h1>Como funciona o banco</h1>
-    <p>Todo mundo pode subir PDFs de questões, que entram direto no banco compartilhado. Todo mundo estuda das mesmas questões, mas cada um tem suas próprias estatísticas.</p>
-  </div>
-  <div class="onboarding-step" data-step="2">
-    <h1>A exclusão é só sua</h1>
-    <p>Se uma questão parecer errada ou malformada, você pode excluir — mas isso some <strong>só pra você</strong>. Ela continua existindo pros outros. Quanto mais gente excluir a mesma questão, mais evidente fica que ela tem um problema.</p>
-    <button class="btn-secundario" onclick="avancarOnboarding()">Entendi</button>
-  </div>
-  <div class="onboarding-step" data-step="3">
-    <h1>Fórum e correções</h1>
-    <p>Cada questão tem um espaço de discussão. Se algo estiver errado de fato (gabarito, digitação), use "Reportar correção" — isso avisa todo mundo com um selo, até alguém corrigir.</p>
-  </div>
-  <div class="onboarding-step" data-step="4">
-    <h1>Placar entre amigos</h1>
-    <p>Vocês veem, lado a lado, quantas questões cada um respondeu e a % de acerto — sem ranking, só os números.</p>
-  </div>
-  <div class="onboarding-step" data-step="5">
-    <h1>Instalar como app</h1>
-    <p id="instrucao-instalacao">Carregando instruções pro seu aparelho...</p>
-    <button class="btn-primario" onclick="concluirOnboarding()" style="margin-top:16px">Concluir e começar</button>
-  </div>
-
-  <div class="onboarding-dots" id="onboarding-dots"></div>
-  <div style="display:flex;gap:8px">
-    <button class="btn-secundario hidden" id="btn-onboarding-voltar" onclick="voltarOnboarding()" style="flex:1;width:auto">Voltar</button>
-    <button class="btn-primario" id="btn-onboarding-avancar" onclick="avancarOnboarding()" style="flex:1;width:auto">Próximo</button>
+  <div style="text-align:center">
+    <h1>Instale como app</h1>
+    <p id="instrucao-instalacao-navegador">Carregando instruções pro seu aparelho...</p>
+    <p style="color:#888;font-size:var(--fs-c);margin-top:16px">Assim você tem acesso rápido, direto da tela inicial, sem a barra do navegador ocupando espaço.</p>
+    <button class="btn-secundario" style="width:100%;margin-top:20px" onclick="continuarNoNavegador()">Continuar no navegador mesmo assim</button>
   </div>
 </div>
+</div>
+
+<div id="view-onboarding" class="hidden">
+  <div class="onboarding-conteudo" id="onboarding-conteudo">
+    <div class="onboarding-step ativo" data-step="0">
+      <h1>Bem-vindo(a) ao Claude Quest</h1>
+      <p>Aqui é onde vocês 5 vão estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
+    </div>
+    <div class="onboarding-step" data-step="1">
+      <h1>Como funciona o banco</h1>
+      <p>Todo mundo pode subir PDFs de questões, que entram direto no banco compartilhado. Todo mundo estuda das mesmas questões, mas cada um tem suas próprias estatísticas.</p>
+    </div>
+    <div class="onboarding-step" data-step="2">
+      <h1>A exclusão é só sua</h1>
+      <p>Se uma questão parecer errada ou malformada, você pode excluir — mas isso some <strong>só pra você</strong>. Ela continua existindo pros outros. Quanto mais gente excluir a mesma questão, mais evidente fica que ela tem um problema.</p>
+    </div>
+    <div class="onboarding-step" data-step="3">
+      <h1>Fórum e correções</h1>
+      <p>Cada questão tem um espaço de discussão. Se algo estiver errado de fato (gabarito, digitação), use "Reportar correção" — isso avisa todo mundo com um selo, até alguém corrigir.</p>
+    </div>
+    <div class="onboarding-step" data-step="4">
+      <h1>Placar entre amigos</h1>
+      <p>Vocês veem, lado a lado, quantas questões cada um respondeu e a % de acerto — sem ranking, só os números.</p>
+    </div>
+    <div class="onboarding-step" data-step="5">
+      <h1>Instalar como app</h1>
+      <p id="instrucao-instalacao">Carregando instruções pro seu aparelho...</p>
+    </div>
+  </div>
+
+  <div class="onboarding-rodape">
+    <div style="text-align:center;color:#888;font-size:var(--fs-c);margin-bottom:12px" id="onboarding-contador"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario hidden" id="btn-onboarding-voltar" onclick="voltarOnboarding()" style="flex:1;width:auto">Voltar</button>
+      <button class="btn-primario" id="btn-onboarding-avancar" onclick="avancarOnboarding()" style="flex:1;width:auto">Próximo</button>
+    </div>
+  </div>
 </div>
 
 <!-- ============================================================ -->
@@ -871,7 +882,7 @@ function toggleSenhaVisivel(inputId, btn){
   const input = document.getElementById(inputId);
   const vaiMostrar = input.type === 'password';
   input.type = vaiMostrar ? 'text' : 'password';
-  btn.innerHTML = vaiMostrar ? SVG_OLHO_FECHADO : SVG_OLHO_ABERTO;
+  btn.innerHTML = vaiMostrar ? SVG_OLHO_ABERTO : SVG_OLHO_FECHADO;
   btn.setAttribute('aria-label', vaiMostrar ? 'Esconder senha' : 'Mostrar senha');
 }
 
@@ -1097,6 +1108,8 @@ async function posLogin(nomeInformado){
 
   if(!usuarioAtual.onboarding_concluido){
     mostrarOnboarding();
+  }else if(!estaComoWebapp() && localStorage.getItem('instalarAppDispensado') !== 'true'){
+    mostrarTelaInstalarApp();
   }else{
     mostrarAppShell();
   }
@@ -1106,25 +1119,28 @@ async function posLogin(nomeInformado){
    ONBOARDING
    ============================================================ */
 let passoOnboarding = 0;
+let swipeOnboardingIniciado = false;
 function mostrarOnboarding(){
   document.getElementById('view-onboarding').classList.remove('hidden');
-  renderizarDots();
+  atualizarContadorOnboarding();
+  atualizarBotoesOnboarding();
   detectarDispositivoOnboarding();
-}
-function renderizarDots(){
-  const total = document.querySelectorAll('.onboarding-step').length;
-  const dotsEl = document.getElementById('onboarding-dots');
-  dotsEl.innerHTML = '';
-  for(let i=0;i<total;i++){
-    dotsEl.innerHTML += `<span class="${i===passoOnboarding?'ativo':''}"></span>`;
+  if(!swipeOnboardingIniciado){
+    iniciarSwipeOnboarding();
+    swipeOnboardingIniciado = true;
   }
+}
+function atualizarContadorOnboarding(){
+  const total = document.querySelectorAll('.onboarding-step').length;
+  document.getElementById('onboarding-contador').textContent = `${passoOnboarding+1} de ${total}`;
 }
 function avancarOnboarding(){
   const passos = document.querySelectorAll('.onboarding-step');
+  if(passoOnboarding === passos.length-1){ concluirOnboarding(); return; }
   passos[passoOnboarding].classList.remove('ativo');
   passoOnboarding = Math.min(passoOnboarding+1, passos.length-1);
   passos[passoOnboarding].classList.add('ativo');
-  renderizarDots();
+  atualizarContadorOnboarding();
   atualizarBotoesOnboarding();
 }
 function voltarOnboarding(){
@@ -1132,17 +1148,40 @@ function voltarOnboarding(){
   passos[passoOnboarding].classList.remove('ativo');
   passoOnboarding = Math.max(passoOnboarding-1, 0);
   passos[passoOnboarding].classList.add('ativo');
-  renderizarDots();
+  atualizarContadorOnboarding();
   atualizarBotoesOnboarding();
 }
 function atualizarBotoesOnboarding(){
   const passos = document.querySelectorAll('.onboarding-step');
-  document.getElementById('btn-onboarding-avancar').classList.toggle('hidden', passoOnboarding === passos.length-1);
+  const ultimo = passoOnboarding === passos.length-1;
+  document.getElementById('btn-onboarding-avancar').textContent = ultimo ? 'Concluir e começar' : 'Próximo';
   document.getElementById('btn-onboarding-voltar').classList.toggle('hidden', passoOnboarding === 0);
 }
-function detectarDispositivoOnboarding(){
+// Swipe de verdade no conteúdo do onboarding — as bolinhas/contador só fazem
+// sentido se o gesto funcionar também, não só o botão
+function iniciarSwipeOnboarding(){
+  const el = document.getElementById('onboarding-conteudo');
+  let inicioX = null, inicioY = null;
+  el.addEventListener('touchstart', e=>{
+    inicioX = e.touches[0].clientX;
+    inicioY = e.touches[0].clientY;
+  }, {passive:true});
+  el.addEventListener('touchend', e=>{
+    if(inicioX === null) return;
+    const dx = e.changedTouches[0].clientX - inicioX;
+    const dy = e.changedTouches[0].clientY - inicioY;
+    inicioX = null;
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)){
+      if(dx < 0) avancarOnboarding(); else voltarOnboarding();
+    }
+  }, {passive:true});
+}
+function estaComoWebapp(){
+  return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+}
+function detectarInstrucaoInstalacao(elId){
   const ua = navigator.userAgent;
-  const el = document.getElementById('instrucao-instalacao');
+  const el = document.getElementById(elId);
   if(/iPhone|iPad|iPod/.test(ua)){
     el.textContent = 'No Safari, toque no ícone de compartilhar e depois em "Adicionar à Tela de Início".';
   }else if(/Android/.test(ua)){
@@ -1150,6 +1189,18 @@ function detectarDispositivoOnboarding(){
   }else{
     el.textContent = 'No seu navegador de computador, procure o ícone de instalar na barra de endereço, ou o menu de opções.';
   }
+}
+function detectarDispositivoOnboarding(){
+  detectarInstrucaoInstalacao('instrucao-instalacao');
+}
+function mostrarTelaInstalarApp(){
+  document.getElementById('view-instalar-app').classList.remove('hidden');
+  detectarInstrucaoInstalacao('instrucao-instalacao-navegador');
+}
+function continuarNoNavegador(){
+  localStorage.setItem('instalarAppDispensado', 'true');
+  document.getElementById('view-instalar-app').classList.add('hidden');
+  mostrarAppShell();
 }
 async function concluirOnboarding(){
   await sb.from('usuarios').update({onboarding_concluido:true}).eq('id', usuarioAtual.id);
