@@ -147,6 +147,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
 .modal-overlay.hidden{display:none}
 .modal-conteudo{background:#fff;border-radius:14px;padding:20px;width:100%;max-width:340px;max-height:85vh;overflow-y:auto}
+.modal-conteudo-fluxo-topico{height:420px;box-sizing:border-box}
 
 /* --- Alternativas de questão (padrão herdado do app pessoal) --- */
 .banco-alternativas{display:flex;flex-direction:column;gap:8px;margin-top:14px}
@@ -571,8 +572,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="modal-conteudo" id="modal-detalhe-caderno-conteudo"></div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-questao-detalhe" onclick="if(event.target===this) fecharModal('modal-questao-detalhe')">
+  <div class="modal-conteudo modal-conteudo-fluxo-topico" id="modal-questao-detalhe-conteudo" style="position:relative"></div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-novo-topico" onclick="if(event.target===this) fecharModal('modal-novo-topico')">
-  <div class="modal-conteudo">
+  <div class="modal-conteudo modal-conteudo-fluxo-topico">
     <h3 class="config-title" id="titulo-modal-novo-topico">Nova discussão</h3>
     <input type="text" id="novo-topico-titulo" class="filter-select" placeholder="Resumo curto do problema">
     <div style="display:flex;gap:8px">
@@ -583,7 +588,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-confirmar-anulacao" onclick="if(event.target===this) fecharModal('modal-confirmar-anulacao')">
-  <div class="modal-conteudo">
+  <div class="modal-conteudo modal-conteudo-fluxo-topico">
     <h3 class="config-title">Anular questão</h3>
     <p>Isso remove a questão de cadernos futuros pra sempre. Quem já respondeu essa questão (de qualquer jeito) passa a ter a resposta contada como acerto, mesmo quem errou — igual acontece numa anulação de prova de verdade.</p>
     <div style="display:flex;gap:8px">
@@ -591,10 +596,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <button class="btn-primario" style="flex:1" onclick="executarAnulacaoQuestao()">Anular</button>
     </div>
   </div>
-</div>
-
-<div class="modal-overlay hidden" id="modal-questao-detalhe" onclick="if(event.target===this) fecharModal('modal-questao-detalhe')">
-  <div class="modal-conteudo" id="modal-questao-detalhe-conteudo" style="position:relative"></div>
 </div>
 
 <div class="modal-overlay hidden" id="modal-admin">
@@ -1125,6 +1126,17 @@ async function verificarCadernoEmAndamento(){
 }
 function retomarCaderno(){
   trocarAba('quests');
+  const conteudo = document.getElementById('lista-cadernos-andamento');
+  const chev = document.getElementById('chev-andamento');
+  if(conteudo && !conteudo.classList.contains('open')){
+    conteudo.classList.add('open');
+    chev.classList.add('open');
+  }
+  requestAnimationFrame(()=>{
+    conteudo.scrollIntoView({block:'start', behavior:'smooth'});
+    const totalPaginas = Math.ceil(totalCadernosAndamento / ITENS_POR_PAGINA_CADERNO);
+    initCarrosselCaderno('carrossel-andamento', totalPaginas);
+  });
 }
 
 /* ============================================================
@@ -1745,7 +1757,6 @@ async function finalizarCaderno(){
   document.getElementById('quests-filtros').classList.remove('hidden');
   await carregarCadernosExistentes();
   await verificarCadernoEmAndamento(); // recalcula a contagem certa, pode ainda sobrar outros em andamento
-  trocarAba('inicio');
 }
 
 /* ============================================================
