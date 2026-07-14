@@ -915,6 +915,7 @@ async function concluirOnboarding(){
    ============================================================ */
 async function mostrarAppShell(){
   document.getElementById('app-shell').classList.add('ativo');
+  document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança
   document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${sobrenomeDe(usuarioAtual.nome)}!`;
   atualizarAvatarUI();
   document.getElementById('perfil-nome-input').value = usuarioAtual.nome;
@@ -936,16 +937,17 @@ function medirAlturaNav(){
 window.addEventListener('resize', medirAlturaNav);
 
 // Some navegadores mobile "flutuam" a barra fixa em cima do teclado quando um
-// campo de texto ganha foco. Solução mais confiável: esconder a barra
-// enquanto o teclado estiver aberto, e mostrar de volta ao fechar.
+// campo de texto ganha foco. Solução: esconder a barra enquanto o teclado
+// estiver aberto, e mostrar de volta ao fechar. Restrito ao #app-shell (não
+// à tela de login), e com trava de segurança pra nunca ficar presa escondida.
 document.addEventListener('focusin', (e)=>{
-  if(e.target.matches('input, textarea, select')){
+  if(e.target.matches('input, textarea, select') && e.target.closest('#app-shell')){
     const nav = document.getElementById('bottom-nav');
     if(nav) nav.classList.add('teclado-aberto');
   }
 });
 document.addEventListener('focusout', (e)=>{
-  if(e.target.matches('input, textarea, select')){
+  if(e.target.matches('input, textarea, select') && e.target.closest('#app-shell')){
     const nav = document.getElementById('bottom-nav');
     if(nav) nav.classList.remove('teclado-aberto');
   }
@@ -955,6 +957,7 @@ function trocarAba(nome){
   document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
   document.getElementById('aba-'+nome).classList.remove('hidden');
   document.querySelectorAll('#bottom-nav .nav-item').forEach(item=>item.classList.toggle('active', item.dataset.aba===nome));
+  document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança, nunca fica presa escondida
   document.getElementById('barra-adicionar-questoes').classList.toggle('hidden', nome!=='inicio');
   document.getElementById('content').scrollTop = 0;
   if(nome==='forum'){ carregarForum(); marcarForumVisto(); }
