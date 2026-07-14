@@ -72,6 +72,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #view-onboarding{position:fixed;top:var(--vv-top, 0px);left:0;width:100%;height:var(--vh-real, 100vh);display:flex;flex-direction:column;background:#fff;overflow:hidden;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 86px) 24px;box-sizing:border-box}
 .onboarding-conteudo{flex:1;display:flex;flex-direction:column;justify-content:center;overflow:hidden;touch-action:pan-y;width:100%;max-width:432px;margin:0 auto}
 .onboarding-rodape{width:100%;max-width:432px;margin:0 auto;flex-shrink:0}
+.onboarding-dots{display:flex;gap:7px;justify-content:center;margin-bottom:16px}
+.onboarding-dots span{width:7px;height:7px;border-radius:50%;background:#DDD;transition:all 0.2s ease}
+.onboarding-dots span.ativo{background:var(--azul-marca);width:10px;height:10px}
 .login-inner{width:100%;max-width:432px}
 #view-login{background:#F9F9F7}
 #view-login .erro{color:#B00020;font-size:var(--fs-c);margin-bottom:8px}
@@ -106,18 +109,34 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .nav-item.active .nav-label{color:#D97757;font-weight:500}
 
 @media(min-width:768px) and (max-width:1099px){
+  :root{
+    --fs-a:12px; --fs-b:13px; --fs-c:14px; --fs-d:15px;
+    --fs-e:18px; --fs-f:20px; --fs-g:21px; --fs-h:26px;
+  }
+  #app-shell{max-width:100%}
+  .topbar{max-width:100%}
   #bottom-nav{max-width:100%}
+  .content{padding:24px;padding-bottom:calc(var(--nav-height, 76px) + 24px)}
   .nav-label{font-size:var(--fs-b)}
+  .section-title{margin-top:28px}
+  .section-title:first-child{margin-top:0}
 }
 @media(min-width:1100px){
+  :root{
+    --fs-a:13px; --fs-b:14px; --fs-c:16px; --fs-d:17px;
+    --fs-e:19px; --fs-f:22px; --fs-g:23px; --fs-h:29px;
+  }
   body{display:flex;background:#f5f5f3}
+  #app-shell{max-width:100%}
   #app-shell.ativo{display:grid;grid-template-columns:250px 1fr;grid-template-rows:auto 1fr;width:100%;padding-bottom:0}
-  .topbar{grid-column:1/-1;grid-row:1;max-width:100%;padding:16px 32px}
+  .topbar{grid-column:1/-1;grid-row:1;max-width:100%;padding:16px 32px;z-index:20}
   #bottom-nav{grid-column:1;grid-row:2;position:sticky;left:auto;bottom:auto;transform:none;width:100%;max-width:none;border-top:none;border-right:0.5px solid #e0e0e0;flex-direction:column;padding:20px 14px;gap:6px;align-self:start;top:0;height:100%}
   .nav-item{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;border-radius:9px;width:100%}
   .nav-icon{width:18px;height:18px}
   .nav-label{font-size:var(--fs-e)}
-  .content{grid-column:2;grid-row:2;padding:32px 48px;max-width:1000px;width:100%}
+  .content{grid-column:2;grid-row:2;padding:32px 48px;max-width:1320px;width:100%}
+  .section-title{margin-top:28px}
+  .section-title:first-child{margin-top:0}
 }
 
 /* --- Módulo: paleta por módulo (reaproveitada exatamente do app pessoal) --- */
@@ -305,11 +324,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 
   <div class="onboarding-rodape">
-    <div style="text-align:center;color:#888;font-size:var(--fs-c);margin-bottom:12px" id="onboarding-contador"></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn-secundario hidden" id="btn-onboarding-voltar" onclick="voltarOnboarding()" style="flex:1;width:auto">Voltar</button>
-      <button class="btn-primario" id="btn-onboarding-avancar" onclick="avancarOnboarding()" style="flex:1;width:auto">Próximo</button>
-    </div>
+    <div class="onboarding-dots" id="onboarding-dots"></div>
+    <button class="btn-primario hidden" id="btn-onboarding-concluir" onclick="concluirOnboarding()">Concluir e começar</button>
   </div>
 </div>
 
@@ -1122,17 +1138,21 @@ let passoOnboarding = 0;
 let swipeOnboardingIniciado = false;
 function mostrarOnboarding(){
   document.getElementById('view-onboarding').classList.remove('hidden');
-  atualizarContadorOnboarding();
-  atualizarBotoesOnboarding();
+  renderizarDotsOnboarding();
+  atualizarBotaoConcluirOnboarding();
   detectarDispositivoOnboarding();
   if(!swipeOnboardingIniciado){
     iniciarSwipeOnboarding();
     swipeOnboardingIniciado = true;
   }
 }
-function atualizarContadorOnboarding(){
+function renderizarDotsOnboarding(){
   const total = document.querySelectorAll('.onboarding-step').length;
-  document.getElementById('onboarding-contador').textContent = `${passoOnboarding+1} de ${total}`;
+  const dotsEl = document.getElementById('onboarding-dots');
+  dotsEl.innerHTML = '';
+  for(let i=0;i<total;i++){
+    dotsEl.innerHTML += `<span class="${i===passoOnboarding?'ativo':''}"></span>`;
+  }
 }
 function avancarOnboarding(){
   const passos = document.querySelectorAll('.onboarding-step');
@@ -1140,25 +1160,24 @@ function avancarOnboarding(){
   passos[passoOnboarding].classList.remove('ativo');
   passoOnboarding = Math.min(passoOnboarding+1, passos.length-1);
   passos[passoOnboarding].classList.add('ativo');
-  atualizarContadorOnboarding();
-  atualizarBotoesOnboarding();
+  renderizarDotsOnboarding();
+  atualizarBotaoConcluirOnboarding();
 }
 function voltarOnboarding(){
   const passos = document.querySelectorAll('.onboarding-step');
   passos[passoOnboarding].classList.remove('ativo');
   passoOnboarding = Math.max(passoOnboarding-1, 0);
   passos[passoOnboarding].classList.add('ativo');
-  atualizarContadorOnboarding();
-  atualizarBotoesOnboarding();
+  renderizarDotsOnboarding();
+  atualizarBotaoConcluirOnboarding();
 }
-function atualizarBotoesOnboarding(){
+function atualizarBotaoConcluirOnboarding(){
   const passos = document.querySelectorAll('.onboarding-step');
   const ultimo = passoOnboarding === passos.length-1;
-  document.getElementById('btn-onboarding-avancar').textContent = ultimo ? 'Concluir e começar' : 'Próximo';
-  document.getElementById('btn-onboarding-voltar').classList.toggle('hidden', passoOnboarding === 0);
+  document.getElementById('btn-onboarding-concluir').classList.toggle('hidden', !ultimo);
 }
-// Swipe de verdade no conteúdo do onboarding — as bolinhas/contador só fazem
-// sentido se o gesto funcionar também, não só o botão
+// Swipe de verdade no conteúdo do onboarding — as bolinhas só fazem sentido
+// se o gesto funcionar também, não só o botão do último passo
 function iniciarSwipeOnboarding(){
   const el = document.getElementById('onboarding-conteudo');
   let inicioX = null, inicioY = null;
