@@ -397,10 +397,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <div style="color:#888;cursor:pointer;margin-bottom:16px;font-size:var(--fs-d)" onclick="fecharCadernoResolucao()">← Cadernos</div>
       <div id="pills-nav-caderno" class="pills-nav"></div>
       <div id="questao-atual"></div>
-      <div style="display:flex;gap:8px;margin-top:16px" id="wrapper-acoes-caderno" class="hidden">
-        <button class="btn-secundario" style="flex:1" id="btn-excluir-caderno-resolucao" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">Excluir caderno</button>
-        <button class="btn-primario" style="flex:1;background:#1B5E20" id="btn-finalizar-caderno" onclick="finalizarCaderno()">Finalizar caderno</button>
-      </div>
     </div>
   </div>
 
@@ -1482,6 +1478,8 @@ function renderizarQuestaoAtual(){
   const jaRespondida = !!respostasPorQuestao[q.id];
   const resposta = respostasPorQuestao[q.id];
   const gabarito = (q.gabarito||'').toLowerCase().trim();
+  const todasRespondidas = questoesCaderno.length > 0 && questoesCaderno.every(qq => !!respostasPorQuestao[qq.id]);
+  const nomeCadernoEscapado = escapeHtml(cadernoAtual.nome || 'Caderno sem nome');
 
   const htmlAlternativas = alternativas.length
     ? alternativas.map(alt=>{
@@ -1508,6 +1506,11 @@ function renderizarQuestaoAtual(){
       ${indiceQuestaoAtual>0?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual-1})">← Anterior</button>`:''}
       ${indiceQuestaoAtual<questoesCaderno.length-1?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual+1})">Próxima →</button>`:''}
     </div>
+    ${todasRespondidas ? `
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-secundario" style="flex:1" data-id="${cadernoAtual.id}" data-nome="${nomeCadernoEscapado}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">Excluir caderno</button>
+      <button class="btn-primario" style="flex:1" onclick="finalizarCaderno()">Finalizar caderno</button>
+    </div>` : ''}
     <div class="banco-acoes">
       <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoQuestao('${q.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
@@ -1527,24 +1530,36 @@ function renderizarQuestaoAtual(){
       </button>
     </div>`;
   document.getElementById('questao-atual').innerHTML = html;
-
-  const todasRespondidas = questoesCaderno.length > 0 && questoesCaderno.every(qq => !!respostasPorQuestao[qq.id]);
-  const btnExcluir = document.getElementById('btn-excluir-caderno-resolucao');
-  btnExcluir.dataset.id = cadernoAtual.id;
-  btnExcluir.dataset.nome = cadernoAtual.nome || 'Caderno sem nome';
-  document.getElementById('wrapper-acoes-caderno').classList.toggle('hidden', !todasRespondidas);
 }
 
 function renderizarResultado(q,resposta){
-  let explicacaoHtml = '';
+  const cor = resposta.correta ? '#3B6D11' : '#A32D2D';
+  const textoResultado = `${resposta.correta?'Acertou!':'Errou.'} Gabarito: ${(q.gabarito||'—').toUpperCase()}`;
+
+  let linkExplicacao = '';
+  let blocoExplicacao = '';
+
   if(q.explicacao_origem === 'fonte_original'){
-    explicacaoHtml = `<p style="margin-top:10px;font-weight:400;font-size:var(--fs-d);text-align:left">${escapeHtml(q.explicacao)}</p>`;
+    // veio pronta da fonte — mostra direto, sem clique extra, sem etiqueta
+    blocoExplicacao = `<p style="margin-top:10px;font-weight:400;font-size:var(--fs-d);text-align:left;color:#111;line-height:1.5">${escapeHtml(q.explicacao)}</p>`;
   }else if(q.explicacao_origem === 'gerada_web'){
-    explicacaoHtml = `<button class="btn-secundario" style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="mostrarExplicacaoSalva('${q.id}')">Mostrar explicação (baseada na web) <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>`;
+    // já foi gerada antes — link pra expandir/esconder, sem chamar a IA de novo
+    linkExplicacao = `<span class="info-icone" onclick="toggleExplicacaoInline('${q.id}')">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span id="link-explicacao-texto-${q.id}">Ver explicação</span>
+    </span>`;
+    blocoExplicacao = `<p id="texto-explicacao-${q.id}" class="hidden" style="margin-top:10px;font-weight:400;font-size:var(--fs-d);text-align:left;color:#111;line-height:1.5">${escapeHtml(q.explicacao)}<br><span style="font-size:var(--fs-a);color:#888">(baseada em busca na web)</span></p>`;
   }else{
-    explicacaoHtml = `<button class="btn-secundario" style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="gerarExplicacao('${q.id}')">Gerar explicação (busca na web) <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>`;
+    // nunca foi gerada — link pra disparar a busca
+    linkExplicacao = `<span class="info-icone" onclick="gerarExplicacao('${q.id}')">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Gerar explicação
+    </span>`;
   }
-  return `<div class="banco-resultado" style="color:${resposta.correta?'#3B6D11':'#A32D2D'}">${resposta.correta?'Acertou!':'Errou.'} Gabarito: ${(q.gabarito||'—').toUpperCase()}</div>${explicacaoHtml}`;
+
+  return `<div class="banco-resultado" style="color:${cor};display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px 10px">
+    <span>${textoResultado}</span>${linkExplicacao}
+  </div>${blocoExplicacao}`;
 }
 
 async function responderQuestao(questaoId, letraEscolhida){
@@ -1570,9 +1585,13 @@ function gerarExplicacao(questaoId){
   // pra 'gerada_web'. Fora do escopo deste primeiro rascunho de código.
   alert('Geração de explicação via busca na web: a implementar numa próxima função serverless.');
 }
-function mostrarExplicacaoSalva(questaoId){
-  const q = questoesCaderno.find(x=>x.id===questaoId);
-  alert(q.explicacao || '(sem explicação salva)');
+function toggleExplicacaoInline(questaoId){
+  const bloco = document.getElementById('texto-explicacao-'+questaoId);
+  const textoLink = document.getElementById('link-explicacao-texto-'+questaoId);
+  if(!bloco) return;
+  const abrindo = bloco.classList.contains('hidden');
+  bloco.classList.toggle('hidden');
+  if(textoLink) textoLink.textContent = abrindo ? 'Ocultar explicação' : 'Ver explicação';
 }
 
 let questaoParaExcluir = null;
