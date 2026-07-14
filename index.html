@@ -39,7 +39,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .card-inicio{background:#fff;border-radius:18px;padding:13px;box-shadow:0 1px 4px rgba(0,0,0,0.05);margin-bottom:14px;position:relative;overflow:hidden}
 
 /* --- Botões --- */
-.btn-primario{background:#111;color:#fff;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;width:100%;border:none;cursor:pointer;font-family:inherit}
+.btn-primario{background:#D97757;color:#fff;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;width:100%;border:none;cursor:pointer;font-family:inherit}
 .btn-secundario{background:#f0f0ee;color:#111;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;border:none;cursor:pointer;font-family:inherit}
 .filter-btn{font-size:var(--fs-c);padding:4px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;margin:4px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
@@ -48,7 +48,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
 .chev.open{transform:rotate(180deg)}
-#barra-adicionar-questoes{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--nav-height, 76px);width:100%;max-width:480px;box-sizing:border-box;background:#fff;border-top:0.5px solid #e0e0e0;padding:12px 16px;z-index:15;display:flex;align-items:center;gap:10px;cursor:pointer;text-align:left}
+#barra-adicionar-questoes{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav-height, 76px) + 12px);width:calc(100% - 32px);max-width:448px;box-sizing:border-box;background:#fff;border-radius:28px;box-shadow:0 2px 8px rgba(0,0,0,0.08);padding:14px 16px;z-index:15;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
 .conteudo-colapsavel{display:none}
 .conteudo-colapsavel.open{display:block}
 
@@ -72,7 +72,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #app-shell.ativo{display:flex}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;flex-shrink:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
 .topbar h2{font-size:var(--fs-g);margin:0;color:var(--azul-marca);display:none}
-.avatar-btn{width:36px;height:36px;border-radius:50%;background:var(--azul-marca);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0}
+.avatar-btn{width:36px;height:36px;border-radius:50%;background:#D97757;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0}
 
 .content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px 0 16px;padding-bottom:calc(70px + var(--safe-bottom))}
 
@@ -188,7 +188,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="view-login">
 <div class="login-inner">
   <div style="text-align:center;margin-bottom:16px">
-    <img src="assets/logo.png" alt="Claude Quest" style="height:48px;width:auto">
+    <img src="assets/logo.png" alt="Claude Quest" style="height:36px;width:auto">
   </div>
 
   <form id="login-form-entrar" onsubmit="event.preventDefault(); entrar();">
@@ -252,8 +252,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="app-shell">
 
   <div class="topbar">
-    <img src="assets/logo.png" alt="Claude Quest" style="height:28px;width:auto;display:block">
-    <button class="avatar-btn" onclick="abrirModal('modal-perfil')" id="avatar-inicial">?</button>
+    <img src="assets/logo.png" alt="Claude Quest" style="height:36px;width:auto;display:block">
+    <button class="avatar-btn" onclick="abrirModalPerfil()" id="avatar-inicial">?</button>
   </div>
 
   <div class="content" id="content">
@@ -262,7 +262,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="view-aba" id="aba-inicio">
     <div class="card-inicio" style="background:#D97757;color:#fff">
       <div style="font-size:var(--fs-f);font-weight:600" id="inicio-saudacao">Olá!</div>
-      <div style="font-size:var(--fs-c);opacity:0.85">Bora estudar hoje?</div>
+      <div style="font-size:var(--fs-c);opacity:0.85">Bora estudar</div>
     </div>
 
     <div id="caderno-em-andamento" class="hidden">
@@ -288,7 +288,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
       <div>
         <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0">
-          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+          <span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
           <span>Novo caderno</span>
         </div>
 
@@ -346,16 +346,16 @@ input,select,textarea{font-family:inherit;font-size:16px}
         </div>
       </div>
 
-      <div id="card-cadernos-existentes">
+      <div id="card-cadernos-existentes" style="margin-top:28px">
         <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0;cursor:pointer" onclick="toggleCadernosLista('andamento')">
-          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+          <span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
           <span id="titulo-cadernos-andamento">Cadernos em andamento (0)</span>
           <span class="chev" id="chev-andamento" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
         </div>
         <div id="lista-cadernos-andamento" class="conteudo-colapsavel"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno em andamento.</span></div>
 
-        <div class="section-title" style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleCadernosLista('concluidos')">
-          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:16px" onclick="toggleCadernosLista('concluidos')">
+          <span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M20 6 9 17l-5-5"/></svg></span>
           <span id="titulo-cadernos-concluidos">Cadernos concluídos (0)</span>
           <span class="chev" id="chev-concluidos" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
         </div>
@@ -389,10 +389,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <button id="barra-adicionar-questoes" onclick="abrirModal('modal-upload')">
     <span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#D97757"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-    <div style="text-align:left">
-      <div style="font-weight:600;font-size:var(--fs-e);color:#D97757">Adicionar questões</div>
-      <div style="color:#888;font-size:var(--fs-c)">Suba um PDF e a gente extrai as questões pra você</div>
-    </div>
+    <span style="font-weight:600;font-size:var(--fs-e);color:#D97757">Adicionar questões</span>
   </button>
 
   <div class="bottom-nav" id="bottom-nav">
@@ -407,7 +404,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <span id="badge-comunidade" class="badge-notificacao hidden">0</span>
     </div>
     <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 10.5h6M9 13.5h6M9 16.5h4"/></svg></span><span class="nav-label">Desempenho</span>
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></span><span class="nav-label">Métricas</span>
     </div>
   </div>
 </div>
@@ -419,6 +416,13 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-perfil">
   <div class="modal-conteudo">
     <h3 class="config-title">Seu perfil</h3>
+
+    <div style="text-align:center;margin-bottom:14px">
+      <div id="avatar-perfil-preview" style="width:72px;height:72px;border-radius:50%;background:#D97757;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:24px;margin:0 auto 8px;overflow:hidden">?</div>
+      <input type="file" id="upload-foto-perfil" accept="image/*" class="hidden" onchange="enviarFotoPerfil()">
+      <button type="button" class="btn-secundario" onclick="document.getElementById('upload-foto-perfil').click()">Trocar foto</button>
+    </div>
+
     <input type="text" id="perfil-nome-input" class="filter-select" placeholder="Seu nome">
     <button class="btn-secundario" style="width:100%;margin-bottom:14px" onclick="salvarNomePerfil()">Salvar nome</button>
     <button class="btn-secundario" style="width:100%;margin-bottom:10px" onclick="sair()">Sair</button>
@@ -516,6 +520,13 @@ function wilsonScoreLowerBound(k,n){
   const centro=p+(z*z)/(2*n);
   const margem=z*Math.sqrt((p*(1-p))/n+(z*z)/(4*n*n));
   return Math.max(0,Math.round(((centro-margem)/denom)*100));
+}
+
+function saudacaoHora(){
+  const h = new Date().getHours();
+  if(h < 12) return 'Bom dia';
+  if(h < 18) return 'Boa tarde';
+  return 'Boa noite';
 }
 
 function sobrenomeDe(nomeCompleto){
@@ -637,14 +648,52 @@ async function definirSenha(){
   await posLogin(nome);
 }
 
+function atualizarAvatarUI(){
+  const iniciais = (usuarioAtual.nome||'?')[0].toUpperCase();
+  ['avatar-inicial','avatar-perfil-preview'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(usuarioAtual.foto_url){
+      el.innerHTML = `<img src="${usuarioAtual.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    }else{
+      el.textContent = iniciais;
+    }
+  });
+}
+
+function abrirModalPerfil(){
+  atualizarAvatarUI();
+  abrirModal('modal-perfil');
+}
+
+async function enviarFotoPerfil(){
+  const input = document.getElementById('upload-foto-perfil');
+  if(!input.files.length) return;
+  const arquivo = input.files[0];
+  const extensao = arquivo.name.split('.').pop();
+  const caminho = `${usuarioAtual.id}/avatar.${extensao}`;
+
+  const {error: erroUpload} = await sb.storage.from('avatars').upload(caminho, arquivo, {upsert:true});
+  if(erroUpload){ alert('Erro ao enviar foto: '+erroUpload.message); return; }
+
+  const {data: urlData} = sb.storage.from('avatars').getPublicUrl(caminho);
+  const fotoUrl = urlData.publicUrl + '?t=' + Date.now(); // evita cache antigo
+
+  const {error: erroUpdate} = await sb.from('usuarios').update({foto_url: fotoUrl}).eq('id', usuarioAtual.id);
+  if(erroUpdate){ alert('Erro ao salvar foto: '+erroUpdate.message); return; }
+
+  usuarioAtual.foto_url = fotoUrl;
+  atualizarAvatarUI();
+}
+
 async function salvarNomePerfil(){
   const novoNome = document.getElementById('perfil-nome-input').value.trim();
   if(!novoNome){ alert('Digite um nome válido.'); return; }
   const {error} = await sb.from('usuarios').update({nome: novoNome}).eq('id', usuarioAtual.id);
   if(error){ alert('Erro ao salvar nome: '+error.message); return; }
   usuarioAtual.nome = novoNome;
-  document.getElementById('inicio-saudacao').textContent = `Olá, ${sobrenomeDe(novoNome)}!`;
-  document.getElementById('avatar-inicial').textContent = novoNome[0].toUpperCase();
+  document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${sobrenomeDe(novoNome)}!`;
+  atualizarAvatarUI();
   fecharModal('modal-perfil');
 }
 
@@ -723,8 +772,8 @@ async function concluirOnboarding(){
    ============================================================ */
 async function mostrarAppShell(){
   document.getElementById('app-shell').classList.add('ativo');
-  document.getElementById('inicio-saudacao').textContent = `Olá, ${sobrenomeDe(usuarioAtual.nome)}!`;
-  document.getElementById('avatar-inicial').textContent = usuarioAtual.nome[0].toUpperCase();
+  document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${sobrenomeDe(usuarioAtual.nome)}!`;
+  atualizarAvatarUI();
   document.getElementById('perfil-nome-input').value = usuarioAtual.nome;
   if(usuarioAtual.is_admin){
     document.getElementById('btn-abrir-admin').classList.remove('hidden');
