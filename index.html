@@ -48,9 +48,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
 .chev.open{transform:rotate(180deg)}
+#barra-adicionar-questoes{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--nav-height, 76px);width:100%;max-width:480px;box-sizing:border-box;background:#fff;border-top:0.5px solid #e0e0e0;padding:12px 16px;z-index:15;display:flex;align-items:center;gap:10px;cursor:pointer;text-align:left}
 .conteudo-colapsavel{display:none}
 .conteudo-colapsavel.open{display:block}
-.chev.open{transform:rotate(180deg)}
 
 /* --- Telas de auth/onboarding --- */
 #view-login,#view-onboarding{position:fixed;top:var(--vv-top, 0px);left:0;width:100%;height:var(--vh-real, 100vh);display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 24px) 24px;box-sizing:border-box}
@@ -74,17 +74,18 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .topbar h2{font-size:var(--fs-g);margin:0;color:var(--azul-marca);display:none}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:var(--azul-marca);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0}
 
-.content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px;padding-bottom:calc(70px + var(--safe-bottom))}
+.content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px 0 16px;padding-bottom:calc(70px + var(--safe-bottom))}
 
 /* --- Bottom nav --- */
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
-.nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box}
+.nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative}
+.badge-notificacao{position:absolute;top:10px;right:calc(50% - 24px);background:#E24B4A;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
 .nav-item.active{background:#f0f0ee}
 .nav-icon{width:21px;height:21px;color:#888;display:flex;align-items:center;justify-content:center}
 .nav-icon svg{width:100%;height:100%}
-.nav-item.active .nav-icon{color:#0A2882}
+.nav-item.active .nav-icon{color:#D97757}
 .nav-label{font-size:var(--fs-a);color:#888;white-space:normal;text-align:center;line-height:1.15;max-width:100%}
-.nav-item.active .nav-label{color:#0A2882;font-weight:500}
+.nav-item.active .nav-label{color:#D97757;font-weight:500}
 
 @media(min-width:768px) and (max-width:1099px){
   #bottom-nav{max-width:100%}
@@ -187,7 +188,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="view-login">
 <div class="login-inner">
   <div style="text-align:center;margin-bottom:16px">
-    <span style="font-size:44px;font-weight:800;color:#D97757;font-family:'Manrope',-apple-system,sans-serif;letter-spacing:-1px">Claude</span>
+    <img src="assets/logo.png" alt="Claude Quest" style="height:48px;width:auto">
   </div>
 
   <form id="login-form-entrar" onsubmit="event.preventDefault(); entrar();">
@@ -198,7 +199,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </form>
 
   <form id="login-form-definir-senha" class="hidden" onsubmit="event.preventDefault(); definirSenha();">
-    <p style="margin-bottom:16px">Defina sua senha pra começar a usar o Claude Quest.</p>
+    <p style="margin-bottom:16px">Defina seu nome e sua senha pra começar a usar o Claude Quest.</p>
+    <input type="text" id="novo-nome" placeholder="Seu nome" autocomplete="name" required>
     <input type="password" id="nova-senha" placeholder="Nova senha" autocomplete="new-password" required>
     <input type="password" id="nova-senha-confirmar" placeholder="Confirmar senha" autocomplete="new-password" required>
     <div class="erro hidden" id="definir-senha-erro"></div>
@@ -250,7 +252,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="app-shell">
 
   <div class="topbar">
-    <span class="appname">🧭<span><b>Claude</b>&nbsp;Quest</span></span>
+    <img src="assets/logo.png" alt="Claude Quest" style="height:28px;width:auto;display:block">
     <button class="avatar-btn" onclick="abrirModal('modal-perfil')" id="avatar-inicial">?</button>
   </div>
 
@@ -258,17 +260,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <!-- ===== INÍCIO ===== -->
   <div class="view-aba" id="aba-inicio">
-    <div class="card-inicio" style="background:var(--azul-marca);color:#fff">
+    <div class="card-inicio" style="background:#D97757;color:#fff">
       <div style="font-size:var(--fs-f);font-weight:600" id="inicio-saudacao">Olá!</div>
       <div style="font-size:var(--fs-c);opacity:0.85">Bora estudar hoje?</div>
     </div>
-
-    <button class="card-inicio" style="display:flex;align-items:center;justify-content:space-between;width:100%" onclick="abrirModal('modal-upload')">
-      <div>
-        <div style="font-weight:600;font-size:var(--fs-e)">➕ Adicionar questões</div>
-        <div style="color:#888;font-size:var(--fs-c)">Suba um PDF e a gente extrai as questões pra você</div>
-      </div>
-    </button>
 
     <div id="caderno-em-andamento" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left" onclick="retomarCaderno()">
@@ -276,6 +271,14 @@ input,select,textarea{font-family:inherit;font-size:16px}
         <div style="color:#888;font-size:var(--fs-c)" id="caderno-em-andamento-info"></div>
       </button>
     </div>
+
+    <div id="card-notificacao-comunidade" class="hidden">
+      <button class="card-inicio" style="width:100%;text-align:left" onclick="trocarAba('comunidade')">
+        <div style="font-weight:600">💬 Novidades na Comunidade</div>
+        <div style="color:#888;font-size:var(--fs-c)" id="texto-notificacao-comunidade"></div>
+      </button>
+    </div>
+    <div style="height:76px"></div>
   </div>
 
   <!-- ===== GERAR QUESTS (filtros + resolução) ===== -->
@@ -283,26 +286,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div id="quests-filtros">
 
-      <div class="card-inicio" id="card-cadernos-existentes">
-        <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0;cursor:pointer" onclick="toggleCadernosLista('andamento')">
-          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-          <span id="titulo-cadernos-andamento">Cadernos em andamento (0)</span>
-          <span class="chev" id="chev-andamento" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-        </div>
-        <div id="lista-cadernos-andamento" class="conteudo-colapsavel"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno em andamento.</span></div>
-
-        <div class="section-title" style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleCadernosLista('concluidos')">
-          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M20 6 9 17l-5-5"/></svg></span>
-          <span id="titulo-cadernos-concluidos">Cadernos concluídos (0)</span>
-          <span class="chev" id="chev-concluidos" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-        </div>
-        <div id="lista-cadernos-concluidos" class="conteudo-colapsavel"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno concluído ainda.</span></div>
-      </div>
-
-      <div class="card-inicio">
+      <div>
         <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0">
-          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 4h16l-6 8v6l-4 2v-8L4 4z"/></svg></span>
-          <span>Filtros</span>
+          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+          <span>Novo caderno</span>
         </div>
 
         <input type="text" id="nome-caderno" class="filter-select" placeholder="Nome do caderno (opcional)">
@@ -326,23 +313,15 @@ input,select,textarea{font-family:inherit;font-size:16px}
           <option value="Número">Número</option>
           <option value="Lista">Lista</option>
           <option value="Identificação">Identificação</option>
-          <option value="Outro">Outro</option>
-        </select>
-
-        <select class="filter-select" id="filtro-status" onchange="selecionarFiltroSelect('status', this.value)">
-          <option value="todos">Todos os status</option>
-          <option>Errei</option>
-          <option>Acertei com dúvida</option>
-          <option>Acertei</option>
         </select>
 
         <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#111;padding:6px 2px;cursor:pointer">
           <input type="checkbox" id="toggle-priorizar-erro" onchange="atualizarContadorDisponiveis()">
-          Priorizar questões que eu mais erro
+          Priorizar questões que mais erro
           <span class="info-icone" onclick="abrirModal('modal-info-wilson')">ℹ️</span>
         </label>
         <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#111;padding:6px 2px 14px;cursor:pointer">
-          <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões que eu nunca respondi
+          <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões inéditas
         </label>
 
         <div id="contador-disponiveis" style="text-align:center;color:#888;font-size:var(--fs-c);margin-bottom:14px">Escolha os filtros acima pra ver quantas questões estão disponíveis.</div>
@@ -365,6 +344,22 @@ input,select,textarea{font-family:inherit;font-size:16px}
           Poucas ou nenhuma questão com esses filtros ainda —
           <button style="color:var(--azul-marca);font-weight:600;text-decoration:underline" onclick="abrirModal('modal-upload')">que tal subir um PDF?</button>
         </div>
+      </div>
+
+      <div id="card-cadernos-existentes">
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0;cursor:pointer" onclick="toggleCadernosLista('andamento')">
+          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+          <span id="titulo-cadernos-andamento">Cadernos em andamento (0)</span>
+          <span class="chev" id="chev-andamento" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </div>
+        <div id="lista-cadernos-andamento" class="conteudo-colapsavel"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno em andamento.</span></div>
+
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="toggleCadernosLista('concluidos')">
+          <span style="width:28px;height:28px;border-radius:9px;background:#EEF0F4;color:var(--azul-marca);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span id="titulo-cadernos-concluidos">Cadernos concluídos (0)</span>
+          <span class="chev" id="chev-concluidos" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </div>
+        <div id="lista-cadernos-concluidos" class="conteudo-colapsavel"><span style="color:#999;font-size:var(--fs-c)">Nenhum caderno concluído ainda.</span></div>
       </div>
     </div>
 
@@ -392,18 +387,27 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   </div>
 
+  <button id="barra-adicionar-questoes" onclick="abrirModal('modal-upload')">
+    <span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#D97757"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+    <div style="text-align:left">
+      <div style="font-weight:600;font-size:var(--fs-e);color:#D97757">Adicionar questões</div>
+      <div style="color:#888;font-size:var(--fs-c)">Suba um PDF e a gente extrai as questões pra você</div>
+    </div>
+  </button>
+
   <div class="bottom-nav" id="bottom-nav">
     <div class="nav-item active" data-aba="inicio" onclick="trocarAba('inicio')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-6.5h5V21H18a1 1 0 0 0 1-1V9.5"/></svg></span><span class="nav-label">Início</span>
     </div>
     <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Gerar quests</span>
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
     </div>
     <div class="nav-item" data-aba="comunidade" onclick="trocarAba('comunidade')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span><span class="nav-label">Comunidade</span>
+      <span id="badge-comunidade" class="badge-notificacao hidden">0</span>
     </div>
     <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 10.5h6M9 13.5h6M9 16.5h4"/></svg></span><span class="nav-label">Como você tá indo</span>
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 10.5h6M9 13.5h6M9 16.5h4"/></svg></span><span class="nav-label">Desempenho</span>
     </div>
   </div>
 </div>
@@ -414,7 +418,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 <div class="modal-overlay hidden" id="modal-perfil">
   <div class="modal-conteudo">
-    <h3 class="config-title" id="perfil-nome">—</h3>
+    <h3 class="config-title">Seu perfil</h3>
+    <input type="text" id="perfil-nome-input" class="filter-select" placeholder="Seu nome">
+    <button class="btn-secundario" style="width:100%;margin-bottom:14px" onclick="salvarNomePerfil()">Salvar nome</button>
     <button class="btn-secundario" style="width:100%;margin-bottom:10px" onclick="sair()">Sair</button>
     <button class="btn-secundario hidden" id="btn-abrir-admin" style="width:100%;margin-bottom:10px" onclick="abrirModal('modal-admin')">Painel admin</button>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-perfil')">Fechar</button>
@@ -424,8 +430,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-upload">
   <div class="modal-conteudo">
     <h3 class="config-title">Adicionar questões</h3>
-    <p style="color:#666;font-size:var(--fs-c)">Selecione um PDF com questões. A extração é automática e as questões entram direto no banco.</p>
-    <input type="file" id="upload-arquivo" accept="application/pdf" style="margin:14px 0">
+    <p style="color:#666;font-size:var(--fs-c)">Selecione o PDF com as questões que você deseja adicionar ao banco.</p>
+    <input type="file" id="upload-arquivo" accept="application/pdf" class="hidden" onchange="atualizarNomeArquivoSelecionado()">
+    <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 6px" onclick="document.getElementById('upload-arquivo').click()">Escolher arquivo</button>
+    <div id="nome-arquivo-selecionado" style="color:#888;font-size:var(--fs-c);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:10px">Nenhum arquivo selecionado</div>
     <div id="upload-status"></div>
     <button class="btn-primario" onclick="enviarUpload()">Extrair questões</button>
     <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-upload')">Cancelar</button>
@@ -508,6 +516,11 @@ function wilsonScoreLowerBound(k,n){
   const centro=p+(z*z)/(2*n);
   const margem=z*Math.sqrt((p*(1-p))/n+(z*z)/(4*n*n));
   return Math.max(0,Math.round(((centro-margem)/denom)*100));
+}
+
+function sobrenomeDe(nomeCompleto){
+  const partes = (nomeCompleto||'').trim().split(/\s+/);
+  return partes[partes.length-1] || nomeCompleto;
 }
 
 function escapeHtml(texto){
@@ -596,9 +609,15 @@ async function entrar(){
 }
 
 async function definirSenha(){
+  const nome = document.getElementById('novo-nome').value.trim();
   const s1 = document.getElementById('nova-senha').value;
   const s2 = document.getElementById('nova-senha-confirmar').value;
   const erroEl = document.getElementById('definir-senha-erro');
+  if(!nome){
+    erroEl.textContent = 'Digite seu nome.';
+    erroEl.classList.remove('hidden');
+    return;
+  }
   if(s1.length < 6){
     erroEl.textContent = 'Senha precisa ter pelo menos 6 caracteres.';
     erroEl.classList.remove('hidden');
@@ -615,7 +634,18 @@ async function definirSenha(){
     erroEl.classList.remove('hidden');
     return;
   }
-  await posLogin();
+  await posLogin(nome);
+}
+
+async function salvarNomePerfil(){
+  const novoNome = document.getElementById('perfil-nome-input').value.trim();
+  if(!novoNome){ alert('Digite um nome válido.'); return; }
+  const {error} = await sb.from('usuarios').update({nome: novoNome}).eq('id', usuarioAtual.id);
+  if(error){ alert('Erro ao salvar nome: '+error.message); return; }
+  usuarioAtual.nome = novoNome;
+  document.getElementById('inicio-saudacao').textContent = `Olá, ${sobrenomeDe(novoNome)}!`;
+  document.getElementById('avatar-inicial').textContent = novoNome[0].toUpperCase();
+  fecharModal('modal-perfil');
 }
 
 async function sair(){
@@ -623,14 +653,14 @@ async function sair(){
   location.reload();
 }
 
-async function posLogin(){
+async function posLogin(nomeInformado){
   const {data:{user}} = await sb.auth.getUser();
   if(!user) return;
 
   let {data: perfil} = await sb.from('usuarios').select('*').eq('id', user.id).single();
   if(!perfil){
     // primeira vez desse usuário — cria a linha de perfil
-    const nome = user.email.split('@')[0];
+    const nome = nomeInformado || user.email.split('@')[0];
     const {data: novo} = await sb.from('usuarios').insert({id:user.id, nome}).select().single();
     perfil = novo;
   }
@@ -693,22 +723,32 @@ async function concluirOnboarding(){
    ============================================================ */
 async function mostrarAppShell(){
   document.getElementById('app-shell').classList.add('ativo');
-  document.getElementById('inicio-saudacao').textContent = `Olá, ${usuarioAtual.nome}!`;
+  document.getElementById('inicio-saudacao').textContent = `Olá, ${sobrenomeDe(usuarioAtual.nome)}!`;
   document.getElementById('avatar-inicial').textContent = usuarioAtual.nome[0].toUpperCase();
-  document.getElementById('perfil-nome').textContent = usuarioAtual.nome;
+  document.getElementById('perfil-nome-input').value = usuarioAtual.nome;
   if(usuarioAtual.is_admin){
     document.getElementById('btn-abrir-admin').classList.remove('hidden');
   }
+  medirAlturaNav();
   await carregarBibliografia();
   await verificarCadernoEmAndamento();
+  await atualizarNotificacoesComunidade();
+  iniciarRealtimeComunidade();
 }
+
+function medirAlturaNav(){
+  const nav = document.getElementById('bottom-nav');
+  if(nav) document.documentElement.style.setProperty('--nav-height', nav.offsetHeight + 'px');
+}
+window.addEventListener('resize', medirAlturaNav);
 
 function trocarAba(nome){
   document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
   document.getElementById('aba-'+nome).classList.remove('hidden');
   document.querySelectorAll('#bottom-nav .nav-item').forEach(item=>item.classList.toggle('active', item.dataset.aba===nome));
+  document.getElementById('barra-adicionar-questoes').classList.toggle('hidden', nome!=='inicio');
   document.getElementById('content').scrollTop = 0;
-  if(nome==='comunidade') carregarComunidade();
+  if(nome==='comunidade'){ carregarComunidade(); marcarComunidadeVista(); }
   if(nome==='placar') carregarPlacar();
 }
 
@@ -746,7 +786,7 @@ async function carregarBibliografia(){
   await carregarCadernosExistentes();
 }
 
-let filtroSelecionado = {modulo:null, publicacao:null, capitulo:null, tipoQuestao:null, status:null};
+let filtroSelecionado = {modulo:null, publicacao:null, capitulo:null, tipoQuestao:null};
 let quantidadeSelecionada = 5;
 
 function selecionarFiltroSelect(nivel, valor){
@@ -817,22 +857,6 @@ async function buscarQuestoesFiltradas(){
     const {data: respondidas} = await sb.from('respostas').select('questao_id').eq('usuario_id', usuarioAtual.id);
     const idsRespondidos = new Set((respondidas||[]).map(r=>r.questao_id));
     questoesFiltradas = questoesFiltradas.filter(q=>!idsRespondidos.has(q.id));
-  }
-
-  // Status (Errei/Acertei com dúvida/Acertei) — baseado na resposta mais recente da própria pessoa pra cada questão.
-  // NOTA: o Quest ainda não tem o estado "Acertei com dúvida" no schema (respostas só guarda certo/errado),
-  // então esse filtro específico não tem dado correspondente ainda e sempre devolve vazio.
-  if(filtroSelecionado.status){
-    const {data: minhasRespostas} = await sb.from('respostas').select('questao_id, correta, respondido_em').eq('usuario_id', usuarioAtual.id).order('respondido_em', {ascending:false});
-    const ultimaPorQuestao = {};
-    (minhasRespostas||[]).forEach(r=>{ if(!(r.questao_id in ultimaPorQuestao)) ultimaPorQuestao[r.questao_id] = r.correta; });
-    if(filtroSelecionado.status === 'Errei'){
-      questoesFiltradas = questoesFiltradas.filter(q => ultimaPorQuestao[q.id] === false);
-    }else if(filtroSelecionado.status === 'Acertei'){
-      questoesFiltradas = questoesFiltradas.filter(q => ultimaPorQuestao[q.id] === true);
-    }else if(filtroSelecionado.status === 'Acertei com dúvida'){
-      questoesFiltradas = [];
-    }
   }
 
   return questoesFiltradas;
@@ -1097,6 +1121,61 @@ async function finalizarCaderno(){
 /* ============================================================
    COMUNIDADE — correções pendentes
    ============================================================ */
+/* ============================================================
+   NOTIFICAÇÕES DA COMUNIDADE — Nível 1 (Realtime, só com app aberto)
+   ============================================================ */
+async function atualizarNotificacoesComunidade(){
+  const {data: correcoesPendentes} = await sb.from('correcoes').select('id').eq('status','pendente');
+  const totalCorrecoes = (correcoesPendentes||[]).length;
+
+  let totalComentarios = 0;
+  if(usuarioAtual.comunidade_visto_em){
+    const {data: comentariosNovos} = await sb.from('comentarios').select('id').gt('criado_em', usuarioAtual.comunidade_visto_em).neq('usuario_id', usuarioAtual.id);
+    totalComentarios = (comentariosNovos||[]).length;
+  }else{
+    const {data: todosComentarios} = await sb.from('comentarios').select('id').neq('usuario_id', usuarioAtual.id);
+    totalComentarios = (todosComentarios||[]).length;
+  }
+
+  const totalBadge = totalCorrecoes + totalComentarios;
+  const badgeEl = document.getElementById('badge-comunidade');
+  if(totalBadge > 0){
+    badgeEl.textContent = totalBadge > 9 ? '9+' : totalBadge;
+    badgeEl.classList.remove('hidden');
+  }else{
+    badgeEl.classList.add('hidden');
+  }
+
+  const cardEl = document.getElementById('card-notificacao-comunidade');
+  if(totalCorrecoes > 0 || totalComentarios > 0){
+    const partes = [];
+    if(totalCorrecoes>0) partes.push(`${totalCorrecoes} ${totalCorrecoes===1?'correção pendente':'correções pendentes'}`);
+    if(totalComentarios>0) partes.push(`${totalComentarios} ${totalComentarios===1?'comentário novo':'comentários novos'}`);
+    document.getElementById('texto-notificacao-comunidade').textContent = partes.join(' · ');
+    cardEl.classList.remove('hidden');
+  }else{
+    cardEl.classList.add('hidden');
+  }
+}
+
+async function marcarComunidadeVista(){
+  const agora = new Date().toISOString();
+  await sb.from('usuarios').update({comunidade_visto_em: agora}).eq('id', usuarioAtual.id);
+  usuarioAtual.comunidade_visto_em = agora;
+  await atualizarNotificacoesComunidade();
+}
+
+function iniciarRealtimeComunidade(){
+  sb.channel('comunidade-realtime')
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'comentarios'}, (payload)=>{
+      if(payload.new.usuario_id !== usuarioAtual.id) atualizarNotificacoesComunidade();
+    })
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'correcoes'}, ()=>{
+      atualizarNotificacoesComunidade();
+    })
+    .subscribe();
+}
+
 async function carregarComunidade(){
   const {data} = await sb.from('correcoes').select('*, questoes(enunciado)').eq('status','pendente').order('criado_em',{ascending:false});
   const el = document.getElementById('lista-correcoes-pendentes');
@@ -1136,6 +1215,12 @@ async function carregarPlacar(){
 /* ============================================================
    UPLOAD / EXTRAÇÃO DE PDF
    ============================================================ */
+function atualizarNomeArquivoSelecionado(){
+  const input = document.getElementById('upload-arquivo');
+  const el = document.getElementById('nome-arquivo-selecionado');
+  el.textContent = input.files.length ? input.files[0].name : 'Nenhum arquivo selecionado';
+}
+
 async function enviarUpload(){
   const input = document.getElementById('upload-arquivo');
   const status = document.getElementById('upload-status');
@@ -1180,7 +1265,7 @@ async function enviarUpload(){
     gabarito: q.gabarito,
     autor_id: usuarioAtual.id,
     capitulo: q.capitulo || null,
-    tipo_questao: q.tipo_questao || 'Outro',
+    tipo_questao: q.tipo_questao || null,
     modulo_pscpp: q.modulo_pscpp || 'Conhecimentos Gerais',
     explicacao: q.explicacao || null,
     explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada'
