@@ -43,7 +43,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .btn-secundario{background:#f0f0ee;color:#111;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;border:none;cursor:pointer;font-family:inherit}
 .filter-btn{font-size:var(--fs-c);padding:4px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;margin:4px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
-.filter-select{font-size:var(--fs-d);padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
+.filter-select{font-size:16px;padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
@@ -217,7 +217,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="view-onboarding" class="hidden">
 <div class="login-inner">
   <div class="onboarding-step ativo" data-step="0">
-    <h1>Bem-vindo(a) ao Claude Quest 👋</h1>
+    <h1>Bem-vindo(a) ao Claude Quest</h1>
     <p>Aqui é onde vocês 5 vão estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
   </div>
   <div class="onboarding-step" data-step="1">
@@ -269,16 +269,23 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div id="caderno-em-andamento" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left" onclick="retomarCaderno()">
-        <div style="font-weight:600">📖 Continuar caderno em andamento</div>
+        <div style="font-weight:600;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 0 2-2z"/></svg> Continuar caderno em andamento</div>
         <div style="color:#888;font-size:var(--fs-c)" id="caderno-em-andamento-info"></div>
       </button>
     </div>
 
     <div id="card-notificacao-forum" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left" onclick="trocarAba('forum')">
-        <div style="font-weight:600">💬 Novidades no Fórum</div>
+        <div style="font-weight:600;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 484.366 484.366" width="16" height="16" fill="#D97757"><path d="M483.629,457.833l-7.731-38.872c-3.07-15.4-15.117-27.43-30.517-30.478l-10.474-2.07 c-6.014-1.188-10.738-5.866-11.998-11.881l-1.982-9.621c-0.647-3.079,0.472-6.269,2.895-8.275 c9.449-7.826,18.095-19.354,23.133-32.958c6.945-1.253,13.291-7.937,15.338-17.141c2.52-11.401-2.504-22.218-11.211-24.156 c-0.111-0.015-0.221-0.008-0.316-0.015c-2.628-29.613-14.03-51.54-51.964-51.54c-37.288,0-49.13,21.919-51.917,51.523 c-0.111,0.023-0.236,0.017-0.362,0.031c-8.724,1.939-13.732,12.755-11.212,24.156c2.046,9.204,8.377,15.888,15.338,17.141 c5.039,13.612,13.7,25.132,23.131,32.966c2.426,1.999,3.545,5.189,2.914,8.259l-2,9.622c-1.244,6.015-5.968,10.7-12,11.896 l-10.471,2.063c-15.401,3.048-27.446,15.078-30.518,30.478l-7.732,38.872c-1.29,6.52,0.396,13.282,4.615,18.416 c4.22,5.141,10.518,8.117,17.163,8.117h126.101c6.647,0,12.945-2.977,17.165-8.117 C483.236,471.115,484.921,464.353,483.629,457.833z"/><path d="M162.662,418.961c-3.071-15.4-15.116-27.43-30.518-30.478l-10.472-2.07c-6.016-1.188-10.738-5.866-11.999-11.881 l-1.984-9.621c-0.646-3.079,0.473-6.269,2.898-8.275c9.447-7.826,18.092-19.354,23.131-32.958 c6.945-1.253,13.292-7.937,15.338-17.141c2.52-11.401-2.504-22.218-11.212-24.156c-0.109-0.015-0.221-0.008-0.314-0.015 c-2.63-29.613-14.032-51.54-51.966-51.54c-37.288,0-49.13,21.919-51.916,51.523c-0.111,0.023-0.237,0.017-0.363,0.031 c-8.724,1.939-13.731,12.755-11.212,24.156c2.048,9.204,8.377,15.888,15.339,17.141c5.038,13.612,13.699,25.132,23.133,32.966 c2.423,1.999,3.542,5.189,2.911,8.259l-1.999,9.622c-1.245,6.015-5.968,10.7-11.999,11.896l-10.473,2.063 c-15.399,3.048-27.446,15.078-30.516,30.478l-7.733,38.872c-1.292,6.52,0.394,13.282,4.613,18.416 c4.22,5.141,10.519,8.117,17.165,8.117h126.101c6.646,0,12.943-2.977,17.163-8.117c4.22-5.134,5.905-11.896,4.615-18.416 L162.662,418.961z"/><path d="M334.491,253.329c1.718-1.686,2.017-4.348,0.74-6.37L317.5,210.78h24.612c12.692,0,22.959-10.267,22.959-22.958V83.773 c0-12.691-10.267-22.958-22.959-22.958H284.92v66.199c0,24.07-19.574,43.643-43.65,43.643h-67.995l-17.637,11.787v5.378 c0,12.691,10.282,22.958,22.958,22.958h74.279l75.206,43.146C330.097,255.257,332.775,255.014,334.491,253.329z"/><path d="M77.753,149.974h24.613L84.21,186.404c-1.307,2.032-0.977,4.7,0.74,6.377c0.977,0.962,2.252,1.448,3.559,1.448 c0.993,0,1.969-0.282,2.835-0.857l75.647-43.398h74.278c12.676,0,22.959-10.291,22.959-22.959V22.959 C264.229,10.283,253.946,0,241.27,0H77.753C65.062,0,54.795,10.283,54.795,22.959v104.056 C54.795,139.683,65.062,149.974,77.753,149.974z M205.304,57.815c9.48,0,17.18,7.685,17.18,17.172c0,9.479-7.7,17.164-17.18,17.164 c-9.48,0-17.165-7.685-17.165-17.164C188.139,65.5,195.824,57.815,205.304,57.815z M159.511,57.815 c9.479,0,17.165,7.685,17.165,17.172c0,9.479-7.686,17.164-17.165,17.164c-9.479,0-17.18-7.685-17.18-17.164 C142.332,65.5,150.033,57.815,159.511,57.815z M113.704,57.815c9.513,0,17.181,7.685,17.181,17.172 c0,9.479-7.668,17.164-17.181,17.164c-9.464,0-17.163-7.685-17.163-17.164C96.541,65.5,104.24,57.815,113.704,57.815z"/></svg> Novidades no Fórum</div>
         <div style="color:#888;font-size:var(--fs-c)" id="texto-notificacao-forum"></div>
       </button>
+    </div>
+    <div class="card-inicio">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:600">Placar entre amigos</div>
+        <span class="info-icone" onclick="abrirModal('modal-info-wilson')">ℹ️</span>
+      </div>
+      <div id="lista-placar"><div class="loading-spinner"></div></div>
     </div>
     <div style="height:76px"></div>
   </div>
@@ -287,6 +294,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="view-aba hidden" id="aba-quests">
 
     <div id="quests-filtros">
+
+      <button id="btn-super-quest" onclick="gerarSuperQuest()" style="width:100%;background:#D97757;color:#fff;border:none;border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-bottom:20px;font-weight:700;font-size:var(--fs-e);text-transform:uppercase;letter-spacing:0.02em">
+        <span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></span>
+        Gerar SuperQuest
+      </button>
 
       <div>
         <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0">
@@ -329,14 +341,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
         <div id="contador-disponiveis" style="text-align:center;color:#888;font-size:var(--fs-c);margin-bottom:14px">Escolha os filtros acima pra ver quantas questões estão disponíveis.</div>
 
         <div class="section-title">Quantas questões</div>
-        <div class="filter-row" id="filtro-quantidade">
-          <button class="filter-btn active" data-qtd="5" onclick="selecionarQuantidade(this,5)">5</button>
-          <button class="filter-btn" data-qtd="10" onclick="selecionarQuantidade(this,10)">10</button>
-          <button class="filter-btn" data-qtd="15" onclick="selecionarQuantidade(this,15)">15</button>
-          <button class="filter-btn" data-qtd="20" onclick="selecionarQuantidade(this,20)">20</button>
-          <button class="filter-btn" data-qtd="todas" onclick="selecionarQuantidade(this,'todas')">Todas</button>
-        </div>
-        <input type="number" min="1" id="quantidade-customizada" placeholder="Ou digite uma quantidade (ex: 35)" style="width:100%;padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;margin:8px 0 14px" oninput="if(this.value)selecionarQuantidade(null,parseInt(this.value,10))">
+        <input type="number" min="1" id="quantidade-customizada" class="filter-select" placeholder="Quantidade de questões" value="15" oninput="if(this.value)selecionarQuantidade(null,parseInt(this.value,10))">
 
         <button class="btn-primario" onclick="montarCaderno()">Montar caderno</button>
         <div style="text-align:center;margin-top:8px">
@@ -374,22 +379,26 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <!-- ===== FÓRUM ===== -->
   <div class="view-aba hidden" id="aba-forum">
+    <input type="text" id="busca-forum" class="filter-select" placeholder="Buscar uma questão pra comentar..." oninput="buscarQuestaoForum(this.value)">
+    <div id="resultado-busca-forum" class="hidden" style="margin-bottom:16px"></div>
+
     <div id="resumo-forum" style="color:#888;font-size:var(--fs-c);margin-bottom:16px">Carregando...</div>
 
-    <div class="section-title" style="margin-top:0">⚠️ Correções pendentes</div>
-    <div id="lista-correcoes-pendentes"><div class="loading-spinner"></div></div>
+    <select class="filter-select" id="filtro-forum-modulo" onchange="renderizarListaForum()">
+      <option value="">Todos os módulos</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <input type="checkbox" id="filtro-forum-so-correcao" onchange="renderizarListaForum()"> Só questões com correção pendente
+    </label>
 
-    <div class="section-title">💬 Comentários recentes</div>
-    <div id="lista-comentarios-recentes"><div class="loading-spinner"></div></div>
+    <div id="lista-forum"><div class="loading-spinner"></div></div>
   </div>
 
   <!-- ===== COMO VOCÊ TÁ INDO (placar) ===== -->
   <div class="view-aba hidden" id="aba-placar">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div class="section-title" style="margin:0">Placar entre amigos</div>
-      <span class="info-icone" onclick="abrirModal('modal-info-wilson')">ℹ️ Como é calculado?</span>
-    </div>
-    <div id="lista-placar"><div class="loading-spinner"></div></div>
+    <div class="section-title" style="margin-top:0">Suas métricas por módulo</div>
+    <p style="color:#888;font-size:var(--fs-c);margin-bottom:16px">Em quais módulos você está indo melhor e em quais precisa reforçar — baseado só nos seus cadernos finalizados.</p>
+    <div id="lista-metricas-modulo"><div class="loading-spinner"></div></div>
   </div>
 
   </div>
@@ -410,7 +419,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></span><span class="nav-label">Métricas</span>
     </div>
     <div class="nav-item" data-aba="forum" onclick="trocarAba('forum')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/><line x1="7.5" y1="9.5" x2="15.5" y2="9.5"/><line x1="7.5" y1="13" x2="12.5" y2="13"/></svg></span><span class="nav-label">Fórum</span>
+      <span class="nav-icon"><svg viewBox="0 0 484.366 484.366" width="21" height="21" fill="currentColor"><path d="M483.629,457.833l-7.731-38.872c-3.07-15.4-15.117-27.43-30.517-30.478l-10.474-2.07 c-6.014-1.188-10.738-5.866-11.998-11.881l-1.982-9.621c-0.647-3.079,0.472-6.269,2.895-8.275 c9.449-7.826,18.095-19.354,23.133-32.958c6.945-1.253,13.291-7.937,15.338-17.141c2.52-11.401-2.504-22.218-11.211-24.156 c-0.111-0.015-0.221-0.008-0.316-0.015c-2.628-29.613-14.03-51.54-51.964-51.54c-37.288,0-49.13,21.919-51.917,51.523 c-0.111,0.023-0.236,0.017-0.362,0.031c-8.724,1.939-13.732,12.755-11.212,24.156c2.046,9.204,8.377,15.888,15.338,17.141 c5.039,13.612,13.7,25.132,23.131,32.966c2.426,1.999,3.545,5.189,2.914,8.259l-2,9.622c-1.244,6.015-5.968,10.7-12,11.896 l-10.471,2.063c-15.401,3.048-27.446,15.078-30.518,30.478l-7.732,38.872c-1.29,6.52,0.396,13.282,4.615,18.416 c4.22,5.141,10.518,8.117,17.163,8.117h126.101c6.647,0,12.945-2.977,17.165-8.117 C483.236,471.115,484.921,464.353,483.629,457.833z"/><path d="M162.662,418.961c-3.071-15.4-15.116-27.43-30.518-30.478l-10.472-2.07c-6.016-1.188-10.738-5.866-11.999-11.881 l-1.984-9.621c-0.646-3.079,0.473-6.269,2.898-8.275c9.447-7.826,18.092-19.354,23.131-32.958 c6.945-1.253,13.292-7.937,15.338-17.141c2.52-11.401-2.504-22.218-11.212-24.156c-0.109-0.015-0.221-0.008-0.314-0.015 c-2.63-29.613-14.032-51.54-51.966-51.54c-37.288,0-49.13,21.919-51.916,51.523c-0.111,0.023-0.237,0.017-0.363,0.031 c-8.724,1.939-13.731,12.755-11.212,24.156c2.048,9.204,8.377,15.888,15.339,17.141c5.038,13.612,13.699,25.132,23.133,32.966 c2.423,1.999,3.542,5.189,2.911,8.259l-1.999,9.622c-1.245,6.015-5.968,10.7-11.999,11.896l-10.473,2.063 c-15.399,3.048-27.446,15.078-30.516,30.478l-7.733,38.872c-1.292,6.52,0.394,13.282,4.613,18.416 c4.22,5.141,10.519,8.117,17.165,8.117h126.101c6.646,0,12.943-2.977,17.163-8.117c4.22-5.134,5.905-11.896,4.615-18.416 L162.662,418.961z"/><path d="M334.491,253.329c1.718-1.686,2.017-4.348,0.74-6.37L317.5,210.78h24.612c12.692,0,22.959-10.267,22.959-22.958V83.773 c0-12.691-10.267-22.958-22.959-22.958H284.92v66.199c0,24.07-19.574,43.643-43.65,43.643h-67.995l-17.637,11.787v5.378 c0,12.691,10.282,22.958,22.958,22.958h74.279l75.206,43.146C330.097,255.257,332.775,255.014,334.491,253.329z"/><path d="M77.753,149.974h24.613L84.21,186.404c-1.307,2.032-0.977,4.7,0.74,6.377c0.977,0.962,2.252,1.448,3.559,1.448 c0.993,0,1.969-0.282,2.835-0.857l75.647-43.398h74.278c12.676,0,22.959-10.291,22.959-22.959V22.959 C264.229,10.283,253.946,0,241.27,0H77.753C65.062,0,54.795,10.283,54.795,22.959v104.056 C54.795,139.683,65.062,149.974,77.753,149.974z M205.304,57.815c9.48,0,17.18,7.685,17.18,17.172c0,9.479-7.7,17.164-17.18,17.164 c-9.48,0-17.165-7.685-17.165-17.164C188.139,65.5,195.824,57.815,205.304,57.815z M159.511,57.815 c9.479,0,17.165,7.685,17.165,17.172c0,9.479-7.686,17.164-17.165,17.164c-9.479,0-17.18-7.685-17.18-17.164 C142.332,65.5,150.033,57.815,159.511,57.815z M113.704,57.815c9.513,0,17.181,7.685,17.181,17.172 c0,9.479-7.668,17.164-17.181,17.164c-9.464,0-17.163-7.685-17.163-17.164C96.541,65.5,104.24,57.815,113.704,57.815z"/></svg></span><span class="nav-label">Fórum</span>
       <span id="badge-forum" class="badge-notificacao hidden">0</span>
     </div>
   </div>
@@ -426,12 +435,29 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <h3 class="config-title">Seu perfil</h3>
 
     <div style="text-align:center;margin-bottom:14px">
-      <div id="avatar-perfil-preview" style="width:72px;height:72px;border-radius:50%;background:#D97757;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:24px;margin:0 auto 8px;overflow:hidden">?</div>
-      <input type="file" id="upload-foto-perfil" accept="image/*" class="hidden" onchange="enviarFotoPerfil()">
-      <button type="button" class="btn-secundario" onclick="document.getElementById('upload-foto-perfil').click()">Trocar foto</button>
+      <div id="avatar-perfil-preview" style="width:72px;height:72px;border-radius:50%;background:#D97757;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:24px;margin:0 auto 16px;overflow:hidden">?</div>
+      <input type="file" id="upload-foto-perfil" accept="image/*" class="hidden" onchange="selecionarArquivoFoto()">
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button type="button" class="btn-secundario" onclick="document.getElementById('upload-foto-perfil').click()">Trocar foto</button>
+        <button type="button" class="btn-secundario" onclick="removerFotoPerfil()">Remover foto</button>
+      </div>
+
+      <div id="cropper-foto-overlay" class="hidden" style="margin-top:14px">
+        <div id="cropper-container" style="width:220px;height:220px;border-radius:50%;overflow:hidden;margin:0 auto 10px;position:relative;background:#eee;touch-action:none;cursor:grab">
+          <img id="cropper-img" style="position:absolute;left:50%;top:50%;pointer-events:none;user-select:none">
+        </div>
+        <input type="range" id="cropper-zoom" min="1" max="3" step="0.01" value="1" style="width:220px" oninput="atualizarCropTransform()">
+        <div style="display:flex;gap:8px;margin-top:10px;justify-content:center">
+          <button class="btn-secundario" onclick="cancelarCropFoto()">Cancelar</button>
+          <button class="btn-primario" style="width:auto;padding:10px 20px" onclick="confirmarCropFoto()">Usar essa foto</button>
+        </div>
+      </div>
     </div>
 
-    <input type="text" id="perfil-nome-input" class="filter-select" placeholder="Seu nome" onblur="salvarNomePerfil()">
+    <div style="display:flex;gap:8px">
+      <input type="text" id="perfil-nome-input" class="filter-select" placeholder="Seu nome" style="margin-bottom:0;flex:1">
+      <button class="btn-secundario" style="padding:0 16px" onclick="salvarNomePerfil()">OK</button>
+    </div>
 
     <div style="border-top:0.5px solid #eee;margin:20px 0 14px"></div>
 
@@ -675,14 +701,122 @@ function abrirModalPerfil(){
   abrirModal('modal-perfil');
 }
 
-async function enviarFotoPerfil(){
+function selecionarArquivoFoto(){
   const input = document.getElementById('upload-foto-perfil');
-  if(!input.files.length) return;
-  const arquivo = input.files[0];
-  const extensao = arquivo.name.split('.').pop();
-  const caminho = `${usuarioAtual.id}/avatar.${extensao}`;
+  if(input.files.length) iniciarCropFoto(input.files[0]);
+}
 
-  const {error: erroUpload} = await sb.storage.from('avatars').upload(caminho, arquivo, {upsert:true});
+let cropState = null;
+
+function iniciarCropFoto(arquivo){
+  const leitor = new FileReader();
+  leitor.onload = (e)=>{
+    const img = document.getElementById('cropper-img');
+    img.onload = ()=>{
+      const C = 220;
+      const baseScale = Math.max(C / img.naturalWidth, C / img.naturalHeight);
+      cropState = {natW: img.naturalWidth, natH: img.naturalHeight, baseScale, scale: 1, tx: 0, ty: 0, C};
+      document.getElementById('cropper-zoom').value = 1;
+      atualizarCropTransform();
+      document.getElementById('cropper-foto-overlay').classList.remove('hidden');
+    };
+    img.src = e.target.result;
+  };
+  leitor.readAsDataURL(arquivo);
+}
+
+function clampCropOffset(){
+  const efetivo = cropState.baseScale * cropState.scale;
+  const dispW = cropState.natW * efetivo;
+  const dispH = cropState.natH * efetivo;
+  const maxX = Math.max(0, (dispW - cropState.C) / 2);
+  const maxY = Math.max(0, (dispH - cropState.C) / 2);
+  cropState.tx = Math.max(-maxX, Math.min(maxX, cropState.tx));
+  cropState.ty = Math.max(-maxY, Math.min(maxY, cropState.ty));
+}
+
+function atualizarCropTransform(){
+  if(!cropState) return;
+  cropState.scale = parseFloat(document.getElementById('cropper-zoom').value);
+  clampCropOffset();
+  const img = document.getElementById('cropper-img');
+  const efetivo = cropState.baseScale * cropState.scale;
+  img.style.width = cropState.natW + 'px';
+  img.style.height = cropState.natH + 'px';
+  img.style.transform = `translate(-50%,-50%) translate(${cropState.tx}px, ${cropState.ty}px) scale(${efetivo})`;
+}
+
+(function configurarArrastoCrop(){
+  let arrastando = false, inicioX = 0, inicioY = 0, txInicial = 0, tyInicial = 0;
+
+  function comecar(x, y){
+    if(!cropState) return;
+    arrastando = true;
+    inicioX = x; inicioY = y;
+    txInicial = cropState.tx; tyInicial = cropState.ty;
+  }
+  function mover(x, y){
+    if(!arrastando || !cropState) return;
+    cropState.tx = txInicial + (x - inicioX);
+    cropState.ty = tyInicial + (y - inicioY);
+    clampCropOffset();
+    atualizarCropTransform();
+  }
+  function soltar(){ arrastando = false; }
+
+  document.addEventListener('mousedown', e=>{ if(e.target.closest('#cropper-container')) comecar(e.clientX, e.clientY); });
+  window.addEventListener('mousemove', e=>mover(e.clientX, e.clientY));
+  window.addEventListener('mouseup', soltar);
+
+  document.addEventListener('touchstart', e=>{
+    if(e.target.closest('#cropper-container')){ const t=e.touches[0]; comecar(t.clientX, t.clientY); }
+  }, {passive:true});
+  document.addEventListener('touchmove', e=>{
+    if(arrastando){ const t=e.touches[0]; mover(t.clientX, t.clientY); }
+  }, {passive:true});
+  document.addEventListener('touchend', soltar);
+})();
+
+function cancelarCropFoto(){
+  document.getElementById('cropper-foto-overlay').classList.add('hidden');
+  document.getElementById('upload-foto-perfil').value = '';
+  cropState = null;
+}
+
+async function confirmarCropFoto(){
+  const O = 400; // resolução final salva
+  const canvas = document.createElement('canvas');
+  canvas.width = O; canvas.height = O;
+  const ctx = canvas.getContext('2d');
+  const img = document.getElementById('cropper-img');
+  const fator = O / cropState.C;
+  const efetivo = cropState.baseScale * cropState.scale * fator;
+  ctx.save();
+  ctx.translate(O/2 + cropState.tx*fator, O/2 + cropState.ty*fator);
+  ctx.scale(efetivo, efetivo);
+  ctx.drawImage(img, -cropState.natW/2, -cropState.natH/2);
+  ctx.restore();
+
+  canvas.toBlob(async (blob)=>{
+    await enviarFotoPerfilBlob(blob);
+    document.getElementById('cropper-foto-overlay').classList.add('hidden');
+    cropState = null;
+  }, 'image/jpeg', 0.9);
+}
+
+async function removerFotoPerfil(){
+  const caminho = `${usuarioAtual.id}/avatar.jpg`;
+  await sb.storage.from('avatars').remove([caminho]);
+  const {error} = await sb.from('usuarios').update({foto_url: null}).eq('id', usuarioAtual.id);
+  if(error){ alert('Erro ao remover foto: '+error.message); return; }
+  usuarioAtual.foto_url = null;
+  atualizarAvatarUI();
+}
+
+async function enviarFotoPerfilBlob(blob){
+  const caminho = `${usuarioAtual.id}/avatar.jpg`;
+
+  const {error: erroUpload} = await sb.storage.from('avatars').upload(caminho, blob, {upsert:true, contentType:'image/jpeg'});
   if(erroUpload){ alert('Erro ao enviar foto: '+erroUpload.message); return; }
 
   const {data: urlData} = sb.storage.from('avatars').getPublicUrl(caminho);
@@ -789,6 +923,7 @@ async function mostrarAppShell(){
   medirAlturaNav();
   await carregarBibliografia();
   await verificarCadernoEmAndamento();
+  await carregarPlacar();
   await atualizarNotificacoesForum();
   iniciarRealtimeForum();
 }
@@ -806,7 +941,7 @@ function trocarAba(nome){
   document.getElementById('barra-adicionar-questoes').classList.toggle('hidden', nome!=='inicio');
   document.getElementById('content').scrollTop = 0;
   if(nome==='forum'){ carregarForum(); marcarForumVisto(); }
-  if(nome==='placar') carregarPlacar();
+  if(nome==='placar') carregarMetricasPessoais();
 }
 
 function abrirModal(id){ document.getElementById(id).classList.remove('hidden'); }
@@ -844,7 +979,7 @@ async function carregarBibliografia(){
 }
 
 let filtroSelecionado = {modulo:null, publicacao:null, capitulo:null, tipoQuestao:null};
-let quantidadeSelecionada = 5;
+let quantidadeSelecionada = 15;
 
 function selecionarFiltroSelect(nivel, valor){
   filtroSelecionado[nivel] = (valor && valor!=='todos') ? valor : null;
@@ -930,6 +1065,44 @@ function atualizarContadorDisponiveis(){
   }, 300);
 }
 
+// SuperQuest: simulado fixo de 70 questões variadas, sem filtro nenhum — regras
+// podem ser refinadas depois (ex: balancear por módulo), essa é a v1 simples.
+const QUANTIDADE_SUPERQUEST = 70;
+
+async function gerarSuperQuest(){
+  const {data: todasQuestoes, error} = await sb.from('questoes').select('*');
+  if(error){ alert('Erro ao buscar questões: '+error.message); return; }
+
+  const {data: exclusoes} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id);
+  const idsExcluidos = new Set((exclusoes||[]).map(e=>e.questao_id));
+  let pool = (todasQuestoes||[]).filter(q=>!idsExcluidos.has(q.id));
+
+  if(pool.length < QUANTIDADE_SUPERQUEST){
+    alert(`O banco ainda não tem ${QUANTIDADE_SUPERQUEST} questões disponíveis pra montar um SuperQuest (tem ${pool.length} agora). Sobe mais PDFs pra desbloquear essa opção.`);
+    return;
+  }
+
+  pool = embaralharFisherYates(pool).slice(0, QUANTIDADE_SUPERQUEST);
+
+  const nomeCaderno = `SuperQuest ${new Date().toLocaleDateString('pt-BR')}`;
+  const {data: novoCaderno} = await sb.from('cadernos').insert({
+    usuario_id: usuarioAtual.id,
+    nome: nomeCaderno,
+    filtros_aplicados: {superquest: true},
+    status: 'em_andamento'
+  }).select().single();
+
+  cadernoAtual = novoCaderno;
+  questoesCaderno = pool;
+  indiceQuestaoAtual = 0;
+  respostasPendentes = [];
+  respostasPorQuestao = {};
+
+  document.getElementById('quests-filtros').classList.add('hidden');
+  document.getElementById('quests-resolucao').classList.remove('hidden');
+  renderizarQuestaoAtual();
+}
+
 async function montarCaderno(){
   let questoesFiltradas = await buscarQuestoesFiltradas();
 
@@ -1010,8 +1183,15 @@ async function carregarCadernosExistentes(){
 }
 
 function toggleCadernosLista(tipo){
-  document.getElementById('lista-cadernos-'+tipo).classList.toggle('open');
-  document.getElementById('chev-'+tipo).classList.toggle('open');
+  const conteudo = document.getElementById('lista-cadernos-'+tipo);
+  const chev = document.getElementById('chev-'+tipo);
+  conteudo.classList.toggle('open');
+  chev.classList.toggle('open');
+  if(conteudo.classList.contains('open')){
+    requestAnimationFrame(()=>{
+      conteudo.scrollIntoView({block:'nearest', behavior:'smooth'});
+    });
+  }
 }
 
 async function retomarCadernoEspecifico(cadernoId){
@@ -1109,9 +1289,9 @@ function renderizarResultado(q,resposta){
   if(q.explicacao_origem === 'fonte_original'){
     explicacaoHtml = `<p style="margin-top:10px;font-weight:400;font-size:var(--fs-d);text-align:left">${escapeHtml(q.explicacao)}</p>`;
   }else if(q.explicacao_origem === 'gerada_web'){
-    explicacaoHtml = `<button class="btn-secundario" style="margin-top:10px" onclick="mostrarExplicacaoSalva('${q.id}')">Mostrar explicação (baseada na web) 👁️</button>`;
+    explicacaoHtml = `<button class="btn-secundario" style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="mostrarExplicacaoSalva('${q.id}')">Mostrar explicação (baseada na web) <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>`;
   }else{
-    explicacaoHtml = `<button class="btn-secundario" style="margin-top:10px" onclick="gerarExplicacao('${q.id}')">Gerar explicação (busca na web) 🔍</button>`;
+    explicacaoHtml = `<button class="btn-secundario" style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="gerarExplicacao('${q.id}')">Gerar explicação (busca na web) <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>`;
   }
   return `<div class="banco-resultado" style="color:${resposta.correta?'#3B6D11':'#A32D2D'}">${resposta.correta?'Acertou!':'Errou.'} Gabarito: ${(q.gabarito||'—').toUpperCase()}</div>${explicacaoHtml}`;
 }
@@ -1226,46 +1406,130 @@ function iniciarRealtimeForum(){
     .subscribe();
 }
 
+let forumCache = [];
+
 async function carregarForum(){
-  const {data: correcoes} = await sb.from('correcoes').select('*, questoes(enunciado)').eq('status','pendente').order('criado_em',{ascending:false});
-  const totalCorrecoes = (correcoes||[]).length;
+  const [{data: comentarios}, {data: correcoesPendentes}] = await Promise.all([
+    sb.from('comentarios').select('*, usuarios(nome), questoes(enunciado, modulo_pscpp)').order('criado_em', {ascending:false}),
+    sb.from('correcoes').select('*, questoes(enunciado, modulo_pscpp)').eq('status','pendente').order('criado_em', {ascending:false})
+  ]);
 
-  const elCorrecoes = document.getElementById('lista-correcoes-pendentes');
-  elCorrecoes.innerHTML = totalCorrecoes ? correcoes.map(c=>`
-    <div class="card-questao" style="cursor:pointer" onclick="abrirThreadCorrecao('${c.id}','${c.questao_id}')">
-      <span class="selo-correcao">⚠️ Correção sugerida</span>
-      <p>${escapeHtml((c.questoes?.enunciado||'').slice(0,120))}...</p>
-    </div>`).join('') : '<p style="color:#888">Nenhuma correção pendente agora.</p>';
+  const mapa = {};
+  function garanteEntrada(id, dadosQuestao){
+    if(!mapa[id]){
+      mapa[id] = {questao_id:id, enunciado: dadosQuestao?.enunciado||'', modulo: dadosQuestao?.modulo_pscpp||'', totalComentarios:0, ultimoAutor:null, ultimaAtividadeEm:null, temCorrecaoPendente:false};
+    }
+    return mapa[id];
+  }
 
-  const {data: comentarios} = await sb.from('comentarios').select('*, usuarios(nome), questoes(enunciado)').order('criado_em',{ascending:false}).limit(15);
-  const elComentarios = document.getElementById('lista-comentarios-recentes');
-  elComentarios.innerHTML = (comentarios && comentarios.length) ? comentarios.map(c=>`
-    <div class="card-questao" style="cursor:pointer" onclick="abrirDetalheQuestao('${c.questao_id}')">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span class="autor-tag" style="font-weight:600;color:#111">${escapeHtml(c.usuarios?.nome||'?')}</span>
-        <span style="font-size:var(--fs-a);color:#999">${new Date(c.criado_em).toLocaleString('pt-BR')}</span>
-      </div>
-      <p style="font-size:var(--fs-d);margin:4px 0">${escapeHtml(c.texto)}</p>
-      <p style="color:#888;font-size:var(--fs-b)">em: ${escapeHtml((c.questoes?.enunciado||'').slice(0,80))}...</p>
-    </div>`).join('') : '<p style="color:#888">Nenhum comentário ainda.</p>';
+  (comentarios||[]).forEach(c=>{
+    const entrada = garanteEntrada(c.questao_id, c.questoes);
+    entrada.totalComentarios++;
+    if(!entrada.ultimaAtividadeEm || c.criado_em > entrada.ultimaAtividadeEm){
+      entrada.ultimaAtividadeEm = c.criado_em;
+      entrada.ultimoAutor = c.usuarios?.nome || '?';
+    }
+  });
+  (correcoesPendentes||[]).forEach(c=>{
+    const entrada = garanteEntrada(c.questao_id, c.questoes);
+    entrada.temCorrecaoPendente = true;
+    if(!entrada.ultimaAtividadeEm || c.criado_em > entrada.ultimaAtividadeEm) entrada.ultimaAtividadeEm = c.criado_em;
+  });
 
+  forumCache = Object.values(mapa).sort((a,b)=>(b.ultimaAtividadeEm||'').localeCompare(a.ultimaAtividadeEm||''));
+
+  const elModulo = document.getElementById('filtro-forum-modulo');
+  if(elModulo.options.length <= 1){
+    const modulos = [...new Set(forumCache.map(f=>f.modulo).filter(Boolean))];
+    elModulo.innerHTML = '<option value="">Todos os módulos</option>' + modulos.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+  }
+
+  const totalCorrecoes = (correcoesPendentes||[]).length;
   document.getElementById('resumo-forum').textContent =
-    `${totalCorrecoes} ${totalCorrecoes===1?'correção pendente':'correções pendentes'} · ${(comentarios||[]).length} comentários recentes`;
+    `${totalCorrecoes} ${totalCorrecoes===1?'correção pendente':'correções pendentes'} · ${forumCache.length} ${forumCache.length===1?'questão em discussão':'questões em discussão'}`;
+
+  renderizarListaForum();
+}
+
+function renderizarListaForum(){
+  const moduloFiltro = document.getElementById('filtro-forum-modulo').value;
+  const soCorrecao = document.getElementById('filtro-forum-so-correcao').checked;
+  let lista = forumCache;
+  if(moduloFiltro) lista = lista.filter(f=>f.modulo===moduloFiltro);
+  if(soCorrecao) lista = lista.filter(f=>f.temCorrecaoPendente);
+
+  const el = document.getElementById('lista-forum');
+  if(!lista.length){ el.innerHTML = '<p style="color:#888">Nenhuma discussão encontrada com esses filtros.</p>'; return; }
+  el.innerHTML = lista.map(f=>`
+    <div class="card-questao" style="cursor:pointer" onclick="abrirDetalheQuestao('${f.questao_id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        ${tagModulo(f.modulo)}
+        ${f.temCorrecaoPendente ? '<span class="selo-correcao" style="display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Correção</span>' : ''}
+      </div>
+      <p style="font-size:var(--fs-d)">${escapeHtml((f.enunciado||'').slice(0,120))}...</p>
+      <div style="display:flex;justify-content:space-between;color:#888;font-size:var(--fs-b);margin-top:8px">
+        <span>${f.totalComentarios} ${f.totalComentarios===1?'comentário':'comentários'}${f.ultimoAutor?' · último: '+escapeHtml(f.ultimoAutor):''}</span>
+        <span>${tempoRelativo(f.ultimaAtividadeEm)}</span>
+      </div>
+    </div>`).join('');
+}
+
+let buscaForumDebounce = null;
+function buscarQuestaoForum(termo){
+  clearTimeout(buscaForumDebounce);
+  const el = document.getElementById('resultado-busca-forum');
+  if(!termo || termo.trim().length < 3){ el.classList.add('hidden'); el.innerHTML=''; return; }
+  buscaForumDebounce = setTimeout(async ()=>{
+    const {data} = await sb.from('questoes').select('id, enunciado, modulo_pscpp').ilike('enunciado', `%${termo.trim()}%`).limit(10);
+    el.innerHTML = (data && data.length) ? data.map(q=>`
+      <div class="card-questao" style="cursor:pointer" onclick="abrirDetalheQuestao('${q.id}')">
+        ${tagModulo(q.modulo_pscpp)}
+        <p style="font-size:var(--fs-d);margin-top:6px">${escapeHtml((q.enunciado||'').slice(0,120))}...</p>
+      </div>`).join('') : '<p style="color:#888;font-size:var(--fs-c)">Nenhuma questão encontrada.</p>';
+    el.classList.remove('hidden');
+  }, 350);
+}
+
+function tempoRelativo(dataIso){
+  if(!dataIso) return '';
+  const diffMs = new Date() - new Date(dataIso);
+  const diffMin = Math.floor(diffMs/60000);
+  if(diffMin < 1) return 'agora mesmo';
+  if(diffMin < 60) return `há ${diffMin} min`;
+  const diffHoras = Math.floor(diffMin/60);
+  if(diffHoras < 24) return `há ${diffHoras}h`;
+  const diffDias = Math.floor(diffHoras/24);
+  if(diffDias === 1) return 'ontem';
+  if(diffDias < 7) return `há ${diffDias} dias`;
+  return new Date(dataIso).toLocaleDateString('pt-BR');
+}
+
+function avatarMiniHtml(usuario){
+  const nome = usuario?.nome || '?';
+  if(usuario?.foto_url){
+    return `<div style="width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0"><img src="${usuario.foto_url}" style="width:100%;height:100%;object-fit:cover"></div>`;
+  }
+  return `<div style="width:28px;height:28px;border-radius:50%;background:#D97757;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0">${escapeHtml(nome[0].toUpperCase())}</div>`;
 }
 
 function renderizarListaComentarios(lista){
   if(!lista.length) return '<p style="color:#999;font-size:var(--fs-c)">Nenhum comentário ainda.</p>';
   return lista.map(c=>`
-    <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:0.5px solid #eee">
-      <div class="autor-tag" style="font-weight:600;color:#111">${escapeHtml(c.usuarios?.nome||'?')}</div>
-      <div style="font-size:var(--fs-d)">${escapeHtml(c.texto)}</div>
-      <div style="font-size:var(--fs-a);color:#999">${new Date(c.criado_em).toLocaleString('pt-BR')}</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      ${avatarMiniHtml(c.usuarios)}
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+          <span style="font-weight:600;color:#111;font-size:var(--fs-d)">${escapeHtml(c.usuarios?.nome||'?')}</span>
+          <span style="font-size:var(--fs-a);color:#999;white-space:nowrap">${tempoRelativo(c.criado_em)}</span>
+        </div>
+        <div style="font-size:var(--fs-d)">${escapeHtml(c.texto)}</div>
+      </div>
     </div>`).join('');
 }
 
 async function renderizarDetalheQuestao(questaoId){
   const {data: questao} = await sb.from('questoes').select('*').eq('id', questaoId).single();
-  const {data: comentarios} = await sb.from('comentarios').select('*, usuarios(nome)').eq('questao_id', questaoId).order('criado_em',{ascending:true});
+  const {data: comentarios} = await sb.from('comentarios').select('*, usuarios(nome, foto_url)').eq('questao_id', questaoId).order('criado_em',{ascending:true});
   const {data: correcoesPendentes} = await sb.from('correcoes').select('*').eq('questao_id', questaoId).eq('status','pendente');
   const correcaoAtual = (correcoesPendentes||[])[0] || null;
 
@@ -1275,7 +1539,7 @@ async function renderizarDetalheQuestao(questaoId){
   const html = `
     <button class="btn-secundario" style="margin-bottom:12px" onclick="fecharModal('modal-questao-detalhe')">Fechar</button>
     ${tagModulo(questao.modulo_pscpp)}
-    ${correcaoAtual ? '<span class="selo-correcao" style="margin-left:8px">⚠️ Correção sugerida</span>' : ''}
+    ${correcaoAtual ? '<span class="selo-correcao" style="margin-left:8px;display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Correção sugerida</span>' : ''}
     <div class="enunciado" style="margin:12px 0">${escapeHtml(questao.enunciado||'')}</div>
 
     ${correcaoAtual ? `
@@ -1285,7 +1549,7 @@ async function renderizarDetalheQuestao(questaoId){
       <button class="btn-secundario" style="width:100%;margin-bottom:8px" onclick="enviarComentario('${questaoId}','${correcaoAtual.id}','novo-comentario-correcao')">Comentar</button>
       <button class="btn-primario" onclick="abrirFormularioEdicao('${questaoId}','${correcaoAtual.id}')">Aplicar edição</button>
     ` : `
-      <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="reportarCorrecao('${questaoId}')">⚠️ Reportar correção</button>
+      <button class="btn-secundario" style="width:100%;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="reportarCorrecao('${questaoId}')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Reportar correção</button>
     `}
 
     <div class="section-title" style="margin-top:24px">Discussão geral</div>
@@ -1364,6 +1628,47 @@ async function carregarPlacar(){
       <span>${escapeHtml(p.nome)}</span>
       <span>${p.total_respondidas} respondidas · ${p.pct_acerto}%</span>
     </div>`).join('');
+}
+
+async function carregarMetricasPessoais(){
+  const el = document.getElementById('lista-metricas-modulo');
+  el.innerHTML = '<div class="loading-spinner"></div>';
+
+  const {data: respostas} = await sb.from('respostas_finalizadas').select('questao_id, correta').eq('usuario_id', usuarioAtual.id);
+  if(!respostas || !respostas.length){
+    el.innerHTML = '<p style="color:#888">Você ainda não finalizou nenhum caderno. Assim que finalizar um, suas métricas por módulo aparecem aqui.</p>';
+    return;
+  }
+
+  const idsQuestoes = [...new Set(respostas.map(r=>r.questao_id))];
+  const {data: questoes} = await sb.from('questoes').select('id, modulo_pscpp').in('id', idsQuestoes);
+  const moduloPorQuestao = {};
+  (questoes||[]).forEach(q=>{ moduloPorQuestao[q.id] = q.modulo_pscpp || 'Sem módulo'; });
+
+  const stats = {};
+  respostas.forEach(r=>{
+    const mod = moduloPorQuestao[r.questao_id] || 'Sem módulo';
+    if(!stats[mod]) stats[mod] = {total: 0, acertos: 0};
+    stats[mod].total++;
+    if(r.correta) stats[mod].acertos++;
+  });
+
+  const linhas = Object.entries(stats).map(([modulo, s])=>({
+    modulo,
+    total: s.total,
+    pctAcerto: s.total ? Math.round((s.acertos / s.total) * 100) : 0
+  })).sort((a,b)=>a.pctAcerto - b.pctAcerto); // pior primeiro, pra chamar atenção pro que precisa de reforço
+
+  el.innerHTML = linhas.map(l=>{
+    const cor = l.pctAcerto >= 70 ? '#3B6D11' : l.pctAcerto >= 50 ? '#854F0B' : '#A32D2D';
+    return `<div class="card-questao">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        ${tagModulo(l.modulo)}
+        <span style="font-weight:700;color:${cor}">${l.pctAcerto}%</span>
+      </div>
+      <div style="color:#888;font-size:var(--fs-c)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
+    </div>`;
+  }).join('');
 }
 
 /* ============================================================
