@@ -41,7 +41,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
 
 /* --- Telas de auth/onboarding --- */
-#view-login,#view-onboarding{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;padding:24px;box-sizing:border-box}
+#view-login,#view-onboarding{position:fixed;top:var(--vv-top, 0px);left:0;width:100%;height:var(--vh-real, 100vh);display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;padding:24px;box-sizing:border-box}
 .login-inner{width:100%;max-width:432px}
 #view-login{background:#F9F9F7}
 #view-login .erro{color:#B00020;font-size:var(--fs-c);margin-bottom:8px}
@@ -56,7 +56,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .onboarding-dots span.ativo{background:var(--azul-marca)}
 
 /* --- App shell --- */
-#app-shell{display:none;max-width:480px;margin:0 auto;height:100%;height:100svh;height:100dvh;height:var(--vh-real, 100dvh);position:relative;flex-direction:column;overflow:hidden}
+#app-shell{display:none;max-width:480px;margin:0 auto;position:fixed;top:var(--vv-top, 0px);left:50%;transform:translateX(-50%);width:100%;height:var(--vh-real, 100vh);flex-direction:column;overflow:hidden}
 #app-shell.ativo{display:flex}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;flex-shrink:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
 .topbar h2{font-size:var(--fs-g);margin:0;color:var(--azul-marca);display:none}
@@ -137,13 +137,26 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </head>
 <body>
 <script>
-  // 100dvh não é 100% confiável em todo navegador/contexto (espelhamento de tela, etc.)
-  // Medimos a altura real da janela via JS e usamos isso como fonte de verdade.
-  function ajustarAlturaReal(){
-    document.documentElement.style.setProperty('--vh-real', window.innerHeight + 'px');
+  // Falha conhecida do Safari iOS: position:fixed às vezes se ancora na "layout
+  // viewport" (que pode ser maior que a área realmente visível, por causa da
+  // barra de endereço expandindo/recolhendo). window.visualViewport é a API que
+  // sempre reflete a área realmente visível, então usamos ela como fonte de verdade.
+  function ajustarViewportReal(){
+    const vv = window.visualViewport;
+    if(vv){
+      document.documentElement.style.setProperty('--vh-real', vv.height + 'px');
+      document.documentElement.style.setProperty('--vv-top', vv.offsetTop + 'px');
+    }else{
+      document.documentElement.style.setProperty('--vh-real', window.innerHeight + 'px');
+      document.documentElement.style.setProperty('--vv-top', '0px');
+    }
   }
-  ajustarAlturaReal();
-  window.addEventListener('resize', ajustarAlturaReal);
+  ajustarViewportReal();
+  window.addEventListener('resize', ajustarViewportReal);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', ajustarViewportReal);
+    window.visualViewport.addEventListener('scroll', ajustarViewportReal);
+  }
 </script>
 <div id="bg-fixed"></div>
 
