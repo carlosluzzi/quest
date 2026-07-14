@@ -339,11 +339,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
           <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões inéditas
         </label>
 
-        <div id="contador-disponiveis" style="text-align:center;color:#888;font-size:var(--fs-c);margin-bottom:14px">Escolha os filtros acima pra ver quantas questões estão disponíveis.</div>
+        <div id="contador-disponiveis" style="text-align:center;color:#888;font-size:var(--fs-c);margin-bottom:14px"></div>
 
-        <input type="number" min="1" id="quantidade-customizada" class="filter-select" placeholder="Quantidade de questões" value="15" oninput="if(this.value)selecionarQuantidade(null,parseInt(this.value,10))">
+        <input type="number" min="1" id="quantidade-customizada" class="filter-select" placeholder="Quantidade de questões" oninput="if(this.value)selecionarQuantidade(null,parseInt(this.value,10))">
 
-        <button class="btn-primario" onclick="montarCaderno()">Montar caderno</button>
+        <button class="btn-primario" onclick="montarCaderno()">Gerar caderno ⬈</button>
         <div style="text-align:center;margin-top:8px">
           <span class="info-icone" onclick="abrirModal('modal-info-fisher-yates')" style="font-size:var(--fs-b)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Como a ordem das questões é sorteada?</span>
         </div>
