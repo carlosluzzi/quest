@@ -301,16 +301,44 @@ input,select,textarea{font-family:inherit;font-size:16px}
     </div>
 
     <div id="caderno-em-andamento" class="hidden">
-      <button class="card-inicio" style="width:100%;text-align:left" onclick="retomarCaderno()">
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="retomarCaderno()">
         <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 0 2-2z"/></svg> Cadernos em andamento</div>
-        <div style="color:#888;font-size:var(--fs-c)" id="caderno-em-andamento-info"></div>
+        <div style="color:#888;font-size:var(--fs-c);padding-left:22px" id="caderno-em-andamento-info"></div>
       </button>
     </div>
 
     <div id="card-notificacao-forum" class="hidden">
-      <button class="card-inicio" style="width:100%;text-align:left" onclick="trocarAba('forum')">
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="trocarAba('forum')">
         <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="#D97757"><path fill-rule="evenodd" d="M1.75 1A1.75 1.75 0 000 2.75v9.5C0 13.216.784 14 1.75 14H3v1.543a1.457 1.457 0 002.487 1.03L8.061 14h6.189A1.75 1.75 0 0016 12.25v-9.5A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v9.5a.25.25 0 01-.25.25h-6.5a.75.75 0 00-.53.22L4.5 15.44v-2.19a.75.75 0 00-.75-.75h-2a.25.25 0 01-.25-.25v-9.5z"/><path d="M22.5 8.75a.25.25 0 00-.25-.25h-3.5a.75.75 0 010-1.5h3.5c.966 0 1.75.784 1.75 1.75v9.5A1.75 1.75 0 0122.25 20H21v1.543a1.457 1.457 0 01-2.487 1.03L15.939 20H10.75A1.75 1.75 0 019 18.25v-1.465a.75.75 0 011.5 0v1.465c0 .138.112.25.25.25h5.5a.75.75 0 01.53.22l2.72 2.72v-2.19a.75.75 0 01.75-.75h2a.25.25 0 00.25-.25v-9.5z"/></svg> Novidades no Fórum</div>
-        <div style="color:#888;font-size:var(--fs-c)" id="texto-notificacao-forum"></div>
+        <div style="color:#888;font-size:var(--fs-c);padding-left:22px" id="texto-notificacao-forum"></div>
+      </button>
+    </div>
+
+    <div id="card-notificacao-anulacao" class="hidden">
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarAnulacaoVista()">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg> Questão anulada</div>
+        <div style="color:#888;font-size:var(--fs-c);padding-left:22px" id="texto-notificacao-anulacao"></div>
+      </button>
+    </div>
+
+    <div id="card-notificacao-resposta-discussao" class="hidden">
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirTopicoNotificado()">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Responderam sua discussão</div>
+        <div style="color:#888;font-size:var(--fs-c);padding-left:22px" id="texto-notificacao-resposta-discussao"></div>
+      </button>
+    </div>
+
+    <div id="card-notificacao-questao-corrigida" class="hidden">
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="trocarAba('quests')">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Questão corrigida</div>
+        <div style="color:#888;font-size:var(--fs-c);padding-left:22px" id="texto-notificacao-questao-corrigida"></div>
+      </button>
+    </div>
+
+    <div id="card-notificacao-pdf-novo" class="hidden">
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarPdfNovoVisto()">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Questões novas no banco</div>
+        <div style="color:#888;font-size:var(--fs-c);padding-left:22px" id="texto-notificacao-pdf-novo"></div>
       </button>
     </div>
     <div class="card-inicio">
@@ -428,9 +456,42 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <!-- ===== COMO VOCÊ TÁ INDO (placar) ===== -->
   <div class="view-aba hidden" id="aba-placar">
-    <div class="section-title" style="margin-top:0">Suas métricas por módulo</div>
-    <p style="color:#888;font-size:var(--fs-c);margin-bottom:16px">Em quais módulos você está indo melhor e em quais precisa reforçar — baseado só nos seus cadernos finalizados.</p>
+    <div class="section-title" style="margin-top:0">Seu desempenho</div>
+
+    <select class="filter-select" id="metricas-filtro-tipo" onchange="carregarMetricasPessoais()">
+      <option value="">Todos os tipos</option>
+      <option value="Conceitual">Conceitual</option>
+      <option value="Cálculo">Cálculo</option>
+      <option value="Número">Número</option>
+      <option value="Lista">Lista</option>
+      <option value="Identificação">Identificação</option>
+    </select>
+    <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:2px" id="metricas-filtro-periodo">
+      <button class="filter-btn" data-dias="30" onclick="selecionarPeriodoMetricas(30, this)">30 dias</button>
+      <button class="filter-btn" data-dias="90" onclick="selecionarPeriodoMetricas(90, this)">3 meses</button>
+      <button class="filter-btn" data-dias="180" onclick="selecionarPeriodoMetricas(180, this)">6 meses</button>
+      <button class="filter-btn active" data-dias="0" onclick="selecionarPeriodoMetricas(0, this)">Tudo</button>
+    </div>
+
+    <div id="metricas-resumo-geral"></div>
+
+    <div class="section-title">Por módulo</div>
     <div id="lista-metricas-modulo"><div class="loading-spinner"></div></div>
+
+    <div class="section-title">Por tipo de questão</div>
+    <div id="lista-metricas-tipo"></div>
+
+    <div class="section-title">Por publicação</div>
+    <div id="lista-metricas-publicacao"></div>
+
+    <div class="section-title">Suas questões mais difíceis</div>
+    <div id="lista-metricas-piores"></div>
+
+    <div class="section-title">Favoritos que você mais erra</div>
+    <div id="lista-metricas-favoritos-dificeis"></div>
+
+    <div class="section-title">Suas notas</div>
+    <div id="lista-metricas-notas"></div>
   </div>
 
   </div>
@@ -569,7 +630,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-detalhe-caderno" onclick="if(event.target===this) fecharModal('modal-detalhe-caderno')">
-  <div class="modal-conteudo" id="modal-detalhe-caderno-conteudo"></div>
+  <div class="modal-conteudo modal-conteudo-fluxo-topico" id="modal-detalhe-caderno-conteudo"></div>
 </div>
 
 <div class="modal-overlay hidden" id="modal-questao-detalhe" onclick="if(event.target===this) fecharModal('modal-questao-detalhe')">
@@ -1069,6 +1130,7 @@ async function mostrarAppShell(){
   await verificarCadernoEmAndamento();
   await carregarPlacar();
   await atualizarNotificacoesForum();
+  await verificarNotificacoesExtras();
   iniciarRealtimeForum();
 }
 
@@ -1124,6 +1186,129 @@ async function verificarCadernoEmAndamento(){
     cardEl.classList.add('hidden');
   }
 }
+
+/* ============================================================
+   4 NOTIFICAÇÕES NOVAS DO ÍNCIO — mesmo padrão visual dos cards já
+   existentes (Cadernos em andamento / Novidades no Fórum)
+   ============================================================ */
+async function verificarNotificacoesExtras(){
+  await Promise.all([
+    verificarNotificacaoAnulacao(),
+    verificarNotificacaoRespostaDiscussao(),
+    verificarNotificacaoQuestaoCorrigida(),
+    verificarNotificacaoPdfNovo()
+  ]);
+}
+
+/* 1. Anulação te afetou — respostas suas que foram tocadas por uma anulação
+   e que você ainda não "viu" */
+async function verificarNotificacaoAnulacao(){
+  const {data} = await sb.from('respostas').select('id').eq('usuario_id', usuarioAtual.id).eq('foi_anulada', true).eq('anulacao_vista', false);
+  const total = (data||[]).length;
+  const el = document.getElementById('card-notificacao-anulacao');
+  if(total > 0){
+    document.getElementById('texto-notificacao-anulacao').textContent = total===1
+      ? '1 questão que você respondeu foi anulada — sua estatística foi atualizada'
+      : `${total} questões que você respondeu foram anuladas — sua estatística foi atualizada`;
+    el.classList.remove('hidden');
+  }else{
+    el.classList.add('hidden');
+  }
+}
+async function marcarAnulacaoVista(){
+  await sb.from('respostas').update({anulacao_vista:true}).eq('usuario_id', usuarioAtual.id).eq('foi_anulada', true).eq('anulacao_vista', false);
+  await verificarNotificacaoAnulacao();
+}
+
+/* 2. Alguém respondeu sua discussão — tópicos que você abriu, com
+   comentário de outra pessoa depois da última vez que você viu */
+let topicoNotificadoId = null;
+async function verificarNotificacaoRespostaDiscussao(){
+  const {data: meusTopicos} = await sb.from('topicos').select('id, titulo, criado_em, criador_visto_em').eq('criado_por', usuarioAtual.id);
+  const el = document.getElementById('card-notificacao-resposta-discussao');
+  if(!meusTopicos || !meusTopicos.length){ el.classList.add('hidden'); return; }
+
+  const idsMeusTopicos = meusTopicos.map(t=>t.id);
+  const {data: comentariosNovos} = await sb.from('comentarios').select('topico_id, usuario_id, criado_em').in('topico_id', idsMeusTopicos).neq('usuario_id', usuarioAtual.id);
+
+  const mapaTopico = {};
+  meusTopicos.forEach(t=>{ mapaTopico[t.id] = t; });
+
+  const relevantes = (comentariosNovos||[]).filter(c=>{
+    const t = mapaTopico[c.topico_id];
+    const marco = t.criador_visto_em || t.criado_em;
+    return c.criado_em > marco;
+  });
+
+  if(relevantes.length){
+    const topicosAfetados = [...new Set(relevantes.map(c=>c.topico_id))];
+    topicoNotificadoId = topicosAfetados[0];
+    document.getElementById('texto-notificacao-resposta-discussao').textContent = topicosAfetados.length===1
+      ? `Alguém respondeu "${mapaTopico[topicosAfetados[0]].titulo}"`
+      : `${topicosAfetados.length} discussões suas tiveram resposta`;
+    el.classList.remove('hidden');
+  }else{
+    el.classList.add('hidden');
+  }
+}
+function abrirTopicoNotificado(){
+  if(!topicoNotificadoId) return;
+  document.getElementById('modal-questao-detalhe-conteudo').innerHTML = '<div class="loading-spinner"></div>';
+  abrirModal('modal-questao-detalhe');
+  renderizarTopico(topicoNotificadoId);
+}
+
+/* 3. Questão do seu caderno em andamento foi corrigida antes de você
+   responder ela */
+async function verificarNotificacaoQuestaoCorrigida(){
+  const {data: cadernosAndamento} = await sb.from('cadernos').select('id, criado_em, filtros_aplicados').eq('usuario_id', usuarioAtual.id).eq('status','em_andamento');
+  const el = document.getElementById('card-notificacao-questao-corrigida');
+  if(!cadernosAndamento || !cadernosAndamento.length){ el.classList.add('hidden'); return; }
+
+  let totalAfetadas = 0;
+  for(const c of cadernosAndamento){
+    const ids = (c.filtros_aplicados && c.filtros_aplicados.questao_ids) || [];
+    if(!ids.length) continue;
+    const {data: questoesEditadas} = await sb.from('questoes').select('id').in('id', ids).gt('atualizado_em', c.criado_em);
+    if(!questoesEditadas || !questoesEditadas.length) continue;
+    const idsEditadas = questoesEditadas.map(q=>q.id);
+    const {data: jaRespondidas} = await sb.from('respostas').select('questao_id').eq('caderno_id', c.id).in('questao_id', idsEditadas);
+    const idsRespondidas = new Set((jaRespondidas||[]).map(r=>r.questao_id));
+    totalAfetadas += idsEditadas.filter(id=>!idsRespondidas.has(id)).length;
+  }
+
+  if(totalAfetadas > 0){
+    document.getElementById('texto-notificacao-questao-corrigida').textContent = totalAfetadas===1
+      ? '1 questão do seu caderno foi corrigida antes de você respondê-la'
+      : `${totalAfetadas} questões dos seus cadernos foram corrigidas antes de você respondê-las`;
+    el.classList.remove('hidden');
+  }else{
+    el.classList.add('hidden');
+  }
+}
+
+/* 7. PDF novo no banco — questões de outras pessoas desde a última vez
+   que você viu esse aviso */
+async function verificarNotificacaoPdfNovo(){
+  const marco = usuarioAtual.pdf_novo_visto_em || '1970-01-01T00:00:00Z';
+  const {data} = await sb.from('questoes').select('id, usuarios(nome)').neq('autor_id', usuarioAtual.id).gt('criado_em', marco);
+  const el = document.getElementById('card-notificacao-pdf-novo');
+  const total = (data||[]).length;
+  if(total > 0){
+    const autores = [...new Set((data||[]).map(q=>q.usuarios?.nome).filter(Boolean))];
+    document.getElementById('texto-notificacao-pdf-novo').textContent = `${total} ${total===1?'questão nova':'questões novas'} adicionada${total===1?'':'s'} por ${autores.join(', ')}`;
+    el.classList.remove('hidden');
+  }else{
+    el.classList.add('hidden');
+  }
+}
+async function marcarPdfNovoVisto(){
+  const agora = new Date().toISOString();
+  await sb.from('usuarios').update({pdf_novo_visto_em: agora}).eq('id', usuarioAtual.id);
+  usuarioAtual.pdf_novo_visto_em = agora;
+  await verificarNotificacaoPdfNovo();
+}
+
 function retomarCaderno(){
   trocarAba('quests');
   const conteudo = document.getElementById('lista-cadernos-andamento');
@@ -2024,6 +2209,12 @@ function abrirTopico(topicoId){
 async function renderizarTopico(topicoId){
   const {data: topico} = await sb.from('topicos').select('*, questoes(id, enunciado)').eq('id', topicoId).single();
   if(!topico){ document.getElementById('modal-questao-detalhe-conteudo').innerHTML = '<p>Tópico não encontrado.</p>'; return; }
+  if(topico.criado_por === usuarioAtual.id){
+    // marca como visto pelo criador, sem travar a tela — e reavalia a notificação
+    sb.from('topicos').update({criador_visto_em: new Date().toISOString()}).eq('id', topicoId).then(()=>{
+      verificarNotificacaoRespostaDiscussao();
+    });
+  }
   const [{data: comentarios}, {data: votos}] = await Promise.all([
     sb.from('comentarios').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).order('criado_em', {ascending:true}),
     sb.from('votos_resolucao').select('*, usuarios(nome)').eq('topico_id', topicoId)
@@ -2148,7 +2339,7 @@ async function salvarEdicaoTopico(questaoId, topicoId){
   const enunciado = document.getElementById('edicao-enunciado').value.trim();
   const alternativas = document.getElementById('edicao-alternativas').value.trim();
   const gabarito = document.getElementById('edicao-gabarito').value.trim().toLowerCase();
-  await sb.from('questoes').update({enunciado, alternativas, gabarito}).eq('id', questaoId);
+  await sb.from('questoes').update({enunciado, alternativas, gabarito, atualizado_em: new Date().toISOString()}).eq('id', questaoId);
   await resolverTopicoPorAcao(topicoId);
   await renderizarTopico(topicoId);
 }
@@ -2170,8 +2361,8 @@ async function executarAnulacaoQuestao(){
   if(!questaoParaAnular) return;
   const {questaoId, topicoId} = questaoParaAnular;
   await Promise.all([
-    sb.from('questoes').update({anulada:true}).eq('id', questaoId),
-    sb.from('respostas').update({correta:true}).eq('questao_id', questaoId)
+    sb.from('questoes').update({anulada:true, atualizado_em: new Date().toISOString()}).eq('id', questaoId),
+    sb.from('respostas').update({correta:true, foi_anulada:true, anulacao_vista:false}).eq('questao_id', questaoId)
   ]);
   await resolverTopicoPorAcao(topicoId);
   questaoParaAnular = null;
@@ -2193,36 +2384,109 @@ async function carregarPlacar(){
     </div>`).join('');
 }
 
-async function carregarMetricasPessoais(){
-  const el = document.getElementById('lista-metricas-modulo');
-  el.innerHTML = '<div class="loading-spinner"></div>';
+let metricasFiltroDias = 0; // 0 = tudo
 
-  const {data: respostas} = await sb.from('respostas_finalizadas').select('questao_id, correta').eq('usuario_id', usuarioAtual.id);
-  if(!respostas || !respostas.length){
-    el.innerHTML = '<p style="color:#888">Você ainda não finalizou nenhum caderno. Assim que finalizar um, suas métricas por módulo aparecem aqui.</p>';
+function selecionarPeriodoMetricas(dias, btn){
+  metricasFiltroDias = dias;
+  document.querySelectorAll('#metricas-filtro-periodo .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  carregarMetricasPessoais();
+}
+
+async function carregarMetricasPessoais(){
+  const filtroTipo = document.getElementById('metricas-filtro-tipo').value;
+
+  const elResumo = document.getElementById('metricas-resumo-geral');
+  const elModulo = document.getElementById('lista-metricas-modulo');
+  const elTipo = document.getElementById('lista-metricas-tipo');
+  const elPublicacao = document.getElementById('lista-metricas-publicacao');
+  const elPiores = document.getElementById('lista-metricas-piores');
+  const elFavDificeis = document.getElementById('lista-metricas-favoritos-dificeis');
+  const elNotas = document.getElementById('lista-metricas-notas');
+  elModulo.innerHTML = '<div class="loading-spinner"></div>';
+  elResumo.innerHTML = '';
+  elTipo.innerHTML = '';
+  elPublicacao.innerHTML = '';
+  elPiores.innerHTML = '';
+  elFavDificeis.innerHTML = '';
+  elNotas.innerHTML = '';
+
+  let query = sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em').eq('usuario_id', usuarioAtual.id);
+  if(metricasFiltroDias > 0){
+    const cutoff = new Date(Date.now() - metricasFiltroDias*24*60*60*1000).toISOString();
+    query = query.gte('respondido_em', cutoff);
+  }
+  const {data: respostasBrutas} = await query;
+
+  if(!respostasBrutas || !respostasBrutas.length){
+    elModulo.innerHTML = '<p style="color:#888">Nenhuma resposta registrada nesse período. Assim que finalizar um caderno, suas métricas aparecem aqui.</p>';
     return;
   }
 
-  const idsQuestoes = [...new Set(respostas.map(r=>r.questao_id))];
-  const {data: questoes} = await sb.from('questoes').select('id, modulo_pscpp').in('id', idsQuestoes);
-  const moduloPorQuestao = {};
-  (questoes||[]).forEach(q=>{ moduloPorQuestao[q.id] = q.modulo_pscpp || 'Sem módulo'; });
+  const idsQuestoes = [...new Set(respostasBrutas.map(r=>r.questao_id))];
+  const {data: questoesInfo} = await sb.from('questoes').select('id, modulo_pscpp, tipo_questao, bibliografia_id, enunciado').in('id', idsQuestoes);
+  const infoPorQuestao = {};
+  (questoesInfo||[]).forEach(q=>{ infoPorQuestao[q.id] = q; });
 
-  const stats = {};
+  // filtro de tipo de questão é aplicado em cima do que já veio do período
+  let respostas = respostasBrutas;
+  if(filtroTipo){
+    respostas = respostas.filter(r => infoPorQuestao[r.questao_id]?.tipo_questao === filtroTipo);
+  }
+
+  if(!respostas.length){
+    elModulo.innerHTML = '<p style="color:#888">Nenhuma resposta registrada com esses filtros.</p>';
+    return;
+  }
+
+  /* ---- cards de resumo geral ---- */
+  const totalRespondidas = respostas.length;
+  const totalAcertos = respostas.filter(r=>r.correta).length;
+  const totalErros = totalRespondidas - totalAcertos;
+  const aproveitamento = totalRespondidas ? Math.round((totalAcertos/totalRespondidas)*100) : 0;
+  const corAproveitamento = aproveitamento >= 70 ? '#3B6D11' : aproveitamento >= 50 ? '#854F0B' : '#A32D2D';
+
+  let queryCadernos = sb.from('cadernos').select('id').eq('usuario_id', usuarioAtual.id).eq('status','finalizado');
+  if(metricasFiltroDias > 0){
+    const cutoff = new Date(Date.now() - metricasFiltroDias*24*60*60*1000).toISOString();
+    queryCadernos = queryCadernos.gte('finalizado_em', cutoff);
+  }
+  const {data: cadernosFinalizados} = await queryCadernos;
+  const totalCadernos = (cadernosFinalizados||[]).length;
+
+  elResumo.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
+      <div class="card-questao" style="text-align:center;margin-bottom:0">
+        <div style="font-size:24px;font-weight:700">${totalCadernos}</div>
+        <div style="color:#888;font-size:var(--fs-c)">${totalCadernos===1?'caderno finalizado':'cadernos finalizados'}</div>
+      </div>
+      <div class="card-questao" style="text-align:center;margin-bottom:0">
+        <div style="font-size:24px;font-weight:700">${totalRespondidas}</div>
+        <div style="color:#888;font-size:var(--fs-c)">questões respondidas</div>
+      </div>
+      <div class="card-questao" style="text-align:center;margin-bottom:0">
+        <div style="font-size:24px;font-weight:700"><span style="color:#3B6D11">${totalAcertos}</span> / <span style="color:#A32D2D">${totalErros}</span></div>
+        <div style="color:#888;font-size:var(--fs-c)">acertos / erros</div>
+      </div>
+      <div class="card-questao" style="text-align:center;margin-bottom:0">
+        <div style="font-size:24px;font-weight:700;color:${corAproveitamento}">${aproveitamento}%</div>
+        <div style="color:#888;font-size:var(--fs-c)">aproveitamento médio</div>
+      </div>
+    </div>
+  `;
+
+  /* ---- por módulo ---- */
+  const statsPorModulo = {};
   respostas.forEach(r=>{
-    const mod = moduloPorQuestao[r.questao_id] || 'Sem módulo';
-    if(!stats[mod]) stats[mod] = {total: 0, acertos: 0};
-    stats[mod].total++;
-    if(r.correta) stats[mod].acertos++;
+    const mod = infoPorQuestao[r.questao_id]?.modulo_pscpp || 'Sem módulo';
+    if(!statsPorModulo[mod]) statsPorModulo[mod] = {total:0, acertos:0};
+    statsPorModulo[mod].total++;
+    if(r.correta) statsPorModulo[mod].acertos++;
   });
-
-  const linhas = Object.entries(stats).map(([modulo, s])=>({
-    modulo,
-    total: s.total,
-    pctAcerto: s.total ? Math.round((s.acertos / s.total) * 100) : 0
-  })).sort((a,b)=>a.pctAcerto - b.pctAcerto); // pior primeiro, pra chamar atenção pro que precisa de reforço
-
-  el.innerHTML = linhas.map(l=>{
+  const linhasModulo = Object.entries(statsPorModulo).map(([modulo, s])=>({
+    modulo, total: s.total, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
+  })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
+  elModulo.innerHTML = linhasModulo.map(l=>{
     const cor = l.pctAcerto >= 70 ? '#3B6D11' : l.pctAcerto >= 50 ? '#854F0B' : '#A32D2D';
     return `<div class="card-questao">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -2232,6 +2496,106 @@ async function carregarMetricasPessoais(){
       <div style="color:#888;font-size:var(--fs-c)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
     </div>`;
   }).join('');
+
+  /* ---- por tipo de questão ---- */
+  const statsPorTipo = {};
+  respostas.forEach(r=>{
+    const tipo = infoPorQuestao[r.questao_id]?.tipo_questao || 'Sem tipo';
+    if(!statsPorTipo[tipo]) statsPorTipo[tipo] = {total:0, acertos:0};
+    statsPorTipo[tipo].total++;
+    if(r.correta) statsPorTipo[tipo].acertos++;
+  });
+  const linhasTipo = Object.entries(statsPorTipo).map(([tipo, s])=>({
+    tipo, total: s.total, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
+  })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
+  elTipo.innerHTML = linhasTipo.map(l=>{
+    const cor = l.pctAcerto >= 70 ? '#3B6D11' : l.pctAcerto >= 50 ? '#854F0B' : '#A32D2D';
+    return `<div class="card-questao">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-weight:600;color:#111">${escapeHtml(l.tipo)}</span>
+        <span style="font-weight:700;color:${cor}">${l.pctAcerto}%</span>
+      </div>
+      <div style="color:#888;font-size:var(--fs-c)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
+    </div>`;
+  }).join('');
+
+  /* ---- por publicação ---- */
+  const mapaBibliografia = {};
+  bibliografiaCache.forEach(b=>{ mapaBibliografia[b.id] = b.titulo; });
+  const statsPorPublicacao = {};
+  respostas.forEach(r=>{
+    const bibId = infoPorQuestao[r.questao_id]?.bibliografia_id;
+    const titulo = bibId ? (mapaBibliografia[bibId] || 'Publicação não identificada') : 'Sem publicação identificada';
+    if(!statsPorPublicacao[titulo]) statsPorPublicacao[titulo] = {total:0, acertos:0};
+    statsPorPublicacao[titulo].total++;
+    if(r.correta) statsPorPublicacao[titulo].acertos++;
+  });
+  const linhasPublicacao = Object.entries(statsPorPublicacao).map(([titulo, s])=>({
+    titulo, total: s.total, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
+  })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
+  elPublicacao.innerHTML = linhasPublicacao.map(l=>{
+    const cor = l.pctAcerto >= 70 ? '#3B6D11' : l.pctAcerto >= 50 ? '#854F0B' : '#A32D2D';
+    return `<div class="card-questao">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px">
+        <span style="font-weight:600;color:#111;font-size:var(--fs-d)">${escapeHtml(l.titulo)}</span>
+        <span style="font-weight:700;color:${cor};flex-shrink:0">${l.pctAcerto}%</span>
+      </div>
+      <div style="color:#888;font-size:var(--fs-c)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
+    </div>`;
+  }).join('');
+
+  /* ---- suas questões mais difíceis (Wilson Score, por questão individual) ---- */
+  const statsPorQuestao = {};
+  respostas.forEach(r=>{
+    if(!statsPorQuestao[r.questao_id]) statsPorQuestao[r.questao_id] = {k:0, n:0};
+    statsPorQuestao[r.questao_id].n++;
+    if(!r.correta) statsPorQuestao[r.questao_id].k++;
+  });
+  const todasComErro = Object.entries(statsPorQuestao)
+    .map(([qid, s])=>({questaoId: qid, wilson: wilsonScoreLowerBound(s.k, s.n), tentativas: s.n, erros: s.k}))
+    .filter(x=>x.erros > 0)
+    .sort((a,b)=>b.wilson - a.wilson);
+  const piores = todasComErro.slice(0, 10);
+
+  function cardQuestaoDificil(p){
+    const info = infoPorQuestao[p.questaoId];
+    return `<div class="card-questao" style="cursor:pointer" onclick="abrirDetalheQuestao('${p.questaoId}')">
+      ${info ? tagModulo(info.modulo_pscpp) : ''}
+      <p style="font-size:var(--fs-d);margin-top:6px;color:#111">${escapeHtml((info?.enunciado||'').slice(0,100))}...</p>
+      <div style="color:#888;font-size:var(--fs-b);margin-top:6px">${p.erros} ${p.erros===1?'erro':'erros'} em ${p.tentativas} ${p.tentativas===1?'tentativa':'tentativas'}</div>
+    </div>`;
+  }
+
+  elPiores.innerHTML = piores.length
+    ? piores.map(cardQuestaoDificil).join('')
+    : '<p style="color:#888;font-size:var(--fs-c)">Nenhum erro registrado nesse período — mandou bem!</p>';
+
+  /* ---- favoritos que você mais erra ---- */
+  const {data: meusFavoritos} = await sb.from('favoritos').select('questao_id').eq('usuario_id', usuarioAtual.id);
+  const idsFavoritos = new Set((meusFavoritos||[]).map(f=>f.questao_id));
+  const favoritosDificeis = todasComErro.filter(p=>idsFavoritos.has(p.questaoId));
+  elFavDificeis.innerHTML = favoritosDificeis.length
+    ? favoritosDificeis.map(cardQuestaoDificil).join('')
+    : '<p style="color:#888;font-size:var(--fs-c)">Nenhum dos seus favoritos foi errado nesse período.</p>';
+
+  /* ---- suas notas (atalho de revisão) ---- */
+  const {data: minhasNotas} = await sb.from('notas').select('questao_id, texto, atualizado_em').eq('usuario_id', usuarioAtual.id).order('atualizado_em', {ascending:false});
+  if(minhasNotas && minhasNotas.length){
+    const idsNotas = minhasNotas.map(n=>n.questao_id);
+    const {data: questoesDasNotas} = await sb.from('questoes').select('id, enunciado, modulo_pscpp').in('id', idsNotas);
+    const infoNotas = {};
+    (questoesDasNotas||[]).forEach(q=>{ infoNotas[q.id] = q; });
+    elNotas.innerHTML = minhasNotas.map(n=>{
+      const info = infoNotas[n.questao_id];
+      return `<div class="card-questao" style="cursor:pointer" onclick="abrirDetalheQuestao('${n.questao_id}')">
+        ${info ? tagModulo(info.modulo_pscpp) : ''}
+        <p style="font-size:var(--fs-d);margin-top:6px;color:#111">${escapeHtml((info?.enunciado||'').slice(0,80))}...</p>
+        <p style="font-size:var(--fs-c);color:#666;margin-top:4px;font-style:italic">"${escapeHtml((n.texto||'').slice(0,100))}"</p>
+      </div>`;
+    }).join('');
+  }else{
+    elNotas.innerHTML = '<p style="color:#888;font-size:var(--fs-c)">Você ainda não escreveu nenhuma nota.</p>';
+  }
 }
 
 // Tela de detalhe de um caderno CONCLUÍDO específico — mesma lógica de
