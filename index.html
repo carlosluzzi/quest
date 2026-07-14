@@ -33,6 +33,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .section-title:first-child{margin-top:0}
 .config-title{font-size:var(--fs-f);font-weight:500;margin:0 0 16px 0;color:#111}
 .modal-conteudo p{margin:0 0 20px 0;line-height:1.5}
+.textarea-padrao{width:100%;min-height:100px;font-size:16px;padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;font-family:inherit;color:#111;resize:vertical;line-height:1.5;margin-bottom:14px}
 button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none}
 button:active{transform:scale(0.96)}
 input,select,textarea{font-family:inherit;font-size:16px}
@@ -149,6 +150,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .banco-acoes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:20px}
 .banco-acao-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:12px;border:0.5px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#666}
 .banco-acao-btn.ativo{background:#FBEEE8;border-color:#D97757;color:#D97757}
+.banco-acao-btn.favoritada{background:#FEF6E4;border-color:#EF9F27;color:#854F0B}
 .banco-acao-btn svg{width:19px;height:19px}
 .banco-acao-btn span{font-size:var(--fs-a)}
 .pills-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
@@ -531,16 +533,30 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="modal-nota-questao">
+<div class="modal-overlay hidden" id="modal-confirmar-exclusao-questao">
   <div class="modal-conteudo">
-    <h3 class="config-title">Sua nota</h3>
-    <textarea id="texto-nota-questao" class="filter-select" style="min-height:120px" placeholder="Por que errei, o que lembrar da próxima vez..."></textarea>
-    <button class="btn-primario" onclick="salvarNotaQuestao()">Salvar</button>
+    <h3 class="config-title">Excluir questão</h3>
+    <p>Excluir essa questão? Ela some só pra você — continua existindo normalmente pros outros 4.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-exclusao-questao')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="confirmarExclusaoQuestao()">Excluir</button>
+    </div>
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="modal-questao-detalhe">
-  <div class="modal-conteudo" id="modal-questao-detalhe-conteudo"></div>
+<div class="modal-overlay hidden" id="modal-nota-questao" onclick="if(event.target===this) fecharModal('modal-nota-questao')">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Sua nota nessa questão</h3>
+    <textarea id="texto-nota-questao" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-nota-questao')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="salvarNotaQuestao()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-questao-detalhe" onclick="if(event.target===this) fecharModal('modal-questao-detalhe')">
+  <div class="modal-conteudo" id="modal-questao-detalhe-conteudo" style="position:relative"></div>
 </div>
 
 <div class="modal-overlay hidden" id="modal-admin">
@@ -1493,11 +1509,11 @@ function renderizarQuestaoAtual(){
       ${indiceQuestaoAtual<questoesCaderno.length-1?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual+1})">Próxima →</button>`:''}
     </div>
     <div class="banco-acoes">
-      <button class="banco-acao-btn" onclick="excluirQuestao('${q.id}')">
+      <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoQuestao('${q.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         <span>Excluir</span>
       </button>
-      <button class="banco-acao-btn ${favoritosDoUsuario.has(q.id)?'ativo':''}" onclick="toggleFavorito('${q.id}')">
+      <button class="banco-acao-btn ${favoritosDoUsuario.has(q.id)?'favoritada':''}" onclick="toggleFavorito('${q.id}')">
         <svg viewBox="0 0 24 24" fill="${favoritosDoUsuario.has(q.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
         <span>Favoritar</span>
       </button>
@@ -1558,6 +1574,20 @@ function gerarExplicacao(questaoId){
 function mostrarExplicacaoSalva(questaoId){
   const q = questoesCaderno.find(x=>x.id===questaoId);
   alert(q.explicacao || '(sem explicação salva)');
+}
+
+let questaoParaExcluir = null;
+
+function abrirConfirmacaoExclusaoQuestao(questaoId){
+  questaoParaExcluir = questaoId;
+  abrirModal('modal-confirmar-exclusao-questao');
+}
+
+async function confirmarExclusaoQuestao(){
+  if(!questaoParaExcluir) return;
+  await excluirQuestao(questaoParaExcluir);
+  questaoParaExcluir = null;
+  fecharModal('modal-confirmar-exclusao-questao');
 }
 
 async function excluirQuestao(questaoId){
@@ -1774,7 +1804,7 @@ async function renderizarDetalheQuestao(questaoId){
   const comentariosCorrecao = correcaoAtual ? (comentarios||[]).filter(c=>c.correcao_id===correcaoAtual.id) : [];
 
   const html = `
-    <button class="btn-secundario" style="margin-bottom:12px" onclick="fecharModal('modal-questao-detalhe')">Fechar</button>
+    <button class="btn-secundario" style="width:100%;margin-bottom:12px" onclick="fecharModal('modal-questao-detalhe')">Fechar</button>
     ${tagModulo(questao.modulo_pscpp)}
     ${correcaoAtual ? '<span class="selo-correcao" style="margin-left:8px;display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Correção sugerida</span>' : ''}
     <div class="enunciado" style="margin:12px 0">${escapeHtml(questao.enunciado||'')}</div>
@@ -1782,7 +1812,7 @@ async function renderizarDetalheQuestao(questaoId){
     ${correcaoAtual ? `
       <div class="section-title" style="margin-top:20px">Thread de correção</div>
       <div>${renderizarListaComentarios(comentariosCorrecao)}</div>
-      <textarea id="novo-comentario-correcao" class="filter-select" placeholder="Comentar na correção..." style="min-height:60px"></textarea>
+      <textarea id="novo-comentario-correcao" class="textarea-padrao" placeholder="Comentar na correção..." style="min-height:60px"></textarea>
       <button class="btn-secundario" style="width:100%;margin-bottom:8px" onclick="enviarComentario('${questaoId}','${correcaoAtual.id}','novo-comentario-correcao')">Comentar</button>
       <button class="btn-primario" onclick="abrirFormularioEdicao('${questaoId}','${correcaoAtual.id}')">Aplicar edição</button>
     ` : `
@@ -1791,7 +1821,7 @@ async function renderizarDetalheQuestao(questaoId){
 
     <div class="section-title" style="margin-top:24px">Discussão geral</div>
     <div>${renderizarListaComentarios(comentariosGerais)}</div>
-    <textarea id="novo-comentario-geral" class="filter-select" placeholder="Comentar..." style="min-height:60px"></textarea>
+    <textarea id="novo-comentario-geral" class="textarea-padrao" placeholder="Comentar..." style="min-height:60px"></textarea>
     <button class="btn-primario" onclick="enviarComentario('${questaoId}',null,'novo-comentario-geral')">Comentar</button>
   `;
   document.getElementById('modal-questao-detalhe-conteudo').innerHTML = html;
