@@ -7,7 +7,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Claude Quest</title>
+<meta name="apple-mobile-web-app-title" content="Claudequest">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<title>Claudequest</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -120,6 +123,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* --- Questão --- */
 .card-questao{background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:18px;margin-bottom:8px}
 .card-questao .enunciado{font-size:14px;color:#111;line-height:1.6;margin:25px 0 0 0}
+.enunciado-linha{display:block;margin-top:10px}
 .alternativa{display:block;width:100%;text-align:left;background:#F5F5F6;border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:var(--fs-d)}
 .alternativa.correta{background:#E1F5E1;color:#1B5E20;font-weight:600}
 .alternativa.errada-escolhida{background:#FBE1E1;color:#9E1B1B;font-weight:600}
@@ -193,7 +197,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <!-- TELA: LOGIN / DEFINIR SENHA -->
 <!-- ============================================================ -->
 <div id="view-splash" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#F9F9F7;z-index:100;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 86px) 24px;box-sizing:border-box">
-  <img src="assets/logo.png" alt="Claude Quest" style="height:44px;width:auto;margin-bottom:24px">
+  <img src="assets/logo2.png" alt="Claude Quest" style="height:44px;width:auto;margin-bottom:24px">
   <div style="width:120px;height:4px;border-radius:2px;background:#EEE;overflow:hidden">
     <div style="width:40%;height:100%;background:#D97757;border-radius:2px;animation:carregando 1.1s ease-in-out infinite"></div>
   </div>
@@ -208,7 +212,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="view-login" class="hidden">
 <div class="login-inner">
   <div style="text-align:center;margin-bottom:16px">
-    <img src="assets/logo.png" alt="Claude Quest" style="height:32px;width:auto">
+    <img src="assets/logo2.png" alt="Claude Quest" style="height:32px;width:auto">
   </div>
 
   <form id="login-form-entrar" onsubmit="event.preventDefault(); entrar();">
@@ -272,7 +276,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="app-shell">
 
   <div class="topbar">
-    <img src="assets/logo.png" alt="Claude Quest" style="height:32px;width:auto;display:block">
+    <img src="assets/logo2.png" alt="Claude Quest" style="height:32px;width:auto;display:block">
     <button class="avatar-btn" onclick="abrirModalPerfil()" id="avatar-inicial">?</button>
   </div>
 
@@ -287,20 +291,20 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div id="caderno-em-andamento" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left" onclick="retomarCaderno()">
-        <div style="font-weight:600;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 0 2-2z"/></svg> Continuar caderno em andamento</div>
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 0 2-2z"/></svg> Continuar caderno em andamento</div>
         <div style="color:#888;font-size:var(--fs-c)" id="caderno-em-andamento-info"></div>
       </button>
     </div>
 
     <div id="card-notificacao-forum" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left" onclick="trocarAba('forum')">
-        <div style="font-weight:600;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 484.366 484.366" width="16" height="16" fill="#D97757"><path d="M483.629,457.833l-7.731-38.872c-3.07-15.4-15.117-27.43-30.517-30.478l-10.474-2.07 c-6.014-1.188-10.738-5.866-11.998-11.881l-1.982-9.621c-0.647-3.079,0.472-6.269,2.895-8.275 c9.449-7.826,18.095-19.354,23.133-32.958c6.945-1.253,13.291-7.937,15.338-17.141c2.52-11.401-2.504-22.218-11.211-24.156 c-0.111-0.015-0.221-0.008-0.316-0.015c-2.628-29.613-14.03-51.54-51.964-51.54c-37.288,0-49.13,21.919-51.917,51.523 c-0.111,0.023-0.236,0.017-0.362,0.031c-8.724,1.939-13.732,12.755-11.212,24.156c2.046,9.204,8.377,15.888,15.338,17.141 c5.039,13.612,13.7,25.132,23.131,32.966c2.426,1.999,3.545,5.189,2.914,8.259l-2,9.622c-1.244,6.015-5.968,10.7-12,11.896 l-10.471,2.063c-15.401,3.048-27.446,15.078-30.518,30.478l-7.732,38.872c-1.29,6.52,0.396,13.282,4.615,18.416 c4.22,5.141,10.518,8.117,17.163,8.117h126.101c6.647,0,12.945-2.977,17.165-8.117 C483.236,471.115,484.921,464.353,483.629,457.833z"/><path d="M162.662,418.961c-3.071-15.4-15.116-27.43-30.518-30.478l-10.472-2.07c-6.016-1.188-10.738-5.866-11.999-11.881 l-1.984-9.621c-0.646-3.079,0.473-6.269,2.898-8.275c9.447-7.826,18.092-19.354,23.131-32.958 c6.945-1.253,13.292-7.937,15.338-17.141c2.52-11.401-2.504-22.218-11.212-24.156c-0.109-0.015-0.221-0.008-0.314-0.015 c-2.63-29.613-14.032-51.54-51.966-51.54c-37.288,0-49.13,21.919-51.916,51.523c-0.111,0.023-0.237,0.017-0.363,0.031 c-8.724,1.939-13.731,12.755-11.212,24.156c2.048,9.204,8.377,15.888,15.339,17.141c5.038,13.612,13.699,25.132,23.133,32.966 c2.423,1.999,3.542,5.189,2.911,8.259l-1.999,9.622c-1.245,6.015-5.968,10.7-11.999,11.896l-10.473,2.063 c-15.399,3.048-27.446,15.078-30.516,30.478l-7.733,38.872c-1.292,6.52,0.394,13.282,4.613,18.416 c4.22,5.141,10.519,8.117,17.165,8.117h126.101c6.646,0,12.943-2.977,17.163-8.117c4.22-5.134,5.905-11.896,4.615-18.416 L162.662,418.961z"/><path d="M334.491,253.329c1.718-1.686,2.017-4.348,0.74-6.37L317.5,210.78h24.612c12.692,0,22.959-10.267,22.959-22.958V83.773 c0-12.691-10.267-22.958-22.959-22.958H284.92v66.199c0,24.07-19.574,43.643-43.65,43.643h-67.995l-17.637,11.787v5.378 c0,12.691,10.282,22.958,22.958,22.958h74.279l75.206,43.146C330.097,255.257,332.775,255.014,334.491,253.329z"/><path d="M77.753,149.974h24.613L84.21,186.404c-1.307,2.032-0.977,4.7,0.74,6.377c0.977,0.962,2.252,1.448,3.559,1.448 c0.993,0,1.969-0.282,2.835-0.857l75.647-43.398h74.278c12.676,0,22.959-10.291,22.959-22.959V22.959 C264.229,10.283,253.946,0,241.27,0H77.753C65.062,0,54.795,10.283,54.795,22.959v104.056 C54.795,139.683,65.062,149.974,77.753,149.974z M205.304,57.815c9.48,0,17.18,7.685,17.18,17.172c0,9.479-7.7,17.164-17.18,17.164 c-9.48,0-17.165-7.685-17.165-17.164C188.139,65.5,195.824,57.815,205.304,57.815z M159.511,57.815 c9.479,0,17.165,7.685,17.165,17.172c0,9.479-7.686,17.164-17.165,17.164c-9.479,0-17.18-7.685-17.18-17.164 C142.332,65.5,150.033,57.815,159.511,57.815z M113.704,57.815c9.513,0,17.181,7.685,17.181,17.172 c0,9.479-7.668,17.164-17.181,17.164c-9.464,0-17.163-7.685-17.163-17.164C96.541,65.5,104.24,57.815,113.704,57.815z"/></svg> Novidades no Fórum</div>
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="#D97757"><path fill-rule="evenodd" d="M1.75 1A1.75 1.75 0 000 2.75v9.5C0 13.216.784 14 1.75 14H3v1.543a1.457 1.457 0 002.487 1.03L8.061 14h6.189A1.75 1.75 0 0016 12.25v-9.5A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v9.5a.25.25 0 01-.25.25h-6.5a.75.75 0 00-.53.22L4.5 15.44v-2.19a.75.75 0 00-.75-.75h-2a.25.25 0 01-.25-.25v-9.5z"/><path d="M22.5 8.75a.25.25 0 00-.25-.25h-3.5a.75.75 0 010-1.5h3.5c.966 0 1.75.784 1.75 1.75v9.5A1.75 1.75 0 0122.25 20H21v1.543a1.457 1.457 0 01-2.487 1.03L15.939 20H10.75A1.75 1.75 0 019 18.25v-1.465a.75.75 0 011.5 0v1.465c0 .138.112.25.25.25h5.5a.75.75 0 01.53.22l2.72 2.72v-2.19a.75.75 0 01.75-.75h2a.25.25 0 00.25-.25v-9.5z"/></svg> Novidades no Fórum</div>
         <div style="color:#888;font-size:var(--fs-c)" id="texto-notificacao-forum"></div>
       </button>
     </div>
     <div class="card-inicio">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-weight:600">Placar entre amigos</div>
+        <div style="font-weight:600;font-size:var(--fs-e)">Placar entre amigos</div>
         <span class="info-icone" onclick="abrirModal('modal-info-wilson')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
       </div>
       <div id="lista-placar"><div class="loading-spinner"></div></div>
@@ -434,7 +438,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-6.5h5V21H18a1 1 0 0 0 1-1V9.5"/></svg></span><span class="nav-label">Início</span>
     </div>
     <div class="nav-item" data-aba="forum" onclick="trocarAba('forum')">
-      <span class="nav-icon"><svg viewBox="0 0 484.366 484.366" width="21" height="21" fill="currentColor"><path d="M483.629,457.833l-7.731-38.872c-3.07-15.4-15.117-27.43-30.517-30.478l-10.474-2.07 c-6.014-1.188-10.738-5.866-11.998-11.881l-1.982-9.621c-0.647-3.079,0.472-6.269,2.895-8.275 c9.449-7.826,18.095-19.354,23.133-32.958c6.945-1.253,13.291-7.937,15.338-17.141c2.52-11.401-2.504-22.218-11.211-24.156 c-0.111-0.015-0.221-0.008-0.316-0.015c-2.628-29.613-14.03-51.54-51.964-51.54c-37.288,0-49.13,21.919-51.917,51.523 c-0.111,0.023-0.236,0.017-0.362,0.031c-8.724,1.939-13.732,12.755-11.212,24.156c2.046,9.204,8.377,15.888,15.338,17.141 c5.039,13.612,13.7,25.132,23.131,32.966c2.426,1.999,3.545,5.189,2.914,8.259l-2,9.622c-1.244,6.015-5.968,10.7-12,11.896 l-10.471,2.063c-15.401,3.048-27.446,15.078-30.518,30.478l-7.732,38.872c-1.29,6.52,0.396,13.282,4.615,18.416 c4.22,5.141,10.518,8.117,17.163,8.117h126.101c6.647,0,12.945-2.977,17.165-8.117 C483.236,471.115,484.921,464.353,483.629,457.833z"/><path d="M162.662,418.961c-3.071-15.4-15.116-27.43-30.518-30.478l-10.472-2.07c-6.016-1.188-10.738-5.866-11.999-11.881 l-1.984-9.621c-0.646-3.079,0.473-6.269,2.898-8.275c9.447-7.826,18.092-19.354,23.131-32.958 c6.945-1.253,13.292-7.937,15.338-17.141c2.52-11.401-2.504-22.218-11.212-24.156c-0.109-0.015-0.221-0.008-0.314-0.015 c-2.63-29.613-14.032-51.54-51.966-51.54c-37.288,0-49.13,21.919-51.916,51.523c-0.111,0.023-0.237,0.017-0.363,0.031 c-8.724,1.939-13.731,12.755-11.212,24.156c2.048,9.204,8.377,15.888,15.339,17.141c5.038,13.612,13.699,25.132,23.133,32.966 c2.423,1.999,3.542,5.189,2.911,8.259l-1.999,9.622c-1.245,6.015-5.968,10.7-11.999,11.896l-10.473,2.063 c-15.399,3.048-27.446,15.078-30.516,30.478l-7.733,38.872c-1.292,6.52,0.394,13.282,4.613,18.416 c4.22,5.141,10.519,8.117,17.165,8.117h126.101c6.646,0,12.943-2.977,17.163-8.117c4.22-5.134,5.905-11.896,4.615-18.416 L162.662,418.961z"/><path d="M334.491,253.329c1.718-1.686,2.017-4.348,0.74-6.37L317.5,210.78h24.612c12.692,0,22.959-10.267,22.959-22.958V83.773 c0-12.691-10.267-22.958-22.959-22.958H284.92v66.199c0,24.07-19.574,43.643-43.65,43.643h-67.995l-17.637,11.787v5.378 c0,12.691,10.282,22.958,22.958,22.958h74.279l75.206,43.146C330.097,255.257,332.775,255.014,334.491,253.329z"/><path d="M77.753,149.974h24.613L84.21,186.404c-1.307,2.032-0.977,4.7,0.74,6.377c0.977,0.962,2.252,1.448,3.559,1.448 c0.993,0,1.969-0.282,2.835-0.857l75.647-43.398h74.278c12.676,0,22.959-10.291,22.959-22.959V22.959 C264.229,10.283,253.946,0,241.27,0H77.753C65.062,0,54.795,10.283,54.795,22.959v104.056 C54.795,139.683,65.062,149.974,77.753,149.974z M205.304,57.815c9.48,0,17.18,7.685,17.18,17.172c0,9.479-7.7,17.164-17.18,17.164 c-9.48,0-17.165-7.685-17.165-17.164C188.139,65.5,195.824,57.815,205.304,57.815z M159.511,57.815 c9.479,0,17.165,7.685,17.165,17.172c0,9.479-7.686,17.164-17.165,17.164c-9.479,0-17.18-7.685-17.18-17.164 C142.332,65.5,150.033,57.815,159.511,57.815z M113.704,57.815c9.513,0,17.181,7.685,17.181,17.172 c0,9.479-7.668,17.164-17.181,17.164c-9.464,0-17.163-7.685-17.163-17.164C96.541,65.5,104.24,57.815,113.704,57.815z"/></svg></span><span class="nav-label">Fórum</span>
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor"><path fill-rule="evenodd" d="M1.75 1A1.75 1.75 0 000 2.75v9.5C0 13.216.784 14 1.75 14H3v1.543a1.457 1.457 0 002.487 1.03L8.061 14h6.189A1.75 1.75 0 0016 12.25v-9.5A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v9.5a.25.25 0 01-.25.25h-6.5a.75.75 0 00-.53.22L4.5 15.44v-2.19a.75.75 0 00-.75-.75h-2a.25.25 0 01-.25-.25v-9.5z"/><path d="M22.5 8.75a.25.25 0 00-.25-.25h-3.5a.75.75 0 010-1.5h3.5c.966 0 1.75.784 1.75 1.75v9.5A1.75 1.75 0 0122.25 20H21v1.543a1.457 1.457 0 01-2.487 1.03L15.939 20H10.75A1.75 1.75 0 019 18.25v-1.465a.75.75 0 011.5 0v1.465c0 .138.112.25.25.25h5.5a.75.75 0 01.53.22l2.72 2.72v-2.19a.75.75 0 01.75-.75h2a.25.25 0 00.25-.25v-9.5z"/></svg></span><span class="nav-label">Fórum</span>
       <span id="badge-forum" class="badge-notificacao hidden">0</span>
     </div>
     <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
@@ -630,6 +634,43 @@ function formatQuestaoCompleta(texto){
 
 // extrai {letra, texto} de cada alternativa a partir do campo "alternativas" da questão,
 // que já vem normalizado no formato "(a) texto. (b) texto. ..." (ver molde padrão de questão no dossiê)
+// Quebra o enunciado em linhas quando ele tem uma estrutura de lista interna.
+// Prioridade estrita e mutuamente exclusiva — só verifica a regra seguinte
+// se a anterior não se aplicou:
+//   1. Assertivas romanas (I) II) III)...)
+//   2. Parênteses vazios ( ) — questões de Certo/Errado ou ordenação
+//   3. Maiúsculas seguidas de ponto (A. B. C...) — questões de correlação
+function formatarEnunciado(texto){
+  if(!texto) return '(enunciado vazio — questão pode estar malformada)';
+  const escaped = escapeHtml(texto);
+
+  // 1. Assertivas romanas
+  if(/\s\(?[IVXLCDM]{1,6}\)/.test(escaped)){
+    const partes = escaped.split(/(?=\s\(?[IVXLCDM]{1,6}\))/).map(p=>p.trim()).filter(Boolean);
+    return [partes[0]||'', ...partes.slice(1).map(p=>`<div class="enunciado-linha">${p}</div>`)].join('');
+  }
+
+  // 2. Parênteses vazios (Certo/Errado, ordenação)
+  if(/\(\s*\)/.test(escaped)){
+    const partes = escaped.split(/(?=\s\(\s*\))/).map(p=>p.trim()).filter(Boolean);
+    return [partes[0]||'', ...partes.slice(1).map(p=>`<div class="enunciado-linha">${p}</div>`)].join('');
+  }
+
+  // 3. Maiúsculas com ponto (correlação) — ancorado no "A." literal, pra não
+  // confundir com uma letra maiúscula solta que aparece por acaso no meio de
+  // uma frase normal (ex: "a coluna B." não é item de lista)
+  const anchorA = escaped.match(/\bA\.\s/);
+  if(anchorA){
+    const idx = anchorA.index;
+    const antes = escaped.slice(0, idx).trim();
+    const zonaLista = escaped.slice(idx);
+    const partesLista = zonaLista.split(/(?=\s?[A-F]\.\s)/).map(p=>p.trim()).filter(Boolean);
+    return [antes, ...partesLista.map(p=>`<div class="enunciado-linha">${p}</div>`)].join('');
+  }
+
+  return escaped;
+}
+
 function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   const escaped = escapeHtml(alternativasTexto);
@@ -1435,18 +1476,22 @@ function renderizarQuestaoAtual(){
         }else if(alt.letra === alternativaSelecionadaAtual){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
-        return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} onclick="selecionarAlternativa('${alt.letra}')"><strong>(${alt.letra})</strong> ${alt.texto}</button>`;
+        return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} onclick="selecionarAlternativa('${alt.letra}')"><strong>${alt.letra})</strong> ${alt.texto}</button>`;
       }).join('')
     : '<p style="color:#B00020;font-size:var(--fs-c)">Alternativas não identificadas nessa questão (pode estar malformada) — considere excluir pra você.</p>';
 
   const html = `
     <div class="card-questao" data-questao-id="${q.id}">
       <div class="section-title" style="margin:0 0 8px 0">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length}</div>
-      <div class="enunciado">${escapeHtml(q.enunciado||'(enunciado vazio — questão pode estar malformada)')}</div>
+      <div class="enunciado">${formatarEnunciado(q.enunciado)}</div>
     </div>
     <div class="banco-alternativas">${htmlAlternativas}</div>
     ${(!jaRespondida && alternativas.length) ? `<button class="btn-primario" style="margin-top:14px" ${!alternativaSelecionadaAtual?'disabled':''} onclick="confirmarRespostaCaderno()">Confirmar resposta</button>` : ''}
     <div id="resultado-questao">${jaRespondida?renderizarResultado(q,resposta):''}</div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      ${indiceQuestaoAtual>0?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual-1})">← Anterior</button>`:''}
+      ${indiceQuestaoAtual<questoesCaderno.length-1?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual+1})">Próxima →</button>`:''}
+    </div>
     <div class="banco-acoes">
       <button class="banco-acao-btn" onclick="excluirQuestao('${q.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
@@ -1464,10 +1509,6 @@ function renderizarQuestaoAtual(){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M17 4v5h3"/></svg>
         <span>Notas</span>
       </button>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      ${indiceQuestaoAtual>0?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual-1})">← Anterior</button>`:''}
-      ${indiceQuestaoAtual<questoesCaderno.length-1?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual+1})">Próxima →</button>`:''}
     </div>`;
   document.getElementById('questao-atual').innerHTML = html;
 
