@@ -72,7 +72,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #view-onboarding{position:fixed;top:var(--vv-top, 0px);left:0;width:100%;height:var(--vh-real, 100vh);display:flex;flex-direction:column;background:#fff;overflow:hidden;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 86px) 24px;box-sizing:border-box}
 .onboarding-conteudo{flex:1;display:flex;flex-direction:column;justify-content:center;overflow:hidden;touch-action:pan-y;width:100%;max-width:432px;margin:0 auto}
 .onboarding-rodape{width:100%;max-width:432px;margin:0 auto;flex-shrink:0}
-.onboarding-dots{display:flex;gap:7px;justify-content:center;margin-bottom:16px}
+.onboarding-dots{display:flex;gap:7px;justify-content:center;align-items:center;margin-bottom:48px}
 .onboarding-dots span{width:7px;height:7px;border-radius:50%;background:#DDD;transition:all 0.2s ease}
 .onboarding-dots span.ativo{background:var(--azul-marca);width:10px;height:10px}
 .login-inner{width:100%;max-width:432px}
@@ -287,10 +287,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="view-instalar-app" class="hidden">
 <div class="login-inner">
   <div style="text-align:center">
+    <img src="assets/logo.png" alt="Claude Quest" style="height:40px;width:auto;margin-bottom:24px">
     <h1>Instale como app</h1>
     <p id="instrucao-instalacao-navegador">Carregando instruções pro seu aparelho...</p>
     <p style="color:#888;font-size:var(--fs-c);margin-top:16px">Assim você tem acesso rápido, direto da tela inicial, sem a barra do navegador ocupando espaço.</p>
-    <button class="btn-secundario" style="width:100%;margin-top:20px" onclick="continuarNoNavegador()">Continuar no navegador mesmo assim</button>
+    <button class="btn-secundario" id="btn-continuar-navegador" style="width:100%;margin-top:20px" onclick="continuarNoNavegador()">Continuar no navegador mesmo assim</button>
   </div>
 </div>
 </div>
@@ -325,7 +326,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <div class="onboarding-rodape">
     <div class="onboarding-dots" id="onboarding-dots"></div>
-    <button class="btn-primario hidden" id="btn-onboarding-concluir" onclick="concluirOnboarding()">Concluir e começar</button>
+    <button class="btn-primario" id="btn-onboarding-concluir" onclick="concluirOnboarding()" style="visibility:hidden">Concluir e começar</button>
   </div>
 </div>
 
@@ -1124,7 +1125,7 @@ async function posLogin(nomeInformado){
 
   if(!usuarioAtual.onboarding_concluido){
     mostrarOnboarding();
-  }else if(!estaComoWebapp() && localStorage.getItem('instalarAppDispensado') !== 'true'){
+  }else if(!estaComoWebapp()){
     mostrarTelaInstalarApp();
   }else{
     mostrarAppShell();
@@ -1136,6 +1137,7 @@ async function posLogin(nomeInformado){
    ============================================================ */
 let passoOnboarding = 0;
 let swipeOnboardingIniciado = false;
+let botaoConcluirJaApareceu = false;
 function mostrarOnboarding(){
   document.getElementById('view-onboarding').classList.remove('hidden');
   renderizarDotsOnboarding();
@@ -1174,7 +1176,8 @@ function voltarOnboarding(){
 function atualizarBotaoConcluirOnboarding(){
   const passos = document.querySelectorAll('.onboarding-step');
   const ultimo = passoOnboarding === passos.length-1;
-  document.getElementById('btn-onboarding-concluir').classList.toggle('hidden', !ultimo);
+  if(ultimo) botaoConcluirJaApareceu = true;
+  document.getElementById('btn-onboarding-concluir').style.visibility = botaoConcluirJaApareceu ? 'visible' : 'hidden';
 }
 // Swipe de verdade no conteúdo do onboarding — as bolinhas só fazem sentido
 // se o gesto funcionar também, não só o botão do último passo
@@ -1198,13 +1201,23 @@ function iniciarSwipeOnboarding(){
 function estaComoWebapp(){
   return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 }
+function ehMobileOuTablet(){
+  return /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
+}
 function detectarInstrucaoInstalacao(elId){
   const ua = navigator.userAgent;
   const el = document.getElementById(elId);
+  // iOS: ícones no estilo contorno (mesma linguagem visual do resto do app / SF Symbols)
+  const SVG_COMPARTILHAR_IOS = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin:0 3px"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>';
+  const SVG_ADICIONAR_IOS = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin:0 3px"><rect x="3" y="3" width="18" height="18" rx="5"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+  // Android: ícones preenchidos (padrão Material Design, diferente do contorno usado no resto do app)
+  const SVG_TRES_PONTOS_ANDROID = '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" style="vertical-align:-4px;margin:0 3px"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';
+  const SVG_INSTALAR_ANDROID = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin:0 3px"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 7v7"/><path d="M9 11l3 3 3-3"/></svg>';
+
   if(/iPhone|iPad|iPod/.test(ua)){
-    el.textContent = 'No Safari, toque no ícone de compartilhar e depois em "Adicionar à Tela de Início".';
+    el.innerHTML = `No Safari, toque no ícone de compartilhar${SVG_COMPARTILHAR_IOS}e depois em ${SVG_ADICIONAR_IOS}"Adicionar à Tela de Início".`;
   }else if(/Android/.test(ua)){
-    el.textContent = 'No Chrome, toque nos três pontinhos no canto e depois em "Instalar app" (ou "Adicionar à tela inicial").';
+    el.innerHTML = `No Chrome, toque nos três pontinhos${SVG_TRES_PONTOS_ANDROID}no canto e depois em ${SVG_INSTALAR_ANDROID}"Instalar app" (ou "Adicionar à tela inicial").`;
   }else{
     el.textContent = 'No seu navegador de computador, procure o ícone de instalar na barra de endereço, ou o menu de opções.';
   }
@@ -1215,9 +1228,12 @@ function detectarDispositivoOnboarding(){
 function mostrarTelaInstalarApp(){
   document.getElementById('view-instalar-app').classList.remove('hidden');
   detectarInstrucaoInstalacao('instrucao-instalacao-navegador');
+  // no celular/tablet não tem escape: só sai daqui instalando de verdade.
+  // Só no computador existe a opção de seguir mesmo assim (e mesmo lá, na
+  // próxima vez que a página recarregar, pergunta de novo)
+  document.getElementById('btn-continuar-navegador').classList.toggle('hidden', ehMobileOuTablet());
 }
 function continuarNoNavegador(){
-  localStorage.setItem('instalarAppDispensado', 'true');
   document.getElementById('view-instalar-app').classList.add('hidden');
   mostrarAppShell();
 }
