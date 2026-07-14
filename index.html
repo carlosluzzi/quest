@@ -152,8 +152,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .banco-alternativas{display:flex;flex-direction:column;gap:8px;margin-top:14px}
 .banco-alt-btn{text-align:left;font-size:var(--fs-d);padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#111;line-height:1.5}
 .banco-alt-btn:disabled{cursor:default;opacity:0.9}
-.banco-resultado{font-size:var(--fs-e);font-weight:600;margin-top:16px;padding:10px 0;text-align:center}
-.btn-icone-pequeno{width:32px;height:32px;border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#888;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
+.banco-resultado{font-size:var(--fs-e);font-weight:600;margin-top:14px;padding:10px 0;text-align:center;height:44px;box-sizing:border-box}
+.btn-icone-pequeno{width:24px;height:24px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#888;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
 .banco-acoes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:20px}
 .banco-acao-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:12px;border:0.5px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#666}
 .banco-acao-btn.ativo{background:#FBEEE8;border-color:#D97757;color:#D97757}
@@ -1559,7 +1559,7 @@ function renderizarQuestaoAtual(){
       <div class="enunciado">${formatarEnunciado(q.enunciado)}</div>
     </div>
     <div class="banco-alternativas">${htmlAlternativas}</div>
-    ${(!jaRespondida && alternativas.length) ? `<button class="btn-primario" style="margin-top:14px" ${!alternativaSelecionadaAtual?'disabled':''} onclick="confirmarRespostaCaderno()">Confirmar resposta</button>` : ''}
+    ${(!jaRespondida && alternativas.length) ? `<button class="btn-primario" style="margin-top:14px;height:44px;box-sizing:border-box" ${!alternativaSelecionadaAtual?'disabled':''} onclick="confirmarRespostaCaderno()">Confirmar resposta</button>` : ''}
     <div id="resultado-questao">${jaRespondida?renderizarResultado(q,resposta):''}</div>
     <div style="display:flex;gap:8px;margin-top:12px">
       ${indiceQuestaoAtual>0?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual-1})">← Anterior</button>`:''}
