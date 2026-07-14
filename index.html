@@ -75,6 +75,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #view-login p{color:#666}
 #view-login h1,#view-onboarding h1{font-size:var(--fs-h);color:var(--azul-marca);margin-bottom:4px}
 #view-login input{padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;margin-bottom:10px;width:100%;background:#fff;color:#111}
+.campo-senha-wrapper{position:relative}
+.campo-senha-wrapper input{padding-right:38px !important}
+.btn-revelar-senha{position:absolute;right:6px;top:0;bottom:10px;display:flex;align-items:center;background:none;border:none;padding:4px;color:#888;cursor:pointer}
 #view-login .erro{color:#B00020;font-size:var(--fs-c);margin-bottom:8px}
 .onboarding-step{display:none}
 .onboarding-step.ativo{display:block}
@@ -228,7 +231,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <form id="login-form-entrar" onsubmit="event.preventDefault(); entrar();">
     <input type="email" id="login-email" placeholder="Email" autocomplete="username" required>
-    <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" required>
+    <div class="campo-senha-wrapper">
+      <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" required>
+      <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('login-senha', this)" aria-label="Mostrar senha">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
     <div class="erro hidden" id="login-erro"></div>
     <button class="btn-primario" type="submit">Entrar</button>
   </form>
@@ -236,8 +244,18 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <form id="login-form-definir-senha" class="hidden" onsubmit="event.preventDefault(); definirSenha();">
     <p style="margin-bottom:16px">Defina seu nome e sua senha pra começar a usar o Claude Quest.</p>
     <input type="text" id="novo-nome" placeholder="Seu nome" autocomplete="name" required>
-    <input type="password" id="nova-senha" placeholder="Nova senha" autocomplete="new-password" required>
-    <input type="password" id="nova-senha-confirmar" placeholder="Confirmar senha" autocomplete="new-password" required>
+    <div class="campo-senha-wrapper">
+      <input type="password" id="nova-senha" placeholder="Nova senha" autocomplete="new-password" required>
+      <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('nova-senha', this)" aria-label="Mostrar senha">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <div class="campo-senha-wrapper">
+      <input type="password" id="nova-senha-confirmar" placeholder="Confirmar senha" autocomplete="new-password" required>
+      <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('nova-senha-confirmar', this)" aria-label="Mostrar senha">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
     <div class="erro hidden" id="definir-senha-erro"></div>
     <button class="btn-primario" type="submit">Definir senha e entrar</button>
   </form>
@@ -277,7 +295,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 
   <div class="onboarding-dots" id="onboarding-dots"></div>
-  <button class="btn-primario" id="btn-onboarding-avancar" onclick="avancarOnboarding()">Próximo</button>
+  <div style="display:flex;gap:8px">
+    <button class="btn-secundario hidden" id="btn-onboarding-voltar" onclick="voltarOnboarding()" style="flex:1;width:auto">Voltar</button>
+    <button class="btn-primario" id="btn-onboarding-avancar" onclick="avancarOnboarding()" style="flex:1;width:auto">Próximo</button>
+  </div>
 </div>
 </div>
 
@@ -843,6 +864,17 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   }
 });
 
+const SVG_OLHO_ABERTO = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const SVG_OLHO_FECHADO = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+function toggleSenhaVisivel(inputId, btn){
+  const input = document.getElementById(inputId);
+  const vaiMostrar = input.type === 'password';
+  input.type = vaiMostrar ? 'text' : 'password';
+  btn.innerHTML = vaiMostrar ? SVG_OLHO_FECHADO : SVG_OLHO_ABERTO;
+  btn.setAttribute('aria-label', vaiMostrar ? 'Esconder senha' : 'Mostrar senha');
+}
+
 async function entrar(){
   const email = document.getElementById('login-email').value.trim();
   const senha = document.getElementById('login-senha').value;
@@ -1093,7 +1125,20 @@ function avancarOnboarding(){
   passoOnboarding = Math.min(passoOnboarding+1, passos.length-1);
   passos[passoOnboarding].classList.add('ativo');
   renderizarDots();
+  atualizarBotoesOnboarding();
+}
+function voltarOnboarding(){
+  const passos = document.querySelectorAll('.onboarding-step');
+  passos[passoOnboarding].classList.remove('ativo');
+  passoOnboarding = Math.max(passoOnboarding-1, 0);
+  passos[passoOnboarding].classList.add('ativo');
+  renderizarDots();
+  atualizarBotoesOnboarding();
+}
+function atualizarBotoesOnboarding(){
+  const passos = document.querySelectorAll('.onboarding-step');
   document.getElementById('btn-onboarding-avancar').classList.toggle('hidden', passoOnboarding === passos.length-1);
+  document.getElementById('btn-onboarding-voltar').classList.toggle('hidden', passoOnboarding === 0);
 }
 function detectarDispositivoOnboarding(){
   const ua = navigator.userAgent;
