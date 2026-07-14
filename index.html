@@ -28,7 +28,8 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .saudacao{font-size:15px;font-weight:500;color:#0B1D45;margin-top:6px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .section-title{font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:14px;margin-top:32px;display:flex;align-items:center;gap:6px}
 .section-title:first-child{margin-top:0}
-.config-title{font-size:var(--fs-f);font-weight:500;margin-bottom:16px;color:#111}
+.config-title{font-size:var(--fs-f);font-weight:500;margin:0 0 16px 0;color:#111}
+.modal-conteudo p{margin:0 0 20px 0;line-height:1.5}
 button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none}
 button:active{transform:scale(0.96)}
 input,select,textarea{font-family:inherit;font-size:16px}
@@ -189,7 +190,20 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <!-- ============================================================ -->
 <!-- TELA: LOGIN / DEFINIR SENHA -->
 <!-- ============================================================ -->
-<div id="view-login">
+<div id="view-splash" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#F9F9F7;z-index:100">
+  <img src="assets/logo.png" alt="Claude Quest" style="height:44px;width:auto;margin-bottom:24px">
+  <div style="width:120px;height:4px;border-radius:2px;background:#EEE;overflow:hidden">
+    <div style="width:40%;height:100%;background:#D97757;border-radius:2px;animation:carregando 1.1s ease-in-out infinite"></div>
+  </div>
+</div>
+<style>
+@keyframes carregando{
+  0%{transform:translateX(-100%)}
+  100%{transform:translateX(350%)}
+}
+</style>
+
+<div id="view-login" class="hidden">
 <div class="login-inner">
   <div style="text-align:center;margin-bottom:16px">
     <img src="assets/logo.png" alt="Claude Quest" style="height:32px;width:auto">
@@ -342,7 +356,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
         <div id="contador-disponiveis" style="text-align:center;color:#888;font-size:var(--fs-c);margin-bottom:14px;min-height:18px"></div>
 
-        <input type="number" min="1" id="quantidade-customizada" class="filter-select" placeholder="Quantidade de questões" oninput="if(this.value)selecionarQuantidade(null,parseInt(this.value,10))">
+        <input type="number" min="1" inputmode="numeric" pattern="[0-9]*" id="quantidade-customizada" class="filter-select" placeholder="Quantidade de questões" oninput="if(this.value)selecionarQuantidade(null,parseInt(this.value,10))">
 
         <button class="btn-primario" onclick="montarCaderno()">Gerar caderno ↗</button>
         <div style="text-align:center;margin-top:8px">
@@ -633,12 +647,19 @@ function tagModulo(nomeModulo){
 window.addEventListener('DOMContentLoaded', async ()=>{
   // Se veio de link de convite, o Supabase te devolve com type=invite no hash da URL
   if(window.location.hash.includes('type=invite') || window.location.hash.includes('type=recovery')){
+    document.getElementById('view-splash').classList.add('hidden');
+    document.getElementById('view-login').classList.remove('hidden');
     document.getElementById('login-form-entrar').classList.add('hidden');
     document.getElementById('login-form-definir-senha').classList.remove('hidden');
     return;
   }
   const {data:{session}} = await sb.auth.getSession();
-  if(session) await posLogin();
+  if(session){
+    await posLogin();
+  }else{
+    document.getElementById('view-splash').classList.add('hidden');
+    document.getElementById('view-login').classList.remove('hidden');
+  }
 });
 
 async function entrar(){
@@ -858,6 +879,7 @@ async function posLogin(nomeInformado){
   }
   usuarioAtual = perfil;
 
+  document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('view-login').classList.add('hidden');
 
   if(!usuarioAtual.onboarding_concluido){
@@ -944,6 +966,7 @@ document.addEventListener('focusin', (e)=>{
   if(e.target.matches('input, textarea, select') && e.target.closest('#app-shell')){
     const nav = document.getElementById('bottom-nav');
     if(nav) nav.classList.add('teclado-aberto');
+    setTimeout(()=>{ e.target.scrollIntoView({block:'center', behavior:'smooth'}); }, 300);
   }
 });
 document.addEventListener('focusout', (e)=>{
