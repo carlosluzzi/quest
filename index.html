@@ -1315,17 +1315,17 @@ async function carregarCadernosExistentes(){
   document.getElementById('titulo-cadernos-concluidos').textContent = `Cadernos concluídos (${concluidos.length})`;
 
   const itensAndamento = andamento.map(c=>`
-    <div class="prox-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid #eee">
-      <span style="cursor:pointer;font-size:var(--fs-d)" onclick="retomarCadernoEspecifico('${c.id}')">${escapeHtml(c.nome||'Caderno sem nome')}</span>
-      <span style="color:#888;font-size:var(--fs-c);cursor:pointer" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+    <div class="prox-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid #eee;color:#888">
+      <span style="cursor:pointer;font-size:var(--fs-d);color:#111" onclick="retomarCadernoEspecifico('${c.id}')">${escapeHtml(c.nome||'Caderno sem nome')}</span>
+      <span class="tx" style="font-size:16px;padding:4px;cursor:pointer" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">✕</span>
     </div>`);
   const elA = document.getElementById('lista-cadernos-andamento');
   elA.innerHTML = itensAndamento.length ? montarCarrosselCadernos(itensAndamento, 'carrossel-andamento') : '<span style="color:#999;font-size:var(--fs-c)">Nenhum caderno em andamento.</span>';
 
   const itensConcluidos = concluidos.map(c=>`
-    <div class="prox-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid #eee;opacity:0.7">
-      <span style="font-size:var(--fs-d)">${escapeHtml(c.nome||'Caderno sem nome')}</span>
-      <span style="color:#888;font-size:var(--fs-c);cursor:pointer" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="finalizado" onclick="abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+    <div class="prox-item" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid #eee;opacity:0.7;color:#888">
+      <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
+      <span class="tx" style="font-size:16px;padding:4px;cursor:pointer" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="finalizado" onclick="abrirConfirmacaoExclusaoCaderno(this)">✕</span>
     </div>`);
   const elC = document.getElementById('lista-cadernos-concluidos');
   elC.innerHTML = itensConcluidos.length ? montarCarrosselCadernos(itensConcluidos, 'carrossel-concluidos') : '<span style="color:#999;font-size:var(--fs-c)">Nenhum caderno concluído ainda.</span>';
