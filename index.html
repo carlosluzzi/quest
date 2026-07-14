@@ -26,7 +26,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .appname{font-size:var(--fs-h);font-weight:400;display:flex;align-items:center;gap:6px;color:#0B1D45;letter-spacing:-0.6px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .appname b{font-weight:700}
 .saudacao{font-size:15px;font-weight:500;color:#0B1D45;margin-top:6px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-.section-title{font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:14px;margin-top:24px}
+.section-title{font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:14px;margin-top:32px;display:flex;align-items:center;gap:6px}
 .section-title:first-child{margin-top:0}
 .config-title{font-size:var(--fs-f);font-weight:500;margin-bottom:16px;color:#111}
 button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none}
@@ -315,12 +315,29 @@ input,select,textarea{font-family:inherit;font-size:16px}
           <option value="">Todos os capítulos</option>
         </select>
 
-        <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <select class="filter-select" id="filtro-tipo-questao" onchange="selecionarFiltroSelect('tipoQuestao', this.value)">
+          <option value="todos">Todos os tipos de questão</option>
+          <option value="Conceitual">Conceitual</option>
+          <option value="Cálculo">Cálculo</option>
+          <option value="Número">Número</option>
+          <option value="Lista">Lista</option>
+          <option value="Identificação">Identificação</option>
+          <option value="Outro">Outro</option>
+        </select>
+
+        <select class="filter-select" id="filtro-status" onchange="selecionarFiltroSelect('status', this.value)">
+          <option value="todos">Todos os status</option>
+          <option>Errei</option>
+          <option>Acertei com dúvida</option>
+          <option>Acertei</option>
+        </select>
+
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#111;padding:6px 2px;cursor:pointer">
           <input type="checkbox" id="toggle-priorizar-erro" onchange="atualizarContadorDisponiveis()">
           Priorizar questões que eu mais erro
           <span class="info-icone" onclick="abrirModal('modal-info-wilson')">ℹ️</span>
         </label>
-        <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#111;padding:6px 2px 14px;cursor:pointer">
           <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões que eu nunca respondi
         </label>
 
@@ -719,11 +736,11 @@ async function carregarBibliografia(){
   await carregarCadernosExistentes();
 }
 
-let filtroSelecionado = {modulo:null, publicacao:null, capitulo:null};
+let filtroSelecionado = {modulo:null, publicacao:null, capitulo:null, tipoQuestao:null, status:null};
 let quantidadeSelecionada = 5;
 
 function selecionarFiltroSelect(nivel, valor){
-  filtroSelecionado[nivel] = valor || null;
+  filtroSelecionado[nivel] = (valor && valor!=='todos') ? valor : null;
 
   if(nivel==='modulo'){
     filtroSelecionado.publicacao = null;
@@ -777,6 +794,7 @@ async function buscarQuestoesFiltradas(){
   if(filtroSelecionado.modulo) query = query.eq('modulo_pscpp', filtroSelecionado.modulo);
   if(filtroSelecionado.publicacao) query = query.eq('bibliografia_id', filtroSelecionado.publicacao);
   if(filtroSelecionado.capitulo) query = query.eq('capitulo', filtroSelecionado.capitulo);
+  if(filtroSelecionado.tipoQuestao) query = query.eq('tipo_questao', filtroSelecionado.tipoQuestao);
 
   const {data: todasQuestoes, error} = await query;
   if(error){ console.error(error); return []; }
@@ -790,6 +808,23 @@ async function buscarQuestoesFiltradas(){
     const idsRespondidos = new Set((respondidas||[]).map(r=>r.questao_id));
     questoesFiltradas = questoesFiltradas.filter(q=>!idsRespondidos.has(q.id));
   }
+
+  // Status (Errei/Acertei com dúvida/Acertei) — baseado na resposta mais recente da própria pessoa pra cada questão.
+  // NOTA: o Quest ainda não tem o estado "Acertei com dúvida" no schema (respostas só guarda certo/errado),
+  // então esse filtro específico não tem dado correspondente ainda e sempre devolve vazio.
+  if(filtroSelecionado.status){
+    const {data: minhasRespostas} = await sb.from('respostas').select('questao_id, correta, respondido_em').eq('usuario_id', usuarioAtual.id).order('respondido_em', {ascending:false});
+    const ultimaPorQuestao = {};
+    (minhasRespostas||[]).forEach(r=>{ if(!(r.questao_id in ultimaPorQuestao)) ultimaPorQuestao[r.questao_id] = r.correta; });
+    if(filtroSelecionado.status === 'Errei'){
+      questoesFiltradas = questoesFiltradas.filter(q => ultimaPorQuestao[q.id] === false);
+    }else if(filtroSelecionado.status === 'Acertei'){
+      questoesFiltradas = questoesFiltradas.filter(q => ultimaPorQuestao[q.id] === true);
+    }else if(filtroSelecionado.status === 'Acertei com dúvida'){
+      questoesFiltradas = [];
+    }
+  }
+
   return questoesFiltradas;
 }
 
