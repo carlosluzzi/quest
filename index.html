@@ -69,27 +69,27 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px;padding-bottom:calc(70px + var(--safe-bottom))}
 
 /* --- Bottom nav --- */
-#bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
-#bottom-nav button{flex:1;min-width:0;height:100%;padding:18px 4px calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;color:#888;font-size:var(--fs-a);box-sizing:border-box;-webkit-appearance:none;appearance:none;border:none;background:transparent;margin:0}
-#bottom-nav button span:last-child{white-space:normal;text-align:center;line-height:1.15;max-width:100%}
-#bottom-nav button.ativo{background:#f0f0ee;color:var(--azul-marca)}
-#bottom-nav .icone{width:21px;height:21px;color:#888;display:flex;align-items:center;justify-content:center}
-#bottom-nav .icone svg{width:100%;height:100%}
-#bottom-nav button.ativo .icone{color:#0A2882}
-#bottom-nav button.ativo span:last-child{color:#0A2882;font-weight:500}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
+.nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box}
+.nav-item.active{background:#f0f0ee}
+.nav-icon{width:21px;height:21px;color:#888;display:flex;align-items:center;justify-content:center}
+.nav-icon svg{width:100%;height:100%}
+.nav-item.active .nav-icon{color:#0A2882}
+.nav-label{font-size:var(--fs-a);color:#888;white-space:normal;text-align:center;line-height:1.15;max-width:100%}
+.nav-item.active .nav-label{color:#0A2882;font-weight:500}
 
 @media(min-width:768px) and (max-width:1099px){
   #bottom-nav{max-width:100%}
-  #bottom-nav span:last-child{font-size:var(--fs-b)}
+  .nav-label{font-size:var(--fs-b)}
 }
 @media(min-width:1100px){
   body{display:flex;background:#f5f5f3}
   #app-shell.ativo{display:grid;grid-template-columns:250px 1fr;grid-template-rows:auto 1fr;width:100%;padding-bottom:0}
   .topbar{grid-column:1/-1;grid-row:1;max-width:100%;padding:16px 32px}
   #bottom-nav{grid-column:1;grid-row:2;position:sticky;left:auto;bottom:auto;transform:none;width:100%;max-width:none;border-top:none;border-right:0.5px solid #e0e0e0;flex-direction:column;padding:20px 14px;gap:6px;align-self:start;top:0;height:100%}
-  #bottom-nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;border-radius:9px;width:100%}
-  #bottom-nav .icone{width:18px;height:18px}
-  #bottom-nav span:last-child{font-size:var(--fs-e)}
+  .nav-item{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;border-radius:9px;width:100%}
+  .nav-icon{width:18px;height:18px}
+  .nav-label{font-size:var(--fs-e)}
   .content{grid-column:2;grid-row:2;padding:32px 48px;max-width:1000px;width:100%}
 }
 
@@ -325,19 +325,19 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   </div>
 
-  <div id="bottom-nav">
-    <button class="ativo" data-aba="inicio" onclick="trocarAba('inicio')">
-      <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-6.5h5V21H18a1 1 0 0 0 1-1V9.5"/></svg></span><span>Início</span>
-    </button>
-    <button data-aba="quests" onclick="trocarAba('quests')">
-      <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span>Gerar quests</span>
-    </button>
-    <button data-aba="comunidade" onclick="trocarAba('comunidade')">
-      <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span><span>Comunidade</span>
-    </button>
-    <button data-aba="placar" onclick="trocarAba('placar')">
-      <span class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 10.5h6M9 13.5h6M9 16.5h4"/></svg></span><span>Como você tá indo</span>
-    </button>
+  <div class="bottom-nav" id="bottom-nav">
+    <div class="nav-item active" data-aba="inicio" onclick="trocarAba('inicio')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-6.5h5V21H18a1 1 0 0 0 1-1V9.5"/></svg></span><span class="nav-label">Início</span>
+    </div>
+    <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Gerar quests</span>
+    </div>
+    <div class="nav-item" data-aba="comunidade" onclick="trocarAba('comunidade')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span><span class="nav-label">Comunidade</span>
+    </div>
+    <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 10.5h6M9 13.5h6M9 16.5h4"/></svg></span><span class="nav-label">Como você tá indo</span>
+    </div>
   </div>
 </div>
 
@@ -625,7 +625,7 @@ async function mostrarAppShell(){
 function trocarAba(nome){
   document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
   document.getElementById('aba-'+nome).classList.remove('hidden');
-  document.querySelectorAll('#bottom-nav button').forEach(b=>b.classList.toggle('ativo', b.dataset.aba===nome));
+  document.querySelectorAll('#bottom-nav .nav-item').forEach(item=>item.classList.toggle('active', item.dataset.aba===nome));
   document.getElementById('content').scrollTop = 0;
   if(nome==='comunidade') carregarComunidade();
   if(nome==='placar') carregarPlacar();
