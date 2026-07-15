@@ -400,30 +400,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       </button>
     </div>
 
-    <div id="card-notificacao-forum" class="hidden">
-      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="trocarAba('forum')">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h4a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1v3l-3-3h-6a1 1 0 0 1-1-1v-2"/><path d="M14 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h1v3l4-3h6a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1z"/></svg> Novidades no Fórum</div>
-        <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px" id="texto-notificacao-forum"></div>
-      </button>
-    </div>
-
-    <div id="card-notificacao-anulacao" class="hidden">
-      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarAnulacaoVista()">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg> Questão anulada</div>
-        <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px" id="texto-notificacao-anulacao"></div>
-      </button>
-    </div>
-
-    <div id="container-notificacoes-resposta-discussao"></div>
-
-    <div id="container-notificacoes-questao-corrigida"></div>
-
-    <div id="card-notificacao-pdf-novo" class="hidden">
-      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarPdfNovoVisto()">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Questões novas no banco</div>
-        <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px" id="texto-notificacao-pdf-novo"></div>
-      </button>
-    </div>
+    <div id="container-notificacoes-ordenadas"></div>
     <div class="card-inicio">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-weight:600;font-size:var(--fs-e)">Placar entre amigos</div>
@@ -658,6 +635,22 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <h3 class="config-title">Wilson Score</h3>
     <p>É a fórmula usada pra calcular a % de acerto e pra saber quais questões você mais erra. Diferente de uma % simples, ela leva em conta <em>quantas vezes</em> você já tentou aquela questão – errar 1 de 1 tentativa pesa menos do que errar 8 de 10, mesmo a % "crua" sendo parecida. Isso evita que uma questão respondida só uma vez pareça mais confiável do que realmente é.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-wilson')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-resolucao">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Como funciona "Marcar como resolvido"</h3>
+    <p>Cada um dos 5 vota individualmente que considera a discussão resolvida. Com 3 votos (maioria), a discussão passa a aparecer como resolvida — mas quem ainda não votou pode reabrir ela a qualquer momento, mesmo com maioria já formada. Seu voto pode ser desfeito depois, se mudar de ideia.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-resolucao')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-anulacao-topico">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Como funciona "Anular questão"</h3>
+    <p>Remove a questão de cadernos futuros pra sempre. Quem já respondeu essa questão (de qualquer jeito, em qualquer caderno) passa a ter a resposta contada como acerto, mesmo quem errou — igual acontece numa anulação de prova de verdade. Essa ação não pode ser desfeita.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-anulacao-topico')">Fechar</button>
   </div>
 </div>
 
@@ -1508,32 +1501,50 @@ async function verificarCadernoEmAndamento(){
    existentes (Cadernos em andamento / Novidades no Fórum)
    ============================================================ */
 async function verificarNotificacoesExtras(){
-  await Promise.all([
-    verificarNotificacaoAnulacao(),
-    verificarNotificacaoRespostaDiscussao(),
-    verificarNotificacaoQuestaoCorrigida(),
-    verificarNotificacaoPdfNovo()
+  await atualizarNotificacoesOrdenadas();
+}
+
+// Todas as notificações "de verdade" (não o Cadernos em andamento, que fica
+// sempre fixo em primeiro) se reordenam juntas por data — a mais recente
+// sempre vai pro topo, não importa o tipo dela
+async function atualizarNotificacoesOrdenadas(){
+  const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum] = await Promise.all([
+    coletarNotificacaoAnulacao(),
+    coletarNotificacaoRespostaDiscussao(),
+    coletarNotificacaoQuestaoCorrigida(),
+    coletarNotificacaoPdfNovo(),
+    coletarNotificacaoForum()
   ]);
+  const todos = [...itensAnulacao, ...itensDiscussao, ...itensCorrigida, ...itensPdfNovo, ...itensForum];
+  todos.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+  document.getElementById('container-notificacoes-ordenadas').innerHTML = todos.map(item=>item.html).join('');
 }
 
 /* 1. Anulação te afetou – respostas suas que foram tocadas por uma anulação
    e que você ainda não "viu" */
-async function verificarNotificacaoAnulacao(){
-  const {data} = await sb.from('respostas').select('id').eq('usuario_id', usuarioAtual.id).eq('foi_anulada', true).eq('anulacao_vista', false);
+async function coletarNotificacaoAnulacao(){
+  const {data} = await sb.from('respostas').select('id, questoes(atualizado_em)').eq('usuario_id', usuarioAtual.id).eq('foi_anulada', true).eq('anulacao_vista', false);
   const total = (data||[]).length;
-  const el = document.getElementById('card-notificacao-anulacao');
-  if(total > 0){
-    document.getElementById('texto-notificacao-anulacao').textContent = total===1
-      ? '1 questão que você respondeu foi anulada – sua estatística foi atualizada'
-      : `${total} questões que você respondeu foram anuladas – sua estatística foi atualizada`;
-    el.classList.remove('hidden');
-  }else{
-    el.classList.add('hidden');
-  }
+  if(!total) return [];
+  const timestamp = data.reduce((max,r)=>{
+    const t = r.questoes?.atualizado_em;
+    return (t && t > max) ? t : max;
+  }, data[0].questoes?.atualizado_em || new Date(0).toISOString());
+  const texto = total===1
+    ? '1 questão que você respondeu foi anulada – sua estatística foi atualizada'
+    : `${total} questões que você respondeu foram anuladas – sua estatística foi atualizada`;
+  const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarAnulacaoVista()">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg> Questão anulada</div>
+        <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px">${texto}</div>
+      </button>
+    </div>`;
+  return [{timestamp, html}];
 }
 async function marcarAnulacaoVista(){
   await sb.from('respostas').update({anulacao_vista:true}).eq('usuario_id', usuarioAtual.id).eq('foi_anulada', true).eq('anulacao_vista', false);
-  await verificarNotificacaoAnulacao();
+  await atualizarNotificacoesOrdenadas();
 }
 
 /* 2. Alguém respondeu sua discussão – tópicos que você abriu, com
@@ -1544,10 +1555,9 @@ function formatarListaNomes(nomes){
   if(nomes.length === 2) return `${nomes[0]} e ${nomes[1]}`;
   return `${nomes.slice(0,-1).join(', ')} e ${nomes[nomes.length-1]}`;
 }
-async function verificarNotificacaoRespostaDiscussao(){
+async function coletarNotificacaoRespostaDiscussao(){
   const {data: meusTopicos} = await sb.from('topicos').select('id, titulo, criado_em, criador_visto_em').eq('criado_por', usuarioAtual.id);
-  const container = document.getElementById('container-notificacoes-resposta-discussao');
-  if(!meusTopicos || !meusTopicos.length){ container.innerHTML = ''; return; }
+  if(!meusTopicos || !meusTopicos.length) return [];
 
   const idsMeusTopicos = meusTopicos.map(t=>t.id);
   const {data: comentariosNovos} = await sb.from('comentarios').select('topico_id, usuario_id, criado_em, usuarios(nome)').in('topico_id', idsMeusTopicos).neq('usuario_id', usuarioAtual.id);
@@ -1564,20 +1574,23 @@ async function verificarNotificacaoRespostaDiscussao(){
   // 1 tópico = 1 notificação separada, igual já fazemos com "Questão
   // corrigida" — cada card já sabe exatamente pra qual tópico levar
   const topicosAfetados = [...new Set(relevantes.map(c=>c.topico_id))];
-  if(!topicosAfetados.length){ container.innerHTML = ''; return; }
+  if(!topicosAfetados.length) return [];
 
-  container.innerHTML = topicosAfetados.map(topicoId=>{
-    const nomes = [...new Set(relevantes.filter(c=>c.topico_id===topicoId).map(c=>c.usuarios?.nome).filter(Boolean))];
+  return topicosAfetados.map(topicoId=>{
+    const comentariosDesseTopico = relevantes.filter(c=>c.topico_id===topicoId);
+    const nomes = [...new Set(comentariosDesseTopico.map(c=>c.usuarios?.nome).filter(Boolean))];
     const verbo = nomes.length===1 ? 'respondeu' : 'responderam';
     const texto = `${formatarListaNomes(nomes)} ${verbo} "${mapaTopico[topicoId].titulo}"`;
-    return `
+    const timestamp = comentariosDesseTopico.reduce((max,c)=> c.criado_em > max ? c.criado_em : max, comentariosDesseTopico[0].criado_em);
+    const html = `
     <div>
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirTopicoNotificado('${topicoId}')">
         <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Responderam sua discussão</div>
         <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px">${texto}</div>
       </button>
     </div>`;
-  }).join('');
+    return {timestamp, html};
+  });
 }
 function abrirTopicoNotificado(topicoId){
   abrirViewTopico();
@@ -1587,47 +1600,51 @@ function abrirTopicoNotificado(topicoId){
 
 /* 3. Questão do seu caderno em andamento foi corrigida antes de você
    responder ela */
-async function verificarNotificacaoQuestaoCorrigida(){
+async function coletarNotificacaoQuestaoCorrigida(){
   const {data: cadernosAndamento} = await sb.from('cadernos').select('id, criado_em, filtros_aplicados').eq('usuario_id', usuarioAtual.id).eq('status','em_andamento');
-  const container = document.getElementById('container-notificacoes-questao-corrigida');
-  if(!cadernosAndamento || !cadernosAndamento.length){ container.innerHTML = ''; questoesCorrigidasPorCaderno = {}; return; }
+  if(!cadernosAndamento || !cadernosAndamento.length){ questoesCorrigidasPorCaderno = {}; return []; }
 
   const pendentesPorCaderno = {}; // cadernoId -> [questaoId, ...]
+  const timestampPorCaderno = {};
   for(const c of cadernosAndamento){
     const ids = (c.filtros_aplicados && c.filtros_aplicados.questao_ids) || [];
     if(!ids.length) continue;
-    const {data: questoesEditadas} = await sb.from('questoes').select('id').in('id', ids).gt('atualizado_em', c.criado_em);
+    const {data: questoesEditadas} = await sb.from('questoes').select('id, atualizado_em').in('id', ids).gt('atualizado_em', c.criado_em);
     if(!questoesEditadas || !questoesEditadas.length) continue;
     const idsEditadas = questoesEditadas.map(q=>q.id);
     const {data: jaRespondidas} = await sb.from('respostas').select('questao_id').eq('caderno_id', c.id).in('questao_id', idsEditadas);
     const idsRespondidas = new Set((jaRespondidas||[]).map(r=>r.questao_id));
-    const pendentesDesseCaderno = idsEditadas.filter(questaoId=>
-      !idsRespondidas.has(questaoId) && localStorage.getItem(chaveCorrigidaVista(c.id, questaoId)) !== 'true'
+    const pendentesDesseCaderno = questoesEditadas.filter(q=>
+      !idsRespondidas.has(q.id) && localStorage.getItem(chaveCorrigidaVista(c.id, q.id)) !== 'true'
     );
-    if(pendentesDesseCaderno.length) pendentesPorCaderno[c.id] = pendentesDesseCaderno;
+    if(pendentesDesseCaderno.length){
+      pendentesPorCaderno[c.id] = pendentesDesseCaderno.map(q=>q.id);
+      timestampPorCaderno[c.id] = pendentesDesseCaderno.reduce((max,q)=> q.atualizado_em > max ? q.atualizado_em : max, pendentesDesseCaderno[0].atualizado_em);
+    }
   }
   questoesCorrigidasPorCaderno = pendentesPorCaderno;
 
   const idsCadernosComPendencia = Object.keys(pendentesPorCaderno);
-  if(!idsCadernosComPendencia.length){ container.innerHTML = ''; return; }
+  if(!idsCadernosComPendencia.length) return [];
 
   // 1 caderno = 1 notificação separada – nunca mistura questões de cadernos
   // diferentes num texto só, até pra já deixar pronto pro dia que o clique
   // for levar direto pro caderno específico (aí não teria como escolher
   // "qual dos vários" se estivesse tudo junto)
-  container.innerHTML = idsCadernosComPendencia.map(cadernoId=>{
+  return idsCadernosComPendencia.map(cadernoId=>{
     const total = pendentesPorCaderno[cadernoId].length;
     const texto = total===1
       ? '1 questão foi corrigida em um caderno em andamento antes de você respondê-la'
       : `${total} questões foram corrigidas em um caderno em andamento antes de você respondê-las`;
-    return `
+    const html = `
     <div>
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarCorrigidasVistas('${cadernoId}')">
         <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Questão corrigida</div>
         <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px">${texto}</div>
       </button>
     </div>`;
-  }).join('');
+    return {timestamp: timestampPorCaderno[cadernoId], html};
+  });
 }
 let questoesCorrigidasPorCaderno = {};
 function chaveCorrigidaVista(cadernoId, questaoId){
@@ -1637,37 +1654,76 @@ function marcarCorrigidasVistas(cadernoId){
   (questoesCorrigidasPorCaderno[cadernoId]||[]).forEach(questaoId=>{
     localStorage.setItem(chaveCorrigidaVista(cadernoId, questaoId), 'true');
   });
-  verificarNotificacaoQuestaoCorrigida();
+  atualizarNotificacoesOrdenadas();
+}
+
+/* 4. Novidades no Fórum – tópicos ativos (abertos, ou resolvidos que você
+   ainda não votou/concordou) */
+async function coletarNotificacaoForum(){
+  const {data: todosTopicos} = await sb.from('topicos').select('id, status, criado_em');
+  const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id);
+  const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
+
+  const ativos = (todosTopicos||[]).filter(t => t.status==='aberto' || !idsVotados.has(t.id));
+  const totalBadge = ativos.length;
+
+  const badgeEl = document.getElementById('badge-forum');
+  if(totalBadge > 0){
+    badgeEl.textContent = totalBadge > 9 ? '9+' : totalBadge;
+    badgeEl.classList.remove('hidden');
+  }else{
+    badgeEl.classList.add('hidden');
+  }
+
+  if(!totalBadge) return [];
+
+  const idsAtivos = ativos.map(t=>t.id);
+  const {data: comentariosAtivos} = await sb.from('comentarios').select('topico_id, criado_em').in('topico_id', idsAtivos);
+  let timestamp = ativos.reduce((max,t)=> t.criado_em > max ? t.criado_em : max, ativos[0].criado_em);
+  (comentariosAtivos||[]).forEach(c=>{ if(c.criado_em > timestamp) timestamp = c.criado_em; });
+
+  const texto = `${totalBadge} ${totalBadge===1?'discussão ativa':'discussões ativas'}`;
+  const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="trocarAba('forum')">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h4a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1v3l-3-3h-6a1 1 0 0 1-1-1v-2"/><path d="M14 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h1v3l4-3h6a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1z"/></svg> Novidades no Fórum</div>
+        <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px">${texto}</div>
+      </button>
+    </div>`;
+  return [{timestamp, html}];
 }
 
 /* 7. PDF novo no banco – questões de outras pessoas desde a última vez
    que você viu esse aviso */
-async function verificarNotificacaoPdfNovo(){
+async function coletarNotificacaoPdfNovo(){
   const marco = usuarioAtual.pdf_novo_visto_em || '1970-01-01T00:00:00Z';
-  const {data} = await sb.from('questoes').select('id, usuarios(nome)').neq('autor_id', usuarioAtual.id).gt('criado_em', marco);
-  const el = document.getElementById('card-notificacao-pdf-novo');
+  const {data} = await sb.from('questoes').select('id, criado_em, usuarios(nome)').neq('autor_id', usuarioAtual.id).gt('criado_em', marco);
   const total = (data||[]).length;
-  if(total > 0){
-    const porAutor = {};
-    (data||[]).forEach(q=>{
-      const nome = q.usuarios?.nome || 'Alguém';
-      porAutor[nome] = (porAutor[nome]||0) + 1;
-    });
-    const linhas = Object.entries(porAutor).map(([nome, qtd])=>{
-      const qtdTexto = qtd===1 ? '1 questão nova adicionada' : `${qtd} questões novas adicionadas`;
-      return `<div>${qtdTexto} por ${escapeHtml(nome)}</div>`;
-    });
-    document.getElementById('texto-notificacao-pdf-novo').innerHTML = linhas.join('');
-    el.classList.remove('hidden');
-  }else{
-    el.classList.add('hidden');
-  }
+  if(!total) return [];
+  const timestamp = data.reduce((max,q)=> q.criado_em > max ? q.criado_em : max, data[0].criado_em);
+  const porAutor = {};
+  data.forEach(q=>{
+    const nome = q.usuarios?.nome || 'Alguém';
+    porAutor[nome] = (porAutor[nome]||0) + 1;
+  });
+  const linhas = Object.entries(porAutor).map(([nome, qtd])=>{
+    const qtdTexto = qtd===1 ? '1 questão nova adicionada' : `${qtd} questões novas adicionadas`;
+    return `<div>${qtdTexto} por ${escapeHtml(nome)}</div>`;
+  }).join('');
+  const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarPdfNovoVisto()">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Questões novas no banco</div>
+        <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px">${linhas}</div>
+      </button>
+    </div>`;
+  return [{timestamp, html}];
 }
 async function marcarPdfNovoVisto(){
   const agora = new Date().toISOString();
   await sb.from('usuarios').update({pdf_novo_visto_em: agora}).eq('id', usuarioAtual.id);
   usuarioAtual.pdf_novo_visto_em = agora;
-  await verificarNotificacaoPdfNovo();
+  await atualizarNotificacoesOrdenadas();
 }
 
 function retomarCaderno(){
@@ -2329,29 +2385,7 @@ const VOTOS_PRA_RESOLVER = 3;
    NOTIFICAÇÕES DO FÓRUM – Nível 1 (Realtime, só com app aberto)
    ============================================================ */
 async function atualizarNotificacoesForum(){
-  const {data: todosTopicos} = await sb.from('topicos').select('id, status');
-  const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id);
-  const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
-
-  // "ativo pra mim" = aberto, OU resolvido mas eu ainda não votei/concordei
-  const ativos = (todosTopicos||[]).filter(t => t.status==='aberto' || !idsVotados.has(t.id));
-  const totalBadge = ativos.length;
-
-  const badgeEl = document.getElementById('badge-forum');
-  if(totalBadge > 0){
-    badgeEl.textContent = totalBadge > 9 ? '9+' : totalBadge;
-    badgeEl.classList.remove('hidden');
-  }else{
-    badgeEl.classList.add('hidden');
-  }
-
-  const cardEl = document.getElementById('card-notificacao-forum');
-  if(totalBadge > 0){
-    document.getElementById('texto-notificacao-forum').textContent = `${totalBadge} ${totalBadge===1?'discussão ativa':'discussões ativas'}`;
-    cardEl.classList.remove('hidden');
-  }else{
-    cardEl.classList.add('hidden');
-  }
+  await atualizarNotificacoesOrdenadas();
 }
 
 function iniciarRealtimeForum(){
@@ -2405,8 +2439,8 @@ async function carregarForum(){
 
 function badgeTipoTopico(tipo){
   return tipo==='erro'
-    ? '<span class="selo-correcao" style="display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Erro</span>'
-    : '<span class="selo-correcao" style="background:#EEF2FF;color:#3730A3;display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Discussão</span>';
+    ? '<span style="font-size:var(--fs-c);color:#666">Motivo: <strong style="color:#A32D2D">Erro</strong></span>'
+    : '<span style="font-size:var(--fs-c);color:#666">Motivo: <strong style="color:var(--azul-marca)">Discussão</strong></span>';
 }
 
 function renderizarListaForum(){
@@ -2420,11 +2454,10 @@ function renderizarListaForum(){
   if(!lista.length){ el.innerHTML = '<p style="color:#888">Nenhuma discussão ativa com esses filtros.</p>'; return; }
   el.innerHTML = lista.map(f=>`
     <div class="card-questao" style="cursor:pointer" onclick="abrirTopicoDoForum('${f.id}')">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        ${tagModulo(f.questoes?.modulo_pscpp)}
+      <div style="margin-bottom:6px">
         ${badgeTipoTopico(f.tipo)}
       </div>
-      <div style="font-size:var(--fs-d);font-weight:600;color:#111">${escapeHtml(f.titulo)}</div>
+      <div style="font-size:var(--fs-d);font-weight:600;color:#111;text-transform:uppercase">${escapeHtml(f.titulo)}</div>
       <p style="font-size:var(--fs-c);color:#888;margin-top:2px">${escapeHtml((f.questoes?.enunciado||'').slice(0,90))}...</p>
       <div style="display:flex;justify-content:space-between;color:#888;font-size:var(--fs-b);margin-top:8px">
         <span>${f.totalComentarios} ${f.totalComentarios===1?'comentário':'comentários'}</span>
@@ -2639,20 +2672,24 @@ async function renderizarTopico(topicoId){
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px">
         <div style="font-size:var(--fs-c);color:#666;margin-bottom:8px">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
-        <button class="btn-secundario" onclick="votarResolvido('${topicoId}')">Marcar como resolvido</button>
+        <div style="display:inline-flex;align-items:center;gap:6px">
+          <button class="btn-secundario" onclick="votarResolvido('${topicoId}')">Marcar como resolvido</button>
+          <span class="info-icone" onclick="abrirModal('modal-info-resolucao')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+        </div>
       </div>`;
   }
 
   const acoesErro = (topico.tipo==='erro' && topico.status==='aberto') ? `
-    <div style="display:flex;gap:8px;margin-top:14px">
+    <div style="display:flex;align-items:center;gap:6px;margin-top:14px">
       <button class="btn-secundario" style="flex:1;color:#A32D2D;border-color:#F7C1C1" onclick="confirmarAnularQuestao('${topico.questoes.id}','${topicoId}')">Anular questão</button>
+      <span class="info-icone" onclick="abrirModal('modal-info-anulacao-topico')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
       <button class="btn-primario" style="flex:1" onclick="abrirFormularioEdicao('${topico.questoes.id}','${topicoId}')">Aplicar edição</button>
     </div>` : '';
 
   const html = `
     <button onclick="renderizarDetalheQuestao('${topico.questoes.id}')" style="color:#888;font-size:var(--fs-c);cursor:pointer;margin-bottom:12px;background:none;border:none;padding:0;text-decoration:underline">← Discussões dessa questão</button>
     ${badgeTipoTopico(topico.tipo)}
-    <h3 class="config-title" style="margin-top:8px">${escapeHtml(topico.titulo)}</h3>
+    <h3 class="config-title" style="margin-top:8px;text-transform:uppercase">${escapeHtml(topico.titulo)}</h3>
     <div>${renderizarListaComentarios(comentarios||[])}</div>
     <textarea id="novo-comentario-topico" class="textarea-padrao" placeholder="Comentar..." style="min-height:100px"></textarea>
     <button class="btn-primario" style="width:100%" onclick="enviarComentarioTopico('${topicoId}')">Comentar</button>
