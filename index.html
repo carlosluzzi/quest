@@ -2733,35 +2733,36 @@ async function renderizarTopico(topicoId){
     // usam a MESMA estrutura, com as mesmas 4 linhas sempre reservadas —
     // só o conteúdo de cada linha muda. Isso evita o card "pular" de
     // tamanho toda vez que alguém vota, que era o bug de antes
-    let corFundo, linhaMensagem, linhaBotoes;
+    let corFundo, linhaTopo, linhaBotoes;
     if(meuVoto){
       corFundo = '#F5F5F4';
-      linhaMensagem = `<div style="font-size:var(--fs-d);color:#3B6D11;font-weight:600">Você votou que está resolvido</div>`;
-      linhaBotoes = `<button class="btn-secundario" onclick="desfazerVotoResolucao('${topicoId}')">Desfazer meu voto</button>`;
+      linhaTopo = `${totalVotos} de ${votosParaResolver()} votos pra resolver <strong style="color:#3B6D11">· você votou ✓</strong>`;
+      linhaBotoes = `<button class="btn-secundario" style="margin-top:6px" onclick="desfazerVotoResolucao('${topicoId}')">Desfazer meu voto</button>`;
     }else if(topico.status==='resolvido'){
       corFundo = '#FEF6E4';
       const textoMaioria = ultimaProposta
         ? (ultimaProposta.tipo==='anulacao' ? 'A maioria já aprovou essa anulação. Você concorda?' : 'A maioria já aprovou essa edição. Você concorda?')
         : 'A maioria já considera isso resolvido. Você concorda?';
-      linhaMensagem = `<div style="font-size:var(--fs-d);font-weight:600">${textoMaioria}</div>`;
-      linhaBotoes = `<div style="display:flex;gap:8px">
-        <button class="btn-secundario" style="flex:1" onclick="reabrirTopico('${topicoId}')">Reabrir</button>
-        <button class="btn-primario" style="flex:1" onclick="votarResolvido('${topicoId}')">Concordar</button>
-      </div>`;
+      linhaTopo = `${totalVotos} de ${votosParaResolver()} votos pra resolver`;
+      linhaBotoes = `
+        <div style="font-size:var(--fs-d);font-weight:600;margin-top:6px">${textoMaioria}</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn-secundario" style="flex:1" onclick="reabrirTopico('${topicoId}')">Reabrir</button>
+          <button class="btn-primario" style="flex:1" onclick="votarResolvido('${topicoId}')">Concordar</button>
+        </div>`;
     }else{
       corFundo = '#F5F5F4';
-      linhaMensagem = '';
-      linhaBotoes = `<div style="display:inline-flex;align-items:center;gap:6px">
+      linhaTopo = `${totalVotos} de ${votosParaResolver()} votos pra resolver`;
+      linhaBotoes = `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px">
         <button class="btn-secundario" onclick="votarResolvido('${topicoId}')">${textoBotaoResolver}</button>
         <span class="info-icone" onclick="abrirModalInfoResolucao()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
       </div>`;
     }
     blocoVotacao = `
-      <div style="text-align:center;margin-top:14px;padding:12px;background:${corFundo};border-radius:10px">
-        <div style="font-size:var(--fs-d);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver</div>
-        <div style="font-size:var(--fs-b);color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:16px">${listaVotantes || '&nbsp;'}</div>
-        <div style="min-height:22px;margin-top:4px">${linhaMensagem}</div>
-        <div style="margin-top:8px">${linhaBotoes}</div>
+      <div style="text-align:center;margin-top:14px;padding:10px 12px;background:${corFundo};border-radius:10px">
+        <div style="font-size:var(--fs-d);color:#666">${linhaTopo}</div>
+        ${listaVotantes ? `<div style="font-size:var(--fs-b);color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${listaVotantes}</div>` : ''}
+        ${linhaBotoes}
       </div>`;
   }
 
