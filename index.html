@@ -197,7 +197,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .banco-acao-btn.favoritada{background:#FEF6E4;border-color:#EF9F27;color:#854F0B}
 .banco-acao-btn svg{width:19px;height:19px}
 .banco-acao-btn span{font-size:var(--fs-a)}
-.pills-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.pills-nav{display:grid;grid-template-columns:repeat(auto-fill, minmax(32px, 1fr));justify-items:center;gap:6px;margin-bottom:14px}
 .pill-questao{width:32px;height:32px;border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#888;font-size:var(--fs-c);font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .pill-questao.atual{background:#111;color:#fff;border-color:#111}
 .pill-questao.acertou{background:#EAF3DE;color:#3B6D11;border-color:#C0DD97}
@@ -729,9 +729,14 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-novo-topico" onclick="if(event.target===this) fecharModal('modal-novo-topico')">
-  <div class="modal-conteudo modal-conteudo-fluxo-topico">
+  <div class="modal-conteudo">
     <h3 class="config-title" id="titulo-modal-novo-topico">Nova discussão</h3>
-    <input type="text" id="novo-topico-titulo" class="filter-select" placeholder="Resumo curto do problema">
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div class="filter-btn" id="toggle-tipo-geral" style="flex:1;text-align:center" onclick="selecionarTipoNovoTopico('geral')">Abrir discussão</div>
+      <div class="filter-btn" id="toggle-tipo-erro" style="flex:1;text-align:center" onclick="selecionarTipoNovoTopico('erro')">Reportar erro</div>
+    </div>
+    <input type="text" id="novo-topico-titulo" class="filter-select" placeholder="Resumo curto do que você quer discutir">
+    <textarea id="novo-topico-mensagem" class="textarea-padrao" placeholder="Escreve aqui o que você quer falar"></textarea>
     <div style="display:flex;gap:8px">
       <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-novo-topico')">Cancelar</button>
       <button class="btn-primario" style="flex:1" onclick="confirmarNovoTopico()">Abrir</button>
@@ -1467,9 +1472,16 @@ function abrirViewTopico(){
 function fecharViewTopico(){ document.getElementById('view-topico-detalhe').classList.add('hidden'); }
 async function abrirDiscussaoDoCaderno(questaoId){
   modoTopicoModal = true;
-  document.getElementById('modal-questao-detalhe-conteudo').innerHTML = '<div class="loading-spinner"></div>';
-  abrirModal('modal-questao-detalhe');
-  await renderizarDetalheQuestao(questaoId);
+  const {data: topicosExistentes} = await sb.from('topicos').select('id').eq('questao_id', questaoId).limit(1);
+  if(topicosExistentes && topicosExistentes.length){
+    // já tem discussão vinculada – abre a versão grande, igual ao Fórum
+    document.getElementById('modal-questao-detalhe-conteudo').innerHTML = '<div class="loading-spinner"></div>';
+    abrirModal('modal-questao-detalhe');
+    await renderizarDetalheQuestao(questaoId);
+  }else{
+    // sem nenhuma discussão ainda – vai direto pro popup pequeno de criar
+    abrirModalNovoTopico(questaoId, 'geral');
+  }
 }
 function fecharTopicoAtual(){
   if(modoTopicoModal) fecharModal('modal-questao-detalhe');
@@ -2213,10 +2225,10 @@ function renderizarResultado(q,resposta){
   const cor = resposta.correta ? '#3B6D11' : '#A32D2D';
   const textoResultado = `${resposta.correta?'Acertou!':'Errou.'} Gabarito: ${(q.gabarito||'–').toUpperCase()}`;
 
-  return `<div class="banco-resultado" style="color:${cor};display:flex;align-items:center;justify-content:center;gap:10px">
+  return `<div class="banco-resultado" style="color:${cor};position:relative;display:flex;align-items:center;justify-content:center">
     <span>${textoResultado}</span>
-    <button class="btn-icone-pequeno" onclick="abrirExplicacaoQuestao('${q.id}')" title="Ver explicação">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <button class="btn-icone-pequeno" style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="abrirExplicacaoQuestao('${q.id}')" title="Ver explicação">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
     </button>
   </div>`;
 }
@@ -2508,8 +2520,8 @@ async function renderizarDetalheQuestao(questaoId){
     }).join('') : '<p style="color:#999;font-size:var(--fs-c)">Nenhuma discussão ainda nessa questão.</p>'}
 
     <div style="display:flex;gap:8px;margin-top:16px">
-      ${!temErroAberto ? `<button class="btn-secundario" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px" onclick="abrirModalNovoTopico('${questaoId}','erro')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Reportar erro</button>` : ''}
-      <button class="btn-primario" style="flex:1" onclick="abrirModalNovoTopico('${questaoId}','geral')">Abrir discussão</button>
+      ${!temErroAberto ? `<button class="btn-secundario" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px" onclick="fecharTopicoAtual(); abrirModalNovoTopico('${questaoId}','erro')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Reportar erro</button>` : ''}
+      <button class="btn-primario" style="flex:1" onclick="fecharTopicoAtual(); abrirModalNovoTopico('${questaoId}','geral')">Abrir discussão</button>
     </div>
   `;
   document.getElementById(containerTopicoAtual()).innerHTML = html;
@@ -2525,19 +2537,26 @@ async function abrirDetalheQuestao(questaoId){
    Abrir um tópico novo – sempre com título (nasce intencional)
    ============================================================ */
 let novoTopicoContexto = null;
-
+function selecionarTipoNovoTopico(tipo){
+  novoTopicoContexto.tipo = tipo;
+  document.getElementById('toggle-tipo-geral').classList.toggle('active', tipo==='geral');
+  document.getElementById('toggle-tipo-erro').classList.toggle('active', tipo==='erro');
+  const campoTitulo = document.getElementById('novo-topico-titulo');
+  campoTitulo.placeholder = tipo==='erro' ? 'O que está errado? (ex: gabarito incorreto)' : 'Resumo curto do que você quer discutir';
+}
 function abrirModalNovoTopico(questaoId, tipo){
   novoTopicoContexto = {questaoId, tipo};
-  document.getElementById('titulo-modal-novo-topico').textContent = tipo==='erro' ? 'Reportar erro' : 'Abrir discussão';
-  const campo = document.getElementById('novo-topico-titulo');
-  campo.value = '';
-  campo.placeholder = tipo==='erro' ? 'O que está errado? (ex: gabarito incorreto)' : 'Resumo curto do que você quer discutir';
+  document.getElementById('novo-topico-titulo').value = '';
+  document.getElementById('novo-topico-mensagem').value = '';
+  selecionarTipoNovoTopico(tipo);
   abrirModal('modal-novo-topico');
 }
 
 async function confirmarNovoTopico(){
   const titulo = document.getElementById('novo-topico-titulo').value.trim();
+  const mensagem = document.getElementById('novo-topico-mensagem').value.trim();
   if(!titulo){ alert('Escreve um resumo curto antes de abrir.'); return; }
+  if(!mensagem){ alert('Escreve sua mensagem antes de abrir.'); return; }
   const {questaoId, tipo} = novoTopicoContexto;
   const {data, error} = await sb.from('topicos').insert({questao_id: questaoId, tipo, titulo, criado_por: usuarioAtual.id}).select().single();
   if(error){
@@ -2546,9 +2565,23 @@ async function confirmarNovoTopico(){
       : 'Erro ao abrir discussão: '+error.message);
     return;
   }
+  // a mensagem escrita no popup já entra como o primeiro comentário do tópico
+  await sb.from('comentarios').insert({topico_id: data.id, usuario_id: usuarioAtual.id, texto: mensagem});
+
   fecharModal('modal-novo-topico');
   await atualizarNotificacoesForum();
-  abrirTopico(data.id);
+
+  // mostra o tópico recém-criado na versão grande (igual ao Fórum) — o
+  // container pode não estar aberto ainda, se veio direto do "Discutir"
+  // numa questão que não tinha nenhuma discussão até agora
+  if(modoTopicoModal){
+    document.getElementById('modal-questao-detalhe-conteudo').innerHTML = '<div class="loading-spinner"></div>';
+    abrirModal('modal-questao-detalhe');
+  }else{
+    document.getElementById('conteudo-topico-detalhe').innerHTML = '<div class="loading-spinner"></div>';
+    abrirViewTopico();
+  }
+  await renderizarTopico(data.id);
 }
 
 /* ============================================================
