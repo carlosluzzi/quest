@@ -740,6 +740,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div class="filter-btn active" onclick="trocarAbaAdmin('erros')">Erros técnicos</div>
     <div class="filter-btn" onclick="trocarAbaAdmin('malformadas')">Questões malformadas</div>
     <div class="filter-btn" onclick="trocarAbaAdmin('caderno')">Buscar caderno</div>
+    <div class="filter-btn" onclick="trocarAbaAdmin('convites')">Convites</div>
     <div id="admin-conteudo" style="margin-top:14px"></div>
     <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-admin')">Fechar</button>
   </div>
@@ -3065,6 +3066,35 @@ function trocarAbaAdmin(aba){
       <button class="btn-secundario" onclick="buscarCadernoAdmin()">Buscar</button>
       <div id="admin-caderno-resultado"></div>`;
   }
+  if(aba==='convites'){
+    el.innerHTML = `
+      <input type="text" id="admin-convite-apelido" placeholder="Apelido (aparece no app)" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid #DDD">
+      <input type="text" id="admin-convite-nome-completo" placeholder="Nome completo (só fica guardado)" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid #DDD">
+      <button class="btn-primario" onclick="gerarLinkConvite()">Gerar link de convite</button>
+      <div id="admin-convite-resultado" style="margin-top:14px"></div>`;
+  }
+}
+async function gerarLinkConvite(){
+  const apelido = document.getElementById('admin-convite-apelido').value.trim();
+  const nomeCompleto = document.getElementById('admin-convite-nome-completo').value.trim();
+  const resultadoEl = document.getElementById('admin-convite-resultado');
+  if(!apelido){ resultadoEl.innerHTML = '<p style="color:#B00020;font-size:var(--fs-c)">Digite o apelido.</p>'; return; }
+
+  const {data, error} = await sb.from('convites').insert({apelido, nome_completo: nomeCompleto || null}).select().single();
+  if(error){ resultadoEl.innerHTML = `<p style="color:#B00020;font-size:var(--fs-c)">Erro: ${escapeHtml(error.message)}</p>`; return; }
+
+  const link = `${window.location.origin}${window.location.pathname}?convite=${data.id}`;
+  const textoWhatsapp = encodeURIComponent(`Oi ${apelido}! Aqui está seu acesso ao Claude Quest: ${link}`);
+  resultadoEl.innerHTML = `
+    <div class="card-questao">
+      <p style="font-size:var(--fs-b);word-break:break-all;color:#666">${escapeHtml(link)}</p>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-secundario" style="flex:1;width:auto" onclick="navigator.clipboard.writeText('${link}')">Copiar link</button>
+        <a class="btn-primario" style="flex:1;width:auto;text-align:center;text-decoration:none;box-sizing:border-box" href="https://wa.me/?text=${textoWhatsapp}" target="_blank">WhatsApp</a>
+      </div>
+    </div>`;
+  document.getElementById('admin-convite-apelido').value = '';
+  document.getElementById('admin-convite-nome-completo').value = '';
 }
 async function buscarCadernoAdmin(){
   const uid = document.getElementById('admin-usuario-id').value.trim();
