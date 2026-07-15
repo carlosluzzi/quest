@@ -58,7 +58,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #bottom-nav.teclado-aberto{display:none}
 .icone-modulo-mini{width:14px;height:14px;display:inline-flex;flex-shrink:0}
 .icone-modulo-mini svg{width:100%;height:100%;display:block}
-#barra-adicionar-questoes{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav-height, 76px) + 8px);width:100%;max-width:480px;box-sizing:border-box;background:#fff;border-top:0.5px solid rgba(224,224,224,0.6);padding:14px 16px;z-index:15;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+#barra-adicionar-questoes{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav-height, 76px) + 12px);width:calc(100% - 32px);max-width:448px;box-sizing:border-box;background:#fff;border-radius:18px;box-shadow:0 2px 8px rgba(0,0,0,0.08);padding:14px 16px;z-index:15;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+#fundo-barra-adicionar{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--nav-height, 76px);width:100%;max-width:480px;height:74px;background:#FBFBFA;z-index:14}
 .conteudo-colapsavel{display:none}
 .conteudo-colapsavel.open{display:block}
 .carrossel-cadernos{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -392,7 +393,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       </div>
       <div id="lista-placar"><div class="loading-spinner"></div></div>
     </div>
-    <div style="height:44px"></div>
+    <div style="height:58px"></div>
   </div>
 
   <!-- ===== GERAR QUESTS (filtros + resolução) ===== -->
@@ -540,6 +541,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   </div>
 
+  <div id="fundo-barra-adicionar" class="hidden"></div>
   <button id="barra-adicionar-questoes" onclick="abrirModal('modal-upload')">
     <span style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#D97757"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
     <span style="font-weight:700;font-size:var(--fs-e);color:#D97757;text-transform:uppercase;letter-spacing:0.02em">Adicionar questões</span>
@@ -1316,6 +1318,7 @@ function trocarAba(nome){
   document.querySelectorAll('#bottom-nav .nav-item').forEach(item=>item.classList.toggle('active', item.dataset.aba===nome));
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança, nunca fica presa escondida
   document.getElementById('barra-adicionar-questoes').classList.toggle('hidden', nome!=='inicio');
+  document.getElementById('fundo-barra-adicionar').classList.toggle('hidden', nome!=='inicio');
   document.getElementById('content').scrollTop = 0;
   if(nome==='forum'){ carregarForum(); }
   if(nome==='placar') carregarMetricasPessoais();
