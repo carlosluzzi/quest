@@ -58,7 +58,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #bottom-nav.teclado-aberto{display:none}
 .icone-modulo-mini{width:14px;height:14px;display:inline-flex;flex-shrink:0}
 .icone-modulo-mini svg{width:100%;height:100%;display:block}
-#wrapper-barra-adicionar{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--nav-height, 76px);width:100%;max-width:480px;box-sizing:border-box;background:#FBFBFA;padding:12px 16px;z-index:15}
+#wrapper-barra-adicionar{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--nav-height, 76px);width:100%;max-width:480px;box-sizing:border-box;background:#FBFBFA;padding:0 16px 12px 16px;z-index:15}
 #barra-adicionar-questoes{width:100%;box-sizing:border-box;background:#fff;border-radius:18px;box-shadow:0 2px 8px rgba(0,0,0,0.08);padding:14px 16px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
 .conteudo-colapsavel{display:none}
 .conteudo-colapsavel.open{display:block}
@@ -267,7 +267,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </form>
 
   <form id="login-form-definir-senha" class="hidden" onsubmit="event.preventDefault(); definirSenha();">
-    <p style="margin-bottom:16px">Defina seu nome e sua senha pra começar a usar o Claude Quest.</p>
+    <p style="margin-bottom:16px" id="saudacao-definir-senha">Defina seu nome e sua senha pra começar a usar o Claude Quest.</p>
     <input type="text" id="novo-nome" placeholder="Seu nome" autocomplete="name" required>
     <div class="campo-senha-wrapper">
       <input type="password" id="nova-senha" placeholder="Nova senha" autocomplete="new-password" required>
@@ -296,7 +296,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <img src="assets/logo.png" alt="Claude Quest" style="height:40px;width:auto;margin-bottom:24px">
     <h1>Instale como app</h1>
     <p id="instrucao-instalacao-navegador">Carregando instruções pro seu aparelho...</p>
-    <p style="color:#888;font-size:var(--fs-c);margin-top:16px">Assim você tem acesso rápido, direto da tela inicial, sem a barra do navegador ocupando espaço.</p>
+    <p style="color:#888;font-size:var(--fs-c);margin-top:16px">Assim você tem acesso rápido, direto da tela inicial,<br>sem a barra do navegador ocupando espaço.</p>
     <button class="btn-secundario" id="btn-continuar-navegador" style="width:100%;margin-top:20px" onclick="continuarNoNavegador()">Continuar no navegador mesmo assim</button>
   </div>
 </div>
@@ -594,10 +594,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       </div>
     </div>
 
-    <div style="display:flex;gap:8px;margin-top:22px">
-      <input type="text" id="perfil-nome-input" class="filter-select" placeholder="Seu nome" style="margin-bottom:0;flex:1">
-      <button class="btn-secundario" style="padding:0 16px" onclick="salvarNomePerfil()">OK</button>
-    </div>
+    <div style="text-align:center;margin-top:22px;font-weight:600;font-size:var(--fs-e)" id="perfil-nome-exibicao"></div>
 
     <div style="border-top:0.5px solid #eee;margin:20px 0 14px"></div>
 
@@ -889,6 +886,18 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     document.getElementById('view-login').classList.remove('hidden');
     document.getElementById('login-form-entrar').classList.add('hidden');
     document.getElementById('login-form-definir-senha').classList.remove('hidden');
+
+    // se o nome já foi pré-definido na criação da conta (metadata do usuário
+    // no Supabase), não precisa perguntar de novo — só usa direto
+    const {data:{user}} = await sb.auth.getUser();
+    const nomePreDefinido = user?.user_metadata?.nome;
+    if(nomePreDefinido){
+      const campoNome = document.getElementById('novo-nome');
+      campoNome.value = nomePreDefinido;
+      campoNome.classList.add('hidden');
+      campoNome.required = false;
+      document.getElementById('saudacao-definir-senha').textContent = `Olá, ${nomePreDefinido}! Defina sua senha pra começar a usar o Claude Quest.`;
+    }
     return;
   }
   const {data:{session}} = await sb.auth.getSession();
@@ -1100,17 +1109,6 @@ async function enviarFotoPerfilBlob(blob){
   atualizarAvatarUI();
 }
 
-async function salvarNomePerfil(){
-  const novoNome = document.getElementById('perfil-nome-input').value.trim();
-  if(!novoNome){ alert('Digite um nome válido.'); return; }
-  const {error} = await sb.from('usuarios').update({nome: novoNome}).eq('id', usuarioAtual.id);
-  if(error){ alert('Erro ao salvar nome: '+error.message); return; }
-  usuarioAtual.nome = novoNome;
-  document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${primeiroNomeDe(novoNome)}!`;
-  atualizarAvatarUI();
-  await carregarPlacar();
-}
-
 async function sair(){
   await sb.auth.signOut();
   location.reload();
@@ -1122,9 +1120,12 @@ async function posLogin(nomeInformado){
 
   let {data: perfil} = await sb.from('usuarios').select('*').eq('id', user.id).single();
   if(!perfil){
-    // primeira vez desse usuário – cria a linha de perfil
-    const nome = nomeInformado || user.email.split('@')[0];
-    const {data: novo} = await sb.from('usuarios').insert({id:user.id, nome}).select().single();
+    // primeira vez desse usuário – cria a linha de perfil. Se Carlos já
+    // pré-definiu apelido e nome completo (metadata, na criação da conta),
+    // usa direto; senão cai no nome digitado ou no prefixo do email.
+    const nome = nomeInformado || user.user_metadata?.nome || user.email.split('@')[0];
+    const nomeCompleto = user.user_metadata?.nome_completo || null;
+    const {data: novo} = await sb.from('usuarios').insert({id:user.id, nome, nome_completo: nomeCompleto}).select().single();
     perfil = novo;
   }
   usuarioAtual = perfil;
@@ -1224,11 +1225,11 @@ function detectarInstrucaoInstalacao(elId){
   const SVG_INSTALAR_ANDROID = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin:0 3px"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 7v7"/><path d="M9 11l3 3 3-3"/></svg>';
 
   if(/iPhone|iPad|iPod/.test(ua)){
-    el.innerHTML = `No Safari, toque no ícone de compartilhar${SVG_COMPARTILHAR_IOS}e depois em ${SVG_ADICIONAR_IOS}"Adicionar à Tela de Início".`;
+    el.innerHTML = `No Safari, toque no ícone de compartilhar${SVG_COMPARTILHAR_IOS}<br>e depois em ${SVG_ADICIONAR_IOS}"Adicionar à Tela de Início".`;
   }else if(/Android/.test(ua)){
-    el.innerHTML = `No Chrome, toque nos três pontinhos${SVG_TRES_PONTOS_ANDROID}no canto e depois em ${SVG_INSTALAR_ANDROID}"Instalar app" (ou "Adicionar à tela inicial").`;
+    el.innerHTML = `No Chrome, toque nos três pontinhos${SVG_TRES_PONTOS_ANDROID}<br>no canto e depois em ${SVG_INSTALAR_ANDROID}"Instalar app" (ou "Adicionar à tela inicial").`;
   }else{
-    el.textContent = 'No seu navegador de computador, procure o ícone de instalar na barra de endereço, ou o menu de opções.';
+    el.innerHTML = 'No seu navegador de computador, procure o ícone de<br>instalar na barra de endereço, ou o menu de opções.';
   }
 }
 function detectarDispositivoOnboarding(){
@@ -1259,7 +1260,7 @@ async function concluirOnboarding(){
 async function mostrarAppShell(){
   document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${primeiroNomeDe(usuarioAtual.nome)}!`;
   atualizarAvatarUI();
-  document.getElementById('perfil-nome-input').value = usuarioAtual.nome;
+  document.getElementById('perfil-nome-exibicao').textContent = usuarioAtual.nome;
   if(usuarioAtual.is_admin){
     document.getElementById('btn-abrir-admin').classList.remove('hidden');
   }
