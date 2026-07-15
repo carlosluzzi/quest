@@ -284,6 +284,27 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div class="erro hidden" id="definir-senha-erro"></div>
     <button class="btn-primario" type="submit">Definir senha e entrar</button>
   </form>
+
+  <form id="login-form-convite" class="hidden" onsubmit="event.preventDefault(); cadastrarComConvite();">
+    <p style="margin-bottom:16px" id="saudacao-convite">Carregando convite...</p>
+    <div id="campos-convite" class="hidden">
+      <input type="email" id="convite-email" placeholder="Seu email" autocomplete="username" required>
+      <div class="campo-senha-wrapper">
+        <input type="password" id="convite-senha" placeholder="Crie uma senha" autocomplete="new-password" required>
+        <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('convite-senha', this)" aria-label="Mostrar senha">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+      <div class="campo-senha-wrapper">
+        <input type="password" id="convite-senha-confirmar" placeholder="Confirmar senha" autocomplete="new-password" required>
+        <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('convite-senha-confirmar', this)" aria-label="Mostrar senha">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+      <div class="erro hidden" id="convite-erro"></div>
+      <button class="btn-primario" type="submit" id="btn-cadastrar-convite">Cadastrar e entrar</button>
+    </div>
+  </form>
 </div>
 </div>
 
@@ -880,6 +901,15 @@ function tagModulo(nomeModulo){
    AUTENTICAÇÃO
    ============================================================ */
 window.addEventListener('DOMContentLoaded', async ()=>{
+  // Convite por código próprio (não o convite nativo do Supabase) — a URL
+  // vem com ?convite=<uuid>, sem hash nenhum
+  const params = new URLSearchParams(window.location.search);
+  const codigoConvite = params.get('convite');
+  if(codigoConvite){
+    await processarConvite(codigoConvite);
+    return;
+  }
+
   // Se veio de link de convite, o Supabase te devolve com type=invite no hash da URL
   if(window.location.hash.includes('type=invite') || window.location.hash.includes('type=recovery')){
     document.getElementById('view-splash').classList.add('hidden');
@@ -932,6 +962,63 @@ async function entrar(){
   }
   erroEl.classList.add('hidden');
   await posLogin();
+}
+
+let conviteAtual = null;
+
+async function processarConvite(id){
+  document.getElementById('view-splash').classList.add('hidden');
+  document.getElementById('view-login').classList.remove('hidden');
+  document.getElementById('login-form-entrar').classList.add('hidden');
+  document.getElementById('login-form-convite').classList.remove('hidden');
+
+  const {data: convite} = await sb.from('convites').select('*').eq('id', id).single();
+  if(!convite || convite.usado){
+    document.getElementById('saudacao-convite').textContent = 'Esse link de convite não é válido ou já foi usado. Pede um link novo pra quem te convidou.';
+    return; // campos-convite continua escondido, só aparece a mensagem
+  }
+  conviteAtual = convite;
+  document.getElementById('saudacao-convite').textContent = `Olá, ${convite.apelido}! Cadastre seu email e crie uma senha pra começar a usar o Claude Quest.`;
+  document.getElementById('campos-convite').classList.remove('hidden');
+}
+
+async function cadastrarComConvite(){
+  if(!conviteAtual) return;
+  const email = document.getElementById('convite-email').value.trim();
+  const s1 = document.getElementById('convite-senha').value;
+  const s2 = document.getElementById('convite-senha-confirmar').value;
+  const erroEl = document.getElementById('convite-erro');
+  erroEl.classList.add('hidden');
+
+  if(s1.length < 6){
+    erroEl.textContent = 'Senha precisa ter pelo menos 6 caracteres.';
+    erroEl.classList.remove('hidden');
+    return;
+  }
+  if(s1 !== s2){
+    erroEl.textContent = 'As senhas não são iguais.';
+    erroEl.classList.remove('hidden');
+    return;
+  }
+
+  const {data, error} = await sb.auth.signUp({email, password: s1});
+  if(error){
+    erroEl.textContent = 'Erro ao cadastrar: ' + error.message;
+    erroEl.classList.remove('hidden');
+    return;
+  }
+  if(!data.session){
+    // só acontece se "Confirm email" ainda estiver ativado no projeto —
+    // nesse caso o cadastro funcionou, mas precisa confirmar por email
+    erroEl.textContent = 'Cadastro feito! Confirma seu email antes de entrar (verifica sua caixa de entrada).';
+    erroEl.classList.remove('hidden');
+    return;
+  }
+
+  // marca o convite como usado, vinculado ao novo usuário
+  await sb.from('convites').update({usado:true, usuario_id: data.user.id, usado_em: new Date().toISOString()}).eq('id', conviteAtual.id);
+
+  await posLogin(conviteAtual.apelido, conviteAtual.nome_completo);
 }
 
 async function definirSenha(){
@@ -1114,17 +1201,17 @@ async function sair(){
   location.reload();
 }
 
-async function posLogin(nomeInformado){
+async function posLogin(nomeInformado, nomeCompletoInformado){
   const {data:{user}} = await sb.auth.getUser();
   if(!user) return;
 
   let {data: perfil} = await sb.from('usuarios').select('*').eq('id', user.id).single();
   if(!perfil){
     // primeira vez desse usuário – cria a linha de perfil. Se Carlos já
-    // pré-definiu apelido e nome completo (metadata, na criação da conta),
-    // usa direto; senão cai no nome digitado ou no prefixo do email.
+    // pré-definiu apelido e nome completo (metadata, ou vindo do convite
+    // por código), usa direto; senão cai no nome digitado ou no prefixo do email.
     const nome = nomeInformado || user.user_metadata?.nome || user.email.split('@')[0];
-    const nomeCompleto = user.user_metadata?.nome_completo || null;
+    const nomeCompleto = nomeCompletoInformado || user.user_metadata?.nome_completo || null;
     const {data: novo} = await sb.from('usuarios').insert({id:user.id, nome, nome_completo: nomeCompleto}).select().single();
     perfil = novo;
   }
