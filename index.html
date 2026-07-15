@@ -417,7 +417,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       </div>
       <div id="lista-placar"><div class="loading-spinner"></div></div>
     </div>
-    <div style="height:58px"></div>
+    <div style="height:48px"></div>
   </div>
 
   <!-- ===== GERAR QUESTS (filtros + resolução) ===== -->
@@ -1350,7 +1350,7 @@ async function concluirOnboarding(){
 async function mostrarAppShell(){
   document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${primeiroNomeDe(usuarioAtual.nome)}!`;
   atualizarAvatarUI();
-  document.getElementById('perfil-nome-exibicao').textContent = usuarioAtual.nome;
+  document.getElementById('perfil-nome-exibicao').textContent = usuarioAtual.nome_completo || usuarioAtual.nome;
   if(usuarioAtual.is_admin){
     document.getElementById('btn-abrir-admin').classList.remove('hidden');
   }
@@ -3070,8 +3070,8 @@ function trocarAbaAdmin(aba){
   }
   if(aba==='convites'){
     el.innerHTML = `
-      <input type="text" id="admin-convite-apelido" placeholder="Apelido (aparece no app)" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid #DDD">
-      <input type="text" id="admin-convite-nome-completo" placeholder="Nome completo (só fica guardado)" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid #DDD">
+      <input type="text" id="admin-convite-apelido" placeholder="Apelido" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid #DDD">
+      <input type="text" id="admin-convite-nome-completo" placeholder="Nome completo" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid #DDD">
       <button class="btn-primario" onclick="gerarLinkConvite()">Gerar link de convite</button>
       <div id="admin-convite-resultado" style="margin-top:14px"></div>`;
   }
