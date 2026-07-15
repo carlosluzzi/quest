@@ -224,7 +224,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="bg-fixed"></div>
 
 <!-- ============================================================ -->
-<!-- CONFIGURAÇÃO — troque pelos valores reais do seu projeto Supabase -->
+<!-- CONFIGURAÇÃO – troque pelos valores reais do seu projeto Supabase -->
 <!-- ============================================================ -->
 <script>
   const SUPABASE_URL = "https://jenzxycerdtjpkrzesia.supabase.co";
@@ -313,15 +313,15 @@ input,select,textarea{font-family:inherit;font-size:16px}
     </div>
     <div class="onboarding-step" data-step="2">
       <h1>A exclusão é só sua</h1>
-      <p>Se uma questão parecer errada ou malformada, você pode excluir — mas isso some <strong>só pra você</strong>. Ela continua existindo pros outros. Quanto mais gente excluir a mesma questão, mais evidente fica que ela tem um problema.</p>
+      <p>Se uma questão parecer errada ou malformada, você pode excluir – mas isso some <strong>só pra você</strong>. Ela continua existindo pros outros. Quanto mais gente excluir a mesma questão, mais evidente fica que ela tem um problema.</p>
     </div>
     <div class="onboarding-step" data-step="3">
       <h1>Fórum e correções</h1>
-      <p>Cada questão tem um espaço de discussão. Se algo estiver errado de fato (gabarito, digitação), use "Reportar correção" — isso avisa todo mundo com um selo, até alguém corrigir.</p>
+      <p>Cada questão tem um espaço de discussão. Se algo estiver errado de fato (gabarito, digitação), use "Reportar correção" – isso avisa todo mundo com um selo, até alguém corrigir.</p>
     </div>
     <div class="onboarding-step" data-step="4">
       <h1>Placar entre amigos</h1>
-      <p>Vocês veem, lado a lado, quantas questões cada um respondeu e a % de acerto — sem ranking, só os números.</p>
+      <p>Vocês veem, lado a lado, quantas questões cada um respondeu e a % de acerto – sem ranking, só os números.</p>
     </div>
     <div class="onboarding-step" data-step="5">
       <h1>Instalar como app</h1>
@@ -356,7 +356,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div id="caderno-em-andamento" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="retomarCaderno()">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 0 2-2z"/></svg> Cadernos em andamento</div>
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg> Cadernos em andamento</div>
         <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px" id="caderno-em-andamento-info"></div>
       </button>
     </div>
@@ -375,12 +375,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       </button>
     </div>
 
-    <div id="card-notificacao-resposta-discussao" class="hidden">
-      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirTopicoNotificado()">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Responderam sua discussão</div>
-        <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px" id="texto-notificacao-resposta-discussao"></div>
-      </button>
-    </div>
+    <div id="container-notificacoes-resposta-discussao"></div>
 
     <div id="container-notificacoes-questao-corrigida"></div>
 
@@ -397,7 +392,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       </div>
       <div id="lista-placar"><div class="loading-spinner"></div></div>
     </div>
-    <div style="height:76px"></div>
+    <div style="height:calc(var(--nav-height, 76px) + 74px)"></div>
   </div>
 
   <!-- ===== GERAR QUESTS (filtros + resolução) ===== -->
@@ -457,7 +452,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
           <span class="info-icone" onclick="abrirModal('modal-info-fisher-yates')" style="font-size:var(--fs-b)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Como a ordem das questões é sorteada?</span>
         </div>
         <div id="quests-sem-resultado" class="hidden" style="text-align:center;color:#888;margin-top:16px">
-          Poucas ou nenhuma questão com esses filtros ainda —
+          Poucas ou nenhuma questão com esses filtros ainda –
           <button style="color:var(--azul-marca);font-weight:600;text-decoration:underline" onclick="abrirModal('modal-upload')">que tal subir um PDF?</button>
         </div>
       </div>
@@ -624,7 +619,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-info-wilson">
   <div class="modal-conteudo">
     <h3 class="config-title">Wilson Score</h3>
-    <p>É a fórmula usada pra calcular a % de acerto e pra saber quais questões você mais erra. Diferente de uma % simples, ela leva em conta <em>quantas vezes</em> você já tentou aquela questão — errar 1 de 1 tentativa pesa menos do que errar 8 de 10, mesmo a % "crua" sendo parecida. Isso evita que uma questão respondida só uma vez pareça mais confiável do que realmente é.</p>
+    <p>É a fórmula usada pra calcular a % de acerto e pra saber quais questões você mais erra. Diferente de uma % simples, ela leva em conta <em>quantas vezes</em> você já tentou aquela questão – errar 1 de 1 tentativa pesa menos do que errar 8 de 10, mesmo a % "crua" sendo parecida. Isso evita que uma questão respondida só uma vez pareça mais confiável do que realmente é.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-wilson')">Fechar</button>
   </div>
 </div>
@@ -632,7 +627,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-info-fisher-yates">
   <div class="modal-conteudo">
     <h3 class="config-title">Fisher-Yates</h3>
-    <p>É o algoritmo usado pra embaralhar a ordem das questões do seu caderno. Diferente de um embaralhamento "ingênuo" (tipo ordenar por número aleatório), o Fisher-Yates garante que cada ordem possível tem exatamente a mesma chance de acontecer — sem viés escondido favorecendo certas posições.</p>
+    <p>É o algoritmo usado pra embaralhar a ordem das questões do seu caderno. Diferente de um embaralhamento "ingênuo" (tipo ordenar por número aleatório), o Fisher-Yates garante que cada ordem possível tem exatamente a mesma chance de acontecer – sem viés escondido favorecendo certas posições.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-fisher-yates')">Fechar</button>
   </div>
 </div>
@@ -710,7 +705,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-confirmar-anulacao" onclick="if(event.target===this) fecharModal('modal-confirmar-anulacao')">
   <div class="modal-conteudo modal-conteudo-fluxo-topico">
     <h3 class="config-title">Anular questão</h3>
-    <p>Isso remove a questão de cadernos futuros pra sempre. Quem já respondeu essa questão (de qualquer jeito) passa a ter a resposta contada como acerto, mesmo quem errou — igual acontece numa anulação de prova de verdade.</p>
+    <p>Isso remove a questão de cadernos futuros pra sempre. Quem já respondeu essa questão (de qualquer jeito) passa a ter a resposta contada como acerto, mesmo quem errou – igual acontece numa anulação de prova de verdade.</p>
     <div style="display:flex;gap:8px">
       <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-anulacao')">Cancelar</button>
       <button class="btn-primario" style="flex:1" onclick="executarAnulacaoQuestao()">Anular</button>
@@ -751,7 +746,7 @@ let bibliografiaCache = [];
 let cadernoAtual = null;       // linha da tabela cadernos
 let questoesCaderno = [];      // array de questões do caderno atual
 let indiceQuestaoAtual = 0;
-let respostasPorQuestao = {};  // {questaoId: {letra, correta}} — pra colorir a navegação numerada
+let respostasPorQuestao = {};  // {questaoId: {letra, correta}} – pra colorir a navegação numerada
 
 /* ============================================================
    CÓDIGO REAPROVEITADO DO APP PESSOAL (ver dossiê)
@@ -809,13 +804,13 @@ function formatQuestaoCompleta(texto){
 // extrai {letra, texto} de cada alternativa a partir do campo "alternativas" da questão,
 // que já vem normalizado no formato "(a) texto. (b) texto. ..." (ver molde padrão de questão no dossiê)
 // Quebra o enunciado em linhas quando ele tem uma estrutura de lista interna.
-// Prioridade estrita e mutuamente exclusiva — só verifica a regra seguinte
+// Prioridade estrita e mutuamente exclusiva – só verifica a regra seguinte
 // se a anterior não se aplicou:
 //   1. Assertivas romanas (I) II) III)...)
-//   2. Parênteses vazios ( ) — questões de Certo/Errado ou ordenação
-//   3. Maiúsculas seguidas de ponto (A. B. C...) — questões de correlação
+//   2. Parênteses vazios ( ) – questões de Certo/Errado ou ordenação
+//   3. Maiúsculas seguidas de ponto (A. B. C...) – questões de correlação
 function formatarEnunciado(texto){
-  if(!texto) return '(enunciado vazio — questão pode estar malformada)';
+  if(!texto) return '(enunciado vazio – questão pode estar malformada)';
   const escaped = escapeHtml(texto);
 
   // 1. Assertivas romanas
@@ -830,7 +825,7 @@ function formatarEnunciado(texto){
     return [partes[0]||'', ...partes.slice(1).map(p=>`<div class="enunciado-linha">${p}</div>`)].join('');
   }
 
-  // 3. Maiúsculas com ponto (correlação) — ancorado no "A." literal, pra não
+  // 3. Maiúsculas com ponto (correlação) – ancorado no "A." literal, pra não
   // confundir com uma letra maiúscula solta que aparece por acaso no meio de
   // uma frase normal (ex: "a coluna B." não é item de lista)
   const anchorA = escaped.match(/\bA\.\s/);
@@ -1124,7 +1119,7 @@ async function posLogin(nomeInformado){
 
   let {data: perfil} = await sb.from('usuarios').select('*').eq('id', user.id).single();
   if(!perfil){
-    // primeira vez desse usuário — cria a linha de perfil
+    // primeira vez desse usuário – cria a linha de perfil
     const nome = nomeInformado || user.email.split('@')[0];
     const {data: novo} = await sb.from('usuarios').insert({id:user.id, nome}).select().single();
     perfil = novo;
@@ -1189,7 +1184,7 @@ function atualizarBotaoConcluirOnboarding(){
   if(ultimo) botaoConcluirJaApareceu = true;
   document.getElementById('btn-onboarding-concluir').style.visibility = botaoConcluirJaApareceu ? 'visible' : 'hidden';
 }
-// Swipe de verdade no conteúdo do onboarding — as bolinhas só fazem sentido
+// Swipe de verdade no conteúdo do onboarding – as bolinhas só fazem sentido
 // se o gesto funcionar também, não só o botão do último passo
 function iniciarSwipeOnboarding(){
   const el = document.getElementById('onboarding-conteudo');
@@ -1285,7 +1280,7 @@ window.addEventListener('resize', medirAlturaNav);
 // campo de texto ganha foco. Solução: esconder a barra enquanto o teclado
 // estiver aberto, e mostrar de volta ao fechar. Restrito ao #app-shell (não
 // à tela de login), e com trava de segurança pra nunca ficar presa escondida.
-// Só conta como "abriu teclado" campo de texto de verdade — checkbox, radio
+// Só conta como "abriu teclado" campo de texto de verdade – checkbox, radio
 // e select nunca chamam teclado no celular, então nunca podem esconder o menu.
 function ehCampoDeTeclado(el){
   if(el.tagName === 'TEXTAREA') return true;
@@ -1345,7 +1340,7 @@ function fecharTopicoAtual(){
 }
 
 /* ============================================================
-   INÍCIO — caderno em andamento
+   INÍCIO – caderno em andamento
    ============================================================ */
 async function verificarCadernoEmAndamento(){
   const {data} = await sb.from('cadernos').select('id').eq('usuario_id', usuarioAtual.id).eq('status','em_andamento');
@@ -1360,7 +1355,7 @@ async function verificarCadernoEmAndamento(){
 }
 
 /* ============================================================
-   4 NOTIFICAÇÕES NOVAS DO ÍNCIO — mesmo padrão visual dos cards já
+   4 NOTIFICAÇÕES NOVAS DO ÍNCIO – mesmo padrão visual dos cards já
    existentes (Cadernos em andamento / Novidades no Fórum)
    ============================================================ */
 async function verificarNotificacoesExtras(){
@@ -1372,7 +1367,7 @@ async function verificarNotificacoesExtras(){
   ]);
 }
 
-/* 1. Anulação te afetou — respostas suas que foram tocadas por uma anulação
+/* 1. Anulação te afetou – respostas suas que foram tocadas por uma anulação
    e que você ainda não "viu" */
 async function verificarNotificacaoAnulacao(){
   const {data} = await sb.from('respostas').select('id').eq('usuario_id', usuarioAtual.id).eq('foi_anulada', true).eq('anulacao_vista', false);
@@ -1380,8 +1375,8 @@ async function verificarNotificacaoAnulacao(){
   const el = document.getElementById('card-notificacao-anulacao');
   if(total > 0){
     document.getElementById('texto-notificacao-anulacao').textContent = total===1
-      ? '1 questão que você respondeu foi anulada — sua estatística foi atualizada'
-      : `${total} questões que você respondeu foram anuladas — sua estatística foi atualizada`;
+      ? '1 questão que você respondeu foi anulada – sua estatística foi atualizada'
+      : `${total} questões que você respondeu foram anuladas – sua estatística foi atualizada`;
     el.classList.remove('hidden');
   }else{
     el.classList.add('hidden');
@@ -1392,16 +1387,21 @@ async function marcarAnulacaoVista(){
   await verificarNotificacaoAnulacao();
 }
 
-/* 2. Alguém respondeu sua discussão — tópicos que você abriu, com
+/* 2. Alguém respondeu sua discussão – tópicos que você abriu, com
    comentário de outra pessoa depois da última vez que você viu */
-let topicoNotificadoId = null;
+function formatarListaNomes(nomes){
+  if(nomes.length === 0) return '';
+  if(nomes.length === 1) return nomes[0];
+  if(nomes.length === 2) return `${nomes[0]} e ${nomes[1]}`;
+  return `${nomes.slice(0,-1).join(', ')} e ${nomes[nomes.length-1]}`;
+}
 async function verificarNotificacaoRespostaDiscussao(){
   const {data: meusTopicos} = await sb.from('topicos').select('id, titulo, criado_em, criador_visto_em').eq('criado_por', usuarioAtual.id);
-  const el = document.getElementById('card-notificacao-resposta-discussao');
-  if(!meusTopicos || !meusTopicos.length){ el.classList.add('hidden'); return; }
+  const container = document.getElementById('container-notificacoes-resposta-discussao');
+  if(!meusTopicos || !meusTopicos.length){ container.innerHTML = ''; return; }
 
   const idsMeusTopicos = meusTopicos.map(t=>t.id);
-  const {data: comentariosNovos} = await sb.from('comentarios').select('topico_id, usuario_id, criado_em').in('topico_id', idsMeusTopicos).neq('usuario_id', usuarioAtual.id);
+  const {data: comentariosNovos} = await sb.from('comentarios').select('topico_id, usuario_id, criado_em, usuarios(nome)').in('topico_id', idsMeusTopicos).neq('usuario_id', usuarioAtual.id);
 
   const mapaTopico = {};
   meusTopicos.forEach(t=>{ mapaTopico[t.id] = t; });
@@ -1412,22 +1412,28 @@ async function verificarNotificacaoRespostaDiscussao(){
     return c.criado_em > marco;
   });
 
-  if(relevantes.length){
-    const topicosAfetados = [...new Set(relevantes.map(c=>c.topico_id))];
-    topicoNotificadoId = topicosAfetados[0];
-    document.getElementById('texto-notificacao-resposta-discussao').textContent = topicosAfetados.length===1
-      ? `Alguém respondeu "${mapaTopico[topicosAfetados[0]].titulo}"`
-      : `${topicosAfetados.length} discussões suas tiveram resposta`;
-    el.classList.remove('hidden');
-  }else{
-    el.classList.add('hidden');
-  }
+  // 1 tópico = 1 notificação separada, igual já fazemos com "Questão
+  // corrigida" — cada card já sabe exatamente pra qual tópico levar
+  const topicosAfetados = [...new Set(relevantes.map(c=>c.topico_id))];
+  if(!topicosAfetados.length){ container.innerHTML = ''; return; }
+
+  container.innerHTML = topicosAfetados.map(topicoId=>{
+    const nomes = [...new Set(relevantes.filter(c=>c.topico_id===topicoId).map(c=>c.usuarios?.nome).filter(Boolean))];
+    const verbo = nomes.length===1 ? 'respondeu' : 'responderam';
+    const texto = `${formatarListaNomes(nomes)} ${verbo} "${mapaTopico[topicoId].titulo}"`;
+    return `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirTopicoNotificado('${topicoId}')">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Responderam sua discussão</div>
+        <div style="color:#888;font-size:var(--fs-c);padding-left:22px;margin-top:4px">${texto}</div>
+      </button>
+    </div>`;
+  }).join('');
 }
-function abrirTopicoNotificado(){
-  if(!topicoNotificadoId) return;
+function abrirTopicoNotificado(topicoId){
   abrirViewTopico();
   document.getElementById(containerTopicoAtual()).innerHTML = '<div class="loading-spinner"></div>';
-  renderizarTopico(topicoNotificadoId);
+  renderizarTopico(topicoId);
 }
 
 /* 3. Questão do seu caderno em andamento foi corrigida antes de você
@@ -1456,15 +1462,15 @@ async function verificarNotificacaoQuestaoCorrigida(){
   const idsCadernosComPendencia = Object.keys(pendentesPorCaderno);
   if(!idsCadernosComPendencia.length){ container.innerHTML = ''; return; }
 
-  // 1 caderno = 1 notificação separada — nunca mistura questões de cadernos
+  // 1 caderno = 1 notificação separada – nunca mistura questões de cadernos
   // diferentes num texto só, até pra já deixar pronto pro dia que o clique
   // for levar direto pro caderno específico (aí não teria como escolher
   // "qual dos vários" se estivesse tudo junto)
   container.innerHTML = idsCadernosComPendencia.map(cadernoId=>{
     const total = pendentesPorCaderno[cadernoId].length;
     const texto = total===1
-      ? '1 questão foi corrigida nesse caderno em andamento antes de você respondê-la.'
-      : `${total} questões foram corrigidas nesse caderno em andamento antes de você respondê-las.`;
+      ? '1 questão foi corrigida em um caderno em andamento antes de você respondê-la'
+      : `${total} questões foram corrigidas em um caderno em andamento antes de você respondê-las`;
     return `
     <div>
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarCorrigidasVistas('${cadernoId}')">
@@ -1485,7 +1491,7 @@ function marcarCorrigidasVistas(cadernoId){
   verificarNotificacaoQuestaoCorrigida();
 }
 
-/* 7. PDF novo no banco — questões de outras pessoas desde a última vez
+/* 7. PDF novo no banco – questões de outras pessoas desde a última vez
    que você viu esse aviso */
 async function verificarNotificacaoPdfNovo(){
   const marco = usuarioAtual.pdf_novo_visto_em || '1970-01-01T00:00:00Z';
@@ -1493,8 +1499,16 @@ async function verificarNotificacaoPdfNovo(){
   const el = document.getElementById('card-notificacao-pdf-novo');
   const total = (data||[]).length;
   if(total > 0){
-    const autores = [...new Set((data||[]).map(q=>q.usuarios?.nome).filter(Boolean))];
-    document.getElementById('texto-notificacao-pdf-novo').textContent = `${total} ${total===1?'questão nova':'questões novas'} adicionada${total===1?'':'s'} por ${autores.join(', ')}`;
+    const porAutor = {};
+    (data||[]).forEach(q=>{
+      const nome = q.usuarios?.nome || 'Alguém';
+      porAutor[nome] = (porAutor[nome]||0) + 1;
+    });
+    const linhas = Object.entries(porAutor).map(([nome, qtd])=>{
+      const qtdTexto = qtd===1 ? '1 questão nova adicionada' : `${qtd} questões novas adicionadas`;
+      return `<div>${qtdTexto} por ${escapeHtml(nome)}</div>`;
+    });
+    document.getElementById('texto-notificacao-pdf-novo').innerHTML = linhas.join('');
     el.classList.remove('hidden');
   }else{
     el.classList.add('hidden');
@@ -1523,7 +1537,7 @@ function retomarCaderno(){
 }
 
 /* ============================================================
-   GERAR QUESTS — filtros em cascata
+   GERAR QUESTS – filtros em cascata
    ============================================================ */
 async function carregarBibliografia(){
   const {data} = await sb.from('bibliografia').select('*');
@@ -1586,7 +1600,7 @@ function selecionarQuantidade(botao, valor){
   else document.getElementById('quantidade-customizada').value = valor;
 }
 
-// busca as questões que batem com os filtros atuais, sem criar caderno — reaproveitada
+// busca as questões que batem com os filtros atuais, sem criar caderno – reaproveitada
 // pelo contador ao vivo e pelo montarCaderno de verdade, pra nunca ficarem dessincronizados
 async function buscarQuestoesFiltradas(){
   let query = sb.from('questoes').select('*').eq('anulada', false);
@@ -1622,7 +1636,7 @@ function atualizarContadorDisponiveis(){
   }, 300);
 }
 
-// SuperQuest: simulado fixo de 70 questões variadas, sem filtro nenhum — regras
+// SuperQuest: simulado fixo de 70 questões variadas, sem filtro nenhum – regras
 // podem ser refinadas depois (ex: balancear por módulo), essa é a v1 simples.
 const QUANTIDADE_SUPERQUEST = 70;
 
@@ -1671,7 +1685,7 @@ async function montarCaderno(){
   document.getElementById('quests-sem-resultado').classList.add('hidden');
 
   if(questoesFiltradas.length < 10){
-    alert(`Só ${questoesFiltradas.length} ${questoesFiltradas.length===1?'questão disponível':'questões disponíveis'} com esses filtros (menos de 10) — pode ter pouca variedade.`);
+    alert(`Só ${questoesFiltradas.length} ${questoesFiltradas.length===1?'questão disponível':'questões disponíveis'} com esses filtros (menos de 10) – pode ter pouca variedade.`);
   }
 
   if(document.getElementById('toggle-priorizar-erro').checked){
@@ -1719,7 +1733,7 @@ async function montarCaderno(){
 }
 
 /* ============================================================
-   CADERNOS EXISTENTES — em andamento / concluídos
+   CADERNOS EXISTENTES – em andamento / concluídos
    ============================================================ */
 async function carregarCadernosExistentes(){
   const {data} = await sb.from('cadernos').select('*').eq('usuario_id', usuarioAtual.id).order('criado_em',{ascending:false});
@@ -1778,7 +1792,7 @@ async function carregarCadernosExistentes(){
   elC.innerHTML = itensConcluidos.length ? montarCarrosselCadernos(itensConcluidos, 'carrossel-concluidos') : '<span style="color:#999;font-size:var(--fs-c)">Nenhum caderno concluído ainda.</span>';
 }
 
-// Listas de caderno podem crescer sem limite ao longo do tempo — sem paginação,
+// Listas de caderno podem crescer sem limite ao longo do tempo – sem paginação,
 // uma lista grande estoura a altura da tela e o scrollIntoView nunca consegue
 // mostrar o final dela (não é possível "rolar melhor" até algo maior que a tela).
 // Solução: no máximo 5 itens por página, virando carrossel horizontal a partir daí.
@@ -1835,7 +1849,7 @@ async function retomarCadernoEspecifico(cadernoId){
   if(!data){ alert('Caderno não encontrado.'); return; }
   cadernoAtual = data;
 
-  // usa a lista exata de questões salva na criação do caderno — não recalcula pelos filtros
+  // usa a lista exata de questões salva na criação do caderno – não recalcula pelos filtros
   // (fallback pelos filtros só existe pra cadernos criados antes dessa correção, sem questao_ids salvo)
   const filtros = data.filtros_aplicados || {};
   let questoes;
@@ -1893,7 +1907,7 @@ async function confirmarExclusaoCaderno(){
   await carregarCadernosExistentes();
 }
 
-let alternativaSelecionadaAtual = null; // marcada mas ainda não confirmada — reseta a cada troca de questão
+let alternativaSelecionadaAtual = null; // marcada mas ainda não confirmada – reseta a cada troca de questão
 let favoritosDoUsuario = new Set();
 let notasDoUsuario = new Set();
 let topicosPendentesDoUsuario = new Set();
@@ -2011,14 +2025,16 @@ function renderizarQuestaoAtual(){
         }
         return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} onclick="selecionarAlternativa('${alt.letra}')"><strong>${alt.letra})</strong> ${alt.texto}</button>`;
       }).join('')
-    : '<p style="color:#B00020;font-size:var(--fs-c)">Alternativas não identificadas nessa questão (pode estar malformada) — considere excluir pra você.</p>';
+    : '<p style="color:#B00020;font-size:var(--fs-c)">Alternativas não identificadas nessa questão (pode estar malformada) – considere excluir pra você.</p>';
 
   const foiCorrigidaAntesDeResponder = !jaRespondida && q.atualizado_em && cadernoAtual.criado_em && q.atualizado_em > cadernoAtual.criado_em;
 
   const html = `
     <div class="card-questao" data-questao-id="${q.id}">
-      <div class="section-title" style="margin:0 0 8px 0">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length}</div>
-      ${foiCorrigidaAntesDeResponder ? '<span class="selo-correcao" style="display:inline-flex;align-items:center;gap:4px;margin-bottom:8px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Corrigida recentemente</span>' : ''}
+      <div class="section-title" style="margin:0 0 8px 0;display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span>Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length}</span>
+        ${foiCorrigidaAntesDeResponder ? '<span class="selo-correcao" style="display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;text-transform:none;letter-spacing:normal;padding:2px 6px;flex-shrink:0;white-space:nowrap"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Corrigida recentemente</span>' : ''}
+      </div>
       <div class="enunciado">${formatarEnunciado(q.enunciado)}</div>
     </div>
     <div class="banco-alternativas">${htmlAlternativas}</div>
@@ -2058,7 +2074,7 @@ function renderizarQuestaoAtual(){
 
 function renderizarResultado(q,resposta){
   const cor = resposta.correta ? '#3B6D11' : '#A32D2D';
-  const textoResultado = `${resposta.correta?'Acertou!':'Errou.'} Gabarito: ${(q.gabarito||'—').toUpperCase()}`;
+  const textoResultado = `${resposta.correta?'Acertou!':'Errou.'} Gabarito: ${(q.gabarito||'–').toUpperCase()}`;
 
   return `<div class="banco-resultado" style="color:${cor};display:flex;align-items:center;justify-content:center;gap:10px">
     <span>${textoResultado}</span>
@@ -2075,7 +2091,7 @@ async function responderQuestao(questaoId, letraEscolhida){
 
   respostasPorQuestao[questaoId] = {letra: letraEscolhida, correta};
 
-  // salva direto no banco — a view "respostas_finalizadas" já garante que isso
+  // salva direto no banco – a view "respostas_finalizadas" já garante que isso
   // só conta pras estatísticas depois que o caderno for finalizado, então não
   // precisa mais bufferizar em memória até o fim
   await sb.from('respostas').insert({
@@ -2146,10 +2162,10 @@ async function finalizarCaderno(){
 }
 
 /* ============================================================
-   FÓRUM — sistema de tópicos (unifica "erro reportado" e "discussão
+   FÓRUM – sistema de tópicos (unifica "erro reportado" e "discussão
    geral"). Toda discussão nasce intencional (com título), precisa de
    troca mínima (1+ resposta) antes de poder ser votada como resolvida,
-   e resolução é por votação com maioria fixa de 3 de 5 — não depende de
+   e resolução é por votação com maioria fixa de 3 de 5 – não depende de
    quantos participaram. "Resolvido" é por pessoa: quem votou já para de
    ver o tópico; quem não votou continua vendo até dar seu próprio
    veredito (concordar ou reabrir, mesmo com maioria já formada).
@@ -2157,7 +2173,7 @@ async function finalizarCaderno(){
 const VOTOS_PRA_RESOLVER = 3;
 
 /* ============================================================
-   NOTIFICAÇÕES DO FÓRUM — Nível 1 (Realtime, só com app aberto)
+   NOTIFICAÇÕES DO FÓRUM – Nível 1 (Realtime, só com app aberto)
    ============================================================ */
 async function atualizarNotificacoesForum(){
   const {data: todosTopicos} = await sb.from('topicos').select('id, status');
@@ -2369,7 +2385,7 @@ async function abrirDetalheQuestao(questaoId){
 }
 
 /* ============================================================
-   Abrir um tópico novo — sempre com título (nasce intencional)
+   Abrir um tópico novo – sempre com título (nasce intencional)
    ============================================================ */
 let novoTopicoContexto = null;
 
@@ -2399,7 +2415,7 @@ async function confirmarNovoTopico(){
 }
 
 /* ============================================================
-   Thread de UM tópico — comentários + votação de resolução
+   Thread de UM tópico – comentários + votação de resolução
    ============================================================ */
 function abrirTopico(topicoId){
   document.getElementById(containerTopicoAtual()).innerHTML = '<div class="loading-spinner"></div>';
@@ -2410,7 +2426,7 @@ async function renderizarTopico(topicoId){
   const {data: topico} = await sb.from('topicos').select('*, questoes(id, enunciado)').eq('id', topicoId).single();
   if(!topico){ document.getElementById(containerTopicoAtual()).innerHTML = '<p>Tópico não encontrado.</p>'; return; }
   if(topico.criado_por === usuarioAtual.id){
-    // marca como visto pelo criador, sem travar a tela — e reavalia a notificação
+    // marca como visto pelo criador, sem travar a tela – e reavalia a notificação
     sb.from('topicos').update({criador_visto_em: new Date().toISOString()}).eq('id', topicoId).then(()=>{
       verificarNotificacaoRespostaDiscussao();
     });
@@ -2431,14 +2447,14 @@ async function renderizarTopico(topicoId){
   }else if(meuVoto){
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px;padding:12px;background:#F5F5F4;border-radius:10px">
-        <div style="font-size:var(--fs-c);color:#666">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver${listaVotantes?' — '+listaVotantes:''}</div>
+        <div style="font-size:var(--fs-c);color:#666">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
         <div style="font-size:var(--fs-c);color:#3B6D11;margin-top:4px;font-weight:600">Você votou que está resolvido</div>
         <button class="btn-secundario" style="margin-top:8px" onclick="desfazerVotoResolucao('${topicoId}')">Desfazer meu voto</button>
       </div>`;
   }else if(topico.status==='resolvido'){
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px;padding:12px;background:#FEF6E4;border-radius:10px">
-        <div style="font-size:var(--fs-c);color:#666">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver — ${listaVotantes}</div>
+        <div style="font-size:var(--fs-c);color:#666">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver – ${listaVotantes}</div>
         <div style="font-size:var(--fs-d);font-weight:600;margin-top:4px">A maioria já considera isso resolvido. Você concorda?</div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn-secundario" style="flex:1" onclick="reabrirTopico('${topicoId}')">Reabrir</button>
@@ -2448,7 +2464,7 @@ async function renderizarTopico(topicoId){
   }else{
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px">
-        <div style="font-size:var(--fs-c);color:#666;margin-bottom:8px">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver${listaVotantes?' — '+listaVotantes:''}</div>
+        <div style="font-size:var(--fs-c);color:#666;margin-bottom:8px">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
         <button class="btn-secundario" onclick="votarResolvido('${topicoId}')">Marcar como resolvido</button>
       </div>`;
   }
@@ -2508,7 +2524,7 @@ async function verificarMaioriaTopico(topicoId){
 }
 
 /* ============================================================
-   Aplicar edição — ação concreta que já resolve o tópico de erro na
+   Aplicar edição – ação concreta que já resolve o tópico de erro na
    hora (não precisa esperar votação de mais 2 pessoas), mas quem não
    participou ainda vê o tópico até dar seu próprio veredito, igual
    qualquer outra resolução
@@ -2545,7 +2561,7 @@ async function salvarEdicaoTopico(questaoId, topicoId){
 }
 
 /* ============================================================
-   Anular questão — outro desfecho possível de um tópico de erro. Quem
+   Anular questão – outro desfecho possível de um tópico de erro. Quem
    já respondeu ganha o ponto como acerto (mesmo quem errou), igual
    anulação de prova de verdade; a questão nunca mais entra em cadernos
    novos.
@@ -2768,7 +2784,7 @@ async function carregarMetricasPessoais(){
 
   elPiores.innerHTML = piores.length
     ? piores.map(cardQuestaoDificil).join('')
-    : '<p style="color:#888;font-size:var(--fs-c)">Nenhum erro registrado nesse período — mandou bem!</p>';
+    : '<p style="color:#888;font-size:var(--fs-c)">Nenhum erro registrado nesse período – mandou bem!</p>';
 
   /* ---- favoritos que você mais erra ---- */
   const {data: meusFavoritos} = await sb.from('favoritos').select('questao_id').eq('usuario_id', usuarioAtual.id);
@@ -2798,7 +2814,7 @@ async function carregarMetricasPessoais(){
   }
 }
 
-// Tela de detalhe de um caderno CONCLUÍDO específico — mesma lógica de
+// Tela de detalhe de um caderno CONCLUÍDO específico – mesma lógica de
 // estatística por módulo de carregarMetricasPessoais(), só que filtrada por
 // um caderno_id em vez do histórico inteiro do usuário
 async function abrirDetalheCadernoConcluido(cadernoId){
@@ -2916,7 +2932,7 @@ async function enviarUpload(){
     explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada'
   })));
 
-  // NOTA: checagem de duplicata via pg_trgm ainda não implementada aqui —
+  // NOTA: checagem de duplicata via pg_trgm ainda não implementada aqui –
   // precisa de uma função RPC no Postgres (similaridade de enunciado) que
   // ainda não foi criada no schema. A adicionar numa próxima passada.
 
@@ -2956,7 +2972,7 @@ async function buscarCadernoAdmin(){
   const {data, error} = await sb.rpc('ver_caderno_de', {p_usuario_id: uid, p_caderno_id: cid});
   const el = document.getElementById('admin-caderno-resultado');
   if(error || !data || !data.length){ el.innerHTML = '<p>Nada encontrado (ou você não tem permissão admin).</p>'; return; }
-  el.innerHTML = data.map(r=>`<div class="card-questao">Resposta: ${r.resposta_dada} — ${r.correta?'✅':'❌'}</div>`).join('');
+  el.innerHTML = data.map(r=>`<div class="card-questao">Resposta: ${r.resposta_dada} – ${r.correta?'✅':'❌'}</div>`).join('');
 }
 </script>
 </body>
