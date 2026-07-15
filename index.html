@@ -364,7 +364,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <div class="topbar">
     <img src="assets/logo.png" alt="Claude Quest" style="height:32px;width:auto;display:block">
-    <button class="avatar-btn" onclick="abrirModalPerfil()" id="avatar-inicial">?</button>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="btn-secundario hidden" id="btn-abrir-admin" style="width:auto;padding:6px 12px;font-size:var(--fs-b);font-weight:700;text-transform:uppercase;letter-spacing:0.03em" onclick="abrirModal('modal-admin')">Admin</button>
+      <button class="avatar-btn" onclick="abrirModalPerfil()" id="avatar-inicial">?</button>
+    </div>
   </div>
 
   <div class="content" id="content">
@@ -619,7 +622,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div style="border-top:0.5px solid #eee;margin:20px 0 14px"></div>
 
-    <button class="btn-secundario hidden" id="btn-abrir-admin" style="width:100%;margin-bottom:10px" onclick="abrirModal('modal-admin')">Painel admin</button>
     <button class="btn-secundario" style="width:100%;color:#B00020" onclick="sair()">Sair da conta</button>
   </div>
 </div>
@@ -737,10 +739,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-admin">
   <div class="modal-conteudo">
     <h3 class="config-title">Painel admin</h3>
-    <div class="filter-btn active" onclick="trocarAbaAdmin('erros')">Erros técnicos</div>
-    <div class="filter-btn" onclick="trocarAbaAdmin('malformadas')">Questões malformadas</div>
-    <div class="filter-btn" onclick="trocarAbaAdmin('caderno')">Buscar caderno</div>
-    <div class="filter-btn" onclick="trocarAbaAdmin('convites')">Convites</div>
+    <div class="filter-btn active" style="font-size:var(--fs-e);padding:10px" onclick="trocarAbaAdmin('erros')">Erros técnicos</div>
+    <div class="filter-btn" style="font-size:var(--fs-e);padding:10px" onclick="trocarAbaAdmin('malformadas')">Questões malformadas</div>
+    <div class="filter-btn" style="font-size:var(--fs-e);padding:10px" onclick="trocarAbaAdmin('caderno')">Buscar caderno</div>
+    <div class="filter-btn" style="font-size:var(--fs-e);padding:10px" onclick="trocarAbaAdmin('convites')">Convites</div>
     <div id="admin-conteudo" style="margin-top:14px"></div>
     <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-admin')">Fechar</button>
   </div>
