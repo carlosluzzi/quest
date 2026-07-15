@@ -488,7 +488,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     </div>
 
     <div id="quests-resolucao" class="hidden">
-      <div style="color:#888;cursor:pointer;margin-bottom:16px;font-size:var(--fs-d)" onclick="fecharCadernoResolucao()">← Quest</div>
+      <div style="color:#888;cursor:pointer;margin-bottom:16px;font-size:16px" onclick="fecharCadernoResolucao()">← Quest</div>
       <div id="pills-nav-caderno" class="pills-nav"></div>
       <div id="questao-atual"></div>
     </div>
@@ -693,12 +693,15 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-questao-detalhe" onclick="if(event.target===this) fecharModal('modal-questao-detalhe')">
-  <div class="modal-conteudo modal-conteudo-fluxo-topico" id="modal-questao-detalhe-conteudo" style="position:relative;height:560px"></div>
+  <div class="modal-conteudo modal-conteudo-fluxo-topico" style="position:relative;height:620px;max-width:380px;display:flex;flex-direction:column">
+    <div id="modal-questao-detalhe-conteudo" style="flex:1;min-height:0;overflow-y:auto"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:10px;flex-shrink:0" onclick="fecharModal('modal-questao-detalhe')">Fechar</button>
+  </div>
 </div>
 
 <div id="view-topico-detalhe" class="hidden">
   <div class="topbar-voltar">
-    <button onclick="fecharViewTopico()" style="color:#888;font-size:var(--fs-d);cursor:pointer;background:none;border:none;padding:0">← Fórum</button>
+    <button onclick="fecharViewTopico()" style="color:#888;font-size:16px;cursor:pointer;background:none;border:none;padding:0">← Fórum</button>
   </div>
   <div id="conteudo-topico-detalhe" style="position:relative"></div>
 </div>
