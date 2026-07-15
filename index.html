@@ -2408,10 +2408,19 @@ async function carregarForum(){
   const idsTopicos = ativos.map(t=>t.id);
   const infoComentarios = {};
   if(idsTopicos.length){
-    const {data: comentariosTodos} = await sb.from('comentarios').select('topico_id, criado_em').in('topico_id', idsTopicos).order('criado_em',{ascending:false});
+    const [{data: comentariosTodos}, {data: propostasTodas}] = await Promise.all([
+      sb.from('comentarios').select('topico_id, criado_em').in('topico_id', idsTopicos).order('criado_em',{ascending:false}),
+      sb.from('propostas_edicao').select('topico_id, criado_em').in('topico_id', idsTopicos).order('criado_em',{ascending:false})
+    ]);
     (comentariosTodos||[]).forEach(c=>{
       if(!infoComentarios[c.topico_id]) infoComentarios[c.topico_id] = {total:0, ultima:c.criado_em};
       infoComentarios[c.topico_id].total++;
+    });
+    // propor uma edição/anulação também é atividade que deve atualizar a
+    // posição na lista, mesmo não sendo tecnicamente um comentário
+    (propostasTodas||[]).forEach(p=>{
+      if(!infoComentarios[p.topico_id]) infoComentarios[p.topico_id] = {total:0, ultima:p.criado_em};
+      else if(p.criado_em > infoComentarios[p.topico_id].ultima) infoComentarios[p.topico_id].ultima = p.criado_em;
     });
   }
 
@@ -2603,13 +2612,16 @@ async function renderizarTopico(topicoId){
       verificarNotificacaoRespostaDiscussao();
     });
   }
-  const [{data: comentarios}, {data: votos}, {data: propostaPendente}] = await Promise.all([
+  const [{data: comentarios}, {data: votos}, {data: ultimaProposta}] = await Promise.all([
     sb.from('comentarios').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).order('criado_em', {ascending:true}),
     sb.from('votos_resolucao').select('*, usuarios(nome)').eq('topico_id', topicoId),
     topico.tipo==='erro'
-      ? sb.from('propostas_edicao').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).eq('status','pendente').maybeSingle()
+      ? sb.from('propostas_edicao').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).order('criado_em', {ascending:false}).limit(1).maybeSingle()
       : Promise.resolve({data:null})
   ]);
+  // a proposta pode já estar "aplicada" (se a maioria bateu antes de você
+  // votar) – só mostra a caixa de "proposta pendente" se ainda não foi
+  const propostaPendente = ultimaProposta && ultimaProposta.status==='pendente' ? ultimaProposta : null;
 
   const totalVotos = (votos||[]).length;
   const meuVoto = (votos||[]).find(v=>v.usuario_id===usuarioAtual.id);
@@ -2630,10 +2642,13 @@ async function renderizarTopico(topicoId){
         <button class="btn-secundario" style="margin-top:8px" onclick="desfazerVotoResolucao('${topicoId}')">Desfazer meu voto</button>
       </div>`;
   }else if(topico.status==='resolvido'){
+    const textoMaioria = ultimaProposta
+      ? (ultimaProposta.tipo==='anulacao' ? 'A maioria já aprovou essa anulação. Você concorda?' : 'A maioria já aprovou essa edição. Você concorda?')
+      : 'A maioria já considera isso resolvido. Você concorda?';
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px;padding:12px;background:#FEF6E4;border-radius:10px">
         <div style="font-size:var(--fs-d);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver – ${listaVotantes}</div>
-        <div style="font-size:var(--fs-d);font-weight:600;margin-top:4px">A maioria já considera isso resolvido. Você concorda?</div>
+        <div style="font-size:var(--fs-d);font-weight:600;margin-top:4px">${textoMaioria}</div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn-secundario" style="flex:1" onclick="reabrirTopico('${topicoId}')">Reabrir</button>
           <button class="btn-primario" style="flex:1" onclick="votarResolvido('${topicoId}')">Concordar</button>
@@ -2652,9 +2667,12 @@ async function renderizarTopico(topicoId){
 
   const blocoPropostaPendente = propostaPendente ? (
     propostaPendente.tipo==='anulacao' ? `
-    <div style="margin-top:14px;padding:12px;background:#FCEBEB;border-radius:10px;border:0.5px solid #F7C1C1">
-      <div style="font-size:var(--fs-d);font-weight:600;color:#A32D2D">Proposta de anular essa questão, de ${escapeHtml(propostaPendente.usuarios?.nome||'alguém')}</div>
-      <p style="font-size:var(--fs-d);color:#666;margin-top:4px">Quem já respondeu (de qualquer jeito) passa a ter a resposta contada como acerto. Essa ação não pode ser desfeita depois de aprovada.</p>
+    <div class="card-questao" style="margin-top:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        ${avatarMiniHtml(propostaPendente.usuarios)}
+        <span style="font-size:var(--fs-d);color:#666">${escapeHtml(propostaPendente.usuarios?.nome||'Alguém')} propôs esta anulação:</span>
+      </div>
+      <p style="font-size:var(--fs-d);color:#111;line-height:1.6">Quem já respondeu (de qualquer jeito) passa a ter a resposta contada como acerto. Essa ação não pode ser desfeita depois de aprovada.</p>
     </div>` : `
     <div class="card-questao" style="margin-top:14px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
