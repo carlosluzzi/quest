@@ -2458,7 +2458,7 @@ function renderizarListaForum(){
         ${badgeTipoTopico(f.tipo)}
       </div>
       <div style="font-size:var(--fs-d);font-weight:600;color:#111;text-transform:uppercase">${escapeHtml(f.titulo)}</div>
-      <p style="font-size:var(--fs-c);color:#888;margin-top:2px">${escapeHtml((f.questoes?.enunciado||'').slice(0,90))}...</p>
+      <p style="font-size:var(--fs-c);color:#888;margin-top:0">${escapeHtml((f.questoes?.enunciado||'').slice(0,90))}...</p>
       <div style="display:flex;justify-content:space-between;color:#888;font-size:var(--fs-b);margin-top:8px">
         <span>${f.totalComentarios} ${f.totalComentarios===1?'comentário':'comentários'}</span>
         <span>${tempoRelativo(f.ultimaAtividade)}</span>
@@ -2638,9 +2638,12 @@ async function renderizarTopico(topicoId){
       verificarNotificacaoRespostaDiscussao();
     });
   }
-  const [{data: comentarios}, {data: votos}] = await Promise.all([
+  const [{data: comentarios}, {data: votos}, {data: propostaPendente}] = await Promise.all([
     sb.from('comentarios').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).order('criado_em', {ascending:true}),
-    sb.from('votos_resolucao').select('*, usuarios(nome)').eq('topico_id', topicoId)
+    sb.from('votos_resolucao').select('*, usuarios(nome)').eq('topico_id', topicoId),
+    topico.tipo==='erro'
+      ? sb.from('propostas_edicao').select('*, usuarios(nome)').eq('topico_id', topicoId).eq('status','pendente').maybeSingle()
+      : Promise.resolve({data:null})
   ]);
 
   const totalVotos = (votos||[]).length;
@@ -2648,6 +2651,9 @@ async function renderizarTopico(topicoId){
   const temComentario = (comentarios||[]).length > 0;
   const listaVotantes = (votos||[]).map(v=>escapeHtml(v.usuarios?.nome||'?')).join(', ');
 
+  const textoBotaoResolver = propostaPendente
+    ? (propostaPendente.tipo==='anulacao' ? 'Aprovar essa anulação' : 'Aprovar essa edição')
+    : 'Marcar como resolvido';
   let blocoVotacao = '';
   if(!temComentario){
     blocoVotacao = `<p style="color:#888;font-size:var(--fs-c);text-align:center;margin-top:14px">Precisa de pelo menos uma resposta na discussão antes de poder ser marcada como resolvida.</p>`;
@@ -2673,17 +2679,34 @@ async function renderizarTopico(topicoId){
       <div style="text-align:center;margin-top:14px">
         <div style="font-size:var(--fs-c);color:#666;margin-bottom:8px">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
         <div style="display:inline-flex;align-items:center;gap:6px">
-          <button class="btn-secundario" onclick="votarResolvido('${topicoId}')">Marcar como resolvido</button>
+          <button class="btn-secundario" onclick="votarResolvido('${topicoId}')">${textoBotaoResolver}</button>
           <span class="info-icone" onclick="abrirModal('modal-info-resolucao')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
         </div>
       </div>`;
   }
 
-  const acoesErro = (topico.tipo==='erro' && topico.status==='aberto') ? `
+  const blocoPropostaPendente = propostaPendente ? (
+    propostaPendente.tipo==='anulacao' ? `
+    <div style="margin-top:14px;padding:12px;background:#FCEBEB;border-radius:10px;border:0.5px solid #F7C1C1">
+      <div style="font-size:var(--fs-c);font-weight:600;color:#A32D2D">Proposta de anular essa questão, de ${escapeHtml(propostaPendente.usuarios?.nome||'alguém')}</div>
+      <p style="font-size:var(--fs-c);color:#666;margin-top:4px">Quem já respondeu (de qualquer jeito) passa a ter a resposta contada como acerto. Essa ação não pode ser desfeita depois de aprovada.</p>
+    </div>` : `
+    <div style="margin-top:14px;padding:12px;background:#F0F7EC;border-radius:10px;border:0.5px solid #CDE6BC">
+      <div style="font-size:var(--fs-c);font-weight:600;color:#3B6D11;margin-bottom:8px">Proposta de edição de ${escapeHtml(propostaPendente.usuarios?.nome||'alguém')}</div>
+      <div style="font-size:var(--fs-b);color:#888">Enunciado</div>
+      <p style="font-size:var(--fs-c);white-space:pre-wrap">${escapeHtml(propostaPendente.enunciado||'')}</p>
+      <div style="font-size:var(--fs-b);color:#888;margin-top:6px">Alternativas</div>
+      <p style="font-size:var(--fs-c);white-space:pre-wrap">${escapeHtml(propostaPendente.alternativas||'')}</p>
+      <div style="font-size:var(--fs-b);color:#888;margin-top:6px">Gabarito</div>
+      <p style="font-size:var(--fs-c)">${escapeHtml((propostaPendente.gabarito||'').toUpperCase())}</p>
+    </div>`
+  ) : '';
+
+  const acoesErro = (topico.tipo==='erro' && topico.status==='aberto' && !propostaPendente) ? `
     <div style="display:flex;align-items:center;gap:6px;margin-top:14px">
       <button class="btn-secundario" style="flex:1;color:#A32D2D;border-color:#F7C1C1" onclick="confirmarAnularQuestao('${topico.questoes.id}','${topicoId}')">Anular questão</button>
       <span class="info-icone" onclick="abrirModal('modal-info-anulacao-topico')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
-      <button class="btn-primario" style="flex:1" onclick="abrirFormularioEdicao('${topico.questoes.id}','${topicoId}')">Aplicar edição</button>
+      <button class="btn-primario" style="flex:1" onclick="abrirFormularioEdicao('${topico.questoes.id}','${topicoId}')">Propor edição</button>
     </div>` : '';
 
   const html = `
@@ -2693,6 +2716,7 @@ async function renderizarTopico(topicoId){
     <div>${renderizarListaComentarios(comentarios||[])}</div>
     <textarea id="novo-comentario-topico" class="textarea-padrao" placeholder="Comentar..." style="min-height:100px"></textarea>
     <button class="btn-primario" style="width:100%" onclick="enviarComentarioTopico('${topicoId}')">Comentar</button>
+    ${blocoPropostaPendente}
     ${blocoVotacao}
     ${acoesErro}
   `;
@@ -2731,44 +2755,70 @@ async function reabrirTopico(topicoId){
 async function verificarMaioriaTopico(topicoId){
   const {data: votos} = await sb.from('votos_resolucao').select('id').eq('topico_id', topicoId);
   const total = (votos||[]).length;
-  await sb.from('topicos').update({status: total >= VOTOS_PRA_RESOLVER ? 'resolvido' : 'aberto'}).eq('id', topicoId);
+  const resolvido = total >= VOTOS_PRA_RESOLVER;
+  await sb.from('topicos').update({status: resolvido ? 'resolvido' : 'aberto'}).eq('id', topicoId);
+
+  if(resolvido){
+    // se tinha uma proposta pendente pra esse tópico (edição ou anulação), a
+    // maioria que acabou de bater É a aprovação dela – aplica agora, de uma vez
+    const {data: proposta} = await sb.from('propostas_edicao').select('*').eq('topico_id', topicoId).eq('status','pendente').maybeSingle();
+    if(proposta){
+      if(proposta.tipo==='anulacao'){
+        await Promise.all([
+          sb.from('questoes').update({anulada:true, atualizado_em: new Date().toISOString()}).eq('id', proposta.questao_id),
+          sb.from('respostas').update({correta:true, foi_anulada:true, anulacao_vista:false}).eq('questao_id', proposta.questao_id)
+        ]);
+      }else{
+        await sb.from('questoes').update({
+          enunciado: proposta.enunciado,
+          alternativas: proposta.alternativas,
+          gabarito: proposta.gabarito,
+          atualizado_em: new Date().toISOString()
+        }).eq('id', proposta.questao_id);
+      }
+      await sb.from('propostas_edicao').update({status:'aplicada'}).eq('id', proposta.id);
+    }
+  }
 }
 
 /* ============================================================
-   Aplicar edição – ação concreta que já resolve o tópico de erro na
-   hora (não precisa esperar votação de mais 2 pessoas), mas quem não
-   participou ainda vê o tópico até dar seu próprio veredito, igual
-   qualquer outra resolução
+   Propor edição – não muda a questão na hora. Fica como proposta
+   pendente até a votação de resolução (mesmo mecanismo de sempre)
+   atingir maioria; aí sim os campos propostos são aplicados
+   automaticamente (ver verificarMaioriaTopico)
    ============================================================ */
-async function resolverTopicoPorAcao(topicoId){
-  await sb.from('topicos').update({status:'resolvido'}).eq('id', topicoId);
-  await sb.from('votos_resolucao').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id}, {onConflict:'topico_id,usuario_id'});
-  await atualizarNotificacoesForum();
-}
-
 async function abrirFormularioEdicao(questaoId, topicoId){
   const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
   const html = `
-    <div class="section-title" style="margin-top:0">Aplicar edição</div>
+    <div class="section-title" style="margin-top:0">Propor edição</div>
     <label style="font-size:var(--fs-c);color:#888">Enunciado</label>
     <textarea id="edicao-enunciado" class="filter-select" style="min-height:90px">${escapeHtml(q.enunciado||'')}</textarea>
     <label style="font-size:var(--fs-c);color:#888">Alternativas</label>
     <textarea id="edicao-alternativas" class="filter-select" style="min-height:90px">${escapeHtml(q.alternativas||'')}</textarea>
     <label style="font-size:var(--fs-c);color:#888">Gabarito (uma letra, a-e)</label>
     <input type="text" id="edicao-gabarito" class="filter-select" value="${escapeHtml(q.gabarito||'')}" maxlength="1">
-    <button class="btn-primario" onclick="salvarEdicaoTopico('${questaoId}','${topicoId}')">Salvar edição</button>
+    <button class="btn-primario" onclick="enviarPropostaEdicao('${questaoId}','${topicoId}')">Enviar proposta</button>
     <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="renderizarTopico('${topicoId}')">Cancelar</button>
   `;
   document.getElementById(containerTopicoAtual()).innerHTML = html;
 }
 
-async function salvarEdicaoTopico(questaoId, topicoId){
+async function enviarPropostaEdicao(questaoId, topicoId){
   const enunciado = document.getElementById('edicao-enunciado').value.trim();
   const alternativas = document.getElementById('edicao-alternativas').value.trim();
   const gabarito = document.getElementById('edicao-gabarito').value.trim().toLowerCase();
-  await sb.from('questoes').update({enunciado, alternativas, gabarito, atualizado_em: new Date().toISOString()}).eq('id', questaoId);
-  await resolverTopicoPorAcao(topicoId);
+  const {error} = await sb.from('propostas_edicao').insert({
+    topico_id: topicoId, questao_id: questaoId, enunciado, alternativas, gabarito, criado_por: usuarioAtual.id
+  });
+  if(error){
+    alert('Erro ao enviar proposta: '+error.message);
+    return;
+  }
+  // quem propôs já entra automaticamente como o primeiro voto a favor
+  await sb.from('votos_resolucao').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id}, {onConflict:'topico_id,usuario_id'});
+  await verificarMaioriaTopico(topicoId);
   await renderizarTopico(topicoId);
+  await atualizarNotificacoesForum();
 }
 
 /* ============================================================
@@ -2787,14 +2837,20 @@ function confirmarAnularQuestao(questaoId, topicoId){
 async function executarAnulacaoQuestao(){
   if(!questaoParaAnular) return;
   const {questaoId, topicoId} = questaoParaAnular;
-  await Promise.all([
-    sb.from('questoes').update({anulada:true, atualizado_em: new Date().toISOString()}).eq('id', questaoId),
-    sb.from('respostas').update({correta:true, foi_anulada:true, anulacao_vista:false}).eq('questao_id', questaoId)
-  ]);
-  await resolverTopicoPorAcao(topicoId);
+  const {error} = await sb.from('propostas_edicao').insert({
+    topico_id: topicoId, questao_id: questaoId, tipo: 'anulacao', criado_por: usuarioAtual.id
+  });
   questaoParaAnular = null;
   fecharModal('modal-confirmar-anulacao');
+  if(error){
+    alert('Erro ao propor anulação: '+error.message);
+    return;
+  }
+  // quem propôs já entra automaticamente como o primeiro voto a favor
+  await sb.from('votos_resolucao').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id}, {onConflict:'topico_id,usuario_id'});
+  await verificarMaioriaTopico(topicoId);
   await renderizarTopico(topicoId);
+  await atualizarNotificacoesForum();
 }
 
 /* ============================================================
