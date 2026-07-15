@@ -107,6 +107,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* --- Bottom nav --- */
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
 .nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative}
+#nav-item-adicionar{display:none}
 .badge-notificacao{position:absolute;top:10px;right:calc(50% - 24px);background:#E24B4A;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:16px}
 .nav-item.active{background:#f0f0ee}
 .nav-icon{width:21px;height:21px;color:#888;display:flex;align-items:center;justify-content:center}
@@ -123,6 +124,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   #app-shell{max-width:100%}
   .topbar{max-width:100%}
   #bottom-nav{max-width:100%}
+  #wrapper-barra-adicionar{max-width:100%}
   .content{padding:24px;padding-bottom:calc(var(--nav-height, 76px) + 24px)}
   .nav-label{font-size:var(--fs-b)}
   .section-title{margin-top:28px}
@@ -139,6 +141,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
   .topbar{grid-column:1/-1;grid-row:1;max-width:100%;padding:16px 32px;z-index:20}
   #bottom-nav{grid-column:1;grid-row:2;position:sticky;left:auto;bottom:auto;transform:none;width:100%;max-width:none;border-top:none;border-right:0.5px solid #e0e0e0;flex-direction:column;padding:20px 14px;gap:6px;align-self:start;top:0;height:100%}
   .nav-item{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;border-radius:9px;width:100%}
+  #nav-item-adicionar{display:flex}
+  #wrapper-barra-adicionar{display:none}
   .nav-icon{width:18px;height:18px}
   .nav-label{font-size:var(--fs-e)}
   .content{grid-column:2;grid-row:2;padding:32px 48px;max-width:1320px;width:100%}
@@ -179,6 +183,17 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #conteudo-topico-detalhe{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px}
 .modal-overlay.hidden{display:none}
 .modal-conteudo{background:#fff;border-radius:14px;padding:20px;width:100%;max-width:340px;max-height:85vh;overflow-y:auto}
+
+/* "Adicionar questões" é um híbrido: no mobile/tablet se comporta como um
+   modal (popup por cima de tudo); a partir do desktop (1100px, onde o menu
+   vira lateral) vira uma página normal, igual as outras abas — sem overlay,
+   sem fundo escurecido, ocupando a área de conteúdo normalmente */
+#aba-adicionar{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+#aba-adicionar.hidden{display:none}
+@media(min-width:1100px){
+  #aba-adicionar{position:static;inset:auto;background:none;display:block;padding:0;z-index:auto}
+  #aba-adicionar .modal-conteudo{max-width:520px;max-height:none;overflow-y:visible;padding:0;border-radius:0}
+}
 .modal-conteudo-fluxo-topico{height:420px;box-sizing:border-box}
 
 /* --- Alternativas de questão (padrão herdado do app pessoal) --- */
@@ -325,7 +340,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="view-instalar-app" class="hidden">
 <div class="login-inner">
   <div style="text-align:center">
-    <img src="assets/logo.png" alt="Claude Quest" style="height:40px;width:auto;margin-bottom:24px">
+    <img src="assets/logo.png" alt="Claude Quest" style="height:40px;width:auto;margin-bottom:24px;margin-left:-9px">
     <h1>Instale como app</h1>
     <p id="instrucao-instalacao-navegador">Carregando instruções pro seu aparelho...</p>
     <p style="color:#888;font-size:var(--fs-d);margin-top:16px">Assim você tem acesso rápido, direto da tela inicial,<br>sem a barra do navegador ocupando espaço.</p>
@@ -466,7 +481,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
         </div>
         <div id="quests-sem-resultado" class="hidden" style="text-align:center;color:#888;margin-top:16px">
           Poucas ou nenhuma questão com esses filtros ainda –
-          <button style="color:var(--azul-marca);font-weight:600;text-decoration:underline" onclick="abrirModal('modal-upload')">que tal subir um PDF?</button>
+          <button style="color:var(--azul-marca);font-weight:600;text-decoration:underline" onclick="trocarAba('adicionar')">que tal subir um PDF?</button>
         </div>
       </div>
 
@@ -539,13 +554,20 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div id="lista-metricas-notas"></div>
   </div>
 
+  <!-- ===== ADICIONAR QUESTÕES (popup no mobile/tablet, página no desktop) ===== -->
+  <div class="view-aba hidden" id="aba-adicionar">
+    <div class="modal-conteudo">
+      <h3 class="config-title">Adicionar questões</h3>
+      <p style="color:#666;font-size:var(--fs-d)">Selecione o PDF com as questões que você deseja adicionar ao banco.</p>
+      <input type="file" id="upload-arquivo" accept="application/pdf" class="hidden" onchange="atualizarNomeArquivoSelecionado()">
+      <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 6px" onclick="document.getElementById('upload-arquivo').click()">Escolher arquivo</button>
+      <div id="nome-arquivo-selecionado" style="color:#888;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:20px">Nenhum arquivo selecionado</div>
+      <div id="upload-status"></div>
+      <button class="btn-primario" onclick="enviarUpload()">Extrair questões</button>
+      <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="trocarAba('inicio')">Cancelar</button>
+    </div>
   </div>
 
-  <div id="wrapper-barra-adicionar">
-    <button id="barra-adicionar-questoes" onclick="abrirModal('modal-upload')">
-      <span style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#D97757"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-      <span style="font-weight:700;font-size:var(--fs-e);color:#D97757;text-transform:uppercase;letter-spacing:0.02em">Adicionar questões</span>
-    </button>
   </div>
 
   <div class="bottom-nav" id="bottom-nav">
@@ -562,7 +584,17 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
     </div>
+    <div class="nav-item" id="nav-item-adicionar" data-aba="adicionar" onclick="trocarAba('adicionar')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span class="nav-label">Adicionar questões</span>
+    </div>
   </div>
+</div>
+
+<div id="wrapper-barra-adicionar">
+  <button id="barra-adicionar-questoes" onclick="trocarAba('adicionar')">
+    <span style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#D97757"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+    <span style="font-weight:700;font-size:var(--fs-e);color:#D97757;text-transform:uppercase;letter-spacing:0.02em">Adicionar questões</span>
+  </button>
 </div>
 
 <!-- ============================================================ -->
@@ -602,18 +634,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="modal-upload">
-  <div class="modal-conteudo">
-    <h3 class="config-title">Adicionar questões</h3>
-    <p style="color:#666;font-size:var(--fs-d)">Selecione o PDF com as questões que você deseja adicionar ao banco.</p>
-    <input type="file" id="upload-arquivo" accept="application/pdf" class="hidden" onchange="atualizarNomeArquivoSelecionado()">
-    <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 6px" onclick="document.getElementById('upload-arquivo').click()">Escolher arquivo</button>
-    <div id="nome-arquivo-selecionado" style="color:#888;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:20px">Nenhum arquivo selecionado</div>
-    <div id="upload-status"></div>
-    <button class="btn-primario" onclick="enviarUpload()">Extrair questões</button>
-    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-upload')">Cancelar</button>
-  </div>
-</div>
 
 <div class="modal-overlay hidden" id="modal-info-wilson">
   <div class="modal-conteudo">
@@ -693,9 +713,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-questao-detalhe" onclick="if(event.target===this) fecharModal('modal-questao-detalhe')">
-  <div class="modal-conteudo modal-conteudo-fluxo-topico" style="position:relative;height:620px;max-width:380px;display:flex;flex-direction:column">
-    <div id="modal-questao-detalhe-conteudo" style="flex:1;min-height:0;overflow-y:auto"></div>
-    <button class="btn-secundario" style="width:100%;margin-top:10px;flex-shrink:0" onclick="fecharModal('modal-questao-detalhe')">Fechar</button>
+  <div class="modal-conteudo modal-conteudo-fluxo-topico" style="position:relative;height:620px;max-width:380px;display:flex;flex-direction:column;padding-right:12px">
+    <div id="modal-questao-detalhe-conteudo" style="flex:1;min-height:0;overflow-y:auto;padding-right:10px"></div>
+    <div style="border-top:0.5px solid #eee;margin:12px 0 0;flex-shrink:0"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:12px;flex-shrink:0" onclick="fecharModal('modal-questao-detalhe')">Fechar</button>
   </div>
 </div>
 
@@ -1318,8 +1339,14 @@ function iniciarSwipeOnboarding(){
 function estaComoWebapp(){
   return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 }
+function ehIpad(){
+  // iPadOS finge ser um Mac de mesa no user agent, de propósito — a forma
+  // confiável de detectar é combinar "parece Mac" + "tem suporte a toque"
+  // (um Mac de verdade nunca tem maxTouchPoints > 1)
+  return /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
 function ehMobileOuTablet(){
-  return /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
+  return /iPhone|iPad|iPod|Android/.test(navigator.userAgent) || ehIpad();
 }
 function detectarInstrucaoInstalacao(elId){
   const ua = navigator.userAgent;
@@ -1331,7 +1358,7 @@ function detectarInstrucaoInstalacao(elId){
   const SVG_TRES_PONTOS_ANDROID = '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" style="vertical-align:-4px;margin:0 3px"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';
   const SVG_INSTALAR_ANDROID = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin:0 3px"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 7v7"/><path d="M9 11l3 3 3-3"/></svg>';
 
-  if(/iPhone|iPad|iPod/.test(ua)){
+  if(/iPhone|iPad|iPod/.test(ua) || ehIpad()){
     el.innerHTML = `No Safari, toque no ícone de compartilhar${SVG_COMPARTILHAR_IOS}<br>e depois em ${SVG_ADICIONAR_IOS}"Adicionar à Tela de Início".`;
   }else if(/Android/.test(ua)){
     el.innerHTML = `No Chrome, toque nos três pontinhos${SVG_TRES_PONTOS_ANDROID}<br>no canto e depois em ${SVG_INSTALAR_ANDROID}"Instalar app" (ou "Adicionar à tela inicial").`;
@@ -1393,7 +1420,12 @@ async function mostrarAppShell(){
 
 function medirAlturaNav(){
   const nav = document.getElementById('bottom-nav');
-  if(nav) document.documentElement.style.setProperty('--nav-height', nav.offsetHeight + 'px');
+  if(!nav) return;
+  // a partir de 1100px o menu vira barra lateral (ocupa a tela toda de
+  // cima a baixo) — nesse caso não existe barra embaixo pra reservar
+  // espaço, senão a altura medida seria a tela inteira por engano
+  const alturaReal = window.innerWidth >= 1100 ? 0 : nav.offsetHeight;
+  document.documentElement.style.setProperty('--nav-height', alturaReal + 'px');
 }
 window.addEventListener('resize', medirAlturaNav);
 
@@ -2640,7 +2672,8 @@ async function renderizarTopico(topicoId){
   }else if(meuVoto){
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px;padding:12px;background:#F5F5F4;border-radius:10px">
-        <div style="font-size:var(--fs-d);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
+        <div style="font-size:var(--fs-d);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver</div>
+        ${listaVotantes ? `<div style="font-size:var(--fs-b);color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${listaVotantes}</div>` : ''}
         <div style="font-size:var(--fs-d);color:#3B6D11;margin-top:4px;font-weight:600">Você votou que está resolvido</div>
         <button class="btn-secundario" style="margin-top:8px" onclick="desfazerVotoResolucao('${topicoId}')">Desfazer meu voto</button>
       </div>`;
@@ -2650,7 +2683,8 @@ async function renderizarTopico(topicoId){
       : 'A maioria já considera isso resolvido. Você concorda?';
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px;padding:12px;background:#FEF6E4;border-radius:10px">
-        <div style="font-size:var(--fs-d);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver – ${listaVotantes}</div>
+        <div style="font-size:var(--fs-d);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver</div>
+        ${listaVotantes ? `<div style="font-size:var(--fs-b);color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${listaVotantes}</div>` : ''}
         <div style="font-size:var(--fs-d);font-weight:600;margin-top:4px">${textoMaioria}</div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn-secundario" style="flex:1" onclick="reabrirTopico('${topicoId}')">Reabrir</button>
@@ -2660,8 +2694,9 @@ async function renderizarTopico(topicoId){
   }else{
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px">
-        <div style="font-size:var(--fs-d);color:#666;margin-bottom:8px">${totalVotos} de ${votosParaResolver()} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
-        <div style="display:inline-flex;align-items:center;gap:6px">
+        <div style="font-size:var(--fs-d);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver</div>
+        ${listaVotantes ? `<div style="font-size:var(--fs-b);color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px">${listaVotantes}</div>` : ''}
+        <div style="display:inline-flex;align-items:center;gap:6px;margin-top:4px">
           <button class="btn-secundario" onclick="votarResolvido('${topicoId}')">${textoBotaoResolver}</button>
           <span class="info-icone" onclick="abrirModalInfoResolucao()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
         </div>
