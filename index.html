@@ -496,9 +496,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <!-- ===== FÓRUM ===== -->
   <div class="view-aba hidden" id="aba-forum">
-    <input type="text" id="busca-forum" class="filter-select" placeholder="Buscar uma questão pra comentar..." oninput="buscarQuestaoForum(this.value)">
-    <div id="resultado-busca-forum" class="hidden" style="margin-bottom:16px"></div>
-
     <div id="lista-forum"><div class="loading-spinner"></div></div>
   </div>
 
@@ -2454,22 +2451,6 @@ function abrirTopicoDoForum(topicoId){
   abrirViewTopico();
   document.getElementById(containerTopicoAtual()).innerHTML = '<div class="loading-spinner"></div>';
   renderizarTopico(topicoId);
-}
-
-let buscaForumDebounce = null;
-function buscarQuestaoForum(termo){
-  clearTimeout(buscaForumDebounce);
-  const el = document.getElementById('resultado-busca-forum');
-  if(!termo || termo.trim().length < 3){ el.classList.add('hidden'); el.innerHTML=''; return; }
-  buscaForumDebounce = setTimeout(async ()=>{
-    const {data} = await sb.from('questoes').select('id, enunciado, modulo_pscpp').ilike('enunciado', `%${termo.trim()}%`).limit(10);
-    el.innerHTML = (data && data.length) ? data.map(q=>`
-      <div class="card-questao" style="cursor:pointer" onclick="abrirDetalheQuestao('${q.id}')">
-        ${tagModulo(q.modulo_pscpp)}
-        <p style="font-size:var(--fs-d);margin-top:6px">${escapeHtml((q.enunciado||'').slice(0,120))}...</p>
-      </div>`).join('') : '<p style="color:#888;font-size:var(--fs-d)">Nenhuma questão encontrada.</p>';
-    el.classList.remove('hidden');
-  }, 350);
 }
 
 function tempoRelativo(dataIso){
