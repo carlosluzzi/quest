@@ -2736,8 +2736,14 @@ async function renderizarTopico(topicoId){
     let corFundo, iconeStatus, linhaBotoes;
     if(meuVoto){
       corFundo = '#F5F5F4';
-      iconeStatus = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#3B6D11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-      linhaBotoes = `<button onclick="desfazerVotoResolucao('${topicoId}')" style="background:none;border:none;padding:10px 0;color:#888;font-size:var(--fs-b);cursor:pointer;text-decoration:underline;margin-top:6px;display:block;width:100%">Desfazer meu voto</button>`;
+      iconeStatus = '';
+      linhaBotoes = `<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px">
+        <span style="display:inline-flex;align-items:center;gap:4px;color:#3B6D11;font-size:var(--fs-b);font-weight:600">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#3B6D11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Aprovado
+        </span>
+        <button onclick="desfazerVotoResolucao('${topicoId}')" style="background:none;border:none;padding:10px 0;color:#888;font-size:var(--fs-b);cursor:pointer;text-decoration:underline">Desfazer</button>
+      </div>`;
     }else if(topico.status==='resolvido'){
       corFundo = '#FEF6E4';
       iconeStatus = '';
@@ -2747,14 +2753,14 @@ async function renderizarTopico(topicoId){
       linhaBotoes = `
         <div style="font-size:var(--fs-d);font-weight:600;margin-top:6px">${textoMaioria}</div>
         <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn-secundario" style="flex:1" onclick="reabrirTopico('${topicoId}')">Reabrir</button>
+          <button class="btn-secundario" style="flex:1;border:1px solid #ccc" onclick="reabrirTopico('${topicoId}')">Reabrir</button>
           <button class="btn-primario" style="flex:1" onclick="votarResolvido('${topicoId}')">Concordar</button>
         </div>`;
     }else{
       corFundo = '#F5F5F4';
       iconeStatus = '';
       linhaBotoes = `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px">
-        <button class="btn-secundario" onclick="votarResolvido('${topicoId}')">${textoBotaoResolver}</button>
+        <button class="btn-secundario" style="border:1px solid #ccc" onclick="votarResolvido('${topicoId}')">${textoBotaoResolver}</button>
         <span class="info-icone" onclick="abrirModalInfoResolucao()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
       </div>`;
     }
