@@ -217,6 +217,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .loading-spinner{border:3px solid #EEE;border-top-color:var(--azul-marca);border-radius:50%;width:28px;height:28px;animation:girar 0.8s linear infinite;margin:20px auto}
 @keyframes girar{to{transform:rotate(360deg)}}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <script>
@@ -558,12 +559,31 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="view-aba hidden" id="aba-adicionar">
     <div class="modal-conteudo">
       <h3 class="config-title">Adicionar questões</h3>
-      <p style="color:#666;font-size:var(--fs-d)">Selecione o PDF com as questões que você deseja adicionar ao banco.</p>
-      <input type="file" id="upload-arquivo" accept="application/pdf" class="hidden" onchange="atualizarNomeArquivoSelecionado()">
-      <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 6px" onclick="document.getElementById('upload-arquivo').click()">Escolher arquivo</button>
-      <div id="nome-arquivo-selecionado" style="color:#888;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:20px">Nenhum arquivo selecionado</div>
-      <div id="upload-status"></div>
-      <button class="btn-primario" onclick="enviarUpload()">Extrair questões</button>
+
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div class="filter-btn active" id="toggle-upload-pdf" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="alternarTipoUpload('pdf')">PDF</div>
+        <div class="filter-btn" id="toggle-upload-planilha" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="alternarTipoUpload('planilha')">Planilha</div>
+      </div>
+
+      <div id="secao-upload-pdf">
+        <p style="color:#666;font-size:var(--fs-d)">Selecione o PDF com as questões que você deseja adicionar ao banco.</p>
+        <input type="file" id="upload-arquivo" accept="application/pdf" class="hidden" onchange="atualizarNomeArquivoSelecionado()">
+        <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 6px" onclick="document.getElementById('upload-arquivo').click()">Escolher arquivo</button>
+        <div id="nome-arquivo-selecionado" style="color:#888;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:20px">Nenhum arquivo selecionado</div>
+        <div id="upload-status"></div>
+        <button class="btn-primario" onclick="enviarUpload()">Extrair questões</button>
+      </div>
+
+      <div id="secao-upload-planilha" class="hidden">
+        <p style="color:#666;font-size:var(--fs-d)">Preenche a planilha-modelo com as questões (sem precisar de IA, é só copiar e colar) e sobe ela aqui.</p>
+        <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 10px" onclick="baixarModeloPlanilha()">Baixar planilha-modelo</button>
+        <input type="file" id="upload-planilha" accept=".xlsx" class="hidden" onchange="atualizarNomePlanilhaSelecionada()">
+        <button type="button" class="btn-secundario" style="width:100%;margin-bottom:6px" onclick="document.getElementById('upload-planilha').click()">Escolher planilha preenchida</button>
+        <div id="nome-planilha-selecionada" style="color:#888;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:20px">Nenhuma planilha selecionada</div>
+        <div id="upload-planilha-status"></div>
+        <button class="btn-primario" onclick="enviarPlanilha()">Cadastrar questões</button>
+      </div>
+
       <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="trocarAba('inicio')">Cancelar</button>
     </div>
   </div>
@@ -590,7 +610,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
-<div id="wrapper-barra-adicionar">
+<div id="wrapper-barra-adicionar" class="hidden">
   <button id="barra-adicionar-questoes" onclick="trocarAba('adicionar')">
     <span style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#D97757"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
     <span style="font-weight:700;font-size:var(--fs-e);color:#D97757;text-transform:uppercase;letter-spacing:0.02em">Adicionar questões</span>
@@ -1413,6 +1433,7 @@ async function mostrarAppShell(){
   // girando ou notificação surgindo aos poucos depois que already apareceu
   document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('app-shell').classList.add('ativo');
+  document.getElementById('wrapper-barra-adicionar').classList.remove('hidden'); // app abre sempre na aba Início
   medirAlturaNav(); // só mede depois que o menu está visível de verdade, senão dá 0
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança
   iniciarRealtimeForum();
@@ -2520,9 +2541,16 @@ function avatarMiniHtml(usuario){
   return `<div style="width:28px;height:28px;border-radius:50%;background:#D97757;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0">${escapeHtml(nome[0].toUpperCase())}</div>`;
 }
 
+let comentariosCacheAtual = {};
 function renderizarListaComentarios(lista){
+  comentariosCacheAtual = {};
+  lista.forEach(c => { comentariosCacheAtual[c.id] = c; });
   if(!lista.length) return '<p style="color:#888;font-size:var(--fs-d)">Nenhum comentário ainda.</p>';
-  return lista.map(c=>`
+  return lista.map(c=>{
+    const pai = c.resposta_a ? comentariosCacheAtual[c.resposta_a] : null;
+    const citacao = pai ? `
+        <div style="font-size:var(--fs-b);color:#888;border-left:2px solid #ddd;padding-left:8px;margin:2px 0 4px">↳ Respondendo a <strong>${escapeHtml(pai.usuarios?.nome||'?')}</strong>: "${escapeHtml((pai.texto||'').slice(0,60))}${(pai.texto||'').length>60?'…':''}"</div>` : '';
+    return `
     <div style="display:flex;gap:8px;margin-bottom:12px">
       ${avatarMiniHtml(c.usuarios)}
       <div style="flex:1;min-width:0">
@@ -2530,9 +2558,25 @@ function renderizarListaComentarios(lista){
           <span style="font-weight:600;color:#111;font-size:var(--fs-d)">${escapeHtml(c.usuarios?.nome||'?')}</span>
           <span style="font-size:var(--fs-b);color:#888;white-space:nowrap">${tempoRelativo(c.criado_em)}</span>
         </div>
+        ${citacao}
         <div style="font-size:var(--fs-d)">${escapeHtml(c.texto)}</div>
+        <button onclick="responderComentario('${c.id}')" style="background:none;border:none;padding:0;color:#888;font-size:var(--fs-b);cursor:pointer;text-decoration:underline;margin-top:2px">Responder</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+let respondendoComentarioId = null;
+function responderComentario(comentarioId){
+  const c = comentariosCacheAtual[comentarioId];
+  if(!c) return;
+  respondendoComentarioId = comentarioId;
+  document.getElementById('nome-resposta-a').textContent = c.usuarios?.nome || '?';
+  document.getElementById('indicador-resposta').classList.remove('hidden');
+  document.getElementById('novo-comentario-topico').focus();
+}
+function cancelarResposta(){
+  respondendoComentarioId = null;
+  document.getElementById('indicador-resposta').classList.add('hidden');
 }
 
 /* ============================================================
@@ -2666,8 +2710,12 @@ async function renderizarTopico(topicoId){
   const textoBotaoResolver = propostaPendente
     ? (propostaPendente.tipo==='anulacao' ? 'Aprovar essa anulação' : 'Aprovar essa edição')
     : 'Marcar como resolvido';
+  const propostaAplicada = (ultimaProposta && ultimaProposta.status==='aplicada') ? ultimaProposta : null;
   let blocoVotacao = '';
-  if(!temComentario){
+  if(propostaAplicada){
+    const textoFinal = propostaAplicada.tipo==='anulacao' ? '✓ Esta questão foi anulada.' : '✓ Esta edição foi aplicada.';
+    blocoVotacao = `<div style="text-align:center;margin-top:14px;padding:12px;background:#F0F7EC;border-radius:10px;color:#3B6D11;font-weight:600;font-size:var(--fs-d)">${textoFinal}</div>`;
+  }else if(!temComentario){
     blocoVotacao = `<p style="color:#888;font-size:var(--fs-d);text-align:center;margin-top:14px">Precisa de pelo menos uma resposta na discussão antes de poder ser marcada como resolvida.</p>`;
   }else if(meuVoto){
     blocoVotacao = `
@@ -2734,6 +2782,10 @@ async function renderizarTopico(topicoId){
     ${badgeTipoTopico(topico.tipo)}
     <h3 class="config-title" style="margin-top:8px;text-transform:uppercase;font-size:var(--fs-e)">${escapeHtml(topico.titulo)}</h3>
     <div>${renderizarListaComentarios(comentarios||[])}</div>
+    <div id="indicador-resposta" class="hidden" style="display:flex;align-items:center;justify-content:space-between;background:#F5F5F4;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:var(--fs-b);color:#666">
+      <span>Respondendo a <strong id="nome-resposta-a"></strong></span>
+      <button onclick="cancelarResposta()" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-b)">Cancelar</button>
+    </div>
     <textarea id="novo-comentario-topico" class="textarea-padrao" placeholder="Comentar..." style="min-height:100px"></textarea>
     <button class="btn-primario" style="width:100%" onclick="enviarComentarioTopico('${topicoId}')">Comentar</button>
     ${blocoPropostaPendente}
@@ -2747,7 +2799,8 @@ async function enviarComentarioTopico(topicoId){
   const campo = document.getElementById('novo-comentario-topico');
   const texto = campo.value.trim();
   if(!texto) return;
-  await sb.from('comentarios').insert({topico_id: topicoId, usuario_id: usuarioAtual.id, texto});
+  await sb.from('comentarios').insert({topico_id: topicoId, usuario_id: usuarioAtual.id, texto, resposta_a: respondendoComentarioId});
+  respondendoComentarioId = null;
   await renderizarTopico(topicoId);
 }
 
@@ -3224,6 +3277,113 @@ async function enviarUpload(){
   // ainda não foi criada no schema. A adicionar numa próxima passada.
 
   status.innerHTML = `<p style="color:#1B5E20">${questoes.length} questões cadastradas!</p>`;
+}
+
+/* ============================================================
+   Upload por planilha (Excel) – caminho alternativo ao PDF, sem IA,
+   já que os dados chegam estruturados
+   ============================================================ */
+function alternarTipoUpload(tipo){
+  document.getElementById('toggle-upload-pdf').classList.toggle('active', tipo==='pdf');
+  document.getElementById('toggle-upload-planilha').classList.toggle('active', tipo==='planilha');
+  document.getElementById('secao-upload-pdf').classList.toggle('hidden', tipo!=='pdf');
+  document.getElementById('secao-upload-planilha').classList.toggle('hidden', tipo!=='planilha');
+}
+
+function baixarModeloPlanilha(){
+  const cabecalho = ['Enunciado', 'Alternativas', 'Gabarito', 'Módulo PSCPP', 'Capítulo', 'Tipo de Questão'];
+  const exemplo = [
+    'Exemplo: Qual a largura mínima de segurança de um canal de acesso?',
+    '(a) texto da alternativa a. (b) texto da alternativa b. (c) texto da alternativa c. (d) texto da alternativa d. (e) texto da alternativa e.',
+    'b',
+    'Navegação em Águas Restritas',
+    'cap. 11',
+    'Conceitual'
+  ];
+  const planilha = XLSX.utils.aoa_to_sheet([cabecalho, exemplo]);
+  const livro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(livro, planilha, 'Questões');
+  XLSX.writeFile(livro, 'modelo-questoes-claude-quest.xlsx');
+}
+
+function atualizarNomePlanilhaSelecionada(){
+  const input = document.getElementById('upload-planilha');
+  const el = document.getElementById('nome-planilha-selecionada');
+  el.textContent = input.files.length ? input.files[0].name : 'Nenhuma planilha selecionada';
+}
+
+async function enviarPlanilha(){
+  const input = document.getElementById('upload-planilha');
+  const status = document.getElementById('upload-planilha-status');
+  if(!input.files.length){ status.textContent = 'Escolha uma planilha primeiro.'; return; }
+
+  status.innerHTML = '<div class="loading-spinner"></div><p style="text-align:center">Lendo planilha...</p>';
+
+  const modulosValidos = ['Manobrabilidade','Arte Naval','Navegação em Águas Restritas','Legislação','Meteorologia e Oceanografia','Comunicações','Conhecimentos Gerais'];
+  const tiposValidos = ['Conceitual','Cálculo','Número','Lista','Identificação'];
+
+  let linhas;
+  try{
+    const arquivo = input.files[0];
+    const buffer = await arquivo.arrayBuffer();
+    const livro = XLSX.read(buffer, {type:'array'});
+    const planilha = livro.Sheets[livro.SheetNames[0]];
+    linhas = XLSX.utils.sheet_to_json(planilha, {defval:''});
+  }catch(e){
+    status.innerHTML = `<p style="color:#B00020">Não consegui ler essa planilha: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  if(!linhas.length){
+    status.innerHTML = '<p style="color:#B00020">Planilha vazia, ou as colunas não batem com o modelo. Baixa o modelo de novo se precisar.</p>';
+    return;
+  }
+
+  const questoesValidas = [];
+  const erros = [];
+  linhas.forEach((linha, i) => {
+    const enunciado = String(linha['Enunciado']||'').trim();
+    if(!enunciado || enunciado.startsWith('Exemplo:')) return; // pula linha vazia ou a linha de exemplo
+
+    const alternativas = String(linha['Alternativas']||'').trim();
+    const gabarito = String(linha['Gabarito']||'').trim().toLowerCase();
+    const modulo = String(linha['Módulo PSCPP']||'').trim();
+    const capitulo = String(linha['Capítulo']||'').trim();
+    const tipoQuestao = String(linha['Tipo de Questão']||'').trim();
+
+    if(!['a','b','c','d','e'].includes(gabarito)){
+      erros.push(`Linha ${i+2}: gabarito "${gabarito}" precisa ser uma letra de a a e.`);
+      return;
+    }
+    if(!modulosValidos.includes(modulo)){
+      erros.push(`Linha ${i+2}: módulo "${modulo}" não é um dos 7 módulos válidos.`);
+      return;
+    }
+    if(tipoQuestao && !tiposValidos.includes(tipoQuestao)){
+      erros.push(`Linha ${i+2}: tipo "${tipoQuestao}" não é um tipo válido (deixa em branco se não souber).`);
+      return;
+    }
+    questoesValidas.push({
+      enunciado, alternativas, gabarito,
+      modulo_pscpp: modulo,
+      capitulo: capitulo || null,
+      tipo_questao: tipoQuestao || null,
+      autor_id: usuarioAtual.id,
+      explicacao_origem: 'nunca_gerada'
+    });
+  });
+
+  if(erros.length){
+    status.innerHTML = `<p style="color:#B00020">${erros.length} linha(s) com problema — corrige na planilha e sobe de novo:</p><p style="color:#B00020;font-size:var(--fs-b)">${erros.slice(0,6).map(e=>escapeHtml(e)).join('<br>')}</p>`;
+    return;
+  }
+  if(!questoesValidas.length){
+    status.innerHTML = '<p style="color:#B00020">Nenhuma questão preenchida na planilha (só achei a linha de exemplo).</p>';
+    return;
+  }
+
+  await Promise.all(questoesValidas.map(q => sb.from('questoes').insert(q)));
+  status.innerHTML = `<p style="color:#1B5E20">${questoesValidas.length} questões cadastradas!</p>`;
 }
 
 /* ============================================================
