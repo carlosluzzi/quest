@@ -2733,17 +2733,17 @@ async function renderizarTopico(topicoId){
     // usam a MESMA estrutura, com as mesmas 4 linhas sempre reservadas —
     // só o conteúdo de cada linha muda. Isso evita o card "pular" de
     // tamanho toda vez que alguém vota, que era o bug de antes
-    let corFundo, linhaTopo, linhaBotoes;
+    let corFundo, iconeStatus, linhaBotoes;
     if(meuVoto){
       corFundo = '#F5F5F4';
-      linhaTopo = `${totalVotos} de ${votosParaResolver()} votos pra resolver <strong style="color:#3B6D11">· você votou ✓</strong>`;
-      linhaBotoes = `<button class="btn-secundario" style="margin-top:6px" onclick="desfazerVotoResolucao('${topicoId}')">Desfazer meu voto</button>`;
+      iconeStatus = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#3B6D11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      linhaBotoes = `<button onclick="desfazerVotoResolucao('${topicoId}')" style="background:none;border:none;padding:0;color:#888;font-size:var(--fs-b);cursor:pointer;text-decoration:underline;margin-top:6px">Desfazer meu voto</button>`;
     }else if(topico.status==='resolvido'){
       corFundo = '#FEF6E4';
+      iconeStatus = '';
       const textoMaioria = ultimaProposta
         ? (ultimaProposta.tipo==='anulacao' ? 'A maioria já aprovou essa anulação. Você concorda?' : 'A maioria já aprovou essa edição. Você concorda?')
         : 'A maioria já considera isso resolvido. Você concorda?';
-      linhaTopo = `${totalVotos} de ${votosParaResolver()} votos pra resolver`;
       linhaBotoes = `
         <div style="font-size:var(--fs-d);font-weight:600;margin-top:6px">${textoMaioria}</div>
         <div style="display:flex;gap:8px;margin-top:8px">
@@ -2752,7 +2752,7 @@ async function renderizarTopico(topicoId){
         </div>`;
     }else{
       corFundo = '#F5F5F4';
-      linhaTopo = `${totalVotos} de ${votosParaResolver()} votos pra resolver`;
+      iconeStatus = '';
       linhaBotoes = `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px">
         <button class="btn-secundario" onclick="votarResolvido('${topicoId}')">${textoBotaoResolver}</button>
         <span class="info-icone" onclick="abrirModalInfoResolucao()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
@@ -2760,7 +2760,9 @@ async function renderizarTopico(topicoId){
     }
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px;padding:10px 12px;background:${corFundo};border-radius:10px">
-        <div style="font-size:var(--fs-d);color:#666">${linhaTopo}</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:var(--fs-d);color:#666">
+          ${iconeStatus}<span>${totalVotos} de ${votosParaResolver()} votos pra resolver</span>
+        </div>
         ${listaVotantes ? `<div style="font-size:var(--fs-b);color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${listaVotantes}</div>` : ''}
         ${linhaBotoes}
       </div>`;
