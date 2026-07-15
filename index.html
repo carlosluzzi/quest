@@ -341,7 +341,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="onboarding-conteudo" id="onboarding-conteudo">
     <div class="onboarding-step ativo" data-step="0">
       <h1>Bem-vindo(a) ao Claude Quest</h1>
-      <p>Aqui é onde vocês 5 vão estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
+      <p>Aqui é onde vocês vão estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
     </div>
     <div class="onboarding-step" data-step="1">
       <h1>Como funciona o banco</h1>
@@ -502,15 +502,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <input type="text" id="busca-forum" class="filter-select" placeholder="Buscar uma questão pra comentar..." oninput="buscarQuestaoForum(this.value)">
     <div id="resultado-busca-forum" class="hidden" style="margin-bottom:16px"></div>
 
-    <div id="resumo-forum" style="color:#888;font-size:var(--fs-c);margin-bottom:16px">Carregando...</div>
-
-    <select class="filter-select" id="filtro-forum-modulo" onchange="renderizarListaForum()">
-      <option value="">Todos os módulos</option>
-    </select>
-    <label style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-      <input type="checkbox" id="filtro-forum-so-correcao" onchange="renderizarListaForum()"> Só erros em aberto
-    </label>
-
     <div id="lista-forum"><div class="loading-spinner"></div></div>
   </div>
 
@@ -641,7 +632,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-info-resolucao">
   <div class="modal-conteudo">
     <h3 class="config-title">Como funciona "Marcar como resolvido"</h3>
-    <p>Cada um dos 5 vota individualmente que considera a discussão resolvida. Com 3 votos (maioria), a discussão passa a aparecer como resolvida — mas quem ainda não votou pode reabrir ela a qualquer momento, mesmo com maioria já formada. Seu voto pode ser desfeito depois, se mudar de ideia.</p>
+    <p id="texto-info-resolucao">Cada pessoa cadastrada vota individualmente que considera a discussão resolvida. Com a maioria dos votos, a discussão passa a aparecer como resolvida — mas quem ainda não votou pode reabrir ela a qualquer momento, mesmo com maioria já formada. Seu voto pode ser desfeito depois, se mudar de ideia.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-resolucao')">Fechar</button>
   </div>
 </div>
@@ -1394,7 +1385,8 @@ async function mostrarAppShell(){
     verificarCadernoEmAndamento(),
     carregarPlacar(),
     atualizarNotificacoesForum(),
-    verificarNotificacoesExtras()
+    verificarNotificacoesExtras(),
+    carregarTotalUsuarios()
   ]);
   // só agora, com tudo pronto de verdade, a tela aparece — nada de spinner
   // girando ou notificação surgindo aos poucos depois que already apareceu
@@ -2374,12 +2366,25 @@ async function finalizarCaderno(){
    FÓRUM – sistema de tópicos (unifica "erro reportado" e "discussão
    geral"). Toda discussão nasce intencional (com título), precisa de
    troca mínima (1+ resposta) antes de poder ser votada como resolvida,
-   e resolução é por votação com maioria fixa de 3 de 5 – não depende de
-   quantos participaram. "Resolvido" é por pessoa: quem votou já para de
-   ver o tópico; quem não votou continua vendo até dar seu próprio
+   e resolução é por votação de maioria simples do total de usuários
+   cadastrados (não um número fixo – se entrar mais gente no grupo, a
+   maioria necessária recalcula sozinha) – não depende de quantos
+   participaram da votação em si. "Resolvido" é por pessoa: quem votou já
+   para de ver o tópico; quem não votou continua vendo até dar seu próprio
    veredito (concordar ou reabrir, mesmo com maioria já formada).
    ============================================================ */
-const VOTOS_PRA_RESOLVER = 3;
+let totalUsuariosCadastrados = 5; // valor de segurança até carregar o de verdade
+async function carregarTotalUsuarios(){
+  const {count} = await sb.from('usuarios').select('id', {count:'exact', head:true});
+  if(count) totalUsuariosCadastrados = count;
+}
+function votosParaResolver(){
+  return Math.floor(totalUsuariosCadastrados/2) + 1;
+}
+function abrirModalInfoResolucao(){
+  document.getElementById('texto-info-resolucao').textContent = `Cada pessoa cadastrada vota individualmente que considera a discussão resolvida. Com ${votosParaResolver()} de ${totalUsuariosCadastrados} votos (maioria), a discussão passa a aparecer como resolvida — mas quem ainda não votou pode reabrir ela a qualquer momento, mesmo com maioria já formada. Seu voto pode ser desfeito depois, se mudar de ideia.`;
+  abrirModal('modal-info-resolucao');
+}
 
 /* ============================================================
    NOTIFICAÇÕES DO FÓRUM – Nível 1 (Realtime, só com app aberto)
@@ -2424,16 +2429,6 @@ async function carregarForum(){
     ultimaAtividade: infoComentarios[t.id]?.ultima || t.criado_em
   })).sort((a,b)=>(b.ultimaAtividade||'').localeCompare(a.ultimaAtividade||''));
 
-  const elModulo = document.getElementById('filtro-forum-modulo');
-  if(elModulo.options.length <= 1){
-    const modulos = [...new Set(forumCache.map(f=>f.questoes?.modulo_pscpp).filter(Boolean))];
-    elModulo.innerHTML = '<option value="">Todos os módulos</option>' + modulos.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
-  }
-
-  const totalErros = forumCache.filter(f=>f.tipo==='erro').length;
-  document.getElementById('resumo-forum').textContent =
-    `${totalErros} ${totalErros===1?'erro em aberto':'erros em aberto'} · ${forumCache.length} ${forumCache.length===1?'discussão ativa':'discussões ativas'}`;
-
   renderizarListaForum();
 }
 
@@ -2444,14 +2439,9 @@ function badgeTipoTopico(tipo){
 }
 
 function renderizarListaForum(){
-  const moduloFiltro = document.getElementById('filtro-forum-modulo').value;
-  const soErro = document.getElementById('filtro-forum-so-correcao').checked;
-  let lista = forumCache;
-  if(moduloFiltro) lista = lista.filter(f=>f.questoes?.modulo_pscpp===moduloFiltro);
-  if(soErro) lista = lista.filter(f=>f.tipo==='erro');
-
+  const lista = forumCache;
   const el = document.getElementById('lista-forum');
-  if(!lista.length){ el.innerHTML = '<p style="color:#888">Nenhuma discussão ativa com esses filtros.</p>'; return; }
+  if(!lista.length){ el.innerHTML = '<p style="color:#888">Nenhuma discussão ativa no momento.</p>'; return; }
   el.innerHTML = lista.map(f=>`
     <div class="card-questao" style="cursor:pointer" onclick="abrirTopicoDoForum('${f.id}')">
       <div style="margin-bottom:6px">
@@ -2660,14 +2650,14 @@ async function renderizarTopico(topicoId){
   }else if(meuVoto){
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px;padding:12px;background:#F5F5F4;border-radius:10px">
-        <div style="font-size:var(--fs-c);color:#666">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
+        <div style="font-size:var(--fs-c);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
         <div style="font-size:var(--fs-c);color:#3B6D11;margin-top:4px;font-weight:600">Você votou que está resolvido</div>
         <button class="btn-secundario" style="margin-top:8px" onclick="desfazerVotoResolucao('${topicoId}')">Desfazer meu voto</button>
       </div>`;
   }else if(topico.status==='resolvido'){
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px;padding:12px;background:#FEF6E4;border-radius:10px">
-        <div style="font-size:var(--fs-c);color:#666">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver – ${listaVotantes}</div>
+        <div style="font-size:var(--fs-c);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver – ${listaVotantes}</div>
         <div style="font-size:var(--fs-d);font-weight:600;margin-top:4px">A maioria já considera isso resolvido. Você concorda?</div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn-secundario" style="flex:1" onclick="reabrirTopico('${topicoId}')">Reabrir</button>
@@ -2677,10 +2667,10 @@ async function renderizarTopico(topicoId){
   }else{
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px">
-        <div style="font-size:var(--fs-c);color:#666;margin-bottom:8px">${totalVotos} de ${VOTOS_PRA_RESOLVER} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
+        <div style="font-size:var(--fs-c);color:#666;margin-bottom:8px">${totalVotos} de ${votosParaResolver()} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
         <div style="display:inline-flex;align-items:center;gap:6px">
           <button class="btn-secundario" onclick="votarResolvido('${topicoId}')">${textoBotaoResolver}</button>
-          <span class="info-icone" onclick="abrirModal('modal-info-resolucao')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+          <span class="info-icone" onclick="abrirModalInfoResolucao()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
         </div>
       </div>`;
   }
@@ -2694,9 +2684,9 @@ async function renderizarTopico(topicoId){
     <div style="margin-top:14px;padding:12px;background:#F0F7EC;border-radius:10px;border:0.5px solid #CDE6BC">
       <div style="font-size:var(--fs-c);font-weight:600;color:#3B6D11;margin-bottom:8px">Proposta de edição de ${escapeHtml(propostaPendente.usuarios?.nome||'alguém')}</div>
       <div style="font-size:var(--fs-b);color:#888">Enunciado</div>
-      <p style="font-size:var(--fs-c);white-space:pre-wrap">${escapeHtml(propostaPendente.enunciado||'')}</p>
+      <div class="enunciado" style="font-size:var(--fs-c)">${formatarEnunciado(propostaPendente.enunciado)}</div>
       <div style="font-size:var(--fs-b);color:#888;margin-top:6px">Alternativas</div>
-      <p style="font-size:var(--fs-c);white-space:pre-wrap">${escapeHtml(propostaPendente.alternativas||'')}</p>
+      <div style="font-size:var(--fs-c)">${extrairAlternativas(propostaPendente.alternativas).map(alt=>`<div class="enunciado-linha">(${alt.letra}) ${alt.texto}</div>`).join('')}</div>
       <div style="font-size:var(--fs-b);color:#888;margin-top:6px">Gabarito</div>
       <p style="font-size:var(--fs-c)">${escapeHtml((propostaPendente.gabarito||'').toUpperCase())}</p>
     </div>`
@@ -2755,7 +2745,7 @@ async function reabrirTopico(topicoId){
 async function verificarMaioriaTopico(topicoId){
   const {data: votos} = await sb.from('votos_resolucao').select('id').eq('topico_id', topicoId);
   const total = (votos||[]).length;
-  const resolvido = total >= VOTOS_PRA_RESOLVER;
+  const resolvido = total >= votosParaResolver();
   await sb.from('topicos').update({status: resolvido ? 'resolvido' : 'aberto'}).eq('id', topicoId);
 
   if(resolvido){
