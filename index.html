@@ -732,8 +732,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="modal-conteudo">
     <h3 class="config-title" id="titulo-modal-novo-topico">Nova discussão</h3>
     <div style="display:flex;gap:8px;margin-bottom:12px">
-      <div class="filter-btn" id="toggle-tipo-geral" style="flex:1;text-align:center" onclick="selecionarTipoNovoTopico('geral')">Abrir discussão</div>
-      <div class="filter-btn" id="toggle-tipo-erro" style="flex:1;text-align:center" onclick="selecionarTipoNovoTopico('erro')">Reportar erro</div>
+      <div class="filter-btn" id="toggle-tipo-geral" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="selecionarTipoNovoTopico('geral')">Abrir discussão</div>
+      <div class="filter-btn" id="toggle-tipo-erro" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="selecionarTipoNovoTopico('erro')">Reportar erro</div>
     </div>
     <input type="text" id="novo-topico-titulo" class="filter-select" placeholder="Resumo curto do que você quer discutir">
     <textarea id="novo-topico-mensagem" class="textarea-padrao" placeholder="Escreve aqui o que você quer falar"></textarea>
@@ -2004,7 +2004,11 @@ async function retomarCadernoEspecifico(cadernoId){
   let questoes;
   if(filtros.questao_ids && filtros.questao_ids.length){
     const {data: qs} = await sb.from('questoes').select('*').in('id', filtros.questao_ids);
-    questoes = qs;
+    // .in() não garante devolver na ordem da lista passada – reordena manualmente
+    // pra bater exatamente com a ordem embaralhada salva na criação do caderno
+    const mapaQuestoes = {};
+    (qs||[]).forEach(q => { mapaQuestoes[q.id] = q; });
+    questoes = filtros.questao_ids.map(id => mapaQuestoes[id]).filter(Boolean);
   }else{
     let query = sb.from('questoes').select('*');
     if(filtros.modulo) query = query.eq('modulo_pscpp', filtros.modulo);
