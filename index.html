@@ -2434,8 +2434,8 @@ async function carregarForum(){
 
 function badgeTipoTopico(tipo){
   return tipo==='erro'
-    ? '<span style="font-size:var(--fs-c);color:#666">Motivo: <strong style="color:#A32D2D">Erro</strong></span>'
-    : '<span style="font-size:var(--fs-c);color:#666">Motivo: <strong style="color:var(--azul-marca)">Discussão</strong></span>';
+    ? '<span style="font-size:var(--fs-d);color:#666">Motivo: <strong style="color:#A32D2D">Erro</strong></span>'
+    : '<span style="font-size:var(--fs-d);color:#666">Motivo: <strong style="color:var(--azul-marca)">Discussão</strong></span>';
 }
 
 function renderizarListaForum(){
@@ -2447,8 +2447,8 @@ function renderizarListaForum(){
       <div style="margin-bottom:6px">
         ${badgeTipoTopico(f.tipo)}
       </div>
-      <div style="font-size:var(--fs-d);font-weight:600;color:#111;text-transform:uppercase">${escapeHtml(f.titulo)}</div>
-      <p style="font-size:var(--fs-c);color:#888;margin-top:0">${escapeHtml((f.questoes?.enunciado||'').slice(0,90))}...</p>
+      <div style="font-size:var(--fs-e);font-weight:600;color:#111;text-transform:uppercase">${escapeHtml(f.titulo)}</div>
+      <p style="font-size:var(--fs-d);color:#888;margin-top:0">${escapeHtml((f.questoes?.enunciado||'').slice(0,90))}...</p>
       <div style="display:flex;justify-content:space-between;color:#888;font-size:var(--fs-b);margin-top:8px">
         <span>${f.totalComentarios} ${f.totalComentarios===1?'comentário':'comentários'}</span>
         <span>${tempoRelativo(f.ultimaAtividade)}</span>
@@ -2508,7 +2508,7 @@ function renderizarListaComentarios(lista){
       <div style="flex:1;min-width:0">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
           <span style="font-weight:600;color:#111;font-size:var(--fs-d)">${escapeHtml(c.usuarios?.nome||'?')}</span>
-          <span style="font-size:var(--fs-a);color:#999;white-space:nowrap">${tempoRelativo(c.criado_em)}</span>
+          <span style="font-size:var(--fs-b);color:#999;white-space:nowrap">${tempoRelativo(c.criado_em)}</span>
         </div>
         <div style="font-size:var(--fs-d)">${escapeHtml(c.texto)}</div>
       </div>
@@ -2646,18 +2646,18 @@ async function renderizarTopico(topicoId){
     : 'Marcar como resolvido';
   let blocoVotacao = '';
   if(!temComentario){
-    blocoVotacao = `<p style="color:#888;font-size:var(--fs-c);text-align:center;margin-top:14px">Precisa de pelo menos uma resposta na discussão antes de poder ser marcada como resolvida.</p>`;
+    blocoVotacao = `<p style="color:#888;font-size:var(--fs-d);text-align:center;margin-top:14px">Precisa de pelo menos uma resposta na discussão antes de poder ser marcada como resolvida.</p>`;
   }else if(meuVoto){
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px;padding:12px;background:#F5F5F4;border-radius:10px">
-        <div style="font-size:var(--fs-c);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
-        <div style="font-size:var(--fs-c);color:#3B6D11;margin-top:4px;font-weight:600">Você votou que está resolvido</div>
+        <div style="font-size:var(--fs-d);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
+        <div style="font-size:var(--fs-d);color:#3B6D11;margin-top:4px;font-weight:600">Você votou que está resolvido</div>
         <button class="btn-secundario" style="margin-top:8px" onclick="desfazerVotoResolucao('${topicoId}')">Desfazer meu voto</button>
       </div>`;
   }else if(topico.status==='resolvido'){
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px;padding:12px;background:#FEF6E4;border-radius:10px">
-        <div style="font-size:var(--fs-c);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver – ${listaVotantes}</div>
+        <div style="font-size:var(--fs-d);color:#666">${totalVotos} de ${votosParaResolver()} votos pra resolver – ${listaVotantes}</div>
         <div style="font-size:var(--fs-d);font-weight:600;margin-top:4px">A maioria já considera isso resolvido. Você concorda?</div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn-secundario" style="flex:1" onclick="reabrirTopico('${topicoId}')">Reabrir</button>
@@ -2667,7 +2667,7 @@ async function renderizarTopico(topicoId){
   }else{
     blocoVotacao = `
       <div style="text-align:center;margin-top:14px">
-        <div style="font-size:var(--fs-c);color:#666;margin-bottom:8px">${totalVotos} de ${votosParaResolver()} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
+        <div style="font-size:var(--fs-d);color:#666;margin-bottom:8px">${totalVotos} de ${votosParaResolver()} votos pra resolver${listaVotantes?' – '+listaVotantes:''}</div>
         <div style="display:inline-flex;align-items:center;gap:6px">
           <button class="btn-secundario" onclick="votarResolvido('${topicoId}')">${textoBotaoResolver}</button>
           <span class="info-icone" onclick="abrirModalInfoResolucao()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
@@ -2678,17 +2678,17 @@ async function renderizarTopico(topicoId){
   const blocoPropostaPendente = propostaPendente ? (
     propostaPendente.tipo==='anulacao' ? `
     <div style="margin-top:14px;padding:12px;background:#FCEBEB;border-radius:10px;border:0.5px solid #F7C1C1">
-      <div style="font-size:var(--fs-c);font-weight:600;color:#A32D2D">Proposta de anular essa questão, de ${escapeHtml(propostaPendente.usuarios?.nome||'alguém')}</div>
-      <p style="font-size:var(--fs-c);color:#666;margin-top:4px">Quem já respondeu (de qualquer jeito) passa a ter a resposta contada como acerto. Essa ação não pode ser desfeita depois de aprovada.</p>
+      <div style="font-size:var(--fs-d);font-weight:600;color:#A32D2D">Proposta de anular essa questão, de ${escapeHtml(propostaPendente.usuarios?.nome||'alguém')}</div>
+      <p style="font-size:var(--fs-d);color:#666;margin-top:4px">Quem já respondeu (de qualquer jeito) passa a ter a resposta contada como acerto. Essa ação não pode ser desfeita depois de aprovada.</p>
     </div>` : `
     <div class="card-questao" style="margin-top:14px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         ${avatarMiniHtml(propostaPendente.usuarios)}
-        <span style="font-size:var(--fs-c);color:#666">${escapeHtml(propostaPendente.usuarios?.nome||'Alguém')} propôs esta edição:</span>
+        <span style="font-size:var(--fs-d);color:#666">${escapeHtml(propostaPendente.usuarios?.nome||'Alguém')} propôs esta edição:</span>
       </div>
-      <div class="enunciado" style="font-size:var(--fs-c)">${formatarEnunciado(propostaPendente.enunciado)}</div>
-      <div style="font-size:var(--fs-c);margin-top:10px">${extrairAlternativas(propostaPendente.alternativas).map(alt=>`<div class="enunciado-linha">(${alt.letra}) ${alt.texto}</div>`).join('')}</div>
-      <div style="font-size:var(--fs-c);margin-top:10px;font-weight:600">Gabarito: ${escapeHtml((propostaPendente.gabarito||'').toUpperCase())}</div>
+      <div class="enunciado" style="font-size:var(--fs-d)">${formatarEnunciado(propostaPendente.enunciado)}</div>
+      <div style="font-size:var(--fs-d);margin-top:10px">${extrairAlternativas(propostaPendente.alternativas).map(alt=>`<div class="enunciado-linha">(${alt.letra}) ${alt.texto}</div>`).join('')}</div>
+      <div style="font-size:var(--fs-d);margin-top:10px;font-weight:600">Gabarito: ${escapeHtml((propostaPendente.gabarito||'').toUpperCase())}</div>
     </div>`
   ) : '';
 
@@ -2702,7 +2702,7 @@ async function renderizarTopico(topicoId){
   const html = `
     <button onclick="renderizarDetalheQuestao('${topico.questoes.id}')" style="color:#888;font-size:var(--fs-c);cursor:pointer;margin-bottom:12px;background:none;border:none;padding:0;text-decoration:underline">← Discussões dessa questão</button>
     ${badgeTipoTopico(topico.tipo)}
-    <h3 class="config-title" style="margin-top:8px;text-transform:uppercase">${escapeHtml(topico.titulo)}</h3>
+    <h3 class="config-title" style="margin-top:8px;text-transform:uppercase;font-size:var(--fs-e)">${escapeHtml(topico.titulo)}</h3>
     <div>${renderizarListaComentarios(comentarios||[])}</div>
     <textarea id="novo-comentario-topico" class="textarea-padrao" placeholder="Comentar..." style="min-height:100px"></textarea>
     <button class="btn-primario" style="width:100%" onclick="enviarComentarioTopico('${topicoId}')">Comentar</button>
