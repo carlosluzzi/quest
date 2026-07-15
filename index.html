@@ -2632,7 +2632,7 @@ async function renderizarTopico(topicoId){
     sb.from('comentarios').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).order('criado_em', {ascending:true}),
     sb.from('votos_resolucao').select('*, usuarios(nome)').eq('topico_id', topicoId),
     topico.tipo==='erro'
-      ? sb.from('propostas_edicao').select('*, usuarios(nome)').eq('topico_id', topicoId).eq('status','pendente').maybeSingle()
+      ? sb.from('propostas_edicao').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).eq('status','pendente').maybeSingle()
       : Promise.resolve({data:null})
   ]);
 
@@ -2681,14 +2681,14 @@ async function renderizarTopico(topicoId){
       <div style="font-size:var(--fs-c);font-weight:600;color:#A32D2D">Proposta de anular essa questão, de ${escapeHtml(propostaPendente.usuarios?.nome||'alguém')}</div>
       <p style="font-size:var(--fs-c);color:#666;margin-top:4px">Quem já respondeu (de qualquer jeito) passa a ter a resposta contada como acerto. Essa ação não pode ser desfeita depois de aprovada.</p>
     </div>` : `
-    <div style="margin-top:14px;padding:12px;background:#F0F7EC;border-radius:10px;border:0.5px solid #CDE6BC">
-      <div style="font-size:var(--fs-c);font-weight:600;color:#3B6D11;margin-bottom:8px">Proposta de edição de ${escapeHtml(propostaPendente.usuarios?.nome||'alguém')}</div>
-      <div style="font-size:var(--fs-b);color:#888">Enunciado</div>
+    <div class="card-questao" style="margin-top:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        ${avatarMiniHtml(propostaPendente.usuarios)}
+        <span style="font-size:var(--fs-c);color:#666">${escapeHtml(propostaPendente.usuarios?.nome||'Alguém')} propôs esta edição:</span>
+      </div>
       <div class="enunciado" style="font-size:var(--fs-c)">${formatarEnunciado(propostaPendente.enunciado)}</div>
-      <div style="font-size:var(--fs-b);color:#888;margin-top:6px">Alternativas</div>
-      <div style="font-size:var(--fs-c)">${extrairAlternativas(propostaPendente.alternativas).map(alt=>`<div class="enunciado-linha">(${alt.letra}) ${alt.texto}</div>`).join('')}</div>
-      <div style="font-size:var(--fs-b);color:#888;margin-top:6px">Gabarito</div>
-      <p style="font-size:var(--fs-c)">${escapeHtml((propostaPendente.gabarito||'').toUpperCase())}</p>
+      <div style="font-size:var(--fs-c);margin-top:10px">${extrairAlternativas(propostaPendente.alternativas).map(alt=>`<div class="enunciado-linha">(${alt.letra}) ${alt.texto}</div>`).join('')}</div>
+      <div style="font-size:var(--fs-c);margin-top:10px;font-weight:600">Gabarito: ${escapeHtml((propostaPendente.gabarito||'').toUpperCase())}</div>
     </div>`
   ) : '';
 
