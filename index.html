@@ -2737,7 +2737,7 @@ async function renderizarTopico(topicoId){
     if(meuVoto){
       corFundo = '#F5F5F4';
       iconeStatus = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#3B6D11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-      linhaBotoes = `<button onclick="desfazerVotoResolucao('${topicoId}')" style="background:none;border:none;padding:0;color:#888;font-size:var(--fs-b);cursor:pointer;text-decoration:underline;margin-top:6px">Desfazer meu voto</button>`;
+      linhaBotoes = `<button onclick="desfazerVotoResolucao('${topicoId}')" style="background:none;border:none;padding:10px 0;color:#888;font-size:var(--fs-b);cursor:pointer;text-decoration:underline;margin-top:6px;display:block;width:100%">Desfazer meu voto</button>`;
     }else if(topico.status==='resolvido'){
       corFundo = '#FEF6E4';
       iconeStatus = '';
