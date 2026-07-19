@@ -187,7 +187,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 /* "Adicionar questões" é um híbrido: no mobile/tablet se comporta como um
    modal (popup por cima de tudo); a partir do desktop (1100px, onde o menu
-   vira lateral) vira uma página normal, igual as outras abas — sem overlay,
+   vira lateral) vira uma página normal, igual as outras abas – sem overlay,
    sem fundo escurecido, ocupando a área de conteúdo normalmente */
 #aba-adicionar{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
 #aba-adicionar.hidden{display:none}
@@ -232,7 +232,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   // O ajuste extra de padding embaixo (empurrando o conteúdo ~31px pra cima)
   // foi calibrado só pro modo webapp instalado (sem a barra do navegador
   // ocupando espaço). No navegador comum, esse espaço extra não faz sentido
-  // e desloca o conteúdo à toa — por isso é condicional aqui.
+  // e desloca o conteúdo à toa – por isso é condicional aqui.
   const rodandoComoWebapp = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
   document.documentElement.style.setProperty('--padding-extra-baixo', rodandoComoWebapp ? '86px' : '24px');
 
@@ -361,17 +361,17 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="view-onboarding" class="hidden">
   <div class="onboarding-conteudo" id="onboarding-conteudo">
     <div class="onboarding-step ativo" data-step="0">
-      <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#D97757" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg></div>
+      <div class="onboarding-icone"><img src="assets/favicon.png" alt="Claudequest" width="44" height="44" style="border-radius:12px"></div>
       <h1>Bem-vindo(a) ao Claudequest</h1>
       <p>Aqui é onde vocês vão estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
     </div>
     <div class="onboarding-step" data-step="1">
       <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#D97757" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
       <h1>Como funciona o banco</h1>
-      <p>Todo mundo pode adicionar questões novas — subindo um PDF (a IA extrai sozinha) ou preenchendo uma planilha-modelo. Todo mundo estuda das mesmas questões, mas cada um tem suas próprias estatísticas.</p>
+      <p>Todo mundo pode adicionar questões novas – subindo um PDF (a IA extrai sozinha) ou preenchendo uma planilha-modelo. Todo mundo estuda das mesmas questões, mas cada um tem suas próprias estatísticas.</p>
     </div>
     <div class="onboarding-step" data-step="2">
-      <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#D97757" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></div>
+      <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#D97757" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div>
       <h1>A exclusão é só sua</h1>
       <p>Se uma questão parecer errada ou malformada, você pode excluir – mas isso some <strong>só pra você</strong>. Ela continua existindo pros outros. Quanto mais gente excluir a mesma questão, mais evidente fica que ela tem um problema.</p>
     </div>
@@ -389,10 +389,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#D97757" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
       <h1>Placar entre amigos</h1>
       <p>Vocês veem, lado a lado, quantas questões cada um respondeu e a % de acerto – sem ranking, só os números.</p>
-    </div>
-    <div class="onboarding-step" data-step="6">
-      <h1>Instalar como app</h1>
-      <p id="instrucao-instalacao">Carregando instruções pro seu aparelho...</p>
     </div>
   </div>
 
@@ -693,7 +689,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-info-resolucao">
   <div class="modal-conteudo">
     <h3 class="config-title">Como funciona "Marcar como resolvido"</h3>
-    <p id="texto-info-resolucao">Cada pessoa cadastrada vota individualmente que considera a discussão resolvida. Com a maioria dos votos, a discussão passa a aparecer como resolvida — mas quem ainda não votou pode reabrir ela a qualquer momento, mesmo com maioria já formada. Seu voto pode ser desfeito depois, se mudar de ideia.</p>
+    <p id="texto-info-resolucao">Cada pessoa cadastrada vota individualmente que considera a discussão resolvida. Com a maioria dos votos, a discussão passa a aparecer como resolvida – mas quem ainda não votou pode reabrir ela a qualquer momento, mesmo com maioria já formada. Seu voto pode ser desfeito depois, se mudar de ideia.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-resolucao')">Fechar</button>
   </div>
 </div>
@@ -701,7 +697,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-info-anulacao-topico">
   <div class="modal-conteudo">
     <h3 class="config-title">Como funciona "Anular questão"</h3>
-    <p>Remove a questão de cadernos futuros pra sempre. Quem já respondeu essa questão (de qualquer jeito, em qualquer caderno) passa a ter a resposta contada como acerto, mesmo quem errou — igual acontece numa anulação de prova de verdade. Essa ação não pode ser desfeita.</p>
+    <p>Remove a questão de cadernos futuros pra sempre. Quem já respondeu essa questão (de qualquer jeito, em qualquer caderno) passa a ter a resposta contada como acerto, mesmo quem errou – igual acontece numa anulação de prova de verdade. Essa ação não pode ser desfeita.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-anulacao-topico')">Fechar</button>
   </div>
 </div>
@@ -977,7 +973,7 @@ function tagModulo(nomeModulo){
    AUTENTICAÇÃO
    ============================================================ */
 window.addEventListener('DOMContentLoaded', async ()=>{
-  // Convite por código próprio (não o convite nativo do Supabase) — a URL
+  // Convite por código próprio (não o convite nativo do Supabase) – a URL
   // vem com ?convite=<uuid>, sem hash nenhum
   const params = new URLSearchParams(window.location.search);
   const codigoConvite = params.get('convite');
@@ -994,7 +990,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     document.getElementById('login-form-definir-senha').classList.remove('hidden');
 
     // se o nome já foi pré-definido na criação da conta (metadata do usuário
-    // no Supabase), não precisa perguntar de novo — só usa direto
+    // no Supabase), não precisa perguntar de novo – só usa direto
     const {data:{user}} = await sb.auth.getUser();
     const nomePreDefinido = user?.user_metadata?.nome;
     if(nomePreDefinido){
@@ -1079,7 +1075,7 @@ async function cadastrarComConvite(){
   }
 
   // trava o botão pra não deixar clicar de novo enquanto processa, e sempre
-  // destrava no fim (sucesso ou erro) — nunca deve ficar "preso" sem explicação
+  // destrava no fim (sucesso ou erro) – nunca deve ficar "preso" sem explicação
   btnEl.disabled = true;
   btnEl.textContent = 'Cadastrando...';
   try{
@@ -1094,7 +1090,7 @@ async function cadastrarComConvite(){
       return;
     }
     if(!data.session || !data.user){
-      // só acontece se "Confirm email" ainda estiver ativado no projeto —
+      // só acontece se "Confirm email" ainda estiver ativado no projeto –
       // nesse caso o cadastro funcionou, mas precisa confirmar por email
       erroEl.textContent = 'Cadastro feito! Confirma seu email antes de entrar (verifica sua caixa de entrada).';
       erroEl.classList.remove('hidden');
@@ -1336,7 +1332,6 @@ function mostrarOnboarding(){
   document.getElementById('view-onboarding').classList.remove('hidden');
   renderizarDotsOnboarding();
   atualizarBotaoConcluirOnboarding();
-  detectarDispositivoOnboarding();
   if(!swipeOnboardingIniciado){
     iniciarSwipeOnboarding();
     swipeOnboardingIniciado = true;
@@ -1395,7 +1390,7 @@ function estaComoWebapp(){
   return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 }
 function ehIpad(){
-  // iPadOS finge ser um Mac de mesa no user agent, de propósito — a forma
+  // iPadOS finge ser um Mac de mesa no user agent, de propósito – a forma
   // confiável de detectar é combinar "parece Mac" + "tem suporte a toque"
   // (um Mac de verdade nunca tem maxTouchPoints > 1)
   return /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1420,9 +1415,6 @@ function detectarInstrucaoInstalacao(elId){
   }else{
     el.innerHTML = 'No seu navegador de computador, procure o ícone de<br>instalar na barra de endereço, ou o menu de opções.';
   }
-}
-function detectarDispositivoOnboarding(){
-  detectarInstrucaoInstalacao('instrucao-instalacao');
 }
 function mostrarTelaInstalarApp(){
   document.getElementById('view-instalar-app').classList.remove('hidden');
@@ -1457,7 +1449,7 @@ async function mostrarAppShell(){
   if(usuarioAtual.is_admin){
     document.getElementById('btn-abrir-admin').classList.remove('hidden');
   }
-  // todos esses carregamentos são independentes entre si — rodar em paralelo
+  // todos esses carregamentos são independentes entre si – rodar em paralelo
   // em vez de um atrás do outro é o que faz a tela abrir rápido, mesmo com
   // várias notificações pra checar
   await Promise.all([
@@ -1468,7 +1460,7 @@ async function mostrarAppShell(){
     verificarNotificacoesExtras(),
     carregarTotalUsuarios()
   ]);
-  // só agora, com tudo pronto de verdade, a tela aparece — nada de spinner
+  // só agora, com tudo pronto de verdade, a tela aparece – nada de spinner
   // girando ou notificação surgindo aos poucos depois que already apareceu
   document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('app-shell').classList.add('ativo');
@@ -1482,7 +1474,7 @@ function medirAlturaNav(){
   const nav = document.getElementById('bottom-nav');
   if(!nav) return;
   // a partir de 1100px o menu vira barra lateral (ocupa a tela toda de
-  // cima a baixo) — nesse caso não existe barra embaixo pra reservar
+  // cima a baixo) – nesse caso não existe barra embaixo pra reservar
   // espaço, senão a altura medida seria a tela inteira por engano
   const alturaReal = window.innerWidth >= 1100 ? 0 : nav.offsetHeight;
   document.documentElement.style.setProperty('--nav-height', alturaReal + 'px');
@@ -1584,7 +1576,7 @@ async function verificarNotificacoesExtras(){
 }
 
 // Todas as notificações "de verdade" (não o Cadernos em andamento, que fica
-// sempre fixo em primeiro) se reordenam juntas por data — a mais recente
+// sempre fixo em primeiro) se reordenam juntas por data – a mais recente
 // sempre vai pro topo, não importa o tipo dela
 async function atualizarNotificacoesOrdenadas(){
   const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum, itensPropostaNova] = await Promise.all([
@@ -1652,7 +1644,7 @@ async function coletarNotificacaoRespostaDiscussao(){
   });
 
   // 1 tópico = 1 notificação separada, igual já fazemos com "Questão
-  // corrigida" — cada card já sabe exatamente pra qual tópico levar
+  // corrigida" – cada card já sabe exatamente pra qual tópico levar
   const topicosAfetados = [...new Set(relevantes.map(c=>c.topico_id))];
   if(!topicosAfetados.length) return [];
 
@@ -2504,7 +2496,7 @@ function votosParaResolver(){
   return Math.floor(totalUsuariosCadastrados/2) + 1;
 }
 function abrirModalInfoResolucao(){
-  document.getElementById('texto-info-resolucao').textContent = `Cada pessoa cadastrada vota individualmente que considera a discussão resolvida. Com ${votosParaResolver()} de ${totalUsuariosCadastrados} votos (maioria), a discussão passa a aparecer como resolvida — mas quem ainda não votou pode reabrir ela a qualquer momento, mesmo com maioria já formada. Seu voto pode ser desfeito depois, se mudar de ideia.`;
+  document.getElementById('texto-info-resolucao').textContent = `Cada pessoa cadastrada vota individualmente que considera a discussão resolvida. Com ${votosParaResolver()} de ${totalUsuariosCadastrados} votos (maioria), a discussão passa a aparecer como resolvida – mas quem ainda não votou pode reabrir ela a qualquer momento, mesmo com maioria já formada. Seu voto pode ser desfeito depois, se mudar de ideia.`;
   abrirModal('modal-info-resolucao');
 }
 
@@ -2735,7 +2727,7 @@ async function confirmarNovoTopico(){
   fecharModal('modal-novo-topico');
   await atualizarNotificacoesForum();
 
-  // mostra o tópico recém-criado na versão grande (igual ao Fórum) — o
+  // mostra o tópico recém-criado na versão grande (igual ao Fórum) – o
   // container pode não estar aberto ainda, se veio direto do "Discutir"
   // numa questão que não tinha nenhuma discussão até agora
   if(modoTopicoModal){
@@ -2793,7 +2785,7 @@ async function renderizarTopico(topicoId){
     blocoVotacao = `<p style="color:#888;font-size:var(--fs-d);text-align:center;margin-top:14px">Precisa de pelo menos uma resposta na discussão antes de poder ser marcada como resolvida.</p>`;
   }else{
     // as 3 fases ativas da votação (não votou / já votou / maioria formada)
-    // usam a MESMA estrutura, com as mesmas 4 linhas sempre reservadas —
+    // usam a MESMA estrutura, com as mesmas 4 linhas sempre reservadas –
     // só o conteúdo de cada linha muda. Isso evita o card "pular" de
     // tamanho toda vez que alguém vota, que era o bug de antes
     let corFundo, iconeStatus, linhaBotoes;
@@ -3498,7 +3490,7 @@ async function enviarPlanilha(){
   });
 
   if(erros.length){
-    status.innerHTML = `<p style="color:#B00020">${erros.length} linha(s) com problema — corrige na planilha e sobe de novo:</p><p style="color:#B00020;font-size:var(--fs-b)">${erros.slice(0,6).map(e=>escapeHtml(e)).join('<br>')}</p>`;
+    status.innerHTML = `<p style="color:#B00020">${erros.length} linha(s) com problema – corrige na planilha e sobe de novo:</p><p style="color:#B00020;font-size:var(--fs-b)">${erros.slice(0,6).map(e=>escapeHtml(e)).join('<br>')}</p>`;
     return;
   }
   if(!questoesValidas.length){
