@@ -11,7 +11,7 @@
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <title>Claudequest</title>
-<meta property="og:title" content="Claude Quest">
+<meta property="og:title" content="Claudequest">
 <meta property="og:description" content="Banco de questões colaborativo pra estudar juntos pro PSCPP.">
 <meta property="og:image" content="https://pscpp-quest.vercel.app/assets/og-image.png">
 <meta property="og:url" content="https://pscpp-quest.vercel.app/">
@@ -271,7 +271,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <!-- TELA: LOGIN / DEFINIR SENHA -->
 <!-- ============================================================ -->
 <div id="view-splash" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#F9F9F7;z-index:100;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + var(--padding-extra-baixo, 24px)) 24px;box-sizing:border-box">
-  <img src="assets/logo.png" alt="Claude Quest" style="height:44px;width:auto;margin-bottom:24px">
+  <img src="assets/logo.png" alt="Claudequest" style="height:44px;width:auto;margin-bottom:24px">
   <div style="width:120px;height:4px;border-radius:2px;background:#EEE;overflow:hidden">
     <div style="width:40%;height:100%;background:#D97757;border-radius:2px;animation:carregando 1.1s ease-in-out infinite"></div>
   </div>
@@ -286,7 +286,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="view-login" class="hidden">
 <div class="login-inner">
   <div style="text-align:center;margin-bottom:16px">
-    <img src="assets/logo.png" alt="Claude Quest" style="height:32px;width:auto">
+    <img src="assets/logo.png" alt="Claudequest" style="height:32px;width:auto">
   </div>
 
   <form id="login-form-entrar" onsubmit="event.preventDefault(); entrar();">
@@ -302,7 +302,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </form>
 
   <form id="login-form-definir-senha" class="hidden" onsubmit="event.preventDefault(); definirSenha();">
-    <p style="margin-bottom:16px" id="saudacao-definir-senha">Defina seu nome e sua senha pra começar a usar o Claude Quest.</p>
+    <p style="margin-bottom:16px" id="saudacao-definir-senha">Defina seu nome e sua senha pra começar a usar o Claudequest.</p>
     <input type="text" id="novo-nome" placeholder="Seu nome" autocomplete="name" required>
     <div class="campo-senha-wrapper">
       <input type="password" id="nova-senha" placeholder="Nova senha" autocomplete="new-password" required>
@@ -349,7 +349,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="view-instalar-app" class="hidden">
 <div class="login-inner">
   <div style="text-align:center">
-    <img src="assets/logo.png" alt="Claude Quest" style="height:40px;width:auto;margin-bottom:24px;margin-left:-9px">
+    <img src="assets/logo.png" alt="Claudequest" style="height:40px;width:auto;margin-bottom:24px;margin-left:-9px">
     <h1>Instale como app</h1>
     <p id="instrucao-instalacao-navegador">Carregando instruções pro seu aparelho...</p>
     <p style="color:#888;font-size:var(--fs-d);margin-top:16px">Assim você tem acesso rápido, direto da tela inicial,<br>sem a barra do navegador ocupando espaço.</p>
@@ -362,7 +362,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="onboarding-conteudo" id="onboarding-conteudo">
     <div class="onboarding-step ativo" data-step="0">
       <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#D97757" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg></div>
-      <h1>Bem-vindo(a) ao Claude Quest</h1>
+      <h1>Bem-vindo(a) ao Claudequest</h1>
       <p>Aqui é onde vocês vão estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
     </div>
     <div class="onboarding-step" data-step="1">
@@ -408,7 +408,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="app-shell">
 
   <div class="topbar">
-    <img src="assets/logo.png" alt="Claude Quest" style="height:32px;width:auto;display:block">
+    <img src="assets/logo.png" alt="Claudequest" style="height:32px;width:auto;display:block">
     <div style="display:flex;align-items:center;gap:10px">
       <button class="btn-secundario hidden" id="btn-abrir-admin" style="width:auto;padding:6px 12px;font-size:var(--fs-b);font-weight:700;text-transform:uppercase;letter-spacing:0.03em" onclick="abrirModal('modal-admin')">Admin</button>
       <button class="avatar-btn" onclick="abrirModalPerfil()" id="avatar-inicial">?</button>
@@ -993,7 +993,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
       campoNome.value = nomePreDefinido;
       campoNome.classList.add('hidden');
       campoNome.required = false;
-      document.getElementById('saudacao-definir-senha').textContent = `Olá, ${nomePreDefinido}! Defina sua senha pra começar a usar o Claude Quest.`;
+      document.getElementById('saudacao-definir-senha').textContent = `Olá, ${nomePreDefinido}! Defina sua senha pra começar a usar o Claudequest.`;
     }
     return;
   }
@@ -1045,7 +1045,7 @@ async function processarConvite(id){
     return; // campos-convite continua escondido, só aparece a mensagem
   }
   conviteAtual = convite;
-  document.getElementById('saudacao-convite').textContent = `Olá, ${convite.apelido}! Cadastre seu email e crie uma senha pra começar a usar o Claude Quest.`;
+  document.getElementById('saudacao-convite').textContent = `Olá, ${convite.apelido}! Cadastre seu email e crie uma senha pra começar a usar o Claudequest.`;
   document.getElementById('campos-convite').classList.remove('hidden');
 }
 
