@@ -196,6 +196,13 @@ input,select,textarea{font-family:inherit;font-size:16px}
   #aba-adicionar .modal-conteudo{max-width:520px;max-height:none;overflow-y:visible;padding:0;border-radius:0}
 }
 .modal-conteudo-fluxo-topico{height:420px;box-sizing:border-box}
+.caixa-questao-detalhe{height:620px;max-width:380px}
+@media(min-width:768px) and (max-width:1099px){
+  .caixa-questao-detalhe{height:75vh;max-width:560px}
+}
+@media(min-width:1100px){
+  .caixa-questao-detalhe{height:80vh;max-width:680px}
+}
 
 /* --- Alternativas de questão (padrão herdado do app pessoal) --- */
 .banco-alternativas{display:flex;flex-direction:column;gap:8px;margin-top:14px}
@@ -744,7 +751,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-questao-detalhe" onclick="if(event.target===this) fecharModal('modal-questao-detalhe')">
-  <div class="modal-conteudo modal-conteudo-fluxo-topico" style="position:relative;height:620px;max-width:380px;display:flex;flex-direction:column;padding-right:12px">
+  <div class="modal-conteudo modal-conteudo-fluxo-topico caixa-questao-detalhe" style="position:relative;display:flex;flex-direction:column;padding-right:12px">
     <div id="modal-questao-detalhe-conteudo" style="flex:1;min-height:0;overflow-y:auto;padding-right:10px"></div>
     <div style="border-top:0.5px solid #eee;margin:12px 0 0;flex-shrink:0"></div>
     <button class="btn-secundario" style="width:100%;margin-top:12px;flex-shrink:0" onclick="fecharModal('modal-questao-detalhe')">Fechar</button>
@@ -1559,14 +1566,15 @@ async function verificarNotificacoesExtras(){
 // sempre fixo em primeiro) se reordenam juntas por data — a mais recente
 // sempre vai pro topo, não importa o tipo dela
 async function atualizarNotificacoesOrdenadas(){
-  const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum] = await Promise.all([
+  const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum, itensPropostaNova] = await Promise.all([
     coletarNotificacaoAnulacao(),
     coletarNotificacaoRespostaDiscussao(),
     coletarNotificacaoQuestaoCorrigida(),
     coletarNotificacaoPdfNovo(),
-    coletarNotificacaoForum()
+    coletarNotificacaoForum(),
+    coletarNotificacaoPropostaNova()
   ]);
-  const todos = [...itensAnulacao, ...itensDiscussao, ...itensCorrigida, ...itensPdfNovo, ...itensForum];
+  const todos = [...itensAnulacao, ...itensDiscussao, ...itensCorrigida, ...itensPdfNovo, ...itensForum, ...itensPropostaNova];
   todos.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
   document.getElementById('container-notificacoes-ordenadas').innerHTML = todos.map(item=>item.html).join('');
 }
@@ -1769,6 +1777,31 @@ async function coletarNotificacaoPdfNovo(){
       </button>
     </div>`;
   return [{timestamp, html}];
+}
+
+/* 8. Proposta nova (edição ou anulação) que alguém abriu numa discussão –
+   some quando você vota (mesma lógica de "resolve por engajamento" do Fórum) */
+async function coletarNotificacaoPropostaNova(){
+  const {data} = await sb.from('propostas_edicao').select('*, topicos(titulo), usuarios(nome), questoes(modulo_pscpp)').eq('status','pendente').neq('criado_por', usuarioAtual.id);
+  if(!data || !data.length) return [];
+
+  const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id);
+  const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
+
+  const pendentes = data.filter(p => !idsVotados.has(p.topico_id));
+  return pendentes.map(p=>{
+    const acao = p.tipo==='anulacao' ? 'propôs anular' : 'propôs corrigir';
+    const modulo = p.questoes?.modulo_pscpp ? ` de ${escapeHtml(p.questoes.modulo_pscpp)}` : '';
+    const texto = `${escapeHtml(p.usuarios?.nome||'Alguém')} ${acao} uma questão${modulo}: "${escapeHtml(p.topicos?.titulo||'')}"`;
+    const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirTopicoNotificado('${p.topico_id}')">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Nova proposta no Fórum</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">${texto}</div>
+      </button>
+    </div>`;
+    return {timestamp: p.criado_em, html};
+  });
 }
 async function marcarPdfNovoVisto(){
   const agora = new Date().toISOString();
@@ -2794,9 +2827,9 @@ async function renderizarTopico(topicoId){
     </div>`
   ) : '';
 
-  const acoesErro = (topico.tipo==='erro' && topico.status==='aberto' && !propostaPendente) ? `
+  const acoesPropor = (topico.status==='aberto' && !propostaPendente) ? `
     <div style="display:flex;align-items:center;gap:6px;margin-top:14px">
-      <button class="btn-secundario" style="flex:1;color:#A32D2D;border-color:#F7C1C1" onclick="confirmarAnularQuestao('${topico.questoes.id}','${topicoId}')">Anular questão</button>
+      <button class="btn-secundario" style="flex:1;color:#A32D2D;border:1px solid #F7C1C1" onclick="confirmarAnularQuestao('${topico.questoes.id}','${topicoId}')">Anular questão</button>
       <span class="info-icone" onclick="abrirModal('modal-info-anulacao-topico')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
       <button class="btn-primario" style="flex:1" onclick="abrirFormularioEdicao('${topico.questoes.id}','${topicoId}')">Propor edição</button>
     </div>` : '';
@@ -2813,7 +2846,7 @@ async function renderizarTopico(topicoId){
     <button class="btn-primario" style="width:100%" onclick="enviarComentarioTopico('${topicoId}')">Comentar</button>
     ${blocoPropostaPendente}
     ${blocoVotacao}
-    ${acoesErro}
+    ${acoesPropor}
   `;
   document.getElementById(containerTopicoAtual()).innerHTML = html;
 }
