@@ -697,6 +697,14 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-info-questao">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Sobre essa questão</h3>
+    <p id="texto-info-questao">Carregando...</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-questao')">Fechar</button>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-info-fisher-yates">
   <div class="modal-conteudo">
     <h3 class="config-title">Fisher-Yates</h3>
@@ -2296,6 +2304,15 @@ async function confirmarRespostaCaderno(){
   alternativaSelecionadaAtual = null;
 }
 
+async function abrirInfoQuestao(questaoId){
+  const q = questoesCaderno.find(x => x.id === questaoId);
+  if(!q) return;
+  document.getElementById('texto-info-questao').textContent = 'Carregando...';
+  abrirModal('modal-info-questao');
+  const {data: autor} = await sb.from('usuarios').select('nome').eq('id', q.autor_id).single();
+  const dataFormatada = q.criado_em ? new Date(q.criado_em).toLocaleDateString('pt-BR') : 'data desconhecida';
+  document.getElementById('texto-info-questao').textContent = `Adicionada por ${autor?.nome || 'alguém'}, em ${dataFormatada}.`;
+}
 function renderizarQuestaoAtual(){
   renderizarPillsCaderno();
   const q = questoesCaderno[indiceQuestaoAtual];
@@ -2325,7 +2342,7 @@ function renderizarQuestaoAtual(){
   const html = `
     <div class="card-questao" data-questao-id="${q.id}">
       <div class="section-title" style="margin:0 0 8px 0;display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <span>Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length}</span>
+        <span style="display:flex;align-items:center;gap:4px">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length} <span class="info-icone" onclick="abrirInfoQuestao('${q.id}')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span></span>
         ${foiCorrigidaAntesDeResponder ? '<span class="selo-correcao" style="display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;text-transform:none;letter-spacing:normal;padding:2px 6px;flex-shrink:0;white-space:nowrap"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Corrigida recentemente</span>' : ''}
       </div>
       <div class="enunciado">${formatarEnunciado(q.enunciado)}</div>
