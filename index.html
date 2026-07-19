@@ -545,11 +545,20 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <option value="Lista">Lista</option>
       <option value="Identificação">Identificação</option>
     </select>
-    <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:2px" id="metricas-filtro-periodo">
+    <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px" id="metricas-filtro-periodo">
       <button class="filter-btn" data-dias="30" onclick="selecionarPeriodoMetricas(30, this)">30 dias</button>
       <button class="filter-btn" data-dias="90" onclick="selecionarPeriodoMetricas(90, this)">3 meses</button>
       <button class="filter-btn" data-dias="180" onclick="selecionarPeriodoMetricas(180, this)">6 meses</button>
       <button class="filter-btn active" data-dias="0" onclick="selecionarPeriodoMetricas(0, this)">Tudo</button>
+      <button class="filter-btn" id="btn-periodo-customizado" onclick="toggleFiltroCustomizado()" title="Escolher datas" style="flex-shrink:0"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
+    </div>
+    <div id="metricas-filtro-datas-customizadas" class="hidden" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <input type="date" id="metricas-data-inicio" class="filter-select" style="margin-bottom:0" onchange="aplicarFiltroDatasCustomizadas()">
+      <span style="color:#888;font-size:var(--fs-d)">até</span>
+      <input type="date" id="metricas-data-fim" class="filter-select" style="margin-bottom:0" onchange="aplicarFiltroDatasCustomizadas()">
+    </div>
+    <div id="metricas-redefinir-datas" class="hidden" style="text-align:right;margin-bottom:16px">
+      <button onclick="redefinirFiltroDatas()" style="background:none;border:none;color:#888;font-size:var(--fs-b);text-decoration:underline;cursor:pointer;padding:0">Redefinir</button>
     </div>
 
     <div id="metricas-resumo-geral"></div>
@@ -1306,12 +1315,12 @@ async function posLogin(nomeInformado, nomeCompletoInformado){
 
   document.getElementById('view-login').classList.add('hidden');
 
-  if(!usuarioAtual.onboarding_concluido){
-    document.getElementById('view-splash').classList.add('hidden');
-    mostrarOnboarding();
-  }else if(!estaComoWebapp()){
+  if(!estaComoWebapp()){
     document.getElementById('view-splash').classList.add('hidden');
     mostrarTelaInstalarApp();
+  }else if(!usuarioAtual.onboarding_concluido){
+    document.getElementById('view-splash').classList.add('hidden');
+    mostrarOnboarding();
   }else{
     await mostrarAppShell(); // esconde o splash só quando terminar de carregar tudo
   }
@@ -1425,7 +1434,11 @@ function mostrarTelaInstalarApp(){
 }
 function continuarNoNavegador(){
   document.getElementById('view-instalar-app').classList.add('hidden');
-  mostrarAppShell();
+  if(!usuarioAtual.onboarding_concluido){
+    mostrarOnboarding();
+  }else{
+    mostrarAppShell();
+  }
 }
 async function concluirOnboarding(){
   await sb.from('usuarios').update({onboarding_concluido:true}).eq('id', usuarioAtual.id);
@@ -3014,12 +3027,56 @@ async function carregarPlacar(){
 }
 
 let metricasFiltroDias = 0; // 0 = tudo
+let metricasDataInicio = null; // filtro customizado, tem prioridade sobre metricasFiltroDias quando preenchido
+let metricasDataFim = null;
 
 function selecionarPeriodoMetricas(dias, btn){
   metricasFiltroDias = dias;
+  metricasDataInicio = null;
+  metricasDataFim = null;
+  document.getElementById('metricas-data-inicio').value = '';
+  document.getElementById('metricas-data-fim').value = '';
+  document.getElementById('metricas-redefinir-datas').classList.add('hidden');
+  document.getElementById('metricas-filtro-datas-customizadas').classList.add('hidden');
   document.querySelectorAll('#metricas-filtro-periodo .filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   carregarMetricasPessoais();
+}
+function toggleFiltroCustomizado(){
+  document.getElementById('metricas-filtro-datas-customizadas').classList.toggle('hidden');
+}
+function aplicarFiltroDatasCustomizadas(){
+  const inicio = document.getElementById('metricas-data-inicio').value;
+  const fim = document.getElementById('metricas-data-fim').value;
+  metricasDataInicio = inicio || null;
+  metricasDataFim = fim || null;
+  if(metricasDataInicio || metricasDataFim){
+    document.querySelectorAll('#metricas-filtro-periodo .filter-btn[data-dias]').forEach(b=>b.classList.remove('active'));
+    document.getElementById('metricas-redefinir-datas').classList.remove('hidden');
+  }
+  carregarMetricasPessoais();
+}
+function redefinirFiltroDatas(){
+  metricasDataInicio = null;
+  metricasDataFim = null;
+  document.getElementById('metricas-data-inicio').value = '';
+  document.getElementById('metricas-data-fim').value = '';
+  document.getElementById('metricas-redefinir-datas').classList.add('hidden');
+  document.getElementById('metricas-filtro-datas-customizadas').classList.add('hidden');
+  metricasFiltroDias = 0;
+  document.querySelectorAll('#metricas-filtro-periodo .filter-btn[data-dias]').forEach(b=>b.classList.remove('active'));
+  document.querySelector('#metricas-filtro-periodo .filter-btn[data-dias="0"]').classList.add('active');
+  carregarMetricasPessoais();
+}
+function aplicarFiltroPeriodoQuery(query, campoData){
+  if(metricasDataInicio || metricasDataFim){
+    if(metricasDataInicio) query = query.gte(campoData, metricasDataInicio+'T00:00:00');
+    if(metricasDataFim) query = query.lte(campoData, metricasDataFim+'T23:59:59');
+  }else if(metricasFiltroDias > 0){
+    const cutoff = new Date(Date.now() - metricasFiltroDias*24*60*60*1000).toISOString();
+    query = query.gte(campoData, cutoff);
+  }
+  return query;
 }
 
 async function carregarMetricasPessoais(){
@@ -3041,10 +3098,7 @@ async function carregarMetricasPessoais(){
   elNotas.innerHTML = '';
 
   let query = sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em').eq('usuario_id', usuarioAtual.id);
-  if(metricasFiltroDias > 0){
-    const cutoff = new Date(Date.now() - metricasFiltroDias*24*60*60*1000).toISOString();
-    query = query.gte('respondido_em', cutoff);
-  }
+  query = aplicarFiltroPeriodoQuery(query, 'respondido_em');
   const {data: respostasBrutas} = await query;
 
   if(!respostasBrutas || !respostasBrutas.length){
@@ -3076,10 +3130,7 @@ async function carregarMetricasPessoais(){
   const corAproveitamento = aproveitamento >= 70 ? '#3B6D11' : aproveitamento >= 50 ? '#854F0B' : '#A32D2D';
 
   let queryCadernos = sb.from('cadernos').select('id').eq('usuario_id', usuarioAtual.id).eq('status','finalizado');
-  if(metricasFiltroDias > 0){
-    const cutoff = new Date(Date.now() - metricasFiltroDias*24*60*60*1000).toISOString();
-    queryCadernos = queryCadernos.gte('finalizado_em', cutoff);
-  }
+  queryCadernos = aplicarFiltroPeriodoQuery(queryCadernos, 'finalizado_em');
   const {data: cadernosFinalizados} = await queryCadernos;
   const totalCadernos = (cadernosFinalizados||[]).length;
 
