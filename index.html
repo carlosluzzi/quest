@@ -56,8 +56,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .btn-secundario{background:#f0f0ee;color:#111;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;border:none;cursor:pointer;font-family:inherit}
 .filter-btn{font-size:var(--fs-c);padding:4px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;margin:4px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
-#metricas-filtro-periodo .filter-btn{flex:1;text-align:center;margin:0;height:40px;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
-#metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:40px;box-sizing:border-box}
+#metricas-filtro-periodo .filter-btn{flex:1;text-align:center;margin:0;height:32px;font-size:16px;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+#metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:32px;box-sizing:border-box}
+#aba-quests .filter-select{height:32px;box-sizing:border-box}
 .filter-select{font-size:16px;padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
@@ -165,6 +166,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 /* --- Questão --- */
 .card-questao{background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:18px;margin-bottom:8px}
+/* Cards de resumo (Desempenho) — visual idêntico ao usado no PSCPP Tracker */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px;margin-bottom:16px}
+.stat-card{background:#fff;border-radius:12px;padding:14px 12px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.stat-val{font-size:24px;font-weight:500}
+.stat-lbl{font-size:13px;color:#888;margin-top:2px}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0}
 .enunciado-linha{display:block;margin-top:10px}
 .alternativa{display:block;width:100%;text-align:left;background:#F5F5F6;border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:var(--fs-d)}
@@ -3182,28 +3188,28 @@ function renderizarMetricasPessoais(){
   const totalRespondidas = respostas.length;
   const totalAcertos = respostas.filter(r=>r.correta).length;
   const totalErros = totalRespondidas - totalAcertos;
-  const aproveitamento = totalRespondidas ? Math.round((totalAcertos/totalRespondidas)*100) : 0;
+  const aproveitamento = totalRespondidas ? ((totalAcertos/totalRespondidas)*100).toFixed(2) : '0.00';
   const corAproveitamento = aproveitamento >= 70 ? '#3B6D11' : aproveitamento >= 50 ? '#854F0B' : '#A32D2D';
 
   const totalCadernos = metricasCadernosCache.filter(c => passaNoFiltroPeriodo(c.finalizado_em)).length;
 
   elResumo.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
-      <div class="card-questao" style="text-align:center;margin-bottom:0">
-        <div style="font-size:24px;font-weight:700">${totalCadernos}</div>
-        <div style="color:#888;font-size:var(--fs-b);text-transform:uppercase">${totalCadernos===1?'caderno finalizado':'cadernos finalizados'}</div>
+      <div class="card-questao" style="text-align:left;margin-bottom:0">
+        <div style="font-size:28px;font-weight:700">${totalCadernos}</div>
+        <div style="color:#888;font-size:var(--fs-b)">${totalCadernos===1?'Caderno finalizado':'Cadernos finalizados'}</div>
       </div>
-      <div class="card-questao" style="text-align:center;margin-bottom:0">
-        <div style="font-size:24px;font-weight:700">${totalRespondidas}</div>
-        <div style="color:#888;font-size:var(--fs-b);text-transform:uppercase">questões respondidas</div>
+      <div class="card-questao" style="text-align:left;margin-bottom:0">
+        <div style="font-size:28px;font-weight:700">${totalRespondidas}</div>
+        <div style="color:#888;font-size:var(--fs-b)">Questões respondidas</div>
       </div>
-      <div class="card-questao" style="text-align:center;margin-bottom:0">
-        <div style="font-size:24px;font-weight:700"><span style="color:#3B6D11">${totalAcertos}</span> / <span style="color:#A32D2D">${totalErros}</span></div>
-        <div style="color:#888;font-size:var(--fs-b);text-transform:uppercase">acertos / erros</div>
+      <div class="card-questao" style="text-align:left;margin-bottom:0">
+        <div style="font-size:28px;font-weight:700"><span style="color:#3B6D11">${totalAcertos}</span> / <span style="color:#A32D2D">${totalErros}</span></div>
+        <div style="color:#888;font-size:var(--fs-b)">Acertos / Erros</div>
       </div>
-      <div class="card-questao" style="text-align:center;margin-bottom:0">
-        <div style="font-size:24px;font-weight:700;color:${corAproveitamento}">${aproveitamento}%</div>
-        <div style="color:#888;font-size:var(--fs-b);text-transform:uppercase">aproveitamento médio</div>
+      <div class="card-questao" style="text-align:left;margin-bottom:0">
+        <div style="font-size:28px;font-weight:700;color:${corAproveitamento}">${aproveitamento}%</div>
+        <div style="color:#888;font-size:var(--fs-b)">Aproveitamento médio</div>
       </div>
     </div>
   `;
