@@ -582,15 +582,20 @@ input,select,textarea{font-family:inherit;font-size:16px}
       </div>
     </div>
 
-    <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Matéria (livros)</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis (toca pra mover)</div>
-        <div id="metricas-materias-disponiveis" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
-      </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Selecionados</div>
-        <div id="metricas-materias-selecionadas" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+    <div style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px" onclick="toggleFiltroMateria()">
+      <span style="font-size:var(--fs-b);color:#888">Matéria (livros)</span>
+      <span class="chev" id="chev-filtro-materia" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+    </div>
+    <div id="conteudo-filtro-materia" class="conteudo-colapsavel" style="margin-bottom:12px">
+      <div style="display:flex;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis (toca pra mover)</div>
+          <div id="metricas-materias-disponiveis" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Selecionados</div>
+          <div id="metricas-materias-selecionadas" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+        </div>
       </div>
     </div>
 
@@ -3506,6 +3511,10 @@ function listaMateriasDisponiveis(){
   return [...new Set(bibliografiaCache.map(b=>b.titulo))].sort((a,b)=>a.localeCompare(b));
 }
 let materiasFiltradasMetricas = new Set(); // vazio = considera todas automaticamente
+function toggleFiltroMateria(){
+  document.getElementById('conteudo-filtro-materia').classList.toggle('open');
+  document.getElementById('chev-filtro-materia').classList.toggle('open');
+}
 function renderizarListasFiltroMateria(){
   const todas = listaMateriasDisponiveis();
   const disponiveis = todas.filter(m => !materiasFiltradasMetricas.has(m));
