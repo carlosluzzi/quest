@@ -4196,6 +4196,20 @@ function limparArquivoSelecionado(){
 
 async function extrairTextoDoArquivo(arquivo){
   const arrayBuffer = await arquivo.arrayBuffer();
+
+  // confere a assinatura real do arquivo (todo PDF de verdade começa com
+  // "%PDF-") antes de decidir qual caminho usar — não dá pra confiar que
+  // o pdf.js sempre lança erro em arquivo inválido; às vezes ele "engole"
+  // sem erro e só não acha texto nenhum, o que faz o fallback nunca disparar
+  const primeirosBytes = new Uint8Array(arrayBuffer.slice(0, 5));
+  const assinatura = String.fromCharCode(...primeirosBytes);
+  const ehPdfDeVerdade = assinatura === '%PDF-';
+
+  if(!ehPdfDeVerdade){
+    // não é PDF de verdade (texto puro com nome .pdf) — lê direto como texto
+    return new TextDecoder('utf-8').decode(arrayBuffer);
+  }
+
   try{
     if(typeof pdfjsLib === 'undefined') throw new Error('biblioteca de PDF não carregou');
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
@@ -4208,8 +4222,9 @@ async function extrairTextoDoArquivo(arquivo){
     }
     return textoCompleto;
   }catch(erroPdf){
-    // não é um PDF de verdade (às vezes chega como texto puro com nome
-    // .pdf) — tenta ler como texto simples antes de desistir
+    // PDF real mas deu erro ao processar — tenta ler como texto simples
+    // antes de desistir de vez (raramente ajuda pra PDF genuíno, mas é
+    // melhor que travar sem nenhuma tentativa)
     return new TextDecoder('utf-8').decode(arrayBuffer);
   }
 }
