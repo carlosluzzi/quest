@@ -245,7 +245,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .pill-questao.atual{background:#111;color:#fff;border-color:#111}
 .pill-questao.acertou{background:#EAF3DE;color:#3B6D11;border-color:#C0DD97}
 .pill-questao.errou{background:#FCEBEB;color:#A32D2D;border-color:#F7C1C1}
-.loading-spinner{border:3px solid #EEE;border-top-color:var(--azul-marca);border-radius:50%;width:28px;height:28px;animation:girar 0.8s linear infinite;margin:20px auto}
+.loading-spinner{border:3px solid #EEE;border-top-color:#999;border-radius:50%;width:28px;height:28px;animation:girar 0.8s linear infinite;margin:20px auto}
 @keyframes girar{to{transform:rotate(360deg)}}
 /* Barrinha de carregamento — usada só na tela de splash inicial */
 .loading-bar{width:120px;height:4px;border-radius:2px;background:#EEE;overflow:hidden;margin:20px auto}
@@ -549,7 +549,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <!-- ===== FÓRUM ===== -->
   <div class="view-aba hidden" id="aba-forum">
-    <div id="lista-forum"><div class="loading-spinner"></div></div>
+    <div id="lista-forum"><div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><div class="loading-spinner"></div></div></div>
   </div>
 
   <!-- ===== COMO VOCÊ TÁ INDO (placar) ===== -->
