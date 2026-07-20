@@ -246,7 +246,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 @keyframes girar{to{transform:rotate(360deg)}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 </head>
 <body>
 <script>
@@ -3294,30 +3294,36 @@ function renderizarMetricasPessoais(){
     document.getElementById('metricas-modulo-vazio').classList.add('hidden');
     elModulo.style.height = (linhasModulo.length * 76 + 40) + 'px';
     const canvasModulo = document.getElementById('grafico-por-modulo');
-    graficoPorModulo = new Chart(canvasModulo, {
-      type: 'bar',
-      data: {
-        labels: linhasModulo.map(l=>l.modulo),
-        datasets: [
-          {label:'Acertos', data: linhasModulo.map(l=>l.acertos), backgroundColor:'#3B6D11', borderRadius:4},
-          {label:'Respondidas', data: linhasModulo.map(l=>l.total), backgroundColor:'#202A45', borderRadius:4},
-          {label:'% de acertos', data: linhasModulo.map(l=>l.pctAcerto), backgroundColor:'#D97757', borderRadius:4}
-        ]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {position:'top', align:'start', labels:{color:'#666', boxWidth:12, font:{size:12}}},
-          tooltip: {enabled:true}
+    try{
+      if(typeof Chart === 'undefined') throw new Error('Biblioteca do gráfico não carregou');
+      graficoPorModulo = new Chart(canvasModulo, {
+        type: 'bar',
+        data: {
+          labels: linhasModulo.map(l=>l.modulo),
+          datasets: [
+            {label:'Acertos', data: linhasModulo.map(l=>l.acertos), backgroundColor:'#3B6D11', borderRadius:4},
+            {label:'Respondidas', data: linhasModulo.map(l=>l.total), backgroundColor:'#202A45', borderRadius:4},
+            {label:'% de acertos', data: linhasModulo.map(l=>l.pctAcerto), backgroundColor:'#D97757', borderRadius:4}
+          ]
         },
-        scales: {
-          x: {beginAtZero:true, grid:{color:'#eee'}, ticks:{color:'#888', font:{size:11}}},
-          y: {grid:{display:false}, ticks:{color:'#111', font:{size:12}}}
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {position:'top', align:'start', labels:{color:'#666', boxWidth:12, font:{size:12}}},
+            tooltip: {enabled:true}
+          },
+          scales: {
+            x: {beginAtZero:true, grid:{color:'#eee'}, ticks:{color:'#888', font:{size:11}}},
+            y: {grid:{display:false}, ticks:{color:'#111', font:{size:12}}}
+          }
         }
-      }
-    });
+      });
+    }catch(erroGrafico){
+      console.error('Erro ao desenhar gráfico por módulo:', erroGrafico);
+      mostrarModuloVazio('Não consegui carregar o gráfico agora. Tenta recarregar a página.');
+    }
   }else{
     mostrarModuloVazio('Nenhum módulo selecionado no filtro acima.');
   }
