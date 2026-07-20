@@ -3355,11 +3355,11 @@ function renderizarMetricasPessoais(){
           indexAxis: 'y',
           responsive: true,
           maintainAspectRatio: false,
-          interaction: {mode:'index', intersect:false},
+          interaction: {mode:'y', intersect:false},
           onHover: (event, elements, chart) => { chart.canvas.style.cursor = elements.length ? 'pointer' : 'default'; },
           plugins: {
             legend: {position:'top', align:'start', labels:{color:'#666', boxWidth:12, font:{size:12}}},
-            tooltip: {enabled:true, mode:'index', intersect:false}
+            tooltip: {enabled:true, mode:'y', intersect:false}
           },
           scales: {
             x: {beginAtZero:true, max: Math.ceil(maiorTotalGeral * 1.1), grid:{color:'#eee'}, ticks:{color:'#888', font:{size:11}}},
