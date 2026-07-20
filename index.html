@@ -578,6 +578,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div id="metricas-resumo-geral" style="margin-top:16px"></div>
 
     <div class="section-title">Por módulo</div>
+    <div id="metricas-filtro-modulos" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
     <div id="lista-metricas-modulo"><div class="loading-spinner"></div></div>
 
     <div class="section-title">Por tipo de questão</div>
@@ -3169,6 +3170,28 @@ function legendaBarras(){
     <span><span style="display:inline-block;width:8px;height:8px;background:#C9A165;border-radius:2px;margin-right:4px"></span>% de acertos</span>
   </div>`;
 }
+const MODULOS_PSCPP = ['Manobrabilidade','Arte Naval','Navegação em Águas Restritas','Legislação','Meteorologia e Oceanografia','Comunicações','Conhecimentos Gerais'];
+let modulosFiltradosMetricas = new Set(MODULOS_PSCPP); // todos selecionados por padrão
+
+function renderizarChipsFiltroModulo(){
+  const el = document.getElementById('metricas-filtro-modulos');
+  const todosSelecionados = modulosFiltradosMetricas.size === MODULOS_PSCPP.length;
+  el.innerHTML = `
+    <span class="filter-btn${todosSelecionados?' active':''}" style="font-weight:600" onclick="toggleTodosModulosFiltro()">Todas</span>
+    ${MODULOS_PSCPP.map(m=>`<span class="filter-btn${modulosFiltradosMetricas.has(m)?' active':''}" onclick="toggleModuloFiltro('${m.replace(/'/g,"\\'")}')">${escapeHtml(m)}</span>`).join('')}
+  `;
+}
+function toggleModuloFiltro(nome){
+  if(modulosFiltradosMetricas.has(nome)) modulosFiltradosMetricas.delete(nome);
+  else modulosFiltradosMetricas.add(nome);
+  renderizarChipsFiltroModulo();
+  renderizarMetricasPessoais();
+}
+function toggleTodosModulosFiltro(){
+  modulosFiltradosMetricas = modulosFiltradosMetricas.size === MODULOS_PSCPP.length ? new Set() : new Set(MODULOS_PSCPP);
+  renderizarChipsFiltroModulo();
+  renderizarMetricasPessoais();
+}
 function renderizarMetricasPessoais(){
   const filtroTipo = document.getElementById('metricas-filtro-tipo').value;
   const infoPorQuestao = metricasQuestoesInfoCache;
@@ -3246,17 +3269,21 @@ function renderizarMetricasPessoais(){
     statsPorModulo[mod].total++;
     if(r.correta) statsPorModulo[mod].acertos++;
   });
-  const linhasModulo = Object.entries(statsPorModulo).map(([modulo, s])=>({
+  const linhasModulo = Object.entries(statsPorModulo)
+    .filter(([modulo]) => modulosFiltradosMetricas.has(modulo))
+    .map(([modulo, s])=>({
     modulo, total: s.total, acertos: s.acertos, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
   })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
   const maiorTotalModulo = Math.max(...linhasModulo.map(l=>l.total), 1);
-  elModulo.innerHTML = `<div class="card-questao">
+  const elChipsModulo = document.getElementById('metricas-filtro-modulos');
+  if(!elChipsModulo.innerHTML) renderizarChipsFiltroModulo();
+  elModulo.innerHTML = linhasModulo.length ? `<div class="card-questao">
     ${legendaBarras()}
     ${linhasModulo.map(l=>{
       const cor = l.pctAcerto >= 70 ? '#8FA878' : l.pctAcerto >= 50 ? '#C9A165' : '#C48787';
       return linhaComparativa(escapeHtml(l.modulo), l.acertos, l.total, l.pctAcerto, maiorTotalModulo, cor);
     }).join('')}
-  </div>`;
+  </div>` : '<p style="color:#888;font-size:var(--fs-d)">Nenhum módulo selecionado no filtro acima.</p>';
 
   /* ---- por tipo de questão ---- */
   const statsPorTipo = {};
