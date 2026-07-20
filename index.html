@@ -3261,6 +3261,28 @@ function renderizarMetricasPessoais(){
     return;
   }
 
+  // referência SEM o filtro de módulo, usada só pra régua do gráfico não
+  // mudar de tamanho quando você filtra pra ver menos módulos
+  const statsPorModuloCompleto = {};
+  respostas.forEach(r=>{
+    const mod = infoPorQuestao[r.questao_id]?.modulo_pscpp || 'Sem módulo';
+    if(!statsPorModuloCompleto[mod]) statsPorModuloCompleto[mod] = {total:0, acertos:0};
+    statsPorModuloCompleto[mod].total++;
+    if(r.correta) statsPorModuloCompleto[mod].acertos++;
+  });
+
+  // filtro de módulo (a caixinha lá em cima) é aplicado em cascata — afeta
+  // os cards de resumo e todas as seções abaixo, não só o gráfico "Por módulo"
+  if(modulosFiltradosMetricas.size > 0){
+    respostas = respostas.filter(r => modulosFiltradosMetricas.has(infoPorQuestao[r.questao_id]?.modulo_pscpp));
+  }
+
+  if(!respostas.length){
+    mostrarModuloVazio('Nenhuma resposta registrada com esses módulos selecionados.');
+    renderizarNotasMetricas(elNotas, infoPorQuestao);
+    return;
+  }
+
   /* ---- cards de resumo geral ---- */
   const totalRespondidas = respostas.length;
   const totalAcertos = respostas.filter(r=>r.correta).length;
@@ -3301,14 +3323,13 @@ function renderizarMetricasPessoais(){
     if(r.correta) statsPorModulo[mod].acertos++;
   });
   const linhasModulo = Object.entries(statsPorModulo)
-    .filter(([modulo]) => modulosFiltradosMetricas.size === 0 || modulosFiltradosMetricas.has(modulo))
     .map(([modulo, s])=>({
     modulo, total: s.total, acertos: s.acertos, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
   })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
   // régua do eixo X sempre baseada no maior valor entre TODOS os 7 módulos
   // (seus, não do grupo), não só os que estão filtrados na tela — assim a
   // régua não muda de tamanho quando você filtra pra ver menos módulos
-  const maiorTotalGeral = Math.max(...Object.values(statsPorModulo).map(s=>s.total), 1);
+  const maiorTotalGeral = Math.max(...Object.values(statsPorModuloCompleto).map(s=>s.total), 1);
   const elListaDisponiveis = document.getElementById('metricas-modulos-disponiveis');
   if(!elListaDisponiveis.innerHTML) renderizarListasFiltroModulo();
 
