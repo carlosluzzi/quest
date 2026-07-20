@@ -3391,7 +3391,7 @@ function renderizarGraficoEvolucao(){
 
 function linhaComparativaModulo(nome, pctAcerto, pctRecuperacao, pctRetencao){
   const barraSemDado = () => `
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+    <div style="display:flex;align-items:center;gap:6px;height:16px;margin-bottom:3px">
       <div style="flex:1;background:#F0F0EE;border-radius:3px;height:7px;overflow:hidden"></div>
       <span style="width:36px;flex-shrink:0"></span>
     </div>`;
@@ -3469,11 +3469,11 @@ async function carregarMetricasPessoais(){
 function barraFina(valor, maximo, cor, sufixo=''){
   const largura = maximo > 0 ? Math.min(100, Math.round((valor/maximo)*100)) : 0;
   return `
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+    <div style="display:flex;align-items:center;gap:6px;height:16px;margin-bottom:3px">
       <div style="flex:1;background:#F0F0EE;border-radius:3px;height:7px;overflow:hidden">
         <div style="width:${largura}%;background:${cor};height:100%;border-radius:3px"></div>
       </div>
-      <span style="width:36px;flex-shrink:0;text-align:right;font-size:11px;color:#666">${valor}${sufixo}</span>
+      <span style="width:36px;flex-shrink:0;text-align:right;font-size:11px;line-height:11px;color:#666">${valor}${sufixo}</span>
     </div>`;
 }
 function linhaComparativa(nome, acertos, total, pct, maximo, corPct){
