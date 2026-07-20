@@ -166,11 +166,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 /* --- Questão --- */
 .card-questao{background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:18px;margin-bottom:8px}
-/* Cards de resumo (Desempenho) — visual idêntico ao usado no PSCPP Tracker */
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px;margin-bottom:16px}
-.stat-card{background:#fff;border-radius:12px;padding:14px 12px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
-.stat-val{font-size:24px;font-weight:500}
-.stat-lbl{font-size:13px;color:#888;margin-top:2px}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0}
 .enunciado-linha{display:block;margin-top:10px}
 .alternativa{display:block;width:100%;text-align:left;background:#F5F5F6;border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:var(--fs-d)}
@@ -644,7 +639,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <span id="badge-forum" class="badge-notificacao hidden">0</span>
     </div>
     <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></span><span class="nav-label">Desempenho</span>
+      <span class="nav-icon"><svg viewBox="0 0 512 512" fill="currentColor"><rect x="56" y="317.484" width="80" height="146.516"/><rect x="176" y="237.484" width="80" height="226.516"/><rect x="296" y="141.484" width="80" height="322.516"/><rect x="416" y="45.484" width="80" height="418.516"/><polygon points="16,496 16,0 0,0 0,496 0,512 16,512 512,512 512,496"/></svg></span><span class="nav-label">Desempenho</span>
     </div>
     <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
@@ -3188,27 +3183,28 @@ function renderizarMetricasPessoais(){
   const totalRespondidas = respostas.length;
   const totalAcertos = respostas.filter(r=>r.correta).length;
   const totalErros = totalRespondidas - totalAcertos;
-  const aproveitamento = totalRespondidas ? ((totalAcertos/totalRespondidas)*100).toFixed(2) : '0.00';
-  const corAproveitamento = aproveitamento >= 70 ? '#3B6D11' : aproveitamento >= 50 ? '#854F0B' : '#A32D2D';
+  const aproveitamentoNum = totalRespondidas ? (totalAcertos/totalRespondidas)*100 : 0;
+  const aproveitamento = aproveitamentoNum.toFixed(2).replace('.', ',');
+  const corAproveitamento = aproveitamentoNum >= 70 ? '#3B6D11' : aproveitamentoNum >= 50 ? '#854F0B' : '#A32D2D';
 
   const totalCadernos = metricasCadernosCache.filter(c => passaNoFiltroPeriodo(c.finalizado_em)).length;
 
   elResumo.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
       <div class="card-questao" style="text-align:left;margin-bottom:0">
-        <div style="font-size:28px;font-weight:700">${totalCadernos}</div>
+        <div style="font-size:24px;font-weight:500">${totalCadernos}</div>
         <div style="color:#888;font-size:var(--fs-b)">${totalCadernos===1?'Caderno finalizado':'Cadernos finalizados'}</div>
       </div>
       <div class="card-questao" style="text-align:left;margin-bottom:0">
-        <div style="font-size:28px;font-weight:700">${totalRespondidas}</div>
+        <div style="font-size:24px;font-weight:500">${totalRespondidas}</div>
         <div style="color:#888;font-size:var(--fs-b)">Questões respondidas</div>
       </div>
       <div class="card-questao" style="text-align:left;margin-bottom:0">
-        <div style="font-size:28px;font-weight:700"><span style="color:#3B6D11">${totalAcertos}</span> / <span style="color:#A32D2D">${totalErros}</span></div>
+        <div style="font-size:24px;font-weight:500"><span style="color:#3B6D11">${totalAcertos}</span> / <span style="color:#A32D2D">${totalErros}</span></div>
         <div style="color:#888;font-size:var(--fs-b)">Acertos / Erros</div>
       </div>
       <div class="card-questao" style="text-align:left;margin-bottom:0">
-        <div style="font-size:28px;font-weight:700;color:${corAproveitamento}">${aproveitamento}%</div>
+        <div style="font-size:24px;font-weight:500;color:${corAproveitamento}">${aproveitamento}%</div>
         <div style="color:#888;font-size:var(--fs-b)">Aproveitamento médio</div>
       </div>
     </div>
