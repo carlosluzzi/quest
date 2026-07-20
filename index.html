@@ -608,7 +608,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
       <span style="color:#888;font-size:var(--fs-b);flex-shrink:0">Período:</span>
-      <input type="range" class="slider-evolucao" id="evolucao-slider" min="2" max="104" value="12" step="1" oninput="atualizarSliderEvolucao(this.value)" style="flex:1">
+      <input type="range" class="slider-evolucao" id="evolucao-slider" min="2" max="260" value="12" step="1" oninput="atualizarSliderEvolucao(this.value)" style="flex:1">
       <span id="evolucao-slider-valor" style="color:#111;font-size:var(--fs-d);font-weight:600;flex-shrink:0;min-width:70px;text-align:right">~3 meses</span>
     </div>
 
@@ -3360,7 +3360,7 @@ function renderizarGraficoModuloTresBarras(linhasModulo){
   }
   document.getElementById('grafico-por-modulo').classList.remove('hidden');
   document.getElementById('metricas-modulo-vazio').classList.add('hidden');
-  document.getElementById('lista-metricas-modulo').style.height = (linhasValidas.length * 100 + 60) + 'px';
+  document.getElementById('lista-metricas-modulo').style.height = (linhasValidas.length * 76 + 60) + 'px';
   const canvasModulo = document.getElementById('grafico-por-modulo');
   try{
     if(typeof Chart === 'undefined') throw new Error('Biblioteca do gráfico não carregou');
@@ -3372,9 +3372,9 @@ function renderizarGraficoModuloTresBarras(linhasModulo){
       data: {
         labels: linhasValidas.map(l=>quebrarNomeModulo(l.modulo)),
         datasets: [
-          {label:'% de acerto', data: linhasValidas.map(l=>l.pctAcerto), backgroundColor:'#1BAF7A', borderRadius:4, barThickness:10, categoryPercentage:0.8, barPercentage:0.7},
-          {label:'% de recuperação após erro', data: linhasValidas.map(l=>l.pctRecuperacao), backgroundColor:'#EDA100', borderRadius:4, barThickness:10, categoryPercentage:0.8, barPercentage:0.7},
-          {label:'% de retenção', data: linhasValidas.map(l=>l.pctRetencao), backgroundColor:'#4A3AA7', borderRadius:4, barThickness:10, categoryPercentage:0.8, barPercentage:0.7}
+          {label:'% de acerto', data: linhasValidas.map(l=>l.pctAcerto), backgroundColor:'#1BAF7A', borderRadius:4, barThickness:7, categoryPercentage:0.8, barPercentage:0.5},
+          {label:'% de recuperação após erro', data: linhasValidas.map(l=>l.pctRecuperacao), backgroundColor:'#EDA100', borderRadius:4, barThickness:7, categoryPercentage:0.8, barPercentage:0.5},
+          {label:'% de retenção', data: linhasValidas.map(l=>l.pctRetencao), backgroundColor:'#4A3AA7', borderRadius:4, barThickness:7, categoryPercentage:0.8, barPercentage:0.5}
         ]
       },
       options: {
