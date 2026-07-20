@@ -63,6 +63,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:32px;min-height:32px;max-height:32px;padding-top:0;padding-bottom:0;box-sizing:border-box}
 #aba-quests .filter-select{height:32px;box-sizing:border-box}
 .filter-select{font-size:16px;padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
+.slider-evolucao{-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:#EEE;outline:none;cursor:pointer}
+.slider-evolucao::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#D95926;cursor:pointer;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25)}
+.slider-evolucao::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#D95926;cursor:pointer;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25)}
+.slider-evolucao::-moz-range-track{height:4px;border-radius:2px;background:#EEE}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
@@ -602,14 +606,14 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div class="section-title">Evolução no tempo</div>
     <div id="metricas-evolucao-contexto" style="color:#888;font-size:var(--fs-b);margin-bottom:8px">Todos os módulos</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-      <span style="color:#888;font-size:var(--fs-b);flex-shrink:0">Período:</span>
-      <input type="range" id="evolucao-slider" min="1" max="12" value="3" step="1" oninput="atualizarSliderEvolucao(this.value)" style="flex:1">
-      <span id="evolucao-slider-valor" style="color:#111;font-size:var(--fs-d);font-weight:600;flex-shrink:0;min-width:60px;text-align:right">3 meses</span>
-    </div>
     <div class="card-questao" style="position:relative;height:220px">
       <canvas id="grafico-evolucao"></canvas>
       <p id="metricas-evolucao-vazio" class="hidden" style="color:#888;font-size:var(--fs-d)">Não tem dado suficiente ainda pra mostrar evolução nesse módulo/período.</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+      <span style="color:#888;font-size:var(--fs-b);flex-shrink:0">Período:</span>
+      <input type="range" class="slider-evolucao" id="evolucao-slider" min="2" max="104" value="12" step="1" oninput="atualizarSliderEvolucao(this.value)" style="flex:1">
+      <span id="evolucao-slider-valor" style="color:#111;font-size:var(--fs-d);font-weight:600;flex-shrink:0;min-width:70px;text-align:right">~3 meses</span>
     </div>
 
     <div class="section-title">Por tipo de questão</div>
@@ -3210,17 +3214,23 @@ function calcularMetricasConhecimentoPorModulo(respostasBase, infoPorQuestao){
   return resultado;
 }
 
-let evolucaoMesesExibidos = 3; // independente do filtro de período do resto da tela
+let evolucaoSemanasExibidas = 12; // independente do filtro de período do resto da tela
+function formatarPeriodoEvolucao(semanas){
+  if(semanas < 8) return semanas === 1 ? '1 semana' : `${semanas} semanas`;
+  if(semanas < 52) return `~${Math.round(semanas/4.345)} meses`;
+  const anos = semanas/52;
+  return anos < 1.5 ? '~1 ano' : `~${Math.round(anos)} anos`;
+}
 function atualizarSliderEvolucao(valor){
-  evolucaoMesesExibidos = parseInt(valor, 10);
-  document.getElementById('evolucao-slider-valor').textContent = evolucaoMesesExibidos === 1 ? '1 mês' : `${evolucaoMesesExibidos} meses`;
+  evolucaoSemanasExibidas = parseInt(valor, 10);
+  document.getElementById('evolucao-slider-valor').textContent = formatarPeriodoEvolucao(evolucaoSemanasExibidas);
   renderizarGraficoEvolucao();
 }
 function calcularEvolucaoSemanalModulo(){
   // vazio = considera todos (mesma regra "vazio = todos" do resto da tela);
   // com módulos selecionados, junta as respostas deles numa linha só. O
   // período aqui é o do slider próprio da evolução, não o filtro geral da tela
-  const corteEvolucao = Date.now() - evolucaoMesesExibidos*30*24*60*60*1000;
+  const corteEvolucao = Date.now() - evolucaoSemanasExibidas*7*24*60*60*1000;
   const respostasDoModulo = metricasRespostasCache.filter(r => {
     const mod = metricasQuestoesInfoCache[r.questao_id]?.modulo_pscpp;
     if(modulosFiltradosMetricas.size > 0 && !modulosFiltradosMetricas.has(mod)) return false;
@@ -3305,20 +3315,13 @@ function renderizarGraficoEvolucao(){
   }
 }
 
+const QUEBRAS_NOME_MODULO = {
+  'Navegação em Águas Restritas': ['Navegação em', 'Águas Restritas'],
+  'Meteorologia e Oceanografia': ['Meteorologia e', 'Oceanografia'],
+  'Conhecimentos Gerais': ['Conhecimentos', 'Gerais']
+};
 function quebrarNomeModulo(nome){
-  // quebra em até 2 linhas, sem truncar nada — Chart.js aceita um array de
-  // strings como rótulo do eixo, cada item do array vira uma linha
-  if(nome.length <= 18) return nome;
-  const palavras = nome.split(' ');
-  let linha1 = '', linha2 = '';
-  for(const palavra of palavras){
-    if(!linha2 && (linha1 ? linha1 + ' ' + palavra : palavra).length <= 18){
-      linha1 = linha1 ? linha1 + ' ' + palavra : palavra;
-    }else{
-      linha2 = linha2 ? linha2 + ' ' + palavra : palavra;
-    }
-  }
-  return linha2 ? [linha1, linha2] : linha1;
+  return QUEBRAS_NOME_MODULO[nome] || nome;
 }
 
 function renderizarGraficoModuloTresBarras(linhasModulo){
@@ -3343,9 +3346,9 @@ function renderizarGraficoModuloTresBarras(linhasModulo){
       data: {
         labels: linhasValidas.map(l=>quebrarNomeModulo(l.modulo)),
         datasets: [
-          {label:'% de acerto', data: linhasValidas.map(l=>l.pctAcerto), backgroundColor:'#1BAF7A', borderRadius:4},
-          {label:'% de recuperação após erro', data: linhasValidas.map(l=>l.pctRecuperacao), backgroundColor:'#EDA100', borderRadius:4},
-          {label:'% de retenção', data: linhasValidas.map(l=>l.pctRetencao), backgroundColor:'#4A3AA7', borderRadius:4}
+          {label:'% de acerto', data: linhasValidas.map(l=>l.pctAcerto), backgroundColor:'#1BAF7A', borderRadius:4, barThickness:14},
+          {label:'% de recuperação após erro', data: linhasValidas.map(l=>l.pctRecuperacao), backgroundColor:'#EDA100', borderRadius:4, barThickness:14},
+          {label:'% de retenção', data: linhasValidas.map(l=>l.pctRetencao), backgroundColor:'#4A3AA7', borderRadius:4, barThickness:14}
         ]
       },
       options: {
@@ -3366,7 +3369,7 @@ function renderizarGraficoModuloTresBarras(linhasModulo){
         },
         scales: {
           x: {beginAtZero:true, max:100, ticks:{color:'#888', font:{size:11}, callback:(v)=>v+'%'}, grid:{color:'#eee'}},
-          y: {grid:{display:false}, ticks:{color:'#111', font:{size:11}}}
+          y: {afterFit: (scale) => { scale.width = 95; }, grid:{display:false}, ticks:{color:'#111', font:{size:11}}}
         }
       }
     });
