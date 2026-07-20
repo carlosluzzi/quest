@@ -595,9 +595,17 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div id="metricas-resumo-geral" style="margin-top:16px"></div>
 
     <div class="section-title">Por módulo</div>
+    <div id="metricas-modulo-botoes" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px"></div>
     <div id="lista-metricas-modulo" class="card-questao" style="position:relative">
       <canvas id="grafico-por-modulo"></canvas>
       <p id="metricas-modulo-vazio" class="hidden" style="color:#888;font-size:var(--fs-d)">Nenhum dado disponível pra esses módulos.</p>
+    </div>
+
+    <div class="section-title">Evolução no tempo</div>
+    <select class="filter-select" id="metricas-evolucao-select" onchange="renderizarGraficoEvolucao()"></select>
+    <div class="card-questao" style="position:relative;height:220px">
+      <canvas id="grafico-evolucao"></canvas>
+      <p id="metricas-evolucao-vazio" class="hidden" style="color:#888;font-size:var(--fs-d)">Não tem dado suficiente ainda pra mostrar evolução nesse módulo/período.</p>
     </div>
 
     <div class="section-title">Por tipo de questão</div>
@@ -3156,6 +3164,210 @@ function mostrarModuloVazio(texto){
   document.getElementById('lista-metricas-modulo').style.height = 'auto';
 }
 
+// Calcula, por módulo, duas métricas que olham pra PARES de tentativas na
+// mesma questão ao longo do tempo (não são um "instantâneo" como % de
+// acerto): recuperação (errou, tentou de novo, acertou?) e retenção
+// (acertou há mais de 14 dias, ainda acerta se aparecer de novo?)
+function calcularMetricasConhecimentoPorModulo(respostasBase, infoPorQuestao){
+  const CORTE_RETENCAO_MS = 14*24*60*60*1000;
+  const agora = Date.now();
+  const porModulo = {};
+  respostasBase.forEach(r=>{
+    const mod = infoPorQuestao[r.questao_id]?.modulo_pscpp || 'Sem módulo';
+    if(!porModulo[mod]) porModulo[mod] = {};
+    if(!porModulo[mod][r.questao_id]) porModulo[mod][r.questao_id] = [];
+    porModulo[mod][r.questao_id].push(r);
+  });
+  const resultado = {};
+  Object.entries(porModulo).forEach(([mod, questoes])=>{
+    let recuperacaoTotal=0, recuperacaoSucesso=0, retencaoTotal=0, retencaoSucesso=0;
+    Object.values(questoes).forEach(lista=>{
+      lista.sort((a,b)=> a.respondido_em.localeCompare(b.respondido_em));
+      for(let i=0;i<lista.length-1;i++){
+        const atual=lista[i], proxima=lista[i+1];
+        if(!atual.correta){
+          recuperacaoTotal++;
+          if(proxima.correta) recuperacaoSucesso++;
+        }
+        if(atual.correta){
+          const idade = agora - new Date(atual.respondido_em).getTime();
+          if(idade >= CORTE_RETENCAO_MS){
+            retencaoTotal++;
+            if(proxima.correta) retencaoSucesso++;
+          }
+        }
+      }
+    });
+    resultado[mod] = {
+      recuperacaoPct: recuperacaoTotal ? Math.round((recuperacaoSucesso/recuperacaoTotal)*100) : null,
+      retencaoPct: retencaoTotal ? Math.round((retencaoSucesso/retencaoTotal)*100) : null,
+    };
+  });
+  return resultado;
+}
+
+const METRICAS_GRAFICO_MODULO = {
+  acerto: {label:'% de acerto', cor:'#1BAF7A', campo:'pctAcerto'},
+  recuperacao: {label:'% de recuperação após erro', cor:'#EDA100', campo:'pctRecuperacao'},
+  retencao: {label:'% de retenção', cor:'#4A3AA7', campo:'pctRetencao'}
+};
+let metricaAtivaGraficoModulo = 'acerto';
+
+function trocarMetricaGraficoModulo(chave){
+  metricaAtivaGraficoModulo = chave;
+  document.querySelectorAll('#metricas-modulo-botoes .filter-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.metrica === chave);
+  });
+  renderizarMetricasPessoais();
+}
+
+function abreviarNomeModulo(nome){
+  return nome.length > 16 ? nome.slice(0,15) + '…' : nome;
+}
+
+function calcularEvolucaoSemanalModulo(modulo){
+  const respostasDoModulo = metricasRespostasCache.filter(r => {
+    if(metricasQuestoesInfoCache[r.questao_id]?.modulo_pscpp !== modulo) return false;
+    return passaNoFiltroPeriodo(r.respondido_em);
+  });
+  const porSemana = {};
+  respostasDoModulo.forEach(r=>{
+    const data = new Date(r.respondido_em);
+    const diaDaSemana = data.getDay();
+    const inicioSemana = new Date(data);
+    inicioSemana.setDate(data.getDate() - ((diaDaSemana+6)%7));
+    inicioSemana.setHours(0,0,0,0);
+    const chave = inicioSemana.toISOString().slice(0,10);
+    if(!porSemana[chave]) porSemana[chave] = {total:0, acertos:0};
+    porSemana[chave].total++;
+    if(r.correta) porSemana[chave].acertos++;
+  });
+  return Object.entries(porSemana)
+    .sort((a,b)=> a[0].localeCompare(b[0]))
+    .map(([semana, s])=>({ semana, pct: Math.round((s.acertos/s.total)*100) }));
+}
+
+let graficoEvolucao = null;
+function renderizarGraficoEvolucao(){
+  const elSelect = document.getElementById('metricas-evolucao-select');
+  if(!elSelect.options.length){
+    elSelect.innerHTML = MODULOS_PSCPP.map(m=>`<option value="${m.replace(/"/g,'&quot;')}">${escapeHtml(m)}</option>`).join('');
+  }
+  const modulo = elSelect.value;
+  const dados = calcularEvolucaoSemanalModulo(modulo);
+  const elVazio = document.getElementById('metricas-evolucao-vazio');
+  const canvas = document.getElementById('grafico-evolucao');
+
+  if(graficoEvolucao){ graficoEvolucao.destroy(); graficoEvolucao = null; }
+
+  if(dados.length < 2){
+    canvas.classList.add('hidden');
+    elVazio.textContent = 'Não tem dado suficiente ainda pra mostrar evolução nesse módulo/período.';
+    elVazio.classList.remove('hidden');
+    return;
+  }
+  canvas.classList.remove('hidden');
+  elVazio.classList.add('hidden');
+  try{
+    if(typeof Chart === 'undefined') throw new Error('Biblioteca do gráfico não carregou');
+    graficoEvolucao = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: dados.map(d => new Date(d.semana+'T00:00:00').toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})),
+        datasets: [{
+          data: dados.map(d=>d.pct),
+          borderColor: '#D95926',
+          backgroundColor: 'rgba(217,89,38,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: '#D95926',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {display:false},
+          tooltip: {callbacks: {label: (item) => item.raw + '% de acerto'}}
+        },
+        scales: {
+          x: {grid:{display:false}, ticks:{color:'#888', font:{size:11}}},
+          y: {min:0, max:100, ticks:{color:'#888', font:{size:11}, callback:(v)=>v+'%'}, grid:{color:'#eee'}}
+        }
+      }
+    });
+  }catch(erroGrafico){
+    console.error('Erro ao desenhar gráfico de evolução:', erroGrafico);
+    canvas.classList.add('hidden');
+    elVazio.textContent = 'Não consegui carregar o gráfico agora. Tenta recarregar a página.';
+    elVazio.classList.remove('hidden');
+  }
+}
+
+function renderizarGraficoModuloMetricaUnica(linhasModulo){
+  const elBotoes = document.getElementById('metricas-modulo-botoes');
+  if(!elBotoes.innerHTML){
+    elBotoes.innerHTML = Object.entries(METRICAS_GRAFICO_MODULO).map(([chave, m])=>
+      `<span class="filter-btn${chave===metricaAtivaGraficoModulo?' active':''}" data-metrica="${chave}" onclick="trocarMetricaGraficoModulo('${chave}')">${m.label}</span>`
+    ).join('');
+  }
+
+  const metrica = METRICAS_GRAFICO_MODULO[metricaAtivaGraficoModulo];
+  const linhasValidas = linhasModulo
+    .filter(l => l[metrica.campo] !== null)
+    .sort((a,b) => b[metrica.campo] - a[metrica.campo]);
+
+  if(graficoPorModulo){ graficoPorModulo.destroy(); graficoPorModulo = null; }
+  if(!linhasValidas.length){
+    mostrarModuloVazio('Ainda não tem dado suficiente pra essa métrica.');
+    return;
+  }
+  document.getElementById('grafico-por-modulo').classList.remove('hidden');
+  document.getElementById('metricas-modulo-vazio').classList.add('hidden');
+  document.getElementById('lista-metricas-modulo').style.height = (linhasValidas.length * 40 + 50) + 'px';
+  const canvasModulo = document.getElementById('grafico-por-modulo');
+  try{
+    if(typeof Chart === 'undefined') throw new Error('Biblioteca do gráfico não carregou');
+    if(!Chart.Tooltip.positioners.pontoExato){
+      Chart.Tooltip.positioners.pontoExato = function(elementos, posicaoEvento){ return posicaoEvento; };
+    }
+    graficoPorModulo = new Chart(canvasModulo, {
+      type: 'bar',
+      data: {
+        labels: linhasValidas.map(l=>abreviarNomeModulo(l.modulo)),
+        datasets: [{label: metrica.label, data: linhasValidas.map(l=>l[metrica.campo]), backgroundColor: metrica.cor, borderRadius:4, barThickness:22}]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        onHover: (event, elements, chart) => { chart.canvas.style.cursor = elements.length ? 'pointer' : 'default'; },
+        plugins: {
+          legend: {display:true, position:'top', align:'center', labels:{color:'#666', boxWidth:12, boxHeight:12, borderRadius:4, useBorderRadius:true, font:{size:12}}},
+          tooltip: {
+            enabled:true, position:'pontoExato',
+            callbacks: {
+              title: (itens) => linhasValidas[itens[0].dataIndex].modulo,
+              label: (item) => metrica.label + ': ' + item.raw + '%'
+            }
+          }
+        },
+        scales: {
+          x: {beginAtZero:true, max:100, ticks:{color:'#888', font:{size:11}, callback:(v)=>v+'%'}, grid:{color:'#eee'}},
+          y: {grid:{display:false}, ticks:{color:'#111', font:{size:11}}}
+        }
+      }
+    });
+  }catch(erroGrafico){
+    console.error('Erro ao desenhar gráfico por módulo:', erroGrafico);
+    mostrarModuloVazio('Não consegui carregar o gráfico agora. Tenta recarregar a página.');
+  }
+}
+
 function passaNoFiltroPeriodo(dataIso){
   if(!dataIso) return false;
   if(metricasDataInicio && dataIso < metricasDataInicio+'T00:00:00') return false;
@@ -3350,7 +3562,7 @@ function renderizarMetricasPessoais(){
     </div>
   `;
 
-  /* ---- por módulo ---- */
+  /* ---- por módulo: comparação com métrica selecionável ---- */
   const statsPorModulo = {};
   respostas.forEach(r=>{
     const mod = infoPorQuestao[r.questao_id]?.modulo_pscpp || 'Sem módulo';
@@ -3358,10 +3570,24 @@ function renderizarMetricasPessoais(){
     statsPorModulo[mod].total++;
     if(r.correta) statsPorModulo[mod].acertos++;
   });
+  // recuperação/retenção olham pra pares de tentativas ao longo do tempo –
+  // usam o histórico completo (sem filtro de período), só respeitando o
+  // filtro de módulo, senão um par "errou/acertou depois" podia ser cortado
+  // ao meio pelo filtro de data
+  const respostasParaConhecimento = modulosFiltradosMetricas.size > 0
+    ? metricasRespostasCache.filter(r => modulosFiltradosMetricas.has(infoPorQuestao[r.questao_id]?.modulo_pscpp))
+    : metricasRespostasCache;
+  const metricasConhecimentoPorModulo = calcularMetricasConhecimentoPorModulo(respostasParaConhecimento, infoPorQuestao);
+
   const linhasModulo = Object.entries(statsPorModulo)
     .map(([modulo, s])=>({
-    modulo, total: s.total, acertos: s.acertos, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
-  })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
+      modulo,
+      total: s.total,
+      acertos: s.acertos,
+      pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0,
+      pctRecuperacao: metricasConhecimentoPorModulo[modulo]?.recuperacaoPct ?? null,
+      pctRetencao: metricasConhecimentoPorModulo[modulo]?.retencaoPct ?? null,
+    }));
   // régua do eixo X sempre baseada no maior valor entre TODOS os 7 módulos
   // (seus, não do grupo), não só os que estão filtrados na tela — assim a
   // régua não muda de tamanho quando você filtra pra ver menos módulos
@@ -3369,54 +3595,8 @@ function renderizarMetricasPessoais(){
   const elListaDisponiveis = document.getElementById('metricas-modulos-disponiveis');
   if(!elListaDisponiveis.innerHTML) renderizarListasFiltroModulo();
 
-  if(graficoPorModulo){ graficoPorModulo.destroy(); graficoPorModulo = null; }
-  if(linhasModulo.length){
-    document.getElementById('grafico-por-modulo').classList.remove('hidden');
-    document.getElementById('metricas-modulo-vazio').classList.add('hidden');
-    elModulo.style.height = (linhasModulo.length * 76 + 40) + 'px';
-    const canvasModulo = document.getElementById('grafico-por-modulo');
-    try{
-      if(typeof Chart === 'undefined') throw new Error('Biblioteca do gráfico não carregou');
-      // faz a caixinha de info aparecer exatamente onde a pessoa tocou/clicou,
-      // em vez de numa posição fixa relacionada à barra
-      if(!Chart.Tooltip.positioners.pontoExato){
-        Chart.Tooltip.positioners.pontoExato = function(elementos, posicaoEvento){
-          return posicaoEvento;
-        };
-      }
-      graficoPorModulo = new Chart(canvasModulo, {
-        type: 'bar',
-        data: {
-          labels: linhasModulo.map(l=>l.modulo),
-          datasets: [
-            {label:'Acertos', data: linhasModulo.map(l=>l.acertos), backgroundColor:'#3B6D11', borderRadius:4},
-            {label:'Respondidas', data: linhasModulo.map(l=>l.total), backgroundColor:'#202A45', borderRadius:4},
-            {label:'% de acertos', data: linhasModulo.map(l=>l.pctAcerto), backgroundColor:'#D97757', borderRadius:4}
-          ]
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: {mode:'y', intersect:false},
-          onHover: (event, elements, chart) => { chart.canvas.style.cursor = elements.length ? 'pointer' : 'default'; },
-          plugins: {
-            legend: {position:'top', align:'start', labels:{color:'#666', boxWidth:12, font:{size:12}}},
-            tooltip: {enabled:true, mode:'y', intersect:false, position:'pontoExato'}
-          },
-          scales: {
-            x: {beginAtZero:true, max: Math.ceil(maiorTotalGeral * 1.1), grid:{color:'#eee'}, ticks:{color:'#888', font:{size:11}}},
-            y: {grid:{display:false}, ticks:{color:'#111', font:{size:12}}}
-          }
-        }
-      });
-    }catch(erroGrafico){
-      console.error('Erro ao desenhar gráfico por módulo:', erroGrafico);
-      mostrarModuloVazio('Não consegui carregar o gráfico agora. Tenta recarregar a página.');
-    }
-  }else{
-    mostrarModuloVazio('Nenhum dado disponível pra esses módulos.');
-  }
+  renderizarGraficoModuloMetricaUnica(linhasModulo);
+  renderizarGraficoEvolucao();
 
   /* ---- por tipo de questão ---- */
   const statsPorTipo = {};
