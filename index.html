@@ -3759,8 +3759,18 @@ function identificarBibliografia(explicacao, enunciado){
       // explicação (ex: "Fonte: ..., Cap. 10"), ou vice-versa
       const capExtraido = extrairCapituloDoTexto(texto) ?? extrairCapituloDoTexto(textos.find(t=>t!==texto));
       if(capExtraido){
-        const comCapCerto = candidatos.find(c => c.capitulos && c.capitulos.includes(capExtraido));
-        if(comCapCerto) return comCapCerto;
+        // alguns capítulos aparecem nas 2 listas do mesmo autor (ex: Nayak
+        // cap. 13 está em Arte Naval E Águas Restritas) — quando o
+        // desempate por capítulo ainda deixa empate entre módulos, decisão
+        // explícita do Carlos: prefere Arte Naval em vez de perguntar
+        // (mudar isso pra "questão em múltiplos módulos" exigiria mudança
+        // de schema, não vale o investimento pra esse caso raro)
+        const comCapCerto = candidatos.filter(c => c.capitulos && c.capitulos.includes(capExtraido));
+        if(comCapCerto.length === 1) return comCapCerto[0];
+        if(comCapCerto.length > 1){
+          const preferida = comCapCerto.find(c => c.modulo === 'Arte Naval');
+          if(preferida) return preferida;
+        }
       }
       return null; // achou o autor, mas ambíguo entre módulos — trata como não achado
     }
