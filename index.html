@@ -1945,8 +1945,8 @@ function selecionarQuantidade(botao, valor){
 
 // busca as questões que batem com os filtros atuais, sem criar caderno – reaproveitada
 // pelo contador ao vivo e pelo montarCaderno de verdade, pra nunca ficarem dessincronizados
-async function buscarQuestoesFiltradas(){
-  let query = sb.from('questoes').select('*').eq('anulada', false);
+async function buscarQuestoesFiltradas(apenasContagem = false){
+  let query = sb.from('questoes').select(apenasContagem ? 'id' : '*').eq('anulada', false);
   if(filtroSelecionado.modulo) query = query.eq('modulo_pscpp', filtroSelecionado.modulo);
   if(filtroSelecionado.publicacao) query = query.eq('bibliografia_id', filtroSelecionado.publicacao);
   if(filtroSelecionado.capitulo) query = query.eq('capitulo', filtroSelecionado.capitulo);
@@ -1974,7 +1974,7 @@ function atualizarContadorDisponiveis(){
   contadorDebounce = setTimeout(async ()=>{
     const el = document.getElementById('contador-disponiveis');
     el.textContent = 'Contando...';
-    const questoes = await buscarQuestoesFiltradas();
+    const questoes = await buscarQuestoesFiltradas(true); // leve — só conta, não precisa das colunas todas
     el.textContent = `${questoes.length} ${questoes.length===1?'questão disponível':'questões disponíveis'} com esses filtros`;
   }, 300);
 }
@@ -3125,6 +3125,7 @@ let metricasRespostasCache = [];
 let metricasQuestoesInfoCache = {};
 let metricasFavoritosCache = new Set();
 let metricasNotasCache = [];
+let metricasTodasQuestoesCache = [];
 let graficoPorModulo = null; // instância do Chart.js — precisa destruir antes de redesenhar
 function mostrarModuloVazio(texto){
   if(graficoPorModulo){ graficoPorModulo.destroy(); graficoPorModulo = null; }
@@ -3147,15 +3148,19 @@ function passaNoFiltroPeriodo(dataIso){
 }
 
 async function carregarMetricasPessoais(){
-  const [{data: respostasBrutas}, {data: meusFavoritos}, {data: minhasNotas}] = await Promise.all([
+  const [{data: respostasBrutas}, {data: meusFavoritos}, {data: minhasNotas}, {data: todasQuestoesBanco}, {data: minhasExclusoes}] = await Promise.all([
     sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em').eq('usuario_id', usuarioAtual.id),
     sb.from('favoritos').select('questao_id').eq('usuario_id', usuarioAtual.id),
-    sb.from('notas').select('questao_id, texto, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false})
+    sb.from('notas').select('questao_id, texto, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
+    sb.from('questoes').select('id, modulo_pscpp, tipo_questao').eq('anulada', false),
+    sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id)
   ]);
 
   metricasRespostasCache = respostasBrutas || [];
   metricasFavoritosCache = new Set((meusFavoritos||[]).map(f=>f.questao_id));
   metricasNotasCache = minhasNotas || [];
+  const idsExcluidosSet = new Set((minhasExclusoes||[]).map(e=>e.questao_id));
+  metricasTodasQuestoesCache = (todasQuestoesBanco||[]).filter(q=>!idsExcluidosSet.has(q.id));
 
   const idsQuestoes = new Set(metricasRespostasCache.map(r=>r.questao_id));
   metricasNotasCache.forEach(n=>idsQuestoes.add(n.questao_id));
@@ -3220,22 +3225,11 @@ function moverModuloParaDisponiveis(nome){
   renderizarListasFiltroModulo();
   renderizarMetricasPessoais();
 }
-let versaoRequisicaoDisponiveis = 0;
-async function atualizarTotalQuestoesDisponiveis(filtroTipoAtual, modulosAtuais){
-  const minhaVersao = ++versaoRequisicaoDisponiveis;
-  const {data: exclusoes} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id);
-  const idsExcluidos = (exclusoes||[]).map(e=>e.questao_id);
-
-  let query = sb.from('questoes').select('id', {count:'exact', head:true}).eq('anulada', false);
-  if(modulosAtuais.size > 0) query = query.in('modulo_pscpp', [...modulosAtuais]);
-  if(filtroTipoAtual) query = query.eq('tipo_questao', filtroTipoAtual);
-  if(idsExcluidos.length) query = query.not('id', 'in', `(${idsExcluidos.join(',')})`);
-  const {count} = await query;
-  // se o usuário já trocou o filtro de novo enquanto essa busca rodava,
-  // essa resposta é velha — não sobrescreve o que já está na tela
-  if(minhaVersao !== versaoRequisicaoDisponiveis) return;
-  const el = document.getElementById('questoes-disponiveis-total');
-  if(el) el.textContent = count ?? '?';
+function calcularTotalQuestoesDisponiveis(filtroTipoAtual, modulosAtuais){
+  let questoes = metricasTodasQuestoesCache;
+  if(modulosAtuais.size > 0) questoes = questoes.filter(q => modulosAtuais.has(q.modulo_pscpp));
+  if(filtroTipoAtual) questoes = questoes.filter(q => q.tipo_questao === filtroTipoAtual);
+  return questoes.length;
 }
 function renderizarMetricasPessoais(){
   const filtroTipo = document.getElementById('metricas-filtro-tipo').value;
@@ -3308,11 +3302,12 @@ function renderizarMetricasPessoais(){
   const idsQuestoesUnicas = new Set(respostas.map(r=>r.questao_id));
   const totalQuestoesUnicas = idsQuestoesUnicas.size;
   const totalQuestoesRepetidas = totalRespondidas - totalQuestoesUnicas;
+  const totalDisponivel = calcularTotalQuestoesDisponiveis(filtroTipo, modulosFiltradosMetricas);
 
   elResumo.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
       <div class="card-questao" style="text-align:left;margin-bottom:0">
-        <div style="font-size:24px;font-weight:500">${totalQuestoesUnicas} / <span id="questoes-disponiveis-total">···</span></div>
+        <div style="font-size:24px;font-weight:500">${totalQuestoesUnicas} / ${totalDisponivel}</div>
         <div style="color:#888;font-size:var(--fs-b)">Questões respondidas</div>
       </div>
       <div class="card-questao" style="text-align:left;margin-bottom:0">
@@ -3329,9 +3324,6 @@ function renderizarMetricasPessoais(){
       </div>
     </div>
   `;
-  // busca o total disponível no banco separado, sem travar o resto da tela
-  // (não depende de período, só de módulo + tipo)
-  atualizarTotalQuestoesDisponiveis(filtroTipo, new Set(modulosFiltradosMetricas));
 
   /* ---- por módulo ---- */
   const statsPorModulo = {};
@@ -3360,6 +3352,13 @@ function renderizarMetricasPessoais(){
     const canvasModulo = document.getElementById('grafico-por-modulo');
     try{
       if(typeof Chart === 'undefined') throw new Error('Biblioteca do gráfico não carregou');
+      // faz a caixinha de info aparecer exatamente onde a pessoa tocou/clicou,
+      // em vez de numa posição fixa relacionada à barra
+      if(!Chart.Tooltip.positioners.pontoExato){
+        Chart.Tooltip.positioners.pontoExato = function(elementos, posicaoEvento){
+          return posicaoEvento;
+        };
+      }
       graficoPorModulo = new Chart(canvasModulo, {
         type: 'bar',
         data: {
@@ -3378,7 +3377,7 @@ function renderizarMetricasPessoais(){
           onHover: (event, elements, chart) => { chart.canvas.style.cursor = elements.length ? 'pointer' : 'default'; },
           plugins: {
             legend: {position:'top', align:'start', labels:{color:'#666', boxWidth:12, font:{size:12}}},
-            tooltip: {enabled:true, mode:'y', intersect:false}
+            tooltip: {enabled:true, mode:'y', intersect:false, position:'pontoExato'}
           },
           scales: {
             x: {beginAtZero:true, max: Math.ceil(maiorTotalGeral * 1.1), grid:{color:'#eee'}, ticks:{color:'#888', font:{size:11}}},
