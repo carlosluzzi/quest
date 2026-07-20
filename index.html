@@ -208,7 +208,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #aba-adicionar.hidden{display:none}
 @media(min-width:1100px){
   #aba-adicionar{position:static;inset:auto;background:none;display:block;padding:0;z-index:auto}
-  #aba-adicionar .modal-conteudo{max-width:520px;max-height:none;overflow-y:visible;padding:0;border-radius:0}
+  #aba-adicionar .modal-conteudo{max-width:700px;max-height:none;overflow-y:visible;padding:0;border-radius:0}
 }
 .modal-conteudo-fluxo-topico{height:420px;box-sizing:border-box}
 /* Popup grande — usado em qualquer lugar onde a pessoa escreve ou lê texto
@@ -680,9 +680,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
       <div id="secao-upload-planilha" class="hidden">
         <p style="color:#666;font-size:var(--fs-d)">Preenche a planilha-modelo com as questões (sem precisar de IA, é só copiar e colar) e sobe ela aqui.</p>
-        <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 10px" onclick="baixarModeloPlanilha()">Baixar planilha-modelo</button>
+        <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 10px;white-space:nowrap" onclick="baixarModeloPlanilha()">Baixar planilha-modelo</button>
         <input type="file" id="upload-planilha" accept=".xlsx" class="hidden" onchange="atualizarNomePlanilhaSelecionada()">
-        <button type="button" class="btn-secundario" style="width:100%;margin-bottom:6px" onclick="document.getElementById('upload-planilha').click()">Escolher planilha preenchida</button>
+        <button type="button" class="btn-secundario" style="width:100%;margin-bottom:6px;white-space:nowrap" onclick="document.getElementById('upload-planilha').click()">Escolher planilha preenchida</button>
         <div id="nome-planilha-selecionada" style="color:#888;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:20px">Nenhuma planilha selecionada</div>
         <div id="upload-planilha-status"></div>
         <button class="btn-primario" onclick="enviarPlanilha()">Cadastrar questões</button>
