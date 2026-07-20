@@ -3123,7 +3123,6 @@ function redefinirFiltroDatas(){
 // deixa instantâneo, igual o PSCPP Tracker
 let metricasRespostasCache = [];
 let metricasQuestoesInfoCache = {};
-let metricasCadernosCache = [];
 let metricasFavoritosCache = new Set();
 let metricasNotasCache = [];
 let graficoPorModulo = null; // instância do Chart.js — precisa destruir antes de redesenhar
@@ -3148,15 +3147,13 @@ function passaNoFiltroPeriodo(dataIso){
 }
 
 async function carregarMetricasPessoais(){
-  const [{data: respostasBrutas}, {data: cadernosFinalizados}, {data: meusFavoritos}, {data: minhasNotas}] = await Promise.all([
+  const [{data: respostasBrutas}, {data: meusFavoritos}, {data: minhasNotas}] = await Promise.all([
     sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em').eq('usuario_id', usuarioAtual.id),
-    sb.from('cadernos').select('id, finalizado_em').eq('usuario_id', usuarioAtual.id).eq('status','finalizado'),
     sb.from('favoritos').select('questao_id').eq('usuario_id', usuarioAtual.id),
     sb.from('notas').select('questao_id, texto, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false})
   ]);
 
   metricasRespostasCache = respostasBrutas || [];
-  metricasCadernosCache = cadernosFinalizados || [];
   metricasFavoritosCache = new Set((meusFavoritos||[]).map(f=>f.questao_id));
   metricasNotasCache = minhasNotas || [];
 
@@ -3222,6 +3219,19 @@ function moverModuloParaDisponiveis(nome){
   modulosFiltradosMetricas.delete(nome);
   renderizarListasFiltroModulo();
   renderizarMetricasPessoais();
+}
+let versaoRequisicaoDisponiveis = 0;
+async function atualizarTotalQuestoesDisponiveis(filtroTipoAtual, modulosAtuais){
+  const minhaVersao = ++versaoRequisicaoDisponiveis;
+  let query = sb.from('questoes').select('id', {count:'exact', head:true});
+  if(modulosAtuais.size > 0) query = query.in('modulo_pscpp', [...modulosAtuais]);
+  if(filtroTipoAtual) query = query.eq('tipo_questao', filtroTipoAtual);
+  const {count} = await query;
+  // se o usuário já trocou o filtro de novo enquanto essa busca rodava,
+  // essa resposta é velha — não sobrescreve o que já está na tela
+  if(minhaVersao !== versaoRequisicaoDisponiveis) return;
+  const el = document.getElementById('questoes-disponiveis-total');
+  if(el) el.textContent = count ?? '?';
 }
 function renderizarMetricasPessoais(){
   const filtroTipo = document.getElementById('metricas-filtro-tipo').value;
@@ -3291,17 +3301,19 @@ function renderizarMetricasPessoais(){
   const aproveitamento = aproveitamentoNum.toFixed(2).replace('.', ',');
   const corAproveitamento = aproveitamentoNum >= 70 ? '#3B6D11' : aproveitamentoNum >= 50 ? '#854F0B' : '#A32D2D';
 
-  const totalCadernos = metricasCadernosCache.filter(c => passaNoFiltroPeriodo(c.finalizado_em)).length;
+  const idsQuestoesUnicas = new Set(respostas.map(r=>r.questao_id));
+  const totalQuestoesUnicas = idsQuestoesUnicas.size;
+  const totalQuestoesRepetidas = totalRespondidas - totalQuestoesUnicas;
 
   elResumo.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
       <div class="card-questao" style="text-align:left;margin-bottom:0">
-        <div style="font-size:24px;font-weight:500">${totalCadernos}</div>
-        <div style="color:#888;font-size:var(--fs-b)">${totalCadernos===1?'Caderno finalizado':'Cadernos finalizados'}</div>
+        <div style="font-size:24px;font-weight:500">${totalQuestoesUnicas} / <span id="questoes-disponiveis-total">···</span></div>
+        <div style="color:#888;font-size:var(--fs-b)">Questões respondidas</div>
       </div>
       <div class="card-questao" style="text-align:left;margin-bottom:0">
-        <div style="font-size:24px;font-weight:500">${totalRespondidas}</div>
-        <div style="color:#888;font-size:var(--fs-b)">Questões respondidas</div>
+        <div style="font-size:24px;font-weight:500">${totalQuestoesRepetidas}</div>
+        <div style="color:#888;font-size:var(--fs-b)">Questões repetidas</div>
       </div>
       <div class="card-questao" style="text-align:left;margin-bottom:0">
         <div style="font-size:24px;font-weight:500"><span style="color:#3B6D11">${totalAcertos}</span> / <span style="color:#A32D2D">${totalErros}</span></div>
@@ -3313,6 +3325,9 @@ function renderizarMetricasPessoais(){
       </div>
     </div>
   `;
+  // busca o total disponível no banco separado, sem travar o resto da tela
+  // (não depende de período, só de módulo + tipo)
+  atualizarTotalQuestoesDisponiveis(filtroTipo, new Set(modulosFiltradosMetricas));
 
   /* ---- por módulo ---- */
   const statsPorModulo = {};
