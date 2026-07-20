@@ -169,6 +169,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 /* --- Questão --- */
 .card-questao{background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:18px;margin-bottom:8px}
+.item-lista-modulo{padding:9px 10px;font-size:var(--fs-d);color:#111;cursor:pointer;border-bottom:0.5px solid #eee}
+.item-lista-modulo:last-child{border-bottom:none}
+.item-lista-modulo:active{background:#F5F5F4}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0}
 .enunciado-linha{display:block;margin-top:10px}
 .alternativa{display:block;width:100%;text-align:left;background:#F5F5F6;border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:var(--fs-d)}
@@ -563,10 +566,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <option value="Identificação">Identificação</option>
     </select>
     <div style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px;padding-bottom:2px" id="metricas-filtro-periodo">
-      <button class="filter-btn" data-dias="30" onclick="selecionarPeriodoMetricas(30, this)">30 dias</button>
+      <button class="filter-btn active" data-dias="30" onclick="selecionarPeriodoMetricas(30, this)">30 dias</button>
       <button class="filter-btn" data-dias="90" onclick="selecionarPeriodoMetricas(90, this)">3 meses</button>
       <button class="filter-btn" data-dias="180" onclick="selecionarPeriodoMetricas(180, this)">6 meses</button>
-      <button class="filter-btn active" data-dias="0" onclick="selecionarPeriodoMetricas(0, this)">Tudo</button>
+      <button class="filter-btn" data-dias="0" onclick="selecionarPeriodoMetricas(0, this)">Tudo</button>
       <button class="filter-btn" id="btn-periodo-customizado" onclick="toggleFiltroCustomizado()" title="Escolher datas" style="flex-shrink:0">📅</button>
     </div>
     <div id="metricas-filtro-datas-customizadas" class="hidden" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -579,10 +582,19 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div id="metricas-resumo-geral" style="margin-top:16px"></div>
 
     <div class="section-title">Por módulo</div>
-    <div id="metricas-filtro-modulos" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis (toca pra mover)</div>
+        <div id="metricas-modulos-disponiveis" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Selecionados</div>
+        <div id="metricas-modulos-selecionados" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+      </div>
+    </div>
     <div id="lista-metricas-modulo" class="card-questao" style="position:relative">
       <canvas id="grafico-por-modulo"></canvas>
-      <p id="metricas-modulo-vazio" class="hidden" style="color:#888;font-size:var(--fs-d)">Nenhum módulo selecionado no filtro acima.</p>
+      <p id="metricas-modulo-vazio" class="hidden" style="color:#888;font-size:var(--fs-d)">Nenhum dado disponível pra esses módulos.</p>
     </div>
 
     <div class="section-title">Por tipo de questão</div>
@@ -3056,7 +3068,7 @@ async function carregarPlacar(){
     </div>`).join('');
 }
 
-let metricasFiltroDias = 0; // 0 = tudo
+let metricasFiltroDias = 30; // 30 dias é o padrão ao entrar na aba
 let metricasDataInicio = null; // filtro customizado, tem prioridade sobre metricasFiltroDias quando preenchido
 let metricasDataFim = null;
 
@@ -3182,25 +3194,26 @@ function legendaBarras(){
   </div>`;
 }
 const MODULOS_PSCPP = ['Manobrabilidade','Arte Naval','Navegação em Águas Restritas','Legislação','Meteorologia e Oceanografia','Comunicações','Conhecimentos Gerais'];
-let modulosFiltradosMetricas = new Set(MODULOS_PSCPP); // todos selecionados por padrão
+let modulosFiltradosMetricas = new Set(); // vazio = considera todos automaticamente
 
-function renderizarChipsFiltroModulo(){
-  const el = document.getElementById('metricas-filtro-modulos');
-  const todosSelecionados = modulosFiltradosMetricas.size === MODULOS_PSCPP.length;
-  el.innerHTML = `
-    <span class="filter-btn${todosSelecionados?' active':''}" style="font-weight:600" onclick="toggleTodosModulosFiltro()">Todas</span>
-    ${MODULOS_PSCPP.map(m=>`<span class="filter-btn${modulosFiltradosMetricas.has(m)?' active':''}" onclick="toggleModuloFiltro('${m.replace(/'/g,"\\'")}')">${escapeHtml(m)}</span>`).join('')}
-  `;
+function renderizarListasFiltroModulo(){
+  const disponiveis = MODULOS_PSCPP.filter(m => !modulosFiltradosMetricas.has(m));
+  const selecionados = MODULOS_PSCPP.filter(m => modulosFiltradosMetricas.has(m));
+  document.getElementById('metricas-modulos-disponiveis').innerHTML = disponiveis.length
+    ? disponiveis.map(m=>`<div class="item-lista-modulo" onclick="moverModuloParaSelecionados('${m.replace(/'/g,"\\'")}')">${escapeHtml(m)}</div>`).join('')
+    : '<div style="padding:10px;color:#888;font-size:var(--fs-b)">Nenhum</div>';
+  document.getElementById('metricas-modulos-selecionados').innerHTML = selecionados.length
+    ? selecionados.map(m=>`<div class="item-lista-modulo" onclick="moverModuloParaDisponiveis('${m.replace(/'/g,"\\'")}')">${escapeHtml(m)}</div>`).join('')
+    : '<div style="padding:10px;color:#888;font-size:var(--fs-b)">Nenhum (considera todos)</div>';
 }
-function toggleModuloFiltro(nome){
-  if(modulosFiltradosMetricas.has(nome)) modulosFiltradosMetricas.delete(nome);
-  else modulosFiltradosMetricas.add(nome);
-  renderizarChipsFiltroModulo();
+function moverModuloParaSelecionados(nome){
+  modulosFiltradosMetricas.add(nome);
+  renderizarListasFiltroModulo();
   renderizarMetricasPessoais();
 }
-function toggleTodosModulosFiltro(){
-  modulosFiltradosMetricas = modulosFiltradosMetricas.size === MODULOS_PSCPP.length ? new Set() : new Set(MODULOS_PSCPP);
-  renderizarChipsFiltroModulo();
+function moverModuloParaDisponiveis(nome){
+  modulosFiltradosMetricas.delete(nome);
+  renderizarListasFiltroModulo();
   renderizarMetricasPessoais();
 }
 function renderizarMetricasPessoais(){
@@ -3281,12 +3294,12 @@ function renderizarMetricasPessoais(){
     if(r.correta) statsPorModulo[mod].acertos++;
   });
   const linhasModulo = Object.entries(statsPorModulo)
-    .filter(([modulo]) => modulosFiltradosMetricas.has(modulo))
+    .filter(([modulo]) => modulosFiltradosMetricas.size === 0 || modulosFiltradosMetricas.has(modulo))
     .map(([modulo, s])=>({
     modulo, total: s.total, acertos: s.acertos, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
   })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
-  const elChipsModulo = document.getElementById('metricas-filtro-modulos');
-  if(!elChipsModulo.innerHTML) renderizarChipsFiltroModulo();
+  const elListaDisponiveis = document.getElementById('metricas-modulos-disponiveis');
+  if(!elListaDisponiveis.innerHTML) renderizarListasFiltroModulo();
 
   if(graficoPorModulo){ graficoPorModulo.destroy(); graficoPorModulo = null; }
   if(linhasModulo.length){
@@ -3310,9 +3323,11 @@ function renderizarMetricasPessoais(){
           indexAxis: 'y',
           responsive: true,
           maintainAspectRatio: false,
+          interaction: {mode:'index', intersect:false},
+          onHover: (event, elements, chart) => { chart.canvas.style.cursor = elements.length ? 'pointer' : 'default'; },
           plugins: {
             legend: {position:'top', align:'start', labels:{color:'#666', boxWidth:12, font:{size:12}}},
-            tooltip: {enabled:true}
+            tooltip: {enabled:true, mode:'index', intersect:false}
           },
           scales: {
             x: {beginAtZero:true, grid:{color:'#eee'}, ticks:{color:'#888', font:{size:11}}},
@@ -3325,7 +3340,7 @@ function renderizarMetricasPessoais(){
       mostrarModuloVazio('Não consegui carregar o gráfico agora. Tenta recarregar a página.');
     }
   }else{
-    mostrarModuloVazio('Nenhum módulo selecionado no filtro acima.');
+    mostrarModuloVazio('Nenhum dado disponível pra esses módulos.');
   }
 
   /* ---- por tipo de questão ---- */
