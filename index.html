@@ -265,6 +265,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
 </head>
 <body>
 <script>
@@ -3528,6 +3529,261 @@ function legendaBarras(){
   </div>`;
 }
 const MODULOS_PSCPP = ['Manobrabilidade','Arte Naval','Navegação em Águas Restritas','Legislação','Meteorologia e Oceanografia','Comunicações','Conhecimentos Gerais'];
+
+// Lista fechada de bibliografia oficial do PSCPP, por módulo — extraída do
+// dossiê do projeto (Anexo 2-B do edital da Marinha). Cada entrada tem:
+// modulo, autorBusca (termos de busca no texto, minúsculo), titulo (nome
+// completo pra criar o registro de bibliografia), capitulos (array de
+// números de capítulo cobertos por ESSA entrada especificamente — usado
+// pra desempatar quando o mesmo autor aparece em módulos diferentes)
+const BIBLIOGRAFIA_FECHADA = [
+  // Manobrabilidade
+  {modulo:'Manobrabilidade', autorBusca:['crenshaw'], titulo:'CRENSHAW, R. S. — Naval Shiphandling, 4. ed.', capitulos:[2]},
+  {modulo:'Manobrabilidade', autorBusca:['lewis','principles of naval architecture'], titulo:'LEWIS, E. V. — Principles of Naval Architecture, 3. ed.', capitulos:null},
+  {modulo:'Manobrabilidade', autorBusca:['larsson','raven','ship resistance and flow'], titulo:'LARSSON, L.; RAVEN, H. C. — Ship Resistance and Flow', capitulos:[1,2,3,4,5,6,7,8]},
+  {modulo:'Manobrabilidade', autorBusca:['bertram','practical ship hydrodynamics'], titulo:'BERTRAM, V. — Practical Ship Hydrodynamics, 2. ed.', capitulos:[2,3,6]},
+  {modulo:'Manobrabilidade', autorBusca:['explanatory notes to the standards for ship manoeuvrability'], titulo:'IMO — Explanatory Notes to the Standards for Ship Manoeuvrability (MSC/Circ.1053)', capitulos:null},
+  {modulo:'Manobrabilidade', autorBusca:['standards for ship manoeuvrability'], titulo:'IMO — Standards for Ship Manoeuvrability (Resolution MSC.137(76))', capitulos:null},
+  {modulo:'Manobrabilidade', autorBusca:['santos','a manobrabilidade do navio'], titulo:'SANTOS, E. M. — A Manobrabilidade do Navio no Século 21', capitulos:[2,3,4,5,6,7,8,9,10,11]},
+  {modulo:'Manobrabilidade', autorBusca:['santos','princípios de hidrodinâmica'], titulo:'SANTOS, E. M. — Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio', capitulos:[3,4]},
+  {modulo:'Manobrabilidade', autorBusca:['revised guidance to the master for avoiding dangerous situations'], titulo:'IMO — Revised Guidance to the Master for Avoiding Dangerous Situations in Adverse Weather and Sea Conditions (MSC.1/Circ.1228)', capitulos:null},
+  {modulo:'Manobrabilidade', autorBusca:['provision and display of manoeuvring information'], titulo:'IMO — Provision and Display of Manoeuvring Information on Board Ships (Resolution A.601(15))', capitulos:null},
+
+  // Arte Naval
+  {modulo:'Arte Naval', autorBusca:['fonseca','arte naval'], titulo:'FONSECA, M. M. — Arte Naval, v.1, 8. ed.', capitulos:[1,2,3,8,9,10,11,12]},
+  {modulo:'Arte Naval', autorBusca:['macelrevey','shiphandling for the mariner'], titulo:'MacELREVEY, D. H. — Shiphandling for the Mariner, 4. ed.', capitulos:null},
+  {modulo:'Arte Naval', autorBusca:['solas 1974'], titulo:'IMO — SOLAS 1974 (as amended), Regra V/23.3.3', capitulos:null},
+  {modulo:'Arte Naval', autorBusca:['unified interpretation of solas v/23.3.3'], titulo:'IMO — Unified Interpretation of SOLAS V/23.3.3 (MSC.1/Circ.1495/Rev.1)', capitulos:null},
+  {modulo:'Arte Naval', autorBusca:['required pilot transfer arrangements'], titulo:'IMO — Required Pilot Transfer Arrangements (MSC.1/Circ.1428)', capitulos:null},
+  {modulo:'Arte Naval', autorBusca:['pilot transfer arrangements'], titulo:'IMO — Pilot Transfer Arrangements (Resolution A.1045(27))', capitulos:null},
+  {modulo:'Arte Naval', autorBusca:['amendments to the recommendation on pilot transfer'], titulo:'IMO — Amendments to the Recommendation on Pilot Transfer Arrangements (Resolution A.1108(29))', capitulos:null},
+  {modulo:'Arte Naval', autorBusca:['nayak'], titulo:'NAYAK, S. K. — Theory and Practices of Marine Pilotage', capitulos:[3,4,13,14,15,16,17,18,19]},
+  {modulo:'Arte Naval', autorBusca:['hensen','tug use in port'], titulo:'HENSEN, H. — Tug Use in Port: A Practical Guide, 4. ed.', capitulos:[1,2,3,4,5,6,7,9]},
+  {modulo:'Arte Naval', autorBusca:['hensen','van der laan','estabilidade dos rebocadores'], titulo:'HENSEN, H.; VAN DER LAAN, M. — Estabilidade dos Rebocadores', capitulos:[2]},
+  {modulo:'Arte Naval', autorBusca:['clark','mooring and anchoring ships'], titulo:'CLARK, I. C. — Mooring and Anchoring Ships: Principles and Practice, v.1', capitulos:[6]},
+  {modulo:'Arte Naval', autorBusca:['fragoso','cajaty','rebocadores portuários'], titulo:'FRAGOSO, O.; CAJATY, M. — Rebocadores Portuários', capitulos:null},
+  {modulo:'Arte Naval', autorBusca:['ship dimensions and data for design of marine infrastructure'], titulo:'PIANC — Ship Dimensions and Data for Design of Marine Infrastructure', capitulos:[1,2]},
+
+  // Navegação em Águas Restritas
+  {modulo:'Navegação em Águas Restritas', autorBusca:['swift','bailey','bridge team management'], titulo:'SWIFT, A. J.; BAILEY, T. J. — Bridge Team Management: a Practical Guide, 2. ed.', capitulos:[1,2,3,4,5,6,7]},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['miguens'], titulo:'MIGUENS, A. P. — Navegação: a Ciência e a Arte, v.1 e v.3', capitulos:[1,2,3,4,5,6,7,8,10,11,12,13,14,37,38,40,42]},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['ciência e a arte'], titulo:'MIGUENS, A. P. — Navegação: a Ciência e a Arte, v.1 e v.3', capitulos:[1,2,3,4,5,6,7,8,10,11,12,13,14,37,38,40,42]},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['bridge procedures guide'], titulo:'INTERNATIONAL CHAMBER OF SHIPPING — Bridge Procedures Guide, 6. ed.', capitulos:[2,3,5,6]},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['solas consolidated edition 2024'], titulo:'IMO — SOLAS Consolidated Edition 2024 (Capítulo V)', capitulos:null},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['bento','navegação integrada'], titulo:'BENTO, C. N. S. — Navegação Integrada, 4. ed.', capitulos:[1,2,3,4]},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['nayak'], titulo:'NAYAK, S. K. — Theory and Practices of Marine Pilotage', capitulos:[5,6,13]},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['normam-202','normam 202'], titulo:'NORMAM-202/DPC', capitulos:[11]},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['normam-511','normam 511'], titulo:'NORMAM-511/DHN', capitulos:null},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['revised performance standards for radar'], titulo:'IMO — Adoption of the Revised Performance Standards for Radar Equipment (Resolution MSC.192(79))', capitulos:null},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['revised guidelines for ais'], titulo:'IMO — Revised Guidelines for AIS (Resolution A.1106(29))', capitulos:null},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['performance standards for ecdis'], titulo:'IMO — Performance Standards for ECDIS (Resolution MSC.530(106))', capitulos:null},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['guidelines for dp operator training'], titulo:'IMO — Guidelines for DP Operator Training (MSC.1/Circ.738/Rev.2)', capitulos:null},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['guidelines for vessels with dp systems'], titulo:'IMO — Guidelines for Vessels with DP Systems (MSC.1/Circ.1580)', capitulos:null},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['colreg'], titulo:'IMO — COLREG, Consolidated Edition 2018', capitulos:null},
+  {modulo:'Navegação em Águas Restritas', autorBusca:['normam-501','normam 501'], titulo:'NORMAM-501/DHN', capitulos:null},
+
+  // Legislação
+  {modulo:'Legislação', autorBusca:['normam-201','normam 201'], titulo:'NORMAM-201/DPC', capitulos:[7]},
+  {modulo:'Legislação', autorBusca:['normam-204','normam 204'], titulo:'NORMAM-204/DPC', capitulos:null},
+  {modulo:'Legislação', autorBusca:['normam-302','normam 302'], titulo:'NORMAM-302/DPC', capitulos:null},
+  {modulo:'Legislação', autorBusca:['normam-311','normam 311'], titulo:'NORMAM-311/DPC', capitulos:null},
+  {modulo:'Legislação', autorBusca:['normam-601','normam 601'], titulo:'NORMAM-601/DHN', capitulos:null},
+  {modulo:'Legislação', autorBusca:['normam-112','normam 112'], titulo:'NORMAM-112/DPC', capitulos:null},
+  {modulo:'Legislação', autorBusca:['normam-602','normam 602'], titulo:'NORMAM-602/DHN', capitulos:null},
+  {modulo:'Legislação', autorBusca:['lei nº 2.180','lei 2.180'], titulo:'Lei nº 2.180/1954 — Tribunal Marítimo', capitulos:null},
+  {modulo:'Legislação', autorBusca:['lei nº 9.537','lesta'], titulo:'Lei nº 9.537/1997 — LESTA', capitulos:null},
+  {modulo:'Legislação', autorBusca:['lei nº 14.813','14.813'], titulo:'Lei nº 14.813/2024 — Regulamenta a atividade de praticagem', capitulos:null},
+  {modulo:'Legislação', autorBusca:['decreto nº 2.596','rlesta'], titulo:'Decreto nº 2.596/1998 — RLESTA', capitulos:null},
+  {modulo:'Legislação', autorBusca:['portaria nº 37'], titulo:'Portaria nº 37/MB/2022 — Estrutura da Autoridade Marítima', capitulos:null},
+  {modulo:'Legislação', autorBusca:['publicações náuticas da dhn','carta 12.000','lista de faróis'], titulo:'Publicações Náuticas da DHN', capitulos:null},
+  {modulo:'Legislação', autorBusca:['busca e salvamento marítimo','sar'], titulo:'Serviço de Busca e Salvamento Marítimo (SAR) no Brasil', capitulos:null},
+  {modulo:'Legislação', autorBusca:['lei nº 12.815','lei dos portos'], titulo:'Lei nº 12.815/2013 — Lei dos Portos', capitulos:null},
+  {modulo:'Legislação', autorBusca:['lei complementar nº 97'], titulo:'Lei Complementar nº 97/1999', capitulos:null},
+  {modulo:'Legislação', autorBusca:['recommendations on training and certification','maritime pilots'], titulo:'IMO — Recommendations on Training and Certification for Maritime Pilots (Resolution A.960(23))', capitulos:null},
+  {modulo:'Legislação', autorBusca:['glossário das forças armadas'], titulo:'Glossário das Forças Armadas (MD35-G-01)', capitulos:null},
+  {modulo:'Legislação', autorBusca:['política nacional de defesa'], titulo:'Política Nacional de Defesa (2025)', capitulos:null},
+  {modulo:'Legislação', autorBusca:['decreto nº 12.481','política marítima nacional'], titulo:'Decreto nº 12.481/2025 — Política Marítima Nacional', capitulos:null},
+  {modulo:'Legislação', autorBusca:['decreto nº 2.256'], titulo:'Decreto nº 2.256/1997', capitulos:null},
+  {modulo:'Legislação', autorBusca:['lei nº 7.642'], titulo:'Lei nº 7.642/1987 — Procuradoria Especial da Marinha', capitulos:null},
+  {modulo:'Legislação', autorBusca:['lei nº 7.652'], titulo:'Lei nº 7.652/1988 — Registro da Propriedade Marítima', capitulos:null},
+  {modulo:'Legislação', autorBusca:['lei nº 9.432'], titulo:'Lei nº 9.432/1997 — Ordenação do Transporte Aquaviário', capitulos:null},
+
+  // Meteorologia e Oceanografia
+  {modulo:'Meteorologia e Oceanografia', autorBusca:['miguens'], titulo:'MIGUENS, A. P. — Navegação: a Ciência e a Arte, v.3', capitulos:[45]},
+  {modulo:'Meteorologia e Oceanografia', autorBusca:['ciência e a arte'], titulo:'MIGUENS, A. P. — Navegação: a Ciência e a Arte, v.3', capitulos:[45]},
+  {modulo:'Meteorologia e Oceanografia', autorBusca:['ynoue','meteorologia: noções básicas'], titulo:'YNOUE, R. Y. et al. — Meteorologia: Noções Básicas', capitulos:null},
+  {modulo:'Meteorologia e Oceanografia', autorBusca:['lobo','soares','meteorologia e oceanografia'], titulo:'LOBO, P. R. V.; SOARES, C. A. — Meteorologia e Oceanografia, 4. ed.', capitulos:null},
+  {modulo:'Meteorologia e Oceanografia', autorBusca:['santos','princípios de hidrodinâmica'], titulo:'SANTOS, E. M. — Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)', capitulos:null},
+  {modulo:'Meteorologia e Oceanografia', autorBusca:['use of hydro/meteo information'], titulo:'PIANC — Use of Hydro/Meteo Information for Port Access and Operations (Report 117)', capitulos:[2,3,4,5,6]},
+  {modulo:'Meteorologia e Oceanografia', autorBusca:['normam-701','normam 701'], titulo:'NORMAM-701/DHN', capitulos:null},
+
+  // Comunicações
+  {modulo:'Comunicações', autorBusca:['standard marine communication phrases'], titulo:'IMO — Standard Marine Communication Phrases (Resolution A.918(22))', capitulos:null},
+  {modulo:'Comunicações', autorBusca:['manual do curso especial de radioperador'], titulo:'Diretoria de Portos e Costas — Manual do Curso Especial de Radioperador Geral', capitulos:null},
+  {modulo:'Comunicações', autorBusca:['international code of signals'], titulo:'IMO — International Code of Signals', capitulos:null},
+
+  // Conhecimentos Gerais
+  {modulo:'Conhecimentos Gerais', autorBusca:['ship/port interface'], titulo:'IMO — Ship/Port Interface: List of Publications (FAL.6/Circ.14/Rev.2)', capitulos:null},
+  {modulo:'Conhecimentos Gerais', autorBusca:['conapra','planejamento portuário'], titulo:'CONAPRA — Planejamento Portuário: Recomendações para Acessos Náuticos', capitulos:[2,8]},
+  {modulo:'Conhecimentos Gerais', autorBusca:['harbour approach channels'], titulo:'PIANC — Harbour Approach Channels: Design Guidelines', capitulos:[1,2,3]},
+  {modulo:'Conhecimentos Gerais', autorBusca:['normam-224','normam 224'], titulo:'NORMAM-224/DPC', capitulos:null},
+  {modulo:'Conhecimentos Gerais', autorBusca:['guidelines on fatigue'], titulo:'IMO — Guidelines on Fatigue (MSC.1/Circ.1598)', capitulos:null},
+  {modulo:'Conhecimentos Gerais', autorBusca:['livingstone','shiphandling the beautiful game'], titulo:'LIVINGSTONE, G. H. — Shiphandling the Beautiful Game, v.1', capitulos:[1,3,11,12]},
+  {modulo:'Conhecimentos Gerais', autorBusca:['declaração universal dos direitos humanos'], titulo:'ONU — Declaração Universal dos Direitos Humanos', capitulos:null},
+  {modulo:'Conhecimentos Gerais', autorBusca:['decreto nº 2.508','marpol'], titulo:'Decreto nº 2.508/1998 — MARPOL 73/78', capitulos:null},
+  {modulo:'Conhecimentos Gerais', autorBusca:['stopford','economia marítima'], titulo:'STOPFORD, M. — Economia Marítima, 3. ed.', capitulos:null},
+  {modulo:'Conhecimentos Gerais', autorBusca:['pimenta','direito processual marítimo','matusalém'], titulo:'PIMENTA, M. G. — Direito Processual Marítimo, 3. ed.', capitulos:[1,2,3,4,5,7,8,9,10,11]},
+];
+
+/* ============================================================
+   Parser de PDF/texto de questões — sem IA, por regras de texto.
+   Reconhece 2 variações de cabeçalho de questão ("QUESTÃO Nº 1"/"QUESTÃO 1"
+   e "Questão 1 de 47"), e RESPOSTA:/GABARITO: em qualquer ordem com o
+   cabeçalho repetido na seção de gabarito. Testado contra amostras reais
+   dos PDFs enviados pelo Carlos antes de entrar em produção.
+   ============================================================ */
+const REGEX_RESPOSTA = /(?:RESPOSTA|GABARITO)\s*[:\-—]\s*([A-E])\b/gi;
+const REGEX_INICIO_QUESTAO = /(?:GABARITO\s*[–\-—]\s*)?QUEST[ÃA]O(?:\s+(\d+)\s+DE\s+\d+|\s*N?º?\s*(\d+)(?!\s*[–\-—]\s*GABARITO))/gi;
+
+function encontrarIniciosQuestao(texto){
+  const brutos = [...texto.matchAll(REGEX_INICIO_QUESTAO)];
+  // tira as que vieram prefixadas de "GABARITO —" (são a repetição, não o início real)
+  return brutos.filter(m => !/^GABARITO/i.test(m[0]));
+}
+
+// tira linhas de metadado (DISCIPLINA:/BIBLIOGRAFIA:/DIFICULDADE:/...) e
+// qualquer linha de continuação delas (quando o texto quebra em 2 linhas,
+// a linha de baixo geralmente começa em minúscula, diferente do enunciado
+// de verdade que sempre começa em maiúscula)
+const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTERÍSTICA DO PSCPP REPRODUZIDA)\s*:/i;
+function limparEnunciado(texto){
+  const linhas = texto.split('\n');
+  const linhasLimpas = [];
+  let pularProximaSeMinuscula = false;
+  for(const linha of linhas){
+    if(PREFIXOS_METADADO.test(linha)){
+      pularProximaSeMinuscula = true;
+      continue;
+    }
+    if(pularProximaSeMinuscula){
+      pularProximaSeMinuscula = false;
+      if(linha.trim() && !/^[A-ZÀ-Ú]/.test(linha.trim())) continue;
+    }
+    if(/^Página \d+/i.test(linha.trim())) continue;
+    linhasLimpas.push(linha);
+  }
+  return linhasLimpas.join('\n').replace(/^\s*\n/gm, '').trim();
+}
+
+function parsearQuestoesDoTexto(textoBruto){
+  // normaliza quebras de linha (CRLF do Windows vira LF)
+  const texto = textoBruto.replace(/\r\n/g, '\n');
+  const iniciosQuestao = encontrarIniciosQuestao(texto);
+
+  const questoes = [];
+  for(let i=0; i<iniciosQuestao.length; i++){
+    const inicioBloco = iniciosQuestao[i].index;
+    const fimBloco = i+1 < iniciosQuestao.length ? iniciosQuestao[i+1].index : texto.length;
+    const bloco = texto.slice(inicioBloco, fimBloco);
+
+    // dentro desse bloco, acha a primeira resposta (separa enunciado+alts de explicação)
+    const respostaNoBloco = [...bloco.matchAll(REGEX_RESPOSTA)][0];
+    const zonaPergunta = respostaNoBloco ? bloco.slice(0, respostaNoBloco.index) : bloco;
+    const zonaExplicacao = respostaNoBloco ? bloco.slice(respostaNoBloco.index) : '';
+    const gabarito = respostaNoBloco ? respostaNoBloco[1].toLowerCase() : null;
+
+    // dentro da zona da pergunta: separa enunciado de alternativas a-e/A-E
+    const matchAlt = zonaPergunta.match(/\n\s*[a-eA-E]\)\s*/);
+    const enunciado = limparEnunciado(
+      (matchAlt ? zonaPergunta.slice(0, matchAlt.index) : zonaPergunta)
+        .replace(/QUEST[ÃA]O(?:\s+\d+\s+DE\s+\d+|\s*N?º?\s*\d+)/i, '')
+    );
+
+    const alternativas = zonaPergunta
+      .slice(matchAlt ? matchAlt.index : zonaPergunta.length)
+      .split(/\n\s*(?=[a-eA-E]\)\s)/)
+      .map(a => a.trim().replace(/\s+/g,' '))
+      .filter(a => /^[a-eA-E]\)/.test(a))
+      // normaliza pro padrão (a)-(e) minúsculo, independente de como veio no original
+      .map((a,idx) => `(${String.fromCharCode(97+idx)}) ${a.replace(/^[a-eA-E]\)\s*/,'')}`);
+
+    // explicação: tira a própria linha "RESPOSTA:/GABARITO:" e cabeçalhos
+    // repetidos tipo "QUESTÃO Nº 1 – GABARITO COMENTADO" / "GABARITO — QUESTÃO 1"
+    const explicacao = zonaExplicacao
+      .replace(/(?:RESPOSTA|GABARITO)\s*[:\-—]\s*[A-E]\b.*$/im, '')
+      .replace(/QUEST[ÃA]O\s*N?º?\s*\d+\s*[–\-—]\s*GABARITO.*$/gim, '')
+      .replace(/GABARITO\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
+      .replace(/^Página \d+.*$/gim, '')
+      .replace(/^\s*\n/gm, '')
+      .trim();
+
+    if(enunciado && alternativas.length >= 4 && gabarito){
+      questoes.push({
+        numero: parseInt(iniciosQuestao[i][1] || iniciosQuestao[i][2], 10),
+        enunciado,
+        alternativas: alternativas.join(' '),
+        gabarito,
+        explicacao: explicacao || null
+      });
+    }
+  }
+  return questoes;
+}
+
+// Identifica bibliografia/módulo de uma questão pela lista fechada — busca
+// primeiro na explicação, depois no enunciado (hierarquia fixa do dossiê).
+// Quando o mesmo autor aparece em módulos diferentes (Nayak, Miguens,
+// Santos), desempata pelo capítulo citado no texto
+function normalizarBusca(texto){
+  return (texto||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+function extrairCapituloDoTexto(texto){
+  const m = (texto||'').match(/\bcap(?:[íi]tulos?|\.)\s*n?º?\s*(\d{1,2})\b/i);
+  return m ? parseInt(m[1],10) : null;
+}
+function identificarBibliografia(explicacao, enunciado){
+  const textos = [explicacao, enunciado].filter(Boolean);
+  for(const texto of textos){
+    const textoNorm = normalizarBusca(texto);
+    const candidatosBrutos = BIBLIOGRAFIA_FECHADA.filter(entrada =>
+      entrada.autorBusca.every(termo => textoNorm.includes(normalizarBusca(termo)))
+    );
+    // dedup por módulo+título — 2 entradas do mesmo livro (com termos de
+    // busca diferentes, tipo "miguens" e o título por extenso) não contam
+    // como ambiguidade de verdade, são a mesma bibliografia
+    const candidatos = [...new Map(candidatosBrutos.map(c => [c.modulo+'|'+c.titulo, c])).values()];
+    if(candidatos.length === 1) return candidatos[0];
+    if(candidatos.length > 1){
+      // o capítulo que desempata pode estar em qualquer um dos 2 textos —
+      // às vezes o livro aparece no enunciado mas o capítulo só na
+      // explicação (ex: "Fonte: ..., Cap. 10"), ou vice-versa
+      const capExtraido = extrairCapituloDoTexto(texto) ?? extrairCapituloDoTexto(textos.find(t=>t!==texto));
+      if(capExtraido){
+        const comCapCerto = candidatos.find(c => c.capitulos && c.capitulos.includes(capExtraido));
+        if(comCapCerto) return comCapCerto;
+      }
+      return null; // achou o autor, mas ambíguo entre módulos — trata como não achado
+    }
+  }
+  return null;
+}
+
+// Identifica bibliografia de cada questão do lote, e usa a mais comum entre
+// as que bateram como fallback pras que não bateram (assume 1 livro por
+// PDF, que é o padrão normal confirmado pelo Carlos)
+function resolverBibliografiaDoLote(questoesComTextos){
+  const identificadas = questoesComTextos.map(q => identificarBibliografia(q.explicacao, q.enunciado));
+  const contagem = {};
+  identificadas.forEach(entrada => {
+    if(entrada) contagem[entrada.modulo+'|'+entrada.titulo] = (contagem[entrada.modulo+'|'+entrada.titulo]||0) + 1;
+  });
+  const chaveMaisComum = Object.entries(contagem).sort((a,b)=>b[1]-a[1])[0]?.[0];
+  const entradaMaisComum = chaveMaisComum
+    ? BIBLIOGRAFIA_FECHADA.find(e => (e.modulo+'|'+e.titulo) === chaveMaisComum)
+    : null;
+  return identificadas.map(entrada => entrada || entradaMaisComum || null);
+}
+
 let modulosFiltradosMetricas = new Set(); // vazio = considera todos automaticamente
 
 function renderizarListasFiltroModulo(){
@@ -3928,6 +4184,26 @@ function limparArquivoSelecionado(){
   atualizarNomeArquivoSelecionado();
 }
 
+async function extrairTextoDoArquivo(arquivo){
+  const arrayBuffer = await arquivo.arrayBuffer();
+  try{
+    if(typeof pdfjsLib === 'undefined') throw new Error('biblioteca de PDF não carregou');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    let textoCompleto = '';
+    for(let p=1; p<=pdf.numPages; p++){
+      const pagina = await pdf.getPage(p);
+      const conteudo = await pagina.getTextContent();
+      textoCompleto += conteudo.items.map(item => item.str).join(' ') + '\n\n';
+    }
+    return textoCompleto;
+  }catch(erroPdf){
+    // não é um PDF de verdade (às vezes chega como texto puro com nome
+    // .pdf) — tenta ler como texto simples antes de desistir
+    return new TextDecoder('utf-8').decode(arrayBuffer);
+  }
+}
+
 async function enviarUpload(){
   const input = document.getElementById('upload-arquivo');
   const status = document.getElementById('upload-status');
@@ -3936,53 +4212,67 @@ async function enviarUpload(){
   status.innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg><p style="text-align:center">Extraindo questões...</p>';
 
   const arquivo = input.files[0];
-  const base64 = await new Promise((resolve,reject)=>{
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(arquivo);
-  });
-
-  let resposta;
+  let textoBruto;
   try{
-    resposta = await fetch('/api/extrair-pdf', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({pdfBase64: base64, nomeArquivo: arquivo.name})
-    });
+    textoBruto = await extrairTextoDoArquivo(arquivo);
   }catch(e){
-    status.innerHTML = `<p style="color:#B00020">Erro de rede: ${e.message}</p>`;
+    status.innerHTML = `<p style="color:#B00020">Não consegui ler o arquivo: ${e.message}</p>`;
     return;
   }
 
-  if(!resposta.ok){
-    status.innerHTML = `<p style="color:#B00020">Erro na extração (status ${resposta.status}).</p>`;
+  const questoesParsed = parsearQuestoesDoTexto(textoBruto);
+  if(!questoesParsed.length){
+    status.innerHTML = '<p style="color:#B00020">Nenhuma questão identificada nesse arquivo. Confere se o formato bate com o que o app já reconhece.</p>';
     return;
   }
 
-  const {questoes} = await resposta.json();
-  if(!questoes || !questoes.length){
-    status.innerHTML = '<p style="color:#B00020">Nenhuma questão identificada nesse PDF.</p>';
+  const bibliografias = resolverBibliografiaDoLote(
+    questoesParsed.map(q=>({explicacao:q.explicacao, enunciado:q.enunciado}))
+  );
+
+  if(bibliografias.some(b => !b)){
+    status.innerHTML = '<p style="color:#B00020">Não conseguimos identificar com certeza a bibliografia desse arquivo — não bate com nada da lista fechada do edital. Confirma o livro/norma com o Carlos antes de tentar de novo.</p>';
     return;
   }
 
-  await Promise.all(questoes.map(q => sb.from('questoes').insert({
-    enunciado: q.enunciado,
-    alternativas: q.alternativas,
-    gabarito: q.gabarito,
-    autor_id: usuarioAtual.id,
-    capitulo: q.capitulo || null,
-    tipo_questao: q.tipo_questao || null,
-    modulo_pscpp: q.modulo_pscpp || 'Conhecimentos Gerais',
-    explicacao: q.explicacao || null,
-    explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada'
-  })));
+  // cria (ou acha) as linhas de bibliografia necessárias — uma vez por
+  // entrada única do lote, em paralelo (nunca sequência de await)
+  const entradasUnicas = [...new Map(bibliografias.map(b => [b.modulo+'|'+b.titulo, b])).values()];
+  const resultadosBibliografia = await Promise.all(entradasUnicas.map(async entrada => {
+    const {data: existente} = await sb.from('bibliografia').select('id').eq('titulo', entrada.titulo).eq('modulo_pscpp', entrada.modulo).maybeSingle();
+    if(existente) return {chave: entrada.modulo+'|'+entrada.titulo, id: existente.id};
+    const autorParte = entrada.titulo.includes(' — ') ? entrada.titulo.split(' — ')[0] : entrada.titulo;
+    const {data: criada} = await sb.from('bibliografia').insert({
+      autor: autorParte,
+      titulo: entrada.titulo,
+      modulo_pscpp: entrada.modulo
+    }).select('id').single();
+    return {chave: entrada.modulo+'|'+entrada.titulo, id: criada.id};
+  }));
+  const mapaBibliografiaId = {};
+  resultadosBibliografia.forEach(r => { mapaBibliografiaId[r.chave] = r.id; });
+
+  await Promise.all(questoesParsed.map((q, i) => {
+    const bib = bibliografias[i];
+    return sb.from('questoes').insert({
+      enunciado: q.enunciado,
+      alternativas: q.alternativas,
+      gabarito: q.gabarito,
+      autor_id: usuarioAtual.id,
+      capitulo: extrairCapituloDoTexto(q.explicacao || q.enunciado) || null,
+      tipo_questao: null,
+      modulo_pscpp: bib.modulo,
+      bibliografia_id: mapaBibliografiaId[bib.modulo+'|'+bib.titulo],
+      explicacao: q.explicacao || null,
+      explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada'
+    });
+  }));
 
   // NOTA: checagem de duplicata via pg_trgm ainda não implementada aqui –
   // precisa de uma função RPC no Postgres (similaridade de enunciado) que
   // ainda não foi criada no schema. A adicionar numa próxima passada.
 
-  status.innerHTML = `<p style="color:#1B5E20">${questoes.length} questões cadastradas!</p>`;
+  status.innerHTML = `<p style="color:#1B5E20">${questoesParsed.length} questões cadastradas!</p>`;
 }
 
 /* ============================================================
