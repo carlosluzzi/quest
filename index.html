@@ -1712,11 +1712,13 @@ async function coletarNotificacaoQuestaoCorrigida(){
 
   const pendentesPorCaderno = {}; // cadernoId -> [questaoId, ...]
   const timestampPorCaderno = {};
-  for(const c of cadernosAndamento){
+  // antes isso rodava um caderno de cada vez (sequencial); agora todos os
+  // cadernos em andamento são checados ao mesmo tempo, em paralelo
+  await Promise.all(cadernosAndamento.map(async (c) => {
     const ids = (c.filtros_aplicados && c.filtros_aplicados.questao_ids) || [];
-    if(!ids.length) continue;
+    if(!ids.length) return;
     const {data: questoesEditadas} = await sb.from('questoes').select('id, atualizado_em').in('id', ids).gt('atualizado_em', c.criado_em);
-    if(!questoesEditadas || !questoesEditadas.length) continue;
+    if(!questoesEditadas || !questoesEditadas.length) return;
     const idsEditadas = questoesEditadas.map(q=>q.id);
     const {data: jaRespondidas} = await sb.from('respostas').select('questao_id').eq('caderno_id', c.id).in('questao_id', idsEditadas);
     const idsRespondidas = new Set((jaRespondidas||[]).map(r=>r.questao_id));
@@ -1727,7 +1729,7 @@ async function coletarNotificacaoQuestaoCorrigida(){
       pendentesPorCaderno[c.id] = pendentesDesseCaderno.map(q=>q.id);
       timestampPorCaderno[c.id] = pendentesDesseCaderno.reduce((max,q)=> q.atualizado_em > max ? q.atualizado_em : max, pendentesDesseCaderno[0].atualizado_em);
     }
-  }
+  }));
   questoesCorrigidasPorCaderno = pendentesPorCaderno;
 
   const idsCadernosComPendencia = Object.keys(pendentesPorCaderno);
