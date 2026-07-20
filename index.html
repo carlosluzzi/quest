@@ -60,7 +60,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 @media(min-width:768px){
   #metricas-filtro-periodo .filter-btn{flex:1 1 0%}
 }
-#metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:32px;box-sizing:border-box}
+#metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:32px;min-height:32px;max-height:32px;padding-top:0;padding-bottom:0;box-sizing:border-box}
 #aba-quests .filter-select{height:32px;box-sizing:border-box}
 .filter-select{font-size:16px;padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
@@ -642,7 +642,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <span id="badge-forum" class="badge-notificacao hidden">0</span>
     </div>
     <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
-      <span class="nav-icon"><svg viewBox="0 0 512 512" fill="currentColor"><rect x="56" y="317.484" width="80" height="146.516"/><rect x="176" y="237.484" width="80" height="226.516"/><rect x="296" y="141.484" width="80" height="322.516"/><rect x="416" y="45.484" width="80" height="418.516"/><polygon points="16,496 16,0 0,0 0,496 0,512 16,512 512,512 512,496"/></svg></span><span class="nav-label">Desempenho</span>
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.998 9V1H19.5L23 4.5V23H4M18 1v5h5M3 19l5-5l4 4l6.5-6.5M19 17v-6h-6"/></svg></span><span class="nav-label">Desempenho</span>
     </div>
     <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
