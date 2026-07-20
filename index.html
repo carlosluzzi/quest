@@ -3141,16 +3141,33 @@ async function carregarMetricasPessoais(){
   renderizarMetricasPessoais();
 }
 
-function barraComparativa(rotulo, valor, maximo, cor, sufixo=''){
+function barraFina(valor, maximo, cor, sufixo=''){
   const largura = maximo > 0 ? Math.min(100, Math.round((valor/maximo)*100)) : 0;
   return `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-      <span style="width:82px;flex-shrink:0;font-size:var(--fs-b);color:#888">${rotulo}</span>
-      <div style="flex:1;background:#F0F0EE;border-radius:5px;height:14px;overflow:hidden">
-        <div style="width:${largura}%;background:${cor};height:100%;border-radius:5px"></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+      <div style="flex:1;background:#F0F0EE;border-radius:3px;height:7px;overflow:hidden">
+        <div style="width:${largura}%;background:${cor};height:100%;border-radius:3px"></div>
       </div>
-      <span style="width:42px;flex-shrink:0;text-align:right;font-size:var(--fs-b);font-weight:600;color:#111">${valor}${sufixo}</span>
+      <span style="width:36px;flex-shrink:0;text-align:right;font-size:11px;color:#666">${valor}${sufixo}</span>
     </div>`;
+}
+function linhaComparativa(nome, acertos, total, pct, maximo, corPct){
+  return `
+    <div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:0.5px solid #eee">
+      <div style="width:96px;flex-shrink:0;font-size:var(--fs-d);font-weight:600;color:#111">${nome}</div>
+      <div style="flex:1">
+        ${barraFina(acertos, maximo, '#8FA878')}
+        ${barraFina(total, maximo, '#B5B5B0')}
+        ${barraFina(pct, 100, corPct, '%')}
+      </div>
+    </div>`;
+}
+function legendaBarras(){
+  return `<div style="display:flex;gap:14px;margin-bottom:8px;font-size:11px;color:#888">
+    <span><span style="display:inline-block;width:8px;height:8px;background:#8FA878;border-radius:2px;margin-right:4px"></span>Acertos</span>
+    <span><span style="display:inline-block;width:8px;height:8px;background:#B5B5B0;border-radius:2px;margin-right:4px"></span>Respondidas</span>
+    <span><span style="display:inline-block;width:8px;height:8px;background:#C9A165;border-radius:2px;margin-right:4px"></span>% de acertos</span>
+  </div>`;
 }
 function renderizarMetricasPessoais(){
   const filtroTipo = document.getElementById('metricas-filtro-tipo').value;
@@ -3233,15 +3250,13 @@ function renderizarMetricasPessoais(){
     modulo, total: s.total, acertos: s.acertos, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
   })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
   const maiorTotalModulo = Math.max(...linhasModulo.map(l=>l.total), 1);
-  elModulo.innerHTML = linhasModulo.map(l=>{
-    const cor = l.pctAcerto >= 70 ? '#3B6D11' : l.pctAcerto >= 50 ? '#854F0B' : '#A32D2D';
-    return `<div class="card-questao">
-      <div style="margin-bottom:12px">${tagModulo(l.modulo)}</div>
-      ${barraComparativa('Acertos', l.acertos, maiorTotalModulo, '#3B6D11')}
-      ${barraComparativa('Respondidas', l.total, maiorTotalModulo, '#202A45')}
-      ${barraComparativa('% de acertos', l.pctAcerto, 100, cor, '%')}
-    </div>`;
-  }).join('');
+  elModulo.innerHTML = `<div class="card-questao">
+    ${legendaBarras()}
+    ${linhasModulo.map(l=>{
+      const cor = l.pctAcerto >= 70 ? '#8FA878' : l.pctAcerto >= 50 ? '#C9A165' : '#C48787';
+      return linhaComparativa(escapeHtml(l.modulo), l.acertos, l.total, l.pctAcerto, maiorTotalModulo, cor);
+    }).join('')}
+  </div>`;
 
   /* ---- por tipo de questão ---- */
   const statsPorTipo = {};
@@ -3252,18 +3267,16 @@ function renderizarMetricasPessoais(){
     if(r.correta) statsPorTipo[tipo].acertos++;
   });
   const linhasTipo = Object.entries(statsPorTipo).map(([tipo, s])=>({
-    tipo, total: s.total, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
+    tipo, total: s.total, acertos: s.acertos, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
   })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
-  elTipo.innerHTML = linhasTipo.map(l=>{
-    const cor = l.pctAcerto >= 70 ? '#3B6D11' : l.pctAcerto >= 50 ? '#854F0B' : '#A32D2D';
-    return `<div class="card-questao">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span style="font-weight:600;color:#111">${escapeHtml(l.tipo)}</span>
-        <span style="font-weight:700;color:${cor}">${l.pctAcerto}%</span>
-      </div>
-      <div style="color:#888;font-size:var(--fs-b)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
-    </div>`;
-  }).join('');
+  const maiorTotalTipo = Math.max(...linhasTipo.map(l=>l.total), 1);
+  elTipo.innerHTML = `<div class="card-questao">
+    ${legendaBarras()}
+    ${linhasTipo.map(l=>{
+      const cor = l.pctAcerto >= 70 ? '#8FA878' : l.pctAcerto >= 50 ? '#C9A165' : '#C48787';
+      return linhaComparativa(escapeHtml(l.tipo), l.acertos, l.total, l.pctAcerto, maiorTotalTipo, cor);
+    }).join('')}
+  </div>`;
 
   /* ---- por publicação ---- */
   const mapaBibliografia = {};
@@ -3277,18 +3290,16 @@ function renderizarMetricasPessoais(){
     if(r.correta) statsPorPublicacao[titulo].acertos++;
   });
   const linhasPublicacao = Object.entries(statsPorPublicacao).map(([titulo, s])=>({
-    titulo, total: s.total, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
+    titulo, total: s.total, acertos: s.acertos, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
   })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
-  elPublicacao.innerHTML = linhasPublicacao.map(l=>{
-    const cor = l.pctAcerto >= 70 ? '#3B6D11' : l.pctAcerto >= 50 ? '#854F0B' : '#A32D2D';
-    return `<div class="card-questao">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px">
-        <span style="font-weight:600;color:#111;font-size:var(--fs-d)">${escapeHtml(l.titulo)}</span>
-        <span style="font-weight:700;color:${cor};flex-shrink:0">${l.pctAcerto}%</span>
-      </div>
-      <div style="color:#888;font-size:var(--fs-b)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
-    </div>`;
-  }).join('');
+  const maiorTotalPublicacao = Math.max(...linhasPublicacao.map(l=>l.total), 1);
+  elPublicacao.innerHTML = `<div class="card-questao">
+    ${legendaBarras()}
+    ${linhasPublicacao.map(l=>{
+      const cor = l.pctAcerto >= 70 ? '#8FA878' : l.pctAcerto >= 50 ? '#C9A165' : '#C48787';
+      return linhaComparativa(escapeHtml(l.titulo), l.acertos, l.total, l.pctAcerto, maiorTotalPublicacao, cor);
+    }).join('')}
+  </div>`;
 
   /* ---- suas questões mais difíceis (Wilson Score, por questão individual) ---- */
   const statsPorQuestao = {};
