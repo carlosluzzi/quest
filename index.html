@@ -1002,6 +1002,10 @@ function tagModulo(nomeModulo){
   const svg = modIconesCustomSvg[nomeModulo] ? modIconesCustomSvg[nomeModulo](cor) : '';
   return `<span class="mod-tag ${cls}" style="display:inline-flex;align-items:center;gap:5px">${svg?`<span class="icone-modulo-mini">${svg}</span>`:''}${escapeHtml(nomeModulo||'')}</span>`;
 }
+function iconeModuloPreto(nomeModulo){
+  const svg = modIconesCustomSvg[nomeModulo] ? modIconesCustomSvg[nomeModulo]('#111') : '';
+  return `<span style="display:inline-flex;align-items:center;gap:6px">${svg?`<span class="icone-modulo-mini">${svg}</span>`:''}${escapeHtml(nomeModulo||'')}</span>`;
+}
 
 /* ============================================================
    AUTENTICAÇÃO
@@ -3202,10 +3206,10 @@ function renderizarListasFiltroModulo(){
   const disponiveis = MODULOS_PSCPP.filter(m => !modulosFiltradosMetricas.has(m));
   const selecionados = MODULOS_PSCPP.filter(m => modulosFiltradosMetricas.has(m));
   document.getElementById('metricas-modulos-disponiveis').innerHTML = disponiveis.length
-    ? disponiveis.map(m=>`<div class="item-lista-modulo" onclick="moverModuloParaSelecionados('${m.replace(/'/g,"\\'")}')">${tagModulo(m)}</div>`).join('')
+    ? disponiveis.map(m=>`<div class="item-lista-modulo" onclick="moverModuloParaSelecionados('${m.replace(/'/g,"\\'")}')">${iconeModuloPreto(m)}</div>`).join('')
     : '<div style="padding:10px;color:#888;font-size:var(--fs-b)">Nenhum</div>';
   document.getElementById('metricas-modulos-selecionados').innerHTML = selecionados.length
-    ? selecionados.map(m=>`<div class="item-lista-modulo" onclick="moverModuloParaDisponiveis('${m.replace(/'/g,"\\'")}')">${tagModulo(m)}</div>`).join('')
+    ? selecionados.map(m=>`<div class="item-lista-modulo" onclick="moverModuloParaDisponiveis('${m.replace(/'/g,"\\'")}')">${iconeModuloPreto(m)}</div>`).join('')
     : '<div style="padding:10px;color:#888;font-size:var(--fs-b)">Nenhum (considera todos)</div>';
 }
 function moverModuloParaSelecionados(nome){
@@ -3311,25 +3315,6 @@ function renderizarMetricasPessoais(){
     const canvasModulo = document.getElementById('grafico-por-modulo');
     try{
       if(typeof Chart === 'undefined') throw new Error('Biblioteca do gráfico não carregou');
-      const pluginMarcadorModulo = {
-        id: 'marcadorModulo',
-        afterFit(scale){ if(scale.axis === 'y') scale.width += 16; },
-        afterDraw(chart){
-          const escalaY = chart.scales.y;
-          if(!escalaY) return;
-          const ctx = chart.ctx;
-          ctx.save();
-          chart.data.labels.forEach((nomeModulo, i) => {
-            const cor = modCorTexto[nomeModulo] || '#888';
-            const yPos = escalaY.getPixelForTick(i);
-            ctx.fillStyle = cor;
-            ctx.beginPath();
-            ctx.roundRect(escalaY.left - 12, yPos - 4, 8, 8, 2);
-            ctx.fill();
-          });
-          ctx.restore();
-        }
-      };
       graficoPorModulo = new Chart(canvasModulo, {
         type: 'bar',
         data: {
@@ -3340,7 +3325,6 @@ function renderizarMetricasPessoais(){
             {label:'% de acertos', data: linhasModulo.map(l=>l.pctAcerto), backgroundColor:'#D97757', borderRadius:4}
           ]
         },
-        plugins: [pluginMarcadorModulo],
         options: {
           indexAxis: 'y',
           responsive: true,
