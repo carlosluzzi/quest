@@ -573,7 +573,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Módulo</div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <div style="flex:1;min-width:0">
-        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis (toca pra mover)</div>
+        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis</div>
         <div id="metricas-modulos-disponiveis" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
       </div>
       <div style="flex:1;min-width:0">
@@ -584,13 +584,13 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px" onclick="toggleFiltroMateria()">
       <span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
-      <span style="font-size:var(--fs-d);font-weight:600;color:#111">Matéria (livros)</span>
+      <span style="font-size:var(--fs-d);font-weight:600;color:#111">Publicações</span>
       <span class="chev" id="chev-filtro-materia" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
     </div>
     <div id="conteudo-filtro-materia" class="conteudo-colapsavel" style="margin-bottom:12px">
       <div style="display:flex;gap:8px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis (toca pra mover)</div>
+          <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis</div>
           <div id="metricas-materias-disponiveis" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
         </div>
         <div style="flex:1;min-width:0">
@@ -3624,7 +3624,7 @@ function renderizarMetricasPessoais(){
   }
 
   if(!respostas.length){
-    mostrarModuloVazio('Nenhuma resposta registrada com esses módulos/matérias selecionados.');
+    mostrarModuloVazio('Nenhuma resposta registrada com esses módulos/publicações selecionados.');
     renderizarNotasMetricas(elNotas, infoPorQuestao);
     return;
   }
