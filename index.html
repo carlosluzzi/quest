@@ -595,14 +595,18 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div id="metricas-resumo-geral" style="margin-top:16px"></div>
 
     <div class="section-title">Por módulo</div>
-    <div id="metricas-modulo-botoes" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px"></div>
     <div id="lista-metricas-modulo" class="card-questao" style="position:relative">
       <canvas id="grafico-por-modulo"></canvas>
       <p id="metricas-modulo-vazio" class="hidden" style="color:#888;font-size:var(--fs-d)">Nenhum dado disponível pra esses módulos.</p>
     </div>
 
     <div class="section-title">Evolução no tempo</div>
-    <select class="filter-select" id="metricas-evolucao-select" onchange="renderizarGraficoEvolucao()"></select>
+    <div id="metricas-evolucao-contexto" style="color:#888;font-size:var(--fs-b);margin-bottom:8px">Todos os módulos</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <span style="color:#888;font-size:var(--fs-b);flex-shrink:0">Período:</span>
+      <input type="range" id="evolucao-slider" min="1" max="12" value="3" step="1" oninput="atualizarSliderEvolucao(this.value)" style="flex:1">
+      <span id="evolucao-slider-valor" style="color:#111;font-size:var(--fs-d);font-weight:600;flex-shrink:0;min-width:60px;text-align:right">3 meses</span>
+    </div>
     <div class="card-questao" style="position:relative;height:220px">
       <canvas id="grafico-evolucao"></canvas>
       <p id="metricas-evolucao-vazio" class="hidden" style="color:#888;font-size:var(--fs-d)">Não tem dado suficiente ainda pra mostrar evolução nesse módulo/período.</p>
@@ -3206,29 +3210,21 @@ function calcularMetricasConhecimentoPorModulo(respostasBase, infoPorQuestao){
   return resultado;
 }
 
-const METRICAS_GRAFICO_MODULO = {
-  acerto: {label:'% de acerto', cor:'#1BAF7A', campo:'pctAcerto'},
-  recuperacao: {label:'% de recuperação após erro', cor:'#EDA100', campo:'pctRecuperacao'},
-  retencao: {label:'% de retenção', cor:'#4A3AA7', campo:'pctRetencao'}
-};
-let metricaAtivaGraficoModulo = 'acerto';
-
-function trocarMetricaGraficoModulo(chave){
-  metricaAtivaGraficoModulo = chave;
-  document.querySelectorAll('#metricas-modulo-botoes .filter-btn').forEach(b=>{
-    b.classList.toggle('active', b.dataset.metrica === chave);
-  });
-  renderizarMetricasPessoais();
+let evolucaoMesesExibidos = 3; // independente do filtro de período do resto da tela
+function atualizarSliderEvolucao(valor){
+  evolucaoMesesExibidos = parseInt(valor, 10);
+  document.getElementById('evolucao-slider-valor').textContent = evolucaoMesesExibidos === 1 ? '1 mês' : `${evolucaoMesesExibidos} meses`;
+  renderizarGraficoEvolucao();
 }
-
-function abreviarNomeModulo(nome){
-  return nome.length > 16 ? nome.slice(0,15) + '…' : nome;
-}
-
-function calcularEvolucaoSemanalModulo(modulo){
+function calcularEvolucaoSemanalModulo(){
+  // vazio = considera todos (mesma regra "vazio = todos" do resto da tela);
+  // com módulos selecionados, junta as respostas deles numa linha só. O
+  // período aqui é o do slider próprio da evolução, não o filtro geral da tela
+  const corteEvolucao = Date.now() - evolucaoMesesExibidos*30*24*60*60*1000;
   const respostasDoModulo = metricasRespostasCache.filter(r => {
-    if(metricasQuestoesInfoCache[r.questao_id]?.modulo_pscpp !== modulo) return false;
-    return passaNoFiltroPeriodo(r.respondido_em);
+    const mod = metricasQuestoesInfoCache[r.questao_id]?.modulo_pscpp;
+    if(modulosFiltradosMetricas.size > 0 && !modulosFiltradosMetricas.has(mod)) return false;
+    return new Date(r.respondido_em).getTime() >= corteEvolucao;
   });
   const porSemana = {};
   respostasDoModulo.forEach(r=>{
@@ -3249,14 +3245,15 @@ function calcularEvolucaoSemanalModulo(modulo){
 
 let graficoEvolucao = null;
 function renderizarGraficoEvolucao(){
-  const elSelect = document.getElementById('metricas-evolucao-select');
-  if(!elSelect.options.length){
-    elSelect.innerHTML = MODULOS_PSCPP.map(m=>`<option value="${m.replace(/"/g,'&quot;')}">${escapeHtml(m)}</option>`).join('');
-  }
-  const modulo = elSelect.value;
-  const dados = calcularEvolucaoSemanalModulo(modulo);
+  const dados = calcularEvolucaoSemanalModulo();
   const elVazio = document.getElementById('metricas-evolucao-vazio');
   const canvas = document.getElementById('grafico-evolucao');
+  const elContexto = document.getElementById('metricas-evolucao-contexto');
+  if(elContexto){
+    elContexto.textContent = modulosFiltradosMetricas.size > 0
+      ? [...modulosFiltradosMetricas].join(', ')
+      : 'Todos os módulos';
+  }
 
   if(graficoEvolucao){ graficoEvolucao.destroy(); graficoEvolucao = null; }
 
@@ -3308,27 +3305,33 @@ function renderizarGraficoEvolucao(){
   }
 }
 
-function renderizarGraficoModuloMetricaUnica(linhasModulo){
-  const elBotoes = document.getElementById('metricas-modulo-botoes');
-  if(!elBotoes.innerHTML){
-    elBotoes.innerHTML = Object.entries(METRICAS_GRAFICO_MODULO).map(([chave, m])=>
-      `<span class="filter-btn${chave===metricaAtivaGraficoModulo?' active':''}" data-metrica="${chave}" onclick="trocarMetricaGraficoModulo('${chave}')">${m.label}</span>`
-    ).join('');
+function quebrarNomeModulo(nome){
+  // quebra em até 2 linhas, sem truncar nada — Chart.js aceita um array de
+  // strings como rótulo do eixo, cada item do array vira uma linha
+  if(nome.length <= 18) return nome;
+  const palavras = nome.split(' ');
+  let linha1 = '', linha2 = '';
+  for(const palavra of palavras){
+    if(!linha2 && (linha1 ? linha1 + ' ' + palavra : palavra).length <= 18){
+      linha1 = linha1 ? linha1 + ' ' + palavra : palavra;
+    }else{
+      linha2 = linha2 ? linha2 + ' ' + palavra : palavra;
+    }
   }
+  return linha2 ? [linha1, linha2] : linha1;
+}
 
-  const metrica = METRICAS_GRAFICO_MODULO[metricaAtivaGraficoModulo];
-  const linhasValidas = linhasModulo
-    .filter(l => l[metrica.campo] !== null)
-    .sort((a,b) => b[metrica.campo] - a[metrica.campo]);
+function renderizarGraficoModuloTresBarras(linhasModulo){
+  const linhasValidas = linhasModulo.slice().sort((a,b) => b.pctAcerto - a.pctAcerto);
 
   if(graficoPorModulo){ graficoPorModulo.destroy(); graficoPorModulo = null; }
   if(!linhasValidas.length){
-    mostrarModuloVazio('Ainda não tem dado suficiente pra essa métrica.');
+    mostrarModuloVazio('Nenhum dado disponível pra esses módulos.');
     return;
   }
   document.getElementById('grafico-por-modulo').classList.remove('hidden');
   document.getElementById('metricas-modulo-vazio').classList.add('hidden');
-  document.getElementById('lista-metricas-modulo').style.height = (linhasValidas.length * 40 + 50) + 'px';
+  document.getElementById('lista-metricas-modulo').style.height = (linhasValidas.length * 76 + 60) + 'px';
   const canvasModulo = document.getElementById('grafico-por-modulo');
   try{
     if(typeof Chart === 'undefined') throw new Error('Biblioteca do gráfico não carregou');
@@ -3338,21 +3341,26 @@ function renderizarGraficoModuloMetricaUnica(linhasModulo){
     graficoPorModulo = new Chart(canvasModulo, {
       type: 'bar',
       data: {
-        labels: linhasValidas.map(l=>abreviarNomeModulo(l.modulo)),
-        datasets: [{label: metrica.label, data: linhasValidas.map(l=>l[metrica.campo]), backgroundColor: metrica.cor, borderRadius:4, barThickness:22}]
+        labels: linhasValidas.map(l=>quebrarNomeModulo(l.modulo)),
+        datasets: [
+          {label:'% de acerto', data: linhasValidas.map(l=>l.pctAcerto), backgroundColor:'#1BAF7A', borderRadius:4},
+          {label:'% de recuperação após erro', data: linhasValidas.map(l=>l.pctRecuperacao), backgroundColor:'#EDA100', borderRadius:4},
+          {label:'% de retenção', data: linhasValidas.map(l=>l.pctRetencao), backgroundColor:'#4A3AA7', borderRadius:4}
+        ]
       },
       options: {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {mode:'y', intersect:false},
         onHover: (event, elements, chart) => { chart.canvas.style.cursor = elements.length ? 'pointer' : 'default'; },
         plugins: {
           legend: {display:true, position:'top', align:'center', labels:{color:'#666', boxWidth:12, boxHeight:12, borderRadius:4, useBorderRadius:true, font:{size:12}}},
           tooltip: {
-            enabled:true, position:'pontoExato',
+            enabled:true, mode:'y', intersect:false, position:'pontoExato',
             callbacks: {
               title: (itens) => linhasValidas[itens[0].dataIndex].modulo,
-              label: (item) => metrica.label + ': ' + item.raw + '%'
+              label: (item) => item.raw===null ? (item.dataset.label + ': sem dado suficiente ainda') : (item.dataset.label + ': ' + item.raw + '%')
             }
           }
         },
@@ -3595,7 +3603,7 @@ function renderizarMetricasPessoais(){
   const elListaDisponiveis = document.getElementById('metricas-modulos-disponiveis');
   if(!elListaDisponiveis.innerHTML) renderizarListasFiltroModulo();
 
-  renderizarGraficoModuloMetricaUnica(linhasModulo);
+  renderizarGraficoModuloTresBarras(linhasModulo);
   renderizarGraficoEvolucao();
 
   /* ---- por tipo de questão ---- */
