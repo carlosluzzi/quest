@@ -582,8 +582,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px" onclick="toggleFiltroMateria()">
-      <span style="font-size:var(--fs-b);color:#888">Matéria (livros)</span>
+    <div style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px" onclick="toggleFiltroMateria()">
+      <span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+      <span style="font-size:var(--fs-d);font-weight:600;color:#111">Matéria (livros)</span>
       <span class="chev" id="chev-filtro-materia" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
     </div>
     <div id="conteudo-filtro-materia" class="conteudo-colapsavel" style="margin-bottom:12px">
@@ -3499,16 +3500,31 @@ function renderizarListasFiltroModulo(){
 function moverModuloParaSelecionados(nome){
   modulosFiltradosMetricas.add(nome);
   renderizarListasFiltroModulo();
+  atualizarMateriasAposMudarModulo();
   renderizarMetricasPessoais();
 }
 function moverModuloParaDisponiveis(nome){
   modulosFiltradosMetricas.delete(nome);
   renderizarListasFiltroModulo();
+  atualizarMateriasAposMudarModulo();
   renderizarMetricasPessoais();
+}
+function atualizarMateriasAposMudarModulo(){
+  // se um módulo saiu da seleção, os livros dele também precisam sair da
+  // seleção de matéria, senão fica um filtro "fantasma" sem módulo por trás
+  const materiasValidas = new Set(listaMateriasDisponiveis());
+  [...materiasFiltradasMetricas].forEach(m=>{
+    if(!materiasValidas.has(m)) materiasFiltradasMetricas.delete(m);
+  });
+  renderizarListasFiltroMateria();
 }
 
 function listaMateriasDisponiveis(){
-  return [...new Set(bibliografiaCache.map(b=>b.titulo))].sort((a,b)=>a.localeCompare(b));
+  if(modulosFiltradosMetricas.size === 0) return []; // só mostra livros depois de escolher um módulo
+  const titulos = bibliografiaCache
+    .filter(b => modulosFiltradosMetricas.has(b.modulo_pscpp))
+    .map(b => b.titulo);
+  return [...new Set(titulos)].sort((a,b)=>a.localeCompare(b));
 }
 let materiasFiltradasMetricas = new Set(); // vazio = considera todas automaticamente
 function toggleFiltroMateria(){
@@ -3519,9 +3535,12 @@ function renderizarListasFiltroMateria(){
   const todas = listaMateriasDisponiveis();
   const disponiveis = todas.filter(m => !materiasFiltradasMetricas.has(m));
   const selecionadas = todas.filter(m => materiasFiltradasMetricas.has(m));
+  const msgVazioDisponiveis = modulosFiltradosMetricas.size === 0
+    ? 'Escolha um módulo acima primeiro'
+    : 'Nenhuma';
   document.getElementById('metricas-materias-disponiveis').innerHTML = disponiveis.length
     ? disponiveis.map(m=>`<div class="item-lista-modulo" onclick="moverMateriaParaSelecionadas('${m.replace(/'/g,"\\'")}')">${escapeHtml(m)}</div>`).join('')
-    : '<div style="padding:10px;color:#888;font-size:var(--fs-b)">Nenhuma</div>';
+    : `<div style="padding:10px;color:#888;font-size:var(--fs-b)">${msgVazioDisponiveis}</div>`;
   document.getElementById('metricas-materias-selecionadas').innerHTML = selecionadas.length
     ? selecionadas.map(m=>`<div class="item-lista-modulo" onclick="moverMateriaParaDisponiveis('${m.replace(/'/g,"\\'")}')">${escapeHtml(m)}</div>`).join('')
     : '<div style="padding:10px;color:#888;font-size:var(--fs-b)">Nenhuma (considera todas)</div>';
