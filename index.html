@@ -554,13 +554,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <!-- ===== COMO VOCÊ TÁ INDO (placar) ===== -->
   <div class="view-aba hidden" id="aba-placar">
-    <div class="section-title" style="margin-top:0">Seu desempenho</div>
-
     <div id="metricas-carregando-inicial" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5">
       <div class="loading-spinner"></div>
     </div>
 
     <div id="metricas-conteudo" class="hidden">
+    <div class="section-title" style="margin-top:0">Seu desempenho</div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <div style="flex:1;min-width:0">
         <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis (toca pra mover)</div>
@@ -1580,6 +1579,14 @@ let modoTopicoModal = false;
 function containerTopicoAtual(){
   return modoTopicoModal ? 'modal-questao-detalhe-conteudo' : 'conteudo-topico-detalhe';
 }
+function mostrarCarregandoTopico(){
+  const el = document.getElementById(containerTopicoAtual());
+  // tela cheia (fora do modal) já ocupa o espaço certo entre cabeçalho e
+  // menu — só precisa centralizar dentro dela. Dentro do popup pequeno,
+  // centraliza dentro da própria caixa
+  const altura = modoTopicoModal ? '200px' : '100%';
+  el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:${altura}"><div class="loading-spinner"></div></div>`;
+}
 function abrirViewTopico(){
   modoTopicoModal = false;
   document.getElementById('view-topico-detalhe').classList.remove('hidden');
@@ -1591,7 +1598,8 @@ async function abrirDiscussaoDoCaderno(questaoId){
   // um, vai direto pra dentro dele, sem tela de lista no meio
   const {data: topicoAtivo} = await sb.from('topicos').select('id').eq('questao_id', questaoId).eq('status','aberto').maybeSingle();
   if(topicoAtivo){
-    document.getElementById('modal-questao-detalhe-conteudo').innerHTML = '<div class="loading-spinner"></div>';
+    modoTopicoModal = true;
+    mostrarCarregandoTopico();
     abrirModal('modal-questao-detalhe');
     await renderizarTopico(topicoAtivo.id);
   }else{
@@ -1718,7 +1726,7 @@ async function coletarNotificacaoRespostaDiscussao(){
 }
 function abrirTopicoNotificado(topicoId){
   abrirViewTopico();
-  document.getElementById(containerTopicoAtual()).innerHTML = '<div class="loading-spinner"></div>';
+  mostrarCarregandoTopico();
   renderizarTopico(topicoId);
 }
 
@@ -2651,7 +2659,7 @@ function renderizarListaForum(){
 
 function abrirTopicoDoForum(topicoId){
   abrirViewTopico();
-  document.getElementById(containerTopicoAtual()).innerHTML = '<div class="loading-spinner"></div>';
+  mostrarCarregandoTopico();
   renderizarTopico(topicoId);
 }
 
@@ -2756,7 +2764,7 @@ async function renderizarDetalheQuestao(questaoId){
 }
 
 async function abrirDetalheQuestao(questaoId){
-  document.getElementById(containerTopicoAtual()).innerHTML = '<div class="loading-spinner"></div>';
+  mostrarCarregandoTopico();
   abrirViewTopico();
   await renderizarDetalheQuestao(questaoId);
 }
@@ -2801,10 +2809,10 @@ async function confirmarNovoTopico(){
   // container pode não estar aberto ainda, se veio direto do "Discutir"
   // numa questão que não tinha nenhuma discussão até agora
   if(modoTopicoModal){
-    document.getElementById('modal-questao-detalhe-conteudo').innerHTML = '<div class="loading-spinner"></div>';
+    mostrarCarregandoTopico();
     abrirModal('modal-questao-detalhe');
   }else{
-    document.getElementById('conteudo-topico-detalhe').innerHTML = '<div class="loading-spinner"></div>';
+    mostrarCarregandoTopico();
     abrirViewTopico();
   }
   await renderizarTopico(data.id);
@@ -2814,7 +2822,7 @@ async function confirmarNovoTopico(){
    Thread de UM tópico – comentários + votação de resolução
    ============================================================ */
 function abrirTopico(topicoId){
-  document.getElementById(containerTopicoAtual()).innerHTML = '<div class="loading-spinner"></div>';
+  mostrarCarregandoTopico();
   renderizarTopico(topicoId);
 }
 
