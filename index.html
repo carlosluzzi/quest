@@ -3245,6 +3245,7 @@ function calcularMetricasConhecimentoPorModulo(respostasBase, infoPorQuestao){
     resultado[mod] = {
       recuperacaoPct: recuperacaoTotal ? Math.round((recuperacaoSucesso/recuperacaoTotal)*100) : null,
       retencaoPct: retencaoTotal ? Math.round((retencaoSucesso/retencaoTotal)*100) : null,
+      recuperacaoSucesso, recuperacaoTotal, retencaoSucesso, retencaoTotal,
     };
   });
   return resultado;
@@ -3389,14 +3390,18 @@ function renderizarGraficoEvolucao(){
   }
 }
 
-function linhaComparativaModulo(nome, pctAcerto, pctRecuperacao, pctRetencao){
+function linhaComparativaModulo(nome, pctAcerto, pctRecuperacao, pctRetencao, acertos, total, recuperacaoSucesso, recuperacaoTotal, retencaoSucesso, retencaoTotal){
   const barraSemDado = () => `
     <div style="display:flex;align-items:center;gap:6px;height:12px;margin-bottom:3px">
       <div style="flex:1;background:#F0F0EE;border-radius:3px;height:7px;overflow:hidden"></div>
       <span style="width:36px;flex-shrink:0"></span>
     </div>`;
+  const linhasInfo = [`% de acerto: ${acertos} de ${total}`];
+  linhasInfo.push(recuperacaoTotal ? `% de recuperação: ${recuperacaoSucesso} de ${recuperacaoTotal}` : '% de recuperação: sem dado suficiente ainda');
+  linhasInfo.push(retencaoTotal ? `% de retenção: ${retencaoSucesso} de ${retencaoTotal}` : '% de retenção: sem dado suficiente ainda');
+  const textoInfo = linhasInfo.map(l=>`<div>${escapeHtml(l)}</div>`).join('');
   return `
-    <div style="display:flex;gap:12px;align-items:center;padding:10px 0">
+    <div style="display:flex;gap:12px;align-items:center;padding:10px 0;cursor:pointer" onclick="mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)">
       <div style="width:112px;flex-shrink:0;font-size:13px;font-weight:600;color:#111;line-height:1.25;min-height:33px;display:flex;align-items:center">${escapeHtml(nome)}</div>
       <div style="flex:1">
         ${barraFina(pctAcerto, 100, '#1BAF7A', '%')}
@@ -3405,6 +3410,28 @@ function linhaComparativaModulo(nome, pctAcerto, pctRecuperacao, pctRetencao){
       </div>
     </div>`;
 }
+function mostrarInfoModulo(event, nome, textoInfo){
+  event.stopPropagation();
+  let popup = document.getElementById('popup-info-modulo');
+  if(!popup){
+    popup = document.createElement('div');
+    popup.id = 'popup-info-modulo';
+    popup.style.cssText = 'position:fixed;background:#111;color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.7;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.25);max-width:220px';
+    document.body.appendChild(popup);
+  }
+  popup.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${nome}</div>${textoInfo}`;
+  popup.style.display = 'block';
+  const x = event.clientX || (event.touches && event.touches[0]?.clientX) || window.innerWidth/2;
+  const y = event.clientY || (event.touches && event.touches[0]?.clientY) || window.innerHeight/2;
+  popup.style.left = Math.max(8, Math.min(x, window.innerWidth - 228)) + 'px';
+  popup.style.top = (y + 12) + 'px';
+  clearTimeout(window._timeoutPopupModulo);
+  window._timeoutPopupModulo = setTimeout(()=>{ popup.style.display = 'none'; }, 3000);
+}
+window.addEventListener('click', (e)=>{
+  const popup = document.getElementById('popup-info-modulo');
+  if(popup && e.target !== popup) popup.style.display = 'none';
+});
 function legendaBarrasModulo(){
   return `<div style="display:flex;gap:14px;margin-bottom:8px;font-size:11px;color:#888">
     <span><span style="display:inline-block;width:8px;height:8px;background:#1BAF7A;border-radius:2px;margin-right:4px"></span>% de acerto</span>
@@ -3421,7 +3448,7 @@ function renderizarGraficoModuloTresBarras(linhasModulo){
   }
   document.getElementById('lista-metricas-modulo').innerHTML = `<div class="card-questao">
     ${legendaBarrasModulo()}
-    ${linhasValidas.map(l => linhaComparativaModulo(l.modulo, l.pctAcerto, l.pctRecuperacao, l.pctRetencao)).join('')}
+    ${linhasValidas.map(l => linhaComparativaModulo(l.modulo, l.pctAcerto, l.pctRecuperacao, l.pctRetencao, l.acertos, l.total, l.recuperacaoSucesso, l.recuperacaoTotal, l.retencaoSucesso, l.retencaoTotal)).join('')}
   </div>`;
 }
 
@@ -3702,6 +3729,10 @@ function renderizarMetricasPessoais(){
       pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0,
       pctRecuperacao: metricasConhecimentoPorModulo[modulo]?.recuperacaoPct ?? null,
       pctRetencao: metricasConhecimentoPorModulo[modulo]?.retencaoPct ?? null,
+      recuperacaoSucesso: metricasConhecimentoPorModulo[modulo]?.recuperacaoSucesso ?? 0,
+      recuperacaoTotal: metricasConhecimentoPorModulo[modulo]?.recuperacaoTotal ?? 0,
+      retencaoSucesso: metricasConhecimentoPorModulo[modulo]?.retencaoSucesso ?? 0,
+      retencaoTotal: metricasConhecimentoPorModulo[modulo]?.retencaoTotal ?? 0,
     }));
   // régua do eixo X sempre baseada no maior valor entre TODOS os 7 módulos
   // (seus, não do grupo), não só os que estão filtrados na tela — assim a
