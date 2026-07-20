@@ -246,6 +246,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 @keyframes girar{to{transform:rotate(360deg)}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 </head>
 <body>
 <script>
@@ -579,7 +580,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div class="section-title">Por módulo</div>
     <div id="metricas-filtro-modulos" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
-    <div id="lista-metricas-modulo"><div class="loading-spinner"></div></div>
+    <div id="lista-metricas-modulo" class="card-questao" style="position:relative">
+      <canvas id="grafico-por-modulo"></canvas>
+      <p id="metricas-modulo-vazio" class="hidden" style="color:#888;font-size:var(--fs-d)">Nenhum módulo selecionado no filtro acima.</p>
+    </div>
 
     <div class="section-title">Por tipo de questão</div>
     <div id="lista-metricas-tipo"></div>
@@ -3103,6 +3107,7 @@ let metricasQuestoesInfoCache = {};
 let metricasCadernosCache = [];
 let metricasFavoritosCache = new Set();
 let metricasNotasCache = [];
+let graficoPorModulo = null; // instância do Chart.js — precisa destruir antes de redesenhar
 
 function passaNoFiltroPeriodo(dataIso){
   if(!dataIso) return false;
@@ -3274,16 +3279,44 @@ function renderizarMetricasPessoais(){
     .map(([modulo, s])=>({
     modulo, total: s.total, acertos: s.acertos, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
   })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
-  const maiorTotalModulo = Math.max(...linhasModulo.map(l=>l.total), 1);
   const elChipsModulo = document.getElementById('metricas-filtro-modulos');
   if(!elChipsModulo.innerHTML) renderizarChipsFiltroModulo();
-  elModulo.innerHTML = linhasModulo.length ? `<div class="card-questao">
-    ${legendaBarras()}
-    ${linhasModulo.map(l=>{
-      const cor = l.pctAcerto >= 70 ? '#8FA878' : l.pctAcerto >= 50 ? '#C9A165' : '#C48787';
-      return linhaComparativa(escapeHtml(l.modulo), l.acertos, l.total, l.pctAcerto, maiorTotalModulo, cor);
-    }).join('')}
-  </div>` : '<p style="color:#888;font-size:var(--fs-d)">Nenhum módulo selecionado no filtro acima.</p>';
+
+  if(graficoPorModulo){ graficoPorModulo.destroy(); graficoPorModulo = null; }
+  if(linhasModulo.length){
+    document.getElementById('grafico-por-modulo').classList.remove('hidden');
+    document.getElementById('metricas-modulo-vazio').classList.add('hidden');
+    elModulo.style.height = (linhasModulo.length * 76 + 40) + 'px';
+    const canvasModulo = document.getElementById('grafico-por-modulo');
+    graficoPorModulo = new Chart(canvasModulo, {
+      type: 'bar',
+      data: {
+        labels: linhasModulo.map(l=>l.modulo),
+        datasets: [
+          {label:'Acertos', data: linhasModulo.map(l=>l.acertos), backgroundColor:'#3B6D11', borderRadius:4},
+          {label:'Respondidas', data: linhasModulo.map(l=>l.total), backgroundColor:'#202A45', borderRadius:4},
+          {label:'% de acertos', data: linhasModulo.map(l=>l.pctAcerto), backgroundColor:'#D97757', borderRadius:4}
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {position:'top', align:'start', labels:{color:'#666', boxWidth:12, font:{size:12}}},
+          tooltip: {enabled:true}
+        },
+        scales: {
+          x: {beginAtZero:true, grid:{color:'#eee'}, ticks:{color:'#888', font:{size:11}}},
+          y: {grid:{display:false}, ticks:{color:'#111', font:{size:12}}}
+        }
+      }
+    });
+  }else{
+    document.getElementById('grafico-por-modulo').classList.add('hidden');
+    document.getElementById('metricas-modulo-vazio').classList.remove('hidden');
+    elModulo.style.height = 'auto';
+  }
 
   /* ---- por tipo de questão ---- */
   const statsPorTipo = {};
