@@ -198,12 +198,15 @@ input,select,textarea{font-family:inherit;font-size:16px}
   #aba-adicionar .modal-conteudo{max-width:520px;max-height:none;overflow-y:visible;padding:0;border-radius:0}
 }
 .modal-conteudo-fluxo-topico{height:420px;box-sizing:border-box}
-.caixa-questao-detalhe{height:620px;max-width:380px}
+/* Popup grande — usado em qualquer lugar onde a pessoa escreve ou lê texto
+   mais longo (discutir dentro do caderno, notas). Pequeno no celular (tela
+   já é pequena mesmo), bem maior no iPad (retrato e paisagem) e desktop. */
+.popup-texto-longo{height:620px;max-width:380px}
 @media(min-width:768px) and (max-width:1099px){
-  .caixa-questao-detalhe{height:75vh;max-width:560px}
+  .popup-texto-longo{height:85vh;max-width:650px}
 }
 @media(min-width:1100px){
-  .caixa-questao-detalhe{height:80vh;max-width:680px}
+  .popup-texto-longo{height:85vh;max-width:800px}
 }
 
 /* --- Alternativas de questão (padrão herdado do app pessoal) --- */
@@ -743,10 +746,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-nota-questao" onclick="if(event.target===this) fecharModal('modal-nota-questao')">
-  <div class="modal-conteudo">
+  <div class="modal-conteudo popup-texto-longo" style="display:flex;flex-direction:column">
     <h3 class="config-title">Sua nota nessa questão</h3>
-    <textarea id="texto-nota-questao" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?"></textarea>
-    <div style="display:flex;gap:8px">
+    <textarea id="texto-nota-questao" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="flex:1;min-height:0;resize:none"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-shrink:0">
       <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-nota-questao')">Cancelar</button>
       <button class="btn-primario" style="flex:1" onclick="salvarNotaQuestao()">Salvar</button>
     </div>
@@ -766,7 +769,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-questao-detalhe" onclick="if(event.target===this) fecharModal('modal-questao-detalhe')">
-  <div class="modal-conteudo modal-conteudo-fluxo-topico caixa-questao-detalhe" style="position:relative;display:flex;flex-direction:column;padding-right:12px">
+  <div class="modal-conteudo modal-conteudo-fluxo-topico popup-texto-longo" style="position:relative;display:flex;flex-direction:column;padding-right:12px">
     <div id="modal-questao-detalhe-conteudo" style="flex:1;min-height:0;overflow-y:auto;padding-right:10px"></div>
     <div style="border-top:0.5px solid #eee;margin:12px 0 0;flex-shrink:0"></div>
     <button class="btn-secundario" style="width:100%;margin-top:12px;flex-shrink:0" onclick="fecharModal('modal-questao-detalhe')">Fechar</button>
