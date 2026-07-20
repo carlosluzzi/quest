@@ -3141,6 +3141,17 @@ async function carregarMetricasPessoais(){
   renderizarMetricasPessoais();
 }
 
+function barraComparativa(rotulo, valor, maximo, cor, sufixo=''){
+  const largura = maximo > 0 ? Math.min(100, Math.round((valor/maximo)*100)) : 0;
+  return `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span style="width:82px;flex-shrink:0;font-size:var(--fs-b);color:#888">${rotulo}</span>
+      <div style="flex:1;background:#F0F0EE;border-radius:5px;height:14px;overflow:hidden">
+        <div style="width:${largura}%;background:${cor};height:100%;border-radius:5px"></div>
+      </div>
+      <span style="width:42px;flex-shrink:0;text-align:right;font-size:var(--fs-b);font-weight:600;color:#111">${valor}${sufixo}</span>
+    </div>`;
+}
 function renderizarMetricasPessoais(){
   const filtroTipo = document.getElementById('metricas-filtro-tipo').value;
   const infoPorQuestao = metricasQuestoesInfoCache;
@@ -3219,16 +3230,16 @@ function renderizarMetricasPessoais(){
     if(r.correta) statsPorModulo[mod].acertos++;
   });
   const linhasModulo = Object.entries(statsPorModulo).map(([modulo, s])=>({
-    modulo, total: s.total, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
+    modulo, total: s.total, acertos: s.acertos, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
   })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
+  const maiorTotalModulo = Math.max(...linhasModulo.map(l=>l.total), 1);
   elModulo.innerHTML = linhasModulo.map(l=>{
     const cor = l.pctAcerto >= 70 ? '#3B6D11' : l.pctAcerto >= 50 ? '#854F0B' : '#A32D2D';
     return `<div class="card-questao">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        ${tagModulo(l.modulo)}
-        <span style="font-weight:700;color:${cor}">${l.pctAcerto}%</span>
-      </div>
-      <div style="color:#888;font-size:var(--fs-b)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
+      <div style="margin-bottom:12px">${tagModulo(l.modulo)}</div>
+      ${barraComparativa('Acertos', l.acertos, maiorTotalModulo, '#3B6D11')}
+      ${barraComparativa('Respondidas', l.total, maiorTotalModulo, '#202A45')}
+      ${barraComparativa('% de acertos', l.pctAcerto, 100, cor, '%')}
     </div>`;
   }).join('');
 
