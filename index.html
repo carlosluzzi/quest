@@ -206,6 +206,16 @@ input,select,textarea{font-family:inherit;font-size:16px}
 @media(min-width:1100px){
   .popup-texto-longo{height:85vh;max-width:800px}
 }
+/* Popup pequeno — formulários curtos (notas, nova discussão). Altura livre,
+   baseada no conteúdo (com teto de 85vh vindo do .modal-conteudo padrão),
+   só a largura cresce um pouco em telas maiores */
+.popup-formulario{max-width:380px}
+@media(min-width:768px) and (max-width:1099px){
+  .popup-formulario{max-width:480px}
+}
+@media(min-width:1100px){
+  .popup-formulario{max-width:520px}
+}
 
 /* --- Alternativas de questão (padrão herdado do app pessoal) --- */
 .banco-alternativas{display:flex;flex-direction:column;gap:8px;margin-top:14px}
@@ -744,13 +754,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-nota-questao" onclick="if(event.target===this) fecharModal('modal-nota-questao')">
-  <div class="modal-conteudo popup-texto-longo" style="display:flex;flex-direction:column">
-    <h3 class="config-title">Sua nota nessa questão</h3>
-    <textarea id="texto-nota-questao" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="flex:1;min-height:0;resize:none"></textarea>
-    <div style="display:flex;gap:8px;margin-top:10px;flex-shrink:0">
-      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-nota-questao')">Cancelar</button>
-      <button class="btn-primario" style="flex:1" onclick="salvarNotaQuestao()">Salvar</button>
-    </div>
+  <div class="modal-conteudo popup-formulario">
+    <h3 class="config-title">Suas notas nessa questão</h3>
+    <textarea id="texto-nota-questao" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:80px"></textarea>
+    <button class="btn-primario" style="width:100%;margin-bottom:14px" onclick="adicionarNotaQuestao()">Adicionar nota</button>
+    <div id="lista-notas-questao"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:6px" onclick="fecharModal('modal-nota-questao')">Fechar</button>
   </div>
 </div>
 
@@ -782,11 +791,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-novo-topico" onclick="if(event.target===this) fecharModal('modal-novo-topico')">
-  <div class="modal-conteudo">
+  <div class="modal-conteudo popup-formulario">
     <h3 class="config-title" id="titulo-modal-novo-topico">Nova discussão</h3>
     <div style="display:flex;gap:8px;margin-bottom:12px">
-      <div class="filter-btn" id="toggle-tipo-geral" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="selecionarTipoNovoTopico('geral')">Abrir discussão</div>
-      <div class="filter-btn" id="toggle-tipo-erro" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="selecionarTipoNovoTopico('erro')">Reportar erro</div>
+      <div class="filter-btn" id="toggle-tipo-geral" style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:var(--fs-e);padding:10px" onclick="selecionarTipoNovoTopico('geral')">Abrir discussão</div>
+      <div class="filter-btn" id="toggle-tipo-erro" style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:var(--fs-e);padding:10px" onclick="selecionarTipoNovoTopico('erro')">Reportar erro</div>
     </div>
     <input type="text" id="novo-topico-titulo" class="filter-select" placeholder="Resumo curto do que você quer discutir">
     <textarea id="novo-topico-mensagem" class="textarea-padrao" placeholder="Escreve aqui o que você quer falar"></textarea>
@@ -2259,21 +2268,39 @@ let questaoNotaAtual = null;
 
 async function abrirNotaQuestao(questaoId){
   questaoNotaAtual = questaoId;
-  const {data} = await sb.from('notas').select('texto').eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId).maybeSingle();
-  document.getElementById('texto-nota-questao').value = data?.texto || '';
+  document.getElementById('texto-nota-questao').value = '';
   abrirModal('modal-nota-questao');
+  await renderizarListaNotasQuestao();
 }
 
-async function salvarNotaQuestao(){
-  const texto = document.getElementById('texto-nota-questao').value.trim();
-  if(!texto){
-    await sb.from('notas').delete().eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoNotaAtual);
-    notasDoUsuario.delete(questaoNotaAtual);
-  }else{
-    await sb.from('notas').upsert({usuario_id: usuarioAtual.id, questao_id: questaoNotaAtual, texto, atualizado_em: new Date().toISOString()}, {onConflict: 'usuario_id,questao_id'});
-    notasDoUsuario.add(questaoNotaAtual);
-  }
-  fecharModal('modal-nota-questao');
+async function renderizarListaNotasQuestao(){
+  const el = document.getElementById('lista-notas-questao');
+  el.innerHTML = '<div class="loading-spinner"></div>';
+  const {data} = await sb.from('notas').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoNotaAtual).order('criado_em', {ascending:false});
+  if(!data || !data.length){ el.innerHTML = ''; return; }
+  el.innerHTML = data.map(n => `
+    <div style="display:flex;gap:8px;align-items:flex-start;padding:10px;background:#F5F5F4;border-radius:8px;margin-bottom:8px">
+      <p style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${escapeHtml(n.texto)}</p>
+      <button onclick="excluirNotaQuestao('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
+    </div>`).join('');
+}
+
+async function adicionarNotaQuestao(){
+  const campo = document.getElementById('texto-nota-questao');
+  const texto = campo.value.trim();
+  if(!texto) return;
+  await sb.from('notas').insert({usuario_id: usuarioAtual.id, questao_id: questaoNotaAtual, texto});
+  campo.value = '';
+  notasDoUsuario.add(questaoNotaAtual);
+  await renderizarListaNotasQuestao();
+  renderizarQuestaoAtual();
+}
+
+async function excluirNotaQuestao(notaId){
+  await sb.from('notas').delete().eq('id', notaId);
+  await renderizarListaNotasQuestao();
+  const {count} = await sb.from('notas').select('id', {count:'exact', head:true}).eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoNotaAtual);
+  if(!count) notasDoUsuario.delete(questaoNotaAtual);
   renderizarQuestaoAtual();
 }
 
@@ -2703,7 +2730,7 @@ function selecionarTipoNovoTopico(tipo){
   document.getElementById('toggle-tipo-geral').classList.toggle('active', tipo==='geral');
   document.getElementById('toggle-tipo-erro').classList.toggle('active', tipo==='erro');
   const campoTitulo = document.getElementById('novo-topico-titulo');
-  campoTitulo.placeholder = tipo==='erro' ? 'O que está errado? (ex: gabarito incorreto)' : 'Resumo curto do que você quer discutir';
+  campoTitulo.placeholder = tipo==='erro' ? 'O que está errado?' : 'O que você quer discutir?';
 }
 function abrirModalNovoTopico(questaoId, tipo){
   novoTopicoContexto = {questaoId, tipo};
@@ -3254,7 +3281,7 @@ async function carregarMetricasPessoais(){
     : '<p style="color:#888;font-size:var(--fs-d)">Nenhum dos seus favoritos foi errado nesse período.</p>';
 
   /* ---- suas notas (atalho de revisão) ---- */
-  const {data: minhasNotas} = await sb.from('notas').select('questao_id, texto, atualizado_em').eq('usuario_id', usuarioAtual.id).order('atualizado_em', {ascending:false});
+  const {data: minhasNotas} = await sb.from('notas').select('questao_id, texto, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false});
   if(minhasNotas && minhasNotas.length){
     const idsNotas = minhasNotas.map(n=>n.questao_id);
     const {data: questoesDasNotas} = await sb.from('questoes').select('id, enunciado, modulo_pscpp').in('id', idsNotas);
