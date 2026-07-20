@@ -56,7 +56,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .btn-secundario{background:#f0f0ee;color:#111;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;border:none;cursor:pointer;font-family:inherit}
 .filter-btn{font-size:var(--fs-c);padding:4px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;margin:4px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
-#metricas-filtro-periodo .filter-btn{flex:1;text-align:center;margin:0}
+#metricas-filtro-periodo .filter-btn{flex:1;text-align:center;margin:0;height:40px;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+#metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:40px;box-sizing:border-box}
 .filter-select{font-size:16px;padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
@@ -173,6 +174,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .selo-correcao{background:#FFF3CD;color:#856404;font-size:var(--fs-b);padding:3px 8px;border-radius:8px;font-weight:600}
 
 .info-icone{cursor:pointer;font-size:var(--fs-c);color:#888;display:inline-flex;align-items:center;gap:4px}
+.info-icone svg{border:0.5px solid #ddd;border-radius:7px;padding:4px;box-sizing:content-box;flex-shrink:0;background:#fff}
 .info-icone svg{flex-shrink:0}
 
 /* --- Placar --- */
@@ -200,22 +202,22 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* Popup grande — usado em qualquer lugar onde a pessoa escreve ou lê texto
    mais longo (discutir dentro do caderno, notas). Pequeno no celular (tela
    já é pequena mesmo), bem maior no iPad (retrato e paisagem) e desktop. */
-.popup-texto-longo{height:620px;max-width:380px}
+.popup-texto-longo{height:640px;max-width:400px;padding-top:24px}
 @media(min-width:768px) and (max-width:1099px){
-  .popup-texto-longo{height:85vh;max-width:650px}
+  .popup-texto-longo{height:85vh;max-width:680px}
 }
 @media(min-width:1100px){
-  .popup-texto-longo{height:85vh;max-width:800px}
+  .popup-texto-longo{height:85vh;max-width:830px}
 }
 /* Popup pequeno — formulários curtos (notas, nova discussão). Altura livre,
    baseada no conteúdo (com teto de 85vh vindo do .modal-conteudo padrão),
    só a largura cresce um pouco em telas maiores */
-.popup-formulario{max-width:380px}
+.popup-formulario{max-width:400px;padding-top:24px}
 @media(min-width:768px) and (max-width:1099px){
-  .popup-formulario{max-width:480px}
+  .popup-formulario{max-width:500px}
 }
 @media(min-width:1100px){
-  .popup-formulario{max-width:520px}
+  .popup-formulario{max-width:550px}
 }
 
 /* --- Alternativas de questão (padrão herdado do app pessoal) --- */
@@ -547,7 +549,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="view-aba hidden" id="aba-placar">
     <div class="section-title" style="margin-top:0">Seu desempenho</div>
 
-    <select class="filter-select" id="metricas-filtro-tipo" onchange="carregarMetricasPessoais()">
+    <select class="filter-select" id="metricas-filtro-tipo" onchange="renderizarMetricasPessoais()">
       <option value="">Todos os tipos</option>
       <option value="Conceitual">Conceitual</option>
       <option value="Cálculo">Cálculo</option>
@@ -567,11 +569,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <span style="color:#888;font-size:var(--fs-d)">até</span>
       <input type="date" id="metricas-data-fim" class="filter-select" style="margin-bottom:0" onchange="aplicarFiltroDatasCustomizadas()">
     </div>
-    <div id="metricas-redefinir-datas" class="hidden" style="text-align:right;margin-bottom:16px">
-      <button onclick="redefinirFiltroDatas()" style="background:none;border:none;color:#888;font-size:var(--fs-b);text-decoration:underline;cursor:pointer;padding:0">Redefinir</button>
+    <div id="metricas-redefinir-datas" class="hidden" style="margin-bottom:16px">
+      <button class="btn-secundario" style="width:100%" onclick="redefinirFiltroDatas()">Resetar</button>
     </div>
 
-    <div id="metricas-resumo-geral"></div>
+    <div id="metricas-resumo-geral" style="margin-top:16px"></div>
 
     <div class="section-title">Por módulo</div>
     <div id="lista-metricas-modulo"><div class="loading-spinner"></div></div>
@@ -757,10 +759,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-nota-questao" onclick="if(event.target===this) fecharModal('modal-nota-questao')">
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title">Suas notas nessa questão</h3>
-    <textarea id="texto-nota-questao" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:80px"></textarea>
-    <button class="btn-primario" style="width:100%;margin-bottom:14px" onclick="adicionarNotaQuestao()">Adicionar nota</button>
     <div id="lista-notas-questao"></div>
-    <button class="btn-secundario" style="width:100%;margin-top:6px" onclick="fecharModal('modal-nota-questao')">Fechar</button>
+    <textarea id="texto-nota-questao" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:80px"></textarea>
+    <button class="btn-primario" style="width:100%" onclick="adicionarNotaQuestao()">Adicionar nota</button>
+    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-nota-questao')">Fechar</button>
   </div>
 </div>
 
@@ -2079,10 +2081,10 @@ async function carregarCadernosExistentes(){
     const stats = respostasPorCaderno[c.id] || {total:0, acertos:0};
     const progresso = totalQuestoes ? `${stats.total} de ${totalQuestoes} respondidas` : `${stats.total} respondidas`;
     return `
-    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee">
+    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;cursor:pointer" onclick="retomarCadernoEspecifico('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="cursor:pointer;font-size:var(--fs-d);color:#111" onclick="retomarCadernoEspecifico('${c.id}')">${escapeHtml(c.nome||'Caderno sem nome')}</span>
-        <span class="tx" style="font-size:16px;padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+        <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
+        <span class="tx" style="font-size:16px;padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
       </div>
       <span style="color:#888;font-size:var(--fs-b)">${progresso}</span>
     </div>`;
@@ -2204,9 +2206,7 @@ let cadernoParaExcluir = null;
 function abrirConfirmacaoExclusaoCaderno(el){
   cadernoParaExcluir = el.dataset.id;
   const nome = el.dataset.nome;
-  const texto = el.dataset.status === 'finalizado'
-    ? `Excluir o caderno "${nome}"? Isso desfaz a contribuição desse caderno nas estatísticas das questões originais.`
-    : `Excluir o caderno "${nome}"? Como ele ainda está em andamento, nenhuma resposta dele contou pra estatística ainda.`;
+  const texto = `Excluir o caderno "${nome}"? Isso desfaz a contribuição desse caderno nas suas estatísticas.`;
   document.getElementById('texto-confirmar-exclusao-caderno').textContent = texto;
   abrirModal('modal-confirmar-exclusao-caderno');
 }
@@ -2279,11 +2279,11 @@ async function renderizarListaNotasQuestao(){
   el.innerHTML = '<div class="loading-spinner"></div>';
   const {data} = await sb.from('notas').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoNotaAtual).order('criado_em', {ascending:false});
   if(!data || !data.length){ el.innerHTML = ''; return; }
-  el.innerHTML = data.map(n => `
-    <div style="display:flex;gap:8px;align-items:flex-start;padding:10px;background:#F5F5F4;border-radius:8px;margin-bottom:8px">
+  el.innerHTML = `<div style="margin-bottom:14px">` + data.map(n => `
+    <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
       <p style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${escapeHtml(n.texto)}</p>
       <button onclick="excluirNotaQuestao('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
-    </div>`).join('');
+    </div>`).join('') + `</div>`;
 }
 
 async function adicionarNotaQuestao(){
@@ -3063,7 +3063,7 @@ function selecionarPeriodoMetricas(dias, btn){
   document.getElementById('metricas-filtro-datas-customizadas').classList.add('hidden');
   document.querySelectorAll('#metricas-filtro-periodo .filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  carregarMetricasPessoais();
+  renderizarMetricasPessoais();
 }
 function toggleFiltroCustomizado(){
   document.getElementById('metricas-filtro-datas-customizadas').classList.toggle('hidden');
@@ -3077,7 +3077,7 @@ function aplicarFiltroDatasCustomizadas(){
     document.querySelectorAll('#metricas-filtro-periodo .filter-btn[data-dias]').forEach(b=>b.classList.remove('active'));
     document.getElementById('metricas-redefinir-datas').classList.remove('hidden');
   }
-  carregarMetricasPessoais();
+  renderizarMetricasPessoais();
 }
 function redefinirFiltroDatas(){
   metricasDataInicio = null;
@@ -3089,21 +3089,60 @@ function redefinirFiltroDatas(){
   metricasFiltroDias = 0;
   document.querySelectorAll('#metricas-filtro-periodo .filter-btn[data-dias]').forEach(b=>b.classList.remove('active'));
   document.querySelector('#metricas-filtro-periodo .filter-btn[data-dias="0"]').classList.add('active');
-  carregarMetricasPessoais();
+  renderizarMetricasPessoais();
 }
-function aplicarFiltroPeriodoQuery(query, campoData){
-  if(metricasDataInicio || metricasDataFim){
-    if(metricasDataInicio) query = query.gte(campoData, metricasDataInicio+'T00:00:00');
-    if(metricasDataFim) query = query.lte(campoData, metricasDataFim+'T23:59:59');
-  }else if(metricasFiltroDias > 0){
+
+// cache bruto das métricas — carregado 1x quando entra na aba (ou quando os
+// dados podem ter mudado), NÃO a cada troca de filtro. Trocar filtro só
+// refiltra o que já está em memória, sem ida nova ao banco — é isso que
+// deixa instantâneo, igual o PSCPP Tracker
+let metricasRespostasCache = [];
+let metricasQuestoesInfoCache = {};
+let metricasCadernosCache = [];
+let metricasFavoritosCache = new Set();
+let metricasNotasCache = [];
+
+function passaNoFiltroPeriodo(dataIso){
+  if(!dataIso) return false;
+  if(metricasDataInicio && dataIso < metricasDataInicio+'T00:00:00') return false;
+  if(metricasDataFim && dataIso > metricasDataFim+'T23:59:59') return false;
+  if(!metricasDataInicio && !metricasDataFim && metricasFiltroDias > 0){
     const cutoff = new Date(Date.now() - metricasFiltroDias*24*60*60*1000).toISOString();
-    query = query.gte(campoData, cutoff);
+    if(dataIso < cutoff) return false;
   }
-  return query;
+  return true;
 }
 
 async function carregarMetricasPessoais(){
+  document.getElementById('lista-metricas-modulo').innerHTML = '<div class="loading-spinner"></div>';
+
+  const [{data: respostasBrutas}, {data: cadernosFinalizados}, {data: meusFavoritos}, {data: minhasNotas}] = await Promise.all([
+    sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em').eq('usuario_id', usuarioAtual.id),
+    sb.from('cadernos').select('id, finalizado_em').eq('usuario_id', usuarioAtual.id).eq('status','finalizado'),
+    sb.from('favoritos').select('questao_id').eq('usuario_id', usuarioAtual.id),
+    sb.from('notas').select('questao_id, texto, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false})
+  ]);
+
+  metricasRespostasCache = respostasBrutas || [];
+  metricasCadernosCache = cadernosFinalizados || [];
+  metricasFavoritosCache = new Set((meusFavoritos||[]).map(f=>f.questao_id));
+  metricasNotasCache = minhasNotas || [];
+
+  const idsQuestoes = new Set(metricasRespostasCache.map(r=>r.questao_id));
+  metricasNotasCache.forEach(n=>idsQuestoes.add(n.questao_id));
+  const idsQuestoesArr = [...idsQuestoes];
+  const {data: questoesInfo} = idsQuestoesArr.length
+    ? await sb.from('questoes').select('id, modulo_pscpp, tipo_questao, bibliografia_id, enunciado').in('id', idsQuestoesArr)
+    : {data: []};
+  metricasQuestoesInfoCache = {};
+  (questoesInfo||[]).forEach(q=>{ metricasQuestoesInfoCache[q.id] = q; });
+
+  renderizarMetricasPessoais();
+}
+
+function renderizarMetricasPessoais(){
   const filtroTipo = document.getElementById('metricas-filtro-tipo').value;
+  const infoPorQuestao = metricasQuestoesInfoCache;
 
   const elResumo = document.getElementById('metricas-resumo-geral');
   const elModulo = document.getElementById('lista-metricas-modulo');
@@ -3112,7 +3151,6 @@ async function carregarMetricasPessoais(){
   const elPiores = document.getElementById('lista-metricas-piores');
   const elFavDificeis = document.getElementById('lista-metricas-favoritos-dificeis');
   const elNotas = document.getElementById('lista-metricas-notas');
-  elModulo.innerHTML = '<div class="loading-spinner"></div>';
   elResumo.innerHTML = '';
   elTipo.innerHTML = '';
   elPublicacao.innerHTML = '';
@@ -3120,19 +3158,13 @@ async function carregarMetricasPessoais(){
   elFavDificeis.innerHTML = '';
   elNotas.innerHTML = '';
 
-  let query = sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em').eq('usuario_id', usuarioAtual.id);
-  query = aplicarFiltroPeriodoQuery(query, 'respondido_em');
-  const {data: respostasBrutas} = await query;
+  const respostasBrutas = metricasRespostasCache.filter(r => passaNoFiltroPeriodo(r.respondido_em));
 
-  if(!respostasBrutas || !respostasBrutas.length){
+  if(!respostasBrutas.length){
     elModulo.innerHTML = '<p style="color:#888">Nenhuma resposta registrada nesse período. Assim que finalizar um caderno, suas métricas aparecem aqui.</p>';
+    renderizarNotasMetricas(elNotas, infoPorQuestao);
     return;
   }
-
-  const idsQuestoes = [...new Set(respostasBrutas.map(r=>r.questao_id))];
-  const {data: questoesInfo} = await sb.from('questoes').select('id, modulo_pscpp, tipo_questao, bibliografia_id, enunciado').in('id', idsQuestoes);
-  const infoPorQuestao = {};
-  (questoesInfo||[]).forEach(q=>{ infoPorQuestao[q.id] = q; });
 
   // filtro de tipo de questão é aplicado em cima do que já veio do período
   let respostas = respostasBrutas;
@@ -3142,6 +3174,7 @@ async function carregarMetricasPessoais(){
 
   if(!respostas.length){
     elModulo.innerHTML = '<p style="color:#888">Nenhuma resposta registrada com esses filtros.</p>';
+    renderizarNotasMetricas(elNotas, infoPorQuestao);
     return;
   }
 
@@ -3152,28 +3185,25 @@ async function carregarMetricasPessoais(){
   const aproveitamento = totalRespondidas ? Math.round((totalAcertos/totalRespondidas)*100) : 0;
   const corAproveitamento = aproveitamento >= 70 ? '#3B6D11' : aproveitamento >= 50 ? '#854F0B' : '#A32D2D';
 
-  let queryCadernos = sb.from('cadernos').select('id').eq('usuario_id', usuarioAtual.id).eq('status','finalizado');
-  queryCadernos = aplicarFiltroPeriodoQuery(queryCadernos, 'finalizado_em');
-  const {data: cadernosFinalizados} = await queryCadernos;
-  const totalCadernos = (cadernosFinalizados||[]).length;
+  const totalCadernos = metricasCadernosCache.filter(c => passaNoFiltroPeriodo(c.finalizado_em)).length;
 
   elResumo.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
       <div class="card-questao" style="text-align:center;margin-bottom:0">
         <div style="font-size:24px;font-weight:700">${totalCadernos}</div>
-        <div style="color:#888;font-size:var(--fs-b)">${totalCadernos===1?'caderno finalizado':'cadernos finalizados'}</div>
+        <div style="color:#888;font-size:var(--fs-b);text-transform:uppercase">${totalCadernos===1?'caderno finalizado':'cadernos finalizados'}</div>
       </div>
       <div class="card-questao" style="text-align:center;margin-bottom:0">
         <div style="font-size:24px;font-weight:700">${totalRespondidas}</div>
-        <div style="color:#888;font-size:var(--fs-b)">questões respondidas</div>
+        <div style="color:#888;font-size:var(--fs-b);text-transform:uppercase">questões respondidas</div>
       </div>
       <div class="card-questao" style="text-align:center;margin-bottom:0">
         <div style="font-size:24px;font-weight:700"><span style="color:#3B6D11">${totalAcertos}</span> / <span style="color:#A32D2D">${totalErros}</span></div>
-        <div style="color:#888;font-size:var(--fs-b)">acertos / erros</div>
+        <div style="color:#888;font-size:var(--fs-b);text-transform:uppercase">acertos / erros</div>
       </div>
       <div class="card-questao" style="text-align:center;margin-bottom:0">
         <div style="font-size:24px;font-weight:700;color:${corAproveitamento}">${aproveitamento}%</div>
-        <div style="color:#888;font-size:var(--fs-b)">aproveitamento médio</div>
+        <div style="color:#888;font-size:var(--fs-b);text-transform:uppercase">aproveitamento médio</div>
       </div>
     </div>
   `;
@@ -3274,22 +3304,19 @@ async function carregarMetricasPessoais(){
     : '<p style="color:#888;font-size:var(--fs-d)">Nenhum erro registrado nesse período – mandou bem!</p>';
 
   /* ---- favoritos que você mais erra ---- */
-  const {data: meusFavoritos} = await sb.from('favoritos').select('questao_id').eq('usuario_id', usuarioAtual.id);
-  const idsFavoritos = new Set((meusFavoritos||[]).map(f=>f.questao_id));
-  const favoritosDificeis = todasComErro.filter(p=>idsFavoritos.has(p.questaoId));
+  const favoritosDificeis = todasComErro.filter(p=>metricasFavoritosCache.has(p.questaoId));
   elFavDificeis.innerHTML = favoritosDificeis.length
     ? favoritosDificeis.map(cardQuestaoDificil).join('')
     : '<p style="color:#888;font-size:var(--fs-d)">Nenhum dos seus favoritos foi errado nesse período.</p>';
 
-  /* ---- suas notas (atalho de revisão) ---- */
-  const {data: minhasNotas} = await sb.from('notas').select('questao_id, texto, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false});
-  if(minhasNotas && minhasNotas.length){
-    const idsNotas = minhasNotas.map(n=>n.questao_id);
-    const {data: questoesDasNotas} = await sb.from('questoes').select('id, enunciado, modulo_pscpp').in('id', idsNotas);
-    const infoNotas = {};
-    (questoesDasNotas||[]).forEach(q=>{ infoNotas[q.id] = q; });
-    elNotas.innerHTML = minhasNotas.map(n=>{
-      const info = infoNotas[n.questao_id];
+  /* ---- suas notas (atalho de revisão) — não depende do filtro de período ---- */
+  renderizarNotasMetricas(elNotas, infoPorQuestao);
+}
+
+function renderizarNotasMetricas(elNotas, infoPorQuestao){
+  if(metricasNotasCache.length){
+    elNotas.innerHTML = metricasNotasCache.map(n=>{
+      const info = infoPorQuestao[n.questao_id];
       return `<div class="card-questao" style="cursor:pointer" onclick="abrirDetalheQuestao('${n.questao_id}')">
         ${info ? tagModulo(info.modulo_pscpp) : ''}
         <p style="font-size:var(--fs-d);margin-top:6px;color:#111">${escapeHtml((info?.enunciado||'').slice(0,80))}...</p>
