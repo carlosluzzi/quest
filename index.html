@@ -3108,6 +3108,14 @@ let metricasCadernosCache = [];
 let metricasFavoritosCache = new Set();
 let metricasNotasCache = [];
 let graficoPorModulo = null; // instância do Chart.js — precisa destruir antes de redesenhar
+function mostrarModuloVazio(texto){
+  if(graficoPorModulo){ graficoPorModulo.destroy(); graficoPorModulo = null; }
+  document.getElementById('grafico-por-modulo').classList.add('hidden');
+  const elVazio = document.getElementById('metricas-modulo-vazio');
+  elVazio.textContent = texto;
+  elVazio.classList.remove('hidden');
+  document.getElementById('lista-metricas-modulo').style.height = 'auto';
+}
 
 function passaNoFiltroPeriodo(dataIso){
   if(!dataIso) return false;
@@ -3121,8 +3129,6 @@ function passaNoFiltroPeriodo(dataIso){
 }
 
 async function carregarMetricasPessoais(){
-  document.getElementById('lista-metricas-modulo').innerHTML = '<div class="loading-spinner"></div>';
-
   const [{data: respostasBrutas}, {data: cadernosFinalizados}, {data: meusFavoritos}, {data: minhasNotas}] = await Promise.all([
     sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em').eq('usuario_id', usuarioAtual.id),
     sb.from('cadernos').select('id, finalizado_em').eq('usuario_id', usuarioAtual.id).eq('status','finalizado'),
@@ -3218,7 +3224,7 @@ function renderizarMetricasPessoais(){
   const respostasBrutas = metricasRespostasCache.filter(r => passaNoFiltroPeriodo(r.respondido_em));
 
   if(!respostasBrutas.length){
-    elModulo.innerHTML = '<p style="color:#888">Nenhuma resposta registrada nesse período. Assim que finalizar um caderno, suas métricas aparecem aqui.</p>';
+    mostrarModuloVazio('Nenhuma resposta registrada nesse período. Assim que finalizar um caderno, suas métricas aparecem aqui.');
     renderizarNotasMetricas(elNotas, infoPorQuestao);
     return;
   }
@@ -3230,7 +3236,7 @@ function renderizarMetricasPessoais(){
   }
 
   if(!respostas.length){
-    elModulo.innerHTML = '<p style="color:#888">Nenhuma resposta registrada com esses filtros.</p>';
+    mostrarModuloVazio('Nenhuma resposta registrada com esses filtros.');
     renderizarNotasMetricas(elNotas, infoPorQuestao);
     return;
   }
@@ -3313,9 +3319,7 @@ function renderizarMetricasPessoais(){
       }
     });
   }else{
-    document.getElementById('grafico-por-modulo').classList.add('hidden');
-    document.getElementById('metricas-modulo-vazio').classList.remove('hidden');
-    elModulo.style.height = 'auto';
+    mostrarModuloVazio('Nenhum módulo selecionado no filtro acima.');
   }
 
   /* ---- por tipo de questão ---- */
