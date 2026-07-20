@@ -557,6 +557,17 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="view-aba hidden" id="aba-placar">
     <div class="section-title" style="margin-top:0">Seu desempenho</div>
 
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis (toca pra mover)</div>
+        <div id="metricas-modulos-disponiveis" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Selecionados</div>
+        <div id="metricas-modulos-selecionados" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+      </div>
+    </div>
+
     <select class="filter-select" id="metricas-filtro-tipo" onchange="renderizarMetricasPessoais()">
       <option value="">Todos os tipos</option>
       <option value="Conceitual">Conceitual</option>
@@ -582,16 +593,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div id="metricas-resumo-geral" style="margin-top:16px"></div>
 
     <div class="section-title">Por módulo</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis (toca pra mover)</div>
-        <div id="metricas-modulos-disponiveis" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
-      </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Selecionados</div>
-        <div id="metricas-modulos-selecionados" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
-      </div>
-    </div>
     <div id="lista-metricas-modulo" class="card-questao" style="position:relative">
       <canvas id="grafico-por-modulo"></canvas>
       <p id="metricas-modulo-vazio" class="hidden" style="color:#888;font-size:var(--fs-d)">Nenhum dado disponível pra esses módulos.</p>
