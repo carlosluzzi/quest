@@ -56,7 +56,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .btn-secundario{background:#f0f0ee;color:#111;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;border:none;cursor:pointer;font-family:inherit}
 .filter-btn{font-size:var(--fs-c);padding:4px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;margin:4px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
-#metricas-filtro-periodo .filter-btn{flex:1;text-align:center;margin:0;height:32px;font-size:16px;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+#metricas-filtro-periodo .filter-btn{text-align:center;margin:0;height:32px;font-size:16px;padding:0 12px;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
 #metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:32px;box-sizing:border-box}
 #aba-quests .filter-select{height:32px;box-sizing:border-box}
 .filter-select{font-size:16px;padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
@@ -558,7 +558,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <option value="Lista">Lista</option>
       <option value="Identificação">Identificação</option>
     </select>
-    <div style="display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px;padding-bottom:2px" id="metricas-filtro-periodo">
+    <div style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px;padding-bottom:2px" id="metricas-filtro-periodo">
       <button class="filter-btn" data-dias="30" onclick="selecionarPeriodoMetricas(30, this)">30 dias</button>
       <button class="filter-btn" data-dias="90" onclick="selecionarPeriodoMetricas(90, this)">3 meses</button>
       <button class="filter-btn" data-dias="180" onclick="selecionarPeriodoMetricas(180, this)">6 meses</button>
