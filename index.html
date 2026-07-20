@@ -3372,9 +3372,9 @@ function renderizarGraficoModuloTresBarras(linhasModulo){
       data: {
         labels: linhasValidas.map(l=>quebrarNomeModulo(l.modulo)),
         datasets: [
-          {label:'% de acerto', data: linhasValidas.map(l=>l.pctAcerto), backgroundColor:'#1BAF7A', borderRadius:4, barThickness:7, categoryPercentage:0.8, barPercentage:0.5},
-          {label:'% de recuperação após erro', data: linhasValidas.map(l=>l.pctRecuperacao), backgroundColor:'#EDA100', borderRadius:4, barThickness:7, categoryPercentage:0.8, barPercentage:0.5},
-          {label:'% de retenção', data: linhasValidas.map(l=>l.pctRetencao), backgroundColor:'#4A3AA7', borderRadius:4, barThickness:7, categoryPercentage:0.8, barPercentage:0.5}
+          {label:'% de acerto', data: linhasValidas.map(l=>l.pctAcerto), backgroundColor:'#1BAF7A', borderRadius:4, maxBarThickness:14, categoryPercentage:0.7, barPercentage:0.6},
+          {label:'% de recuperação após erro', data: linhasValidas.map(l=>l.pctRecuperacao), backgroundColor:'#EDA100', borderRadius:4, maxBarThickness:14, categoryPercentage:0.7, barPercentage:0.6},
+          {label:'% de retenção', data: linhasValidas.map(l=>l.pctRetencao), backgroundColor:'#4A3AA7', borderRadius:4, maxBarThickness:14, categoryPercentage:0.7, barPercentage:0.6}
         ]
       },
       options: {
