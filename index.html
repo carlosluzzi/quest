@@ -3304,6 +3304,10 @@ function renderizarMetricasPessoais(){
     .map(([modulo, s])=>({
     modulo, total: s.total, acertos: s.acertos, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
   })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
+  // régua do eixo X sempre baseada no maior valor entre TODOS os 7 módulos
+  // (seus, não do grupo), não só os que estão filtrados na tela — assim a
+  // régua não muda de tamanho quando você filtra pra ver menos módulos
+  const maiorTotalGeral = Math.max(...Object.values(statsPorModulo).map(s=>s.total), 1);
   const elListaDisponiveis = document.getElementById('metricas-modulos-disponiveis');
   if(!elListaDisponiveis.innerHTML) renderizarListasFiltroModulo();
 
@@ -3336,7 +3340,7 @@ function renderizarMetricasPessoais(){
             tooltip: {enabled:true, mode:'index', intersect:false}
           },
           scales: {
-            x: {beginAtZero:true, grid:{color:'#eee'}, ticks:{color:'#888', font:{size:11}}},
+            x: {beginAtZero:true, max: Math.ceil(maiorTotalGeral * 1.1), grid:{color:'#eee'}, ticks:{color:'#888', font:{size:11}}},
             y: {grid:{display:false}, ticks:{color:'#111', font:{size:12}}}
           }
         }
