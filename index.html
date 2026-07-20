@@ -189,6 +189,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 /* --- Modal genérico --- */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+#overlay-arrastar-arquivo{position:fixed;inset:0;background:rgba(217,119,87,0.08);z-index:200;display:flex;align-items:center;justify-content:center;pointer-events:none}
+#overlay-arrastar-arquivo.hidden{display:none}
+#overlay-arrastar-arquivo>div{background:#fff;border:2px dashed #D97757;border-radius:16px;padding:32px 40px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
+#overlay-arrastar-arquivo svg{margin-bottom:12px}
+#overlay-arrastar-arquivo p{color:#111;font-size:var(--fs-e);font-weight:600;margin:0}
 #view-topico-detalhe{position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:40;display:flex;flex-direction:column;overflow:hidden}
 #view-topico-detalhe .topbar-voltar{display:flex;align-items:center;gap:10px;padding:14px 16px;flex-shrink:0;background:#FBFBFA;border-bottom:0.5px solid rgba(224,224,224,0.6)}
 #conteudo-topico-detalhe{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px}
@@ -424,6 +429,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <!-- APP SHELL (pós-login) -->
 <!-- ============================================================ -->
 <div id="app-shell">
+  <div id="overlay-arrastar-arquivo" class="hidden">
+    <div>
+      <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#D97757" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15l3-3 3 3"/></svg>
+      <p>Solte o arquivo aqui pra adicionar questões</p>
+    </div>
+  </div>
 
   <div class="topbar">
     <img src="assets/logo.png" alt="Claudequest" style="height:32px;width:auto;display:block">
@@ -559,6 +570,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div id="metricas-conteudo" class="hidden">
     <div class="section-title" style="margin-top:0">Seu desempenho</div>
+    <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Módulo</div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <div style="flex:1;min-width:0">
         <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis (toca pra mover)</div>
@@ -567,6 +579,18 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <div style="flex:1;min-width:0">
         <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Selecionados</div>
         <div id="metricas-modulos-selecionados" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+      </div>
+    </div>
+
+    <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Matéria (livros)</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis (toca pra mover)</div>
+        <div id="metricas-materias-disponiveis" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Selecionados</div>
+        <div id="metricas-materias-selecionadas" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
       </div>
     </div>
 
@@ -595,10 +619,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div id="metricas-resumo-geral" style="margin-top:16px"></div>
 
     <div class="section-title">Por módulo</div>
-    <div id="lista-metricas-modulo" class="card-questao" style="position:relative;padding-left:13px;padding-right:13px">
-      <canvas id="grafico-por-modulo"></canvas>
-      <p id="metricas-modulo-vazio" class="hidden" style="color:#888;font-size:var(--fs-d)">Nenhum dado disponível pra esses módulos.</p>
-    </div>
+    <div id="lista-metricas-modulo"></div>
 
     <div class="section-title">Evolução no tempo</div>
     <div id="metricas-evolucao-contexto" style="color:#888;font-size:var(--fs-b);margin-bottom:8px">Todos os módulos</div>
@@ -620,9 +641,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div class="section-title">Suas questões mais difíceis</div>
     <div id="lista-metricas-piores"></div>
-
-    <div class="section-title">Favoritos que você mais erra</div>
-    <div id="lista-metricas-favoritos-dificeis"></div>
 
     <div class="section-title">Suas notas</div>
     <div id="lista-metricas-notas"></div>
@@ -2738,6 +2756,8 @@ function cancelarResposta(){
    Lista de tópicos de UMA questão (abre a partir do botão "Discutir")
    ============================================================ */
 async function renderizarDetalheQuestao(questaoId){
+  const {data: questao} = await sb.from('questoes').select('enunciado, alternativas').eq('id', questaoId).maybeSingle();
+  const {data: minhasNotasDaQuestao} = await sb.from('notas').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId).order('criado_em', {ascending:false});
   const {data: topicosDaQuestao} = await sb.from('topicos').select('*').eq('questao_id', questaoId).order('criado_em', {ascending:false});
   const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id);
   const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
@@ -2752,7 +2772,22 @@ async function renderizarDetalheQuestao(questaoId){
   const temTopicoAtivo = (topicosDaQuestao||[]).some(t=>t.status==='aberto');
 
   const html = `
-    <div class="section-title" style="margin-top:0">Discussões dessa questão</div>
+    ${questao ? `
+    <div class="section-title" style="margin-top:0">Questão</div>
+    <div class="card-questao">
+      <p style="font-size:var(--fs-d);color:#111;white-space:pre-wrap;margin:0">${escapeHtml(questao.enunciado || '')}</p>
+      ${questao.alternativas ? `<p style="font-size:var(--fs-d);color:#111;white-space:pre-wrap;margin:10px 0 0">${escapeHtml(questao.alternativas)}</p>` : ''}
+    </div>` : ''}
+
+    ${(minhasNotasDaQuestao||[]).length ? `
+    <div class="section-title">Suas notas</div>
+    ${minhasNotasDaQuestao.map(n=>`
+    <div class="card-questao">
+      <p style="font-size:var(--fs-d);color:#111;margin:0">${escapeHtml(n.texto)}</p>
+      <p style="font-size:var(--fs-b);color:#888;margin-top:6px">${new Date(n.criado_em).toLocaleDateString('pt-BR')}</p>
+    </div>`).join('')}` : ''}
+
+    <div class="section-title">Discussões dessa questão</div>
     ${(topicosDaQuestao||[]).length ? (topicosDaQuestao||[]).map(t=>{
       const resolvidoPraMim = t.status==='resolvido' && idsVotados.has(t.id);
       return `<div class="card-questao" style="cursor:pointer${resolvidoPraMim?';opacity:0.6':''}" onclick="abrirTopico('${t.id}')">
@@ -3155,17 +3190,10 @@ function redefinirFiltroDatas(){
 // deixa instantâneo, igual o PSCPP Tracker
 let metricasRespostasCache = [];
 let metricasQuestoesInfoCache = {};
-let metricasFavoritosCache = new Set();
 let metricasNotasCache = [];
 let metricasTodasQuestoesCache = [];
-let graficoPorModulo = null; // instância do Chart.js — precisa destruir antes de redesenhar
 function mostrarModuloVazio(texto){
-  if(graficoPorModulo){ graficoPorModulo.destroy(); graficoPorModulo = null; }
-  document.getElementById('grafico-por-modulo').classList.add('hidden');
-  const elVazio = document.getElementById('metricas-modulo-vazio');
-  elVazio.textContent = texto;
-  elVazio.classList.remove('hidden');
-  document.getElementById('lista-metricas-modulo').style.height = 'auto';
+  document.getElementById('lista-metricas-modulo').innerHTML = `<p style="color:#888;font-size:var(--fs-d)">${texto}</p>`;
 }
 
 // Calcula, por módulo, duas métricas que olham pra PARES de tentativas na
@@ -3230,12 +3258,19 @@ function determinarGranularidadeEvolucao(semanas){
 
 function calcularEvolucaoSemanalModulo(){
   // vazio = considera todos (mesma regra "vazio = todos" do resto da tela);
-  // com módulos selecionados, junta as respostas deles numa linha só. O
-  // período aqui é o do slider próprio da evolução, não o filtro geral da tela
+  // com módulos/matérias selecionados, junta as respostas deles numa linha
+  // só. O período aqui é o do slider próprio da evolução, não o filtro
+  // geral da tela
   const corteEvolucao = Date.now() - evolucaoSemanasExibidas*7*24*60*60*1000;
+  const mapaBibliografiaTitulo = {};
+  bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.titulo; });
   const respostasDoModulo = metricasRespostasCache.filter(r => {
     const mod = metricasQuestoesInfoCache[r.questao_id]?.modulo_pscpp;
     if(modulosFiltradosMetricas.size > 0 && !modulosFiltradosMetricas.has(mod)) return false;
+    if(materiasFiltradasMetricas.size > 0){
+      const bibId = metricasQuestoesInfoCache[r.questao_id]?.bibliografia_id;
+      if(!bibId || !materiasFiltradasMetricas.has(mapaBibliografiaTitulo[bibId])) return false;
+    }
     return new Date(r.respondido_em).getTime() >= corteEvolucao;
   });
 
@@ -3286,9 +3321,10 @@ function renderizarGraficoEvolucao(){
   const canvas = document.getElementById('grafico-evolucao');
   const elContexto = document.getElementById('metricas-evolucao-contexto');
   if(elContexto){
-    elContexto.textContent = modulosFiltradosMetricas.size > 0
-      ? [...modulosFiltradosMetricas].join(', ')
-      : 'Todos os módulos';
+    const partes = [];
+    partes.push(modulosFiltradosMetricas.size > 0 ? [...modulosFiltradosMetricas].join(', ') : 'Todos os módulos');
+    if(materiasFiltradasMetricas.size > 0) partes.push([...materiasFiltradasMetricas].join(', '));
+    elContexto.textContent = partes.join(' · ');
   }
 
   if(graficoEvolucao){ graficoEvolucao.destroy(); graficoEvolucao = null; }
@@ -3341,68 +3377,36 @@ function renderizarGraficoEvolucao(){
   }
 }
 
-const QUEBRAS_NOME_MODULO = {
-  'Navegação em Águas Restritas': ['Navegação em', 'Águas Restritas'],
-  'Meteorologia e Oceanografia': ['Meteorologia e', 'Oceanografia'],
-  'Conhecimentos Gerais': ['Conhecimentos', 'Gerais']
-};
-function quebrarNomeModulo(nome){
-  return QUEBRAS_NOME_MODULO[nome] || nome;
+function linhaComparativaModulo(nome, pctAcerto, pctRecuperacao, pctRetencao){
+  const semDado = (texto) => `<div style="font-size:11px;color:#bbb;margin-bottom:3px">${texto}: sem dado suficiente ainda</div>`;
+  return `
+    <div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:0.5px solid #eee">
+      <div style="width:96px;flex-shrink:0;font-size:var(--fs-d);font-weight:600;color:#111">${escapeHtml(nome)}</div>
+      <div style="flex:1">
+        ${barraFina(pctAcerto, 100, '#1BAF7A', '%')}
+        ${pctRecuperacao !== null ? barraFina(pctRecuperacao, 100, '#EDA100', '%') : semDado('Recuperação')}
+        ${pctRetencao !== null ? barraFina(pctRetencao, 100, '#4A3AA7', '%') : semDado('Retenção')}
+      </div>
+    </div>`;
+}
+function legendaBarrasModulo(){
+  return `<div style="display:flex;gap:14px;margin-bottom:8px;font-size:11px;color:#888">
+    <span><span style="display:inline-block;width:8px;height:8px;background:#1BAF7A;border-radius:2px;margin-right:4px"></span>% de acerto</span>
+    <span><span style="display:inline-block;width:8px;height:8px;background:#EDA100;border-radius:2px;margin-right:4px"></span>% de recuperação</span>
+    <span><span style="display:inline-block;width:8px;height:8px;background:#4A3AA7;border-radius:2px;margin-right:4px"></span>% de retenção</span>
+  </div>`;
 }
 
 function renderizarGraficoModuloTresBarras(linhasModulo){
   const linhasValidas = linhasModulo.slice().sort((a,b) => b.pctAcerto - a.pctAcerto);
-
-  if(graficoPorModulo){ graficoPorModulo.destroy(); graficoPorModulo = null; }
   if(!linhasValidas.length){
     mostrarModuloVazio('Nenhum dado disponível pra esses módulos.');
     return;
   }
-  document.getElementById('grafico-por-modulo').classList.remove('hidden');
-  document.getElementById('metricas-modulo-vazio').classList.add('hidden');
-  document.getElementById('lista-metricas-modulo').style.height = (linhasValidas.length * 76 + 60) + 'px';
-  const canvasModulo = document.getElementById('grafico-por-modulo');
-  try{
-    if(typeof Chart === 'undefined') throw new Error('Biblioteca do gráfico não carregou');
-    if(!Chart.Tooltip.positioners.pontoExato){
-      Chart.Tooltip.positioners.pontoExato = function(elementos, posicaoEvento){ return posicaoEvento; };
-    }
-    graficoPorModulo = new Chart(canvasModulo, {
-      type: 'bar',
-      data: {
-        labels: linhasValidas.map(l=>quebrarNomeModulo(l.modulo)),
-        datasets: [
-          {label:'% de acerto', data: linhasValidas.map(l=>l.pctAcerto), backgroundColor:'#1BAF7A', borderRadius:4, maxBarThickness:14, categoryPercentage:0.9, barPercentage:0.6},
-          {label:'% de recuperação após erro', data: linhasValidas.map(l=>l.pctRecuperacao), backgroundColor:'#EDA100', borderRadius:4, maxBarThickness:14, categoryPercentage:0.9, barPercentage:0.6},
-          {label:'% de retenção', data: linhasValidas.map(l=>l.pctRetencao), backgroundColor:'#4A3AA7', borderRadius:4, maxBarThickness:14, categoryPercentage:0.9, barPercentage:0.6}
-        ]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {mode:'y', intersect:false},
-        onHover: (event, elements, chart) => { chart.canvas.style.cursor = elements.length ? 'pointer' : 'default'; },
-        plugins: {
-          legend: {display:true, position:'top', align:'center', labels:{color:'#666', boxWidth:12, boxHeight:12, borderRadius:4, useBorderRadius:true, font:{size:12}}},
-          tooltip: {
-            enabled:true, mode:'y', intersect:false, position:'pontoExato',
-            callbacks: {
-              title: (itens) => linhasValidas[itens[0].dataIndex].modulo,
-              label: (item) => item.raw===null ? (item.dataset.label + ': sem dado suficiente ainda') : (item.dataset.label + ': ' + item.raw + '%')
-            }
-          }
-        },
-        scales: {
-          x: {beginAtZero:true, max:100, ticks:{color:'#888', font:{size:11}, callback:(v)=>v+'%'}, grid:{color:'#eee'}},
-          y: {afterFit: (scale) => { scale.width = 95; }, grid:{display:false}, ticks:{color:'#111', font:{size:11}}}
-        }
-      }
-    });
-  }catch(erroGrafico){
-    console.error('Erro ao desenhar gráfico por módulo:', erroGrafico);
-    mostrarModuloVazio('Não consegui carregar o gráfico agora. Tenta recarregar a página.');
-  }
+  document.getElementById('lista-metricas-modulo').innerHTML = `<div class="card-questao">
+    ${legendaBarrasModulo()}
+    ${linhasValidas.map(l => linhaComparativaModulo(l.modulo, l.pctAcerto, l.pctRecuperacao, l.pctRetencao)).join('')}
+  </div>`;
 }
 
 function passaNoFiltroPeriodo(dataIso){
@@ -3420,16 +3424,14 @@ async function carregarMetricasPessoais(){
   document.getElementById('metricas-carregando-inicial').classList.remove('hidden');
   document.getElementById('metricas-conteudo').classList.add('hidden');
 
-  const [{data: respostasBrutas}, {data: meusFavoritos}, {data: minhasNotas}, {data: todasQuestoesBanco}, {data: minhasExclusoes}] = await Promise.all([
+  const [{data: respostasBrutas}, {data: minhasNotas}, {data: todasQuestoesBanco}, {data: minhasExclusoes}] = await Promise.all([
     sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em').eq('usuario_id', usuarioAtual.id),
-    sb.from('favoritos').select('questao_id').eq('usuario_id', usuarioAtual.id),
-    sb.from('notas').select('questao_id, texto, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
+    sb.from('notas').select('id, questao_id, texto, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
     sb.from('questoes').select('id, modulo_pscpp, tipo_questao').eq('anulada', false),
     sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id)
   ]);
 
   metricasRespostasCache = respostasBrutas || [];
-  metricasFavoritosCache = new Set((meusFavoritos||[]).map(f=>f.questao_id));
   metricasNotasCache = minhasNotas || [];
   const idsExcluidosSet = new Set((minhasExclusoes||[]).map(e=>e.questao_id));
   metricasTodasQuestoesCache = (todasQuestoesBanco||[]).filter(q=>!idsExcluidosSet.has(q.id));
@@ -3438,7 +3440,7 @@ async function carregarMetricasPessoais(){
   metricasNotasCache.forEach(n=>idsQuestoes.add(n.questao_id));
   const idsQuestoesArr = [...idsQuestoes];
   const {data: questoesInfo} = idsQuestoesArr.length
-    ? await sb.from('questoes').select('id, modulo_pscpp, tipo_questao, bibliografia_id, enunciado').in('id', idsQuestoesArr)
+    ? await sb.from('questoes').select('id, modulo_pscpp, tipo_questao, bibliografia_id, capitulo, enunciado').in('id', idsQuestoesArr)
     : {data: []};
   metricasQuestoesInfoCache = {};
   (questoesInfo||[]).forEach(q=>{ metricasQuestoesInfoCache[q.id] = q; });
@@ -3499,6 +3501,32 @@ function moverModuloParaDisponiveis(nome){
   renderizarListasFiltroModulo();
   renderizarMetricasPessoais();
 }
+
+function listaMateriasDisponiveis(){
+  return [...new Set(bibliografiaCache.map(b=>b.titulo))].sort((a,b)=>a.localeCompare(b));
+}
+let materiasFiltradasMetricas = new Set(); // vazio = considera todas automaticamente
+function renderizarListasFiltroMateria(){
+  const todas = listaMateriasDisponiveis();
+  const disponiveis = todas.filter(m => !materiasFiltradasMetricas.has(m));
+  const selecionadas = todas.filter(m => materiasFiltradasMetricas.has(m));
+  document.getElementById('metricas-materias-disponiveis').innerHTML = disponiveis.length
+    ? disponiveis.map(m=>`<div class="item-lista-modulo" onclick="moverMateriaParaSelecionadas('${m.replace(/'/g,"\\'")}')">${escapeHtml(m)}</div>`).join('')
+    : '<div style="padding:10px;color:#888;font-size:var(--fs-b)">Nenhuma</div>';
+  document.getElementById('metricas-materias-selecionadas').innerHTML = selecionadas.length
+    ? selecionadas.map(m=>`<div class="item-lista-modulo" onclick="moverMateriaParaDisponiveis('${m.replace(/'/g,"\\'")}')">${escapeHtml(m)}</div>`).join('')
+    : '<div style="padding:10px;color:#888;font-size:var(--fs-b)">Nenhuma (considera todas)</div>';
+}
+function moverMateriaParaSelecionadas(nome){
+  materiasFiltradasMetricas.add(nome);
+  renderizarListasFiltroMateria();
+  renderizarMetricasPessoais();
+}
+function moverMateriaParaDisponiveis(nome){
+  materiasFiltradasMetricas.delete(nome);
+  renderizarListasFiltroMateria();
+  renderizarMetricasPessoais();
+}
 function calcularTotalQuestoesDisponiveis(filtroTipoAtual, modulosAtuais){
   let questoes = metricasTodasQuestoesCache;
   if(modulosAtuais.size > 0) questoes = questoes.filter(q => modulosAtuais.has(q.modulo_pscpp));
@@ -3514,13 +3542,11 @@ function renderizarMetricasPessoais(){
   const elTipo = document.getElementById('lista-metricas-tipo');
   const elPublicacao = document.getElementById('lista-metricas-publicacao');
   const elPiores = document.getElementById('lista-metricas-piores');
-  const elFavDificeis = document.getElementById('lista-metricas-favoritos-dificeis');
   const elNotas = document.getElementById('lista-metricas-notas');
   elResumo.innerHTML = '';
   elTipo.innerHTML = '';
   elPublicacao.innerHTML = '';
   elPiores.innerHTML = '';
-  elFavDificeis.innerHTML = '';
   elNotas.innerHTML = '';
 
   const respostasBrutas = metricasRespostasCache.filter(r => passaNoFiltroPeriodo(r.respondido_em));
@@ -3559,8 +3585,18 @@ function renderizarMetricasPessoais(){
     respostas = respostas.filter(r => modulosFiltradosMetricas.has(infoPorQuestao[r.questao_id]?.modulo_pscpp));
   }
 
+  // filtro de matéria (livro) também em cascata, junto com o de módulo
+  if(materiasFiltradasMetricas.size > 0){
+    const mapaBibliografiaTitulo = {};
+    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.titulo; });
+    respostas = respostas.filter(r => {
+      const bibId = infoPorQuestao[r.questao_id]?.bibliografia_id;
+      return bibId && materiasFiltradasMetricas.has(mapaBibliografiaTitulo[bibId]);
+    });
+  }
+
   if(!respostas.length){
-    mostrarModuloVazio('Nenhuma resposta registrada com esses módulos selecionados.');
+    mostrarModuloVazio('Nenhuma resposta registrada com esses módulos/matérias selecionados.');
     renderizarNotasMetricas(elNotas, infoPorQuestao);
     return;
   }
@@ -3631,6 +3667,8 @@ function renderizarMetricasPessoais(){
   const maiorTotalGeral = Math.max(...Object.values(statsPorModuloCompleto).map(s=>s.total), 1);
   const elListaDisponiveis = document.getElementById('metricas-modulos-disponiveis');
   if(!elListaDisponiveis.innerHTML) renderizarListasFiltroModulo();
+  const elListaMateriasDisponiveis = document.getElementById('metricas-materias-disponiveis');
+  if(!elListaMateriasDisponiveis.innerHTML) renderizarListasFiltroMateria();
 
   renderizarGraficoModuloTresBarras(linhasModulo);
   renderizarGraficoEvolucao();
@@ -3704,29 +3742,35 @@ function renderizarMetricasPessoais(){
     ? piores.map(cardQuestaoDificil).join('')
     : '<p style="color:#888;font-size:var(--fs-d)">Nenhum erro registrado nesse período – mandou bem!</p>';
 
-  /* ---- favoritos que você mais erra ---- */
-  const favoritosDificeis = todasComErro.filter(p=>metricasFavoritosCache.has(p.questaoId));
-  elFavDificeis.innerHTML = favoritosDificeis.length
-    ? favoritosDificeis.map(cardQuestaoDificil).join('')
-    : '<p style="color:#888;font-size:var(--fs-d)">Nenhum dos seus favoritos foi errado nesse período.</p>';
-
   /* ---- suas notas (atalho de revisão) — não depende do filtro de período ---- */
   renderizarNotasMetricas(elNotas, infoPorQuestao);
 }
 
 function renderizarNotasMetricas(elNotas, infoPorQuestao){
   if(metricasNotasCache.length){
+    const mapaBibliografiaTitulo = {};
+    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.titulo; });
     elNotas.innerHTML = metricasNotasCache.map(n=>{
       const info = infoPorQuestao[n.questao_id];
-      return `<div class="card-questao" style="cursor:pointer" onclick="abrirDetalheQuestao('${n.questao_id}')">
-        ${info ? tagModulo(info.modulo_pscpp) : ''}
-        <p style="font-size:var(--fs-d);margin-top:6px;color:#111">${escapeHtml((info?.enunciado||'').slice(0,80))}...</p>
-        <p style="font-size:var(--fs-d);color:#666;margin-top:4px;font-style:italic">"${escapeHtml((n.texto||'').slice(0,100))}"</p>
+      const partes = [];
+      if(info?.modulo_pscpp) partes.push(escapeHtml(info.modulo_pscpp));
+      if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
+      if(info?.capitulo) partes.push('Cap. ' + escapeHtml(info.capitulo));
+      partes.push(new Date(n.criado_em).toLocaleDateString('pt-BR'));
+      return `<div class="card-questao" style="cursor:pointer;position:relative" onclick="abrirDetalheQuestao('${n.questao_id}')">
+        <button onclick="event.stopPropagation();excluirNotaDaListaMetricas('${n.id}')" style="position:absolute;top:10px;right:10px;background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px" title="Excluir nota">✕</button>
+        <p style="font-size:var(--fs-d);color:#111;margin:0 24px 8px 0">${escapeHtml(n.texto)}</p>
+        <div style="font-size:var(--fs-b);color:#888">${partes.join(' · ')}</div>
       </div>`;
     }).join('');
   }else{
     elNotas.innerHTML = '<p style="color:#888;font-size:var(--fs-d)">Você ainda não escreveu nenhuma nota.</p>';
   }
+}
+async function excluirNotaDaListaMetricas(notaId){
+  await sb.from('notas').delete().eq('id', notaId);
+  metricasNotasCache = metricasNotasCache.filter(n => n.id !== notaId);
+  renderizarNotasMetricas(document.getElementById('lista-metricas-notas'), metricasQuestoesInfoCache);
 }
 
 // Tela de detalhe de um caderno CONCLUÍDO específico – mesma lógica de
@@ -3858,6 +3902,54 @@ async function enviarUpload(){
    Upload por planilha (Excel) – caminho alternativo ao PDF, sem IA,
    já que os dados chegam estruturados
    ============================================================ */
+// Arrastar um arquivo pra cima do app, em qualquer aba, reconhece e já leva
+// pra tela de Adicionar Questões com o arquivo certo pré-selecionado — não
+// precisa estar na aba de upload pra começar a arrastar
+let contadorArrastarArquivo = 0;
+window.addEventListener('dragenter', (e)=>{
+  if(!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+  if(!usuarioAtual) return;
+  e.preventDefault();
+  contadorArrastarArquivo++;
+  document.getElementById('overlay-arrastar-arquivo').classList.remove('hidden');
+});
+window.addEventListener('dragover', (e)=>{
+  if(!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+  e.preventDefault(); // sem isso o navegador abre o arquivo direto, em vez de soltar
+});
+window.addEventListener('dragleave', (e)=>{
+  if(!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+  contadorArrastarArquivo = Math.max(0, contadorArrastarArquivo-1);
+  if(contadorArrastarArquivo === 0) document.getElementById('overlay-arrastar-arquivo').classList.add('hidden');
+});
+window.addEventListener('drop', (e)=>{
+  if(!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+  e.preventDefault();
+  contadorArrastarArquivo = 0;
+  document.getElementById('overlay-arrastar-arquivo').classList.add('hidden');
+  if(!usuarioAtual) return; // ainda na tela de login/instalação, não tem pra onde levar o arquivo
+  const arquivo = e.dataTransfer.files[0];
+  if(!arquivo) return;
+
+  const dt = new DataTransfer();
+  dt.items.add(arquivo);
+  const nomeMinusculo = arquivo.name.toLowerCase();
+
+  if(nomeMinusculo.endsWith('.pdf')){
+    trocarAba('adicionar');
+    alternarTipoUpload('pdf');
+    document.getElementById('upload-arquivo').files = dt.files;
+    atualizarNomeArquivoSelecionado();
+  }else if(nomeMinusculo.endsWith('.xlsx')){
+    trocarAba('adicionar');
+    alternarTipoUpload('planilha');
+    document.getElementById('upload-planilha').files = dt.files;
+    atualizarNomePlanilhaSelecionada();
+  }else{
+    alert('Só dá pra soltar arquivo PDF ou Excel (.xlsx) aqui.');
+  }
+});
+
 function alternarTipoUpload(tipo){
   document.getElementById('toggle-upload-pdf').classList.toggle('active', tipo==='pdf');
   document.getElementById('toggle-upload-planilha').classList.toggle('active', tipo==='planilha');
