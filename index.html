@@ -588,7 +588,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px" onclick="toggleFiltroMateria()">
+    <div style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:20px;margin-bottom:8px" onclick="toggleFiltroMateria()">
       <span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
       <span style="font-size:var(--fs-d);font-weight:600;color:#111">Publicações</span>
       <span class="chev" id="chev-filtro-materia" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
@@ -606,7 +606,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       </div>
     </div>
 
-    <select class="filter-select" id="metricas-filtro-tipo" onchange="renderizarMetricasPessoais()">
+    <select class="filter-select" id="metricas-filtro-tipo" onchange="renderizarMetricasPessoais()" style="margin-top:20px">
       <option value="">Todos os tipos de questão</option>
       <option value="Cálculo">Cálculo</option>
       <option value="Conceitual">Conceitual</option>
@@ -614,7 +614,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <option value="Lista">Lista</option>
       <option value="Número">Número</option>
     </select>
-    <div style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px;padding-bottom:2px" id="metricas-filtro-periodo">
+    <div style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin-top:10px;margin-bottom:8px;padding-bottom:2px" id="metricas-filtro-periodo">
       <button class="filter-btn active" data-dias="30" onclick="selecionarPeriodoMetricas(30, this)">30 dias</button>
       <button class="filter-btn" data-dias="90" onclick="selecionarPeriodoMetricas(90, this)">3 meses</button>
       <button class="filter-btn" data-dias="180" onclick="selecionarPeriodoMetricas(180, this)">6 meses</button>
@@ -3390,14 +3390,18 @@ function renderizarGraficoEvolucao(){
 }
 
 function linhaComparativaModulo(nome, pctAcerto, pctRecuperacao, pctRetencao){
-  const semDado = (texto) => `<div style="font-size:11px;color:#bbb;margin-bottom:3px">${texto}: sem dado suficiente ainda</div>`;
+  const barraSemDado = () => `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+      <div style="flex:1;background:#F0F0EE;border-radius:3px;height:7px;overflow:hidden"></div>
+      <span style="width:36px;flex-shrink:0"></span>
+    </div>`;
   return `
     <div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:0.5px solid #eee">
       <div style="width:112px;flex-shrink:0;font-size:13px;font-weight:600;color:#111;line-height:1.25">${escapeHtml(nome)}</div>
       <div style="flex:1">
         ${barraFina(pctAcerto, 100, '#1BAF7A', '%')}
-        ${pctRecuperacao !== null ? barraFina(pctRecuperacao, 100, '#EDA100', '%') : semDado('Recuperação')}
-        ${pctRetencao !== null ? barraFina(pctRetencao, 100, '#4A3AA7', '%') : semDado('Retenção')}
+        ${pctRecuperacao !== null ? barraFina(pctRecuperacao, 100, '#EDA100', '%') : barraSemDado()}
+        ${pctRetencao !== null ? barraFina(pctRetencao, 100, '#4A3AA7', '%') : barraSemDado()}
       </div>
     </div>`;
 }
