@@ -3223,9 +3223,13 @@ function moverModuloParaDisponiveis(nome){
 let versaoRequisicaoDisponiveis = 0;
 async function atualizarTotalQuestoesDisponiveis(filtroTipoAtual, modulosAtuais){
   const minhaVersao = ++versaoRequisicaoDisponiveis;
-  let query = sb.from('questoes').select('id', {count:'exact', head:true});
+  const {data: exclusoes} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id);
+  const idsExcluidos = (exclusoes||[]).map(e=>e.questao_id);
+
+  let query = sb.from('questoes').select('id', {count:'exact', head:true}).eq('anulada', false);
   if(modulosAtuais.size > 0) query = query.in('modulo_pscpp', [...modulosAtuais]);
   if(filtroTipoAtual) query = query.eq('tipo_questao', filtroTipoAtual);
+  if(idsExcluidos.length) query = query.not('id', 'in', `(${idsExcluidos.join(',')})`);
   const {count} = await query;
   // se o usuário já trocou o filtro de novo enquanto essa busca rodava,
   // essa resposta é velha — não sobrescreve o que já está na tela
