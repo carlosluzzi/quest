@@ -63,10 +63,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:32px;min-height:32px;max-height:32px;padding-top:0;padding-bottom:0;box-sizing:border-box}
 #aba-quests .filter-select{height:32px;box-sizing:border-box}
 .filter-select{font-size:16px;padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
-.slider-evolucao{-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:#EEE;outline:none;cursor:pointer}
-.slider-evolucao::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#D95926;cursor:pointer;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25)}
-.slider-evolucao::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#D95926;cursor:pointer;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25)}
-.slider-evolucao::-moz-range-track{height:4px;border-radius:2px;background:#EEE}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
@@ -575,12 +571,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
     </div>
 
     <select class="filter-select" id="metricas-filtro-tipo" onchange="renderizarMetricasPessoais()">
-      <option value="">Todos os tipos</option>
-      <option value="Conceitual">Conceitual</option>
+      <option value="">Todos os tipos de questão</option>
       <option value="Cálculo">Cálculo</option>
-      <option value="Número">Número</option>
-      <option value="Lista">Lista</option>
+      <option value="Conceitual">Conceitual</option>
       <option value="Identificação">Identificação</option>
+      <option value="Lista">Lista</option>
+      <option value="Número">Número</option>
     </select>
     <div style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:8px;padding-bottom:2px" id="metricas-filtro-periodo">
       <button class="filter-btn active" data-dias="30" onclick="selecionarPeriodoMetricas(30, this)">30 dias</button>
@@ -3226,6 +3222,12 @@ function atualizarSliderEvolucao(valor){
   document.getElementById('evolucao-slider-valor').textContent = formatarPeriodoEvolucao(evolucaoSemanasExibidas);
   renderizarGraficoEvolucao();
 }
+function determinarGranularidadeEvolucao(semanas){
+  if(semanas <= 3) return 'dia';
+  if(semanas <= 17) return 'semana'; // ~4 meses
+  return 'mes';
+}
+
 function calcularEvolucaoSemanalModulo(){
   // vazio = considera todos (mesma regra "vazio = todos" do resto da tela);
   // com módulos selecionados, junta as respostas deles numa linha só. O
@@ -3236,26 +3238,50 @@ function calcularEvolucaoSemanalModulo(){
     if(modulosFiltradosMetricas.size > 0 && !modulosFiltradosMetricas.has(mod)) return false;
     return new Date(r.respondido_em).getTime() >= corteEvolucao;
   });
-  const porSemana = {};
+
+  // agrupamento se adapta ao tamanho do período — pouco tempo agrupa por
+  // dia, período médio por semana, período longo por mês. Assim a linha
+  // nunca fica nem vazia demais (poucos pontos) nem lotada demais
+  const granularidade = determinarGranularidadeEvolucao(evolucaoSemanasExibidas);
+  const porBucket = {};
   respostasDoModulo.forEach(r=>{
     const data = new Date(r.respondido_em);
-    const diaDaSemana = data.getDay();
-    const inicioSemana = new Date(data);
-    inicioSemana.setDate(data.getDate() - ((diaDaSemana+6)%7));
-    inicioSemana.setHours(0,0,0,0);
-    const chave = inicioSemana.toISOString().slice(0,10);
-    if(!porSemana[chave]) porSemana[chave] = {total:0, acertos:0};
-    porSemana[chave].total++;
-    if(r.correta) porSemana[chave].acertos++;
+    let chave;
+    if(granularidade === 'dia'){
+      chave = data.toISOString().slice(0,10);
+    }else if(granularidade === 'semana'){
+      const diaDaSemana = data.getDay();
+      const inicioSemana = new Date(data);
+      inicioSemana.setDate(data.getDate() - ((diaDaSemana+6)%7));
+      inicioSemana.setHours(0,0,0,0);
+      chave = inicioSemana.toISOString().slice(0,10);
+    }else{
+      chave = data.getFullYear() + '-' + String(data.getMonth()+1).padStart(2,'0');
+    }
+    if(!porBucket[chave]) porBucket[chave] = {total:0, acertos:0};
+    porBucket[chave].total++;
+    if(r.correta) porBucket[chave].acertos++;
   });
-  return Object.entries(porSemana)
-    .sort((a,b)=> a[0].localeCompare(b[0]))
-    .map(([semana, s])=>({ semana, pct: Math.round((s.acertos/s.total)*100) }));
+  return {
+    granularidade,
+    pontos: Object.entries(porBucket)
+      .sort((a,b)=> a[0].localeCompare(b[0]))
+      .map(([chave, s])=>({ chave, pct: Math.round((s.acertos/s.total)*100) }))
+  };
 }
 
 let graficoEvolucao = null;
+function formatarRotuloEvolucao(chave, granularidade){
+  if(granularidade === 'mes'){
+    const [ano, mes] = chave.split('-');
+    const nomesMes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return nomesMes[parseInt(mes,10)-1] + '/' + ano.slice(2);
+  }
+  return new Date(chave+'T00:00:00').toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+}
+
 function renderizarGraficoEvolucao(){
-  const dados = calcularEvolucaoSemanalModulo();
+  const {granularidade, pontos} = calcularEvolucaoSemanalModulo();
   const elVazio = document.getElementById('metricas-evolucao-vazio');
   const canvas = document.getElementById('grafico-evolucao');
   const elContexto = document.getElementById('metricas-evolucao-contexto');
@@ -3267,7 +3293,7 @@ function renderizarGraficoEvolucao(){
 
   if(graficoEvolucao){ graficoEvolucao.destroy(); graficoEvolucao = null; }
 
-  if(dados.length < 2){
+  if(pontos.length < 2){
     canvas.classList.add('hidden');
     elVazio.textContent = 'Não tem dado suficiente ainda pra mostrar evolução nesse módulo/período.';
     elVazio.classList.remove('hidden');
@@ -3280,9 +3306,9 @@ function renderizarGraficoEvolucao(){
     graficoEvolucao = new Chart(canvas, {
       type: 'line',
       data: {
-        labels: dados.map(d => new Date(d.semana+'T00:00:00').toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})),
+        labels: pontos.map(d => formatarRotuloEvolucao(d.chave, granularidade)),
         datasets: [{
-          data: dados.map(d=>d.pct),
+          data: pontos.map(d=>d.pct),
           borderColor: '#D95926',
           backgroundColor: 'rgba(217,89,38,0.1)',
           fill: true,
@@ -3346,9 +3372,9 @@ function renderizarGraficoModuloTresBarras(linhasModulo){
       data: {
         labels: linhasValidas.map(l=>quebrarNomeModulo(l.modulo)),
         datasets: [
-          {label:'% de acerto', data: linhasValidas.map(l=>l.pctAcerto), backgroundColor:'#1BAF7A', borderRadius:4, barThickness:14},
-          {label:'% de recuperação após erro', data: linhasValidas.map(l=>l.pctRecuperacao), backgroundColor:'#EDA100', borderRadius:4, barThickness:14},
-          {label:'% de retenção', data: linhasValidas.map(l=>l.pctRetencao), backgroundColor:'#4A3AA7', borderRadius:4, barThickness:14}
+          {label:'% de acerto', data: linhasValidas.map(l=>l.pctAcerto), backgroundColor:'#1BAF7A', borderRadius:4, barThickness:10},
+          {label:'% de recuperação após erro', data: linhasValidas.map(l=>l.pctRecuperacao), backgroundColor:'#EDA100', borderRadius:4, barThickness:10},
+          {label:'% de retenção', data: linhasValidas.map(l=>l.pctRetencao), backgroundColor:'#4A3AA7', borderRadius:4, barThickness:10}
         ]
       },
       options: {
