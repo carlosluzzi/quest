@@ -263,9 +263,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
   100%{transform:translateX(350%)}
 }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 <script>
@@ -3340,7 +3337,7 @@ function formatarRotuloEvolucao(chave, granularidade){
   return new Date(chave+'T00:00:00').toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
 }
 
-function renderizarGraficoEvolucao(){
+async function renderizarGraficoEvolucao(){
   const {granularidade, pontos} = calcularEvolucaoSemanalModulo();
   const elVazio = document.getElementById('metricas-evolucao-vazio');
   const canvas = document.getElementById('grafico-evolucao');
@@ -3363,7 +3360,7 @@ function renderizarGraficoEvolucao(){
   canvas.classList.remove('hidden');
   elVazio.classList.add('hidden');
   try{
-    if(typeof Chart === 'undefined') throw new Error('Biblioteca do gráfico não carregou');
+    await carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js', () => typeof Chart !== 'undefined');
     graficoEvolucao = new Chart(canvas, {
       type: 'line',
       data: {
@@ -4313,6 +4310,23 @@ function limparArquivoSelecionado(){
   document.getElementById('upload-status').innerHTML = '';
 }
 
+// Carrega uma biblioteca externa só quando ela é realmente necessária, em
+// vez de sempre no carregamento inicial do app — isso deixa a abertura do
+// app mais leve, já que a maioria das visitas não usa PDF/planilha/gráfico
+const bibliotecasCarregando = {};
+function carregarBibliotecaSobDemanda(url, jaEstaDisponivel){
+  if(jaEstaDisponivel()) return Promise.resolve();
+  if(bibliotecasCarregando[url]) return bibliotecasCarregando[url];
+  bibliotecasCarregando[url] = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = url;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Não consegui carregar um componente necessário (' + url.split('/').pop() + '). Confere sua internet e tenta de novo.'));
+    document.head.appendChild(script);
+  });
+  return bibliotecasCarregando[url];
+}
+
 let workerBlobUrlCache = null; // baixa o worker só uma vez, reaproveita depois
 async function obterWorkerSrcSeguro(){
   if(workerBlobUrlCache) return workerBlobUrlCache;
@@ -4352,7 +4366,7 @@ async function extrairTextoDoArquivo(arquivo, aoProgredir){
   }
 
   try{
-    if(typeof pdfjsLib === 'undefined') throw new Error('biblioteca de PDF não carregou');
+    await carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', () => typeof pdfjsLib !== 'undefined');
     pdfjsLib.GlobalWorkerOptions.workerSrc = await comLimiteDeTempo(
       obterWorkerSrcSeguro(), 15, 'Não consegui baixar o componente de leitura de PDF (demorou demais). Confere sua internet e tenta de novo.'
     );
@@ -4570,7 +4584,8 @@ function alternarTipoUpload(tipo){
   document.getElementById('upload-planilha-status').innerHTML = '';
 }
 
-function baixarModeloPlanilha(){
+async function baixarModeloPlanilha(){
+  await carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', () => typeof XLSX !== 'undefined');
   const cabecalho = ['Enunciado', 'Alternativas', 'Gabarito', 'Módulo PSCPP', 'Capítulo', 'Tipo de Questão'];
   const exemplo = [
     'Exemplo: Qual a largura mínima de segurança de um canal de acesso?',
@@ -4615,6 +4630,7 @@ async function enviarPlanilha(){
 
   let linhas;
   try{
+    await carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', () => typeof XLSX !== 'undefined');
     const arquivo = input.files[0];
     const buffer = await arquivo.arrayBuffer();
     const livro = XLSX.read(buffer, {type:'array'});
