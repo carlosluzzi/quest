@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -117,7 +117,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #nav-item-adicionar{display:none}
 .badge-notificacao{position:absolute;top:10px;right:calc(50% - 24px);background:#E24B4A;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:16px}
 .nav-item.active{background:#f0f0ee}
-.nav-icon{width:21px;height:21px;color:#888;display:flex;align-items:center;justify-content:center}
+.nav-icon{width:24px;height:24px;color:#888;display:flex;align-items:center;justify-content:center}
 .nav-icon svg{width:100%;height:100%}
 .nav-item.active .nav-icon{color:#D97757}
 .nav-label{font-size:var(--fs-a);color:#888;white-space:normal;text-align:center;line-height:1.15;max-width:100%}
@@ -151,8 +151,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
   #nav-item-adicionar{display:flex;gap:8px;padding-left:10px;padding-right:10px}
   #nav-item-adicionar .nav-label{white-space:nowrap}
   #wrapper-barra-adicionar{display:none}
-  #view-topico-detalhe{left:250px}
-  .nav-icon{width:18px;height:18px}
+  #view-topico-detalhe{left:250px !important}
+  .nav-icon{width:24px;height:24px}
   .nav-label{font-size:var(--fs-e)}
   .content{grid-column:2;grid-row:2;padding:32px 48px;max-width:1320px;width:100%}
   .section-title{margin-top:28px}
@@ -209,7 +209,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #aba-adicionar{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
 #aba-adicionar.hidden{display:none}
 @media(min-width:1100px){
-  #aba-adicionar{position:static;inset:auto;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 100px);padding:0;z-index:auto}
+  #aba-adicionar{position:static;inset:auto;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - var(--topbar-height, 70px) - 64px);overflow-y:auto;padding:0;z-index:auto}
   #aba-adicionar .modal-conteudo{max-width:520px;width:100%;max-height:none;overflow-y:visible;padding:0;border-radius:0;background:none;box-shadow:none}
   #titulo-adicionar-questoes{font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 14px 0;text-align:center}
   #card-adicionar-questoes{max-width:520px}
@@ -485,7 +485,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
       <div>
         <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0">
-          <span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+          <span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span>
           <span>Novo caderno</span>
         </div>
 
@@ -700,7 +700,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <div class="bottom-nav" id="bottom-nav">
     <div class="nav-item active" data-aba="inicio" onclick="trocarAba('inicio')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-6.5h5V21H18a1 1 0 0 0 1-1V9.5"/></svg></span><span class="nav-label">Início</span>
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-6.5h5V21H18a1 1 0 0 0 1-1V9.5"/></svg></span><span class="nav-label">Início</span>
     </div>
     <div class="nav-item" data-aba="forum" onclick="trocarAba('forum')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor"><path fill-rule="evenodd" d="M1.75 1A1.75 1.75 0 000 2.75v9.5C0 13.216.784 14 1.75 14H3v1.543a1.457 1.457 0 002.487 1.03L8.061 14h6.189A1.75 1.75 0 0016 12.25v-9.5A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v9.5a.25.25 0 01-.25.25h-6.5a.75.75 0 00-.53.22L4.5 15.44v-2.19a.75.75 0 00-.75-.75h-2a.25.25 0 01-.25-.25v-9.5z"/><path d="M22.5 8.75a.25.25 0 00-.25-.25h-3.5a.75.75 0 010-1.5h3.5c.966 0 1.75.784 1.75 1.75v9.5A1.75 1.75 0 0122.25 20H21v1.543a1.457 1.457 0 01-2.487 1.03L15.939 20H10.75A1.75 1.75 0 019 18.25v-1.465a.75.75 0 011.5 0v1.465c0 .138.112.25.25.25h5.5a.75.75 0 01.53.22l2.72 2.72v-2.19a.75.75 0 01.75-.75h2a.25.25 0 00.25-.25v-9.5z"/></svg></span><span class="nav-label">Fórum</span>
@@ -710,17 +710,17 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.998 9V1H19.5L23 4.5V23H4M18 1v5h5M3 19l5-5l4 4l6.5-6.5M19 17v-6h-6"/></svg></span><span class="nav-label">Desempenho</span>
     </div>
     <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
     </div>
     <div class="nav-item" id="nav-item-adicionar" data-aba="adicionar" onclick="trocarAba('adicionar')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span class="nav-label">Adicionar questões</span>
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span><span class="nav-label">Adicionar questões</span>
     </div>
   </div>
 </div>
 
 <div id="wrapper-barra-adicionar" class="hidden">
   <button id="barra-adicionar-questoes" onclick="trocarAba('adicionar')">
-    <span style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#D97757"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+    <span style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#D97757"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span>
     <span style="font-weight:700;font-size:var(--fs-e);color:#D97757;text-transform:uppercase;letter-spacing:0.02em">Adicionar questões</span>
   </button>
 </div>
@@ -860,6 +860,15 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <button onclick="fecharViewTopico()" style="color:#444;font-size:16px;cursor:pointer;background:none;border:none;padding:0">← <span id="texto-voltar-topico">Fórum</span></button>
   </div>
   <div id="conteudo-topico-detalhe" style="position:relative"></div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-revisao-rascunho" onclick="if(event.target===this) fecharModal('modal-revisao-rascunho')">
+  <div class="modal-conteudo" style="max-width:600px;max-height:85vh;overflow-y:auto">
+    <h3 class="config-title">Revisar questões pendentes</h3>
+    <p style="color:#666;font-size:var(--fs-d);margin-bottom:14px">Essas questões foram extraídas, mas o app não conseguiu identificar a bibliografia sozinho. Escolhe entre o que já existe — nada de digitar um livro novo.</p>
+    <div id="lista-rascunhos-pendentes"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-revisao-rascunho')">Fechar</button>
+  </div>
 </div>
 
 <div class="modal-overlay hidden" id="modal-novo-topico" onclick="if(event.target===this) fecharModal('modal-novo-topico')">
@@ -1697,15 +1706,16 @@ async function verificarNotificacoesExtras(){
 // sempre fixo em primeiro) se reordenam juntas por data – a mais recente
 // sempre vai pro topo, não importa o tipo dela
 async function atualizarNotificacoesOrdenadas(){
-  const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum, itensPropostaNova] = await Promise.all([
+  const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum, itensPropostaNova, itensRascunho] = await Promise.all([
     coletarNotificacaoAnulacao(),
     coletarNotificacaoRespostaDiscussao(),
     coletarNotificacaoQuestaoCorrigida(),
     coletarNotificacaoPdfNovo(),
     coletarNotificacaoForum(),
-    coletarNotificacaoPropostaNova()
+    coletarNotificacaoPropostaNova(),
+    coletarNotificacaoRascunhoPendente()
   ]);
-  const todos = [...itensAnulacao, ...itensDiscussao, ...itensCorrigida, ...itensPdfNovo, ...itensForum, ...itensPropostaNova];
+  const todos = [...itensAnulacao, ...itensDiscussao, ...itensCorrigida, ...itensPdfNovo, ...itensForum, ...itensPropostaNova, ...itensRascunho];
   todos.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
   document.getElementById('container-notificacoes-ordenadas').innerHTML = todos.map(item=>item.html).join('');
 }
@@ -1941,6 +1951,28 @@ async function marcarPdfNovoVisto(){
   await sb.from('usuarios').update({pdf_novo_visto_em: agora}).eq('id', usuarioAtual.id);
   usuarioAtual.pdf_novo_visto_em = agora;
   await atualizarNotificacoesOrdenadas();
+}
+
+/* 9. Rascunhos pendentes de revisão (bibliografia não identificada num
+   upload de PDF) — admin vê de todo mundo, os outros só veem os próprios,
+   já que só o autor ou o admin pode resolver */
+async function coletarNotificacaoRascunhoPendente(){
+  let query = sb.from('questoes_rascunho').select('id, criado_em, nome_arquivo_origem, usuarios(nome)');
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  const {data} = await query;
+  const total = (data||[]).length;
+  if(!total) return [];
+  const timestamp = data.reduce((max,r)=> r.criado_em > max ? r.criado_em : max, data[0].criado_em);
+  const arquivos = [...new Set(data.map(r=>r.nome_arquivo_origem).filter(Boolean))];
+  const textoArquivos = arquivos.length ? ` (${arquivos.slice(0,2).map(a=>escapeHtml(a)).join(', ')}${arquivos.length>2?'...':''})` : '';
+  const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirRevisaoRascunho()">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B8860B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg> ${total} questão${total>1?'ões':''} esperando revisão</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">Bibliografia não identificada automaticamente${textoArquivos}</div>
+      </button>
+    </div>`;
+  return [{timestamp, html}];
 }
 
 function retomarCaderno(){
@@ -3856,12 +3888,20 @@ function romanoParaArabico(romano){
   }
   return total;
 }
+// valida se é um numeral romano de VERDADE (sequência canônica válida),
+// não só "são letras que existem em numeral romano" — isso sozinho já
+// rejeita "MIL", "CIVIL", "MIM", "VIM", "DIVIDI" (nenhuma dessas é uma
+// combinação romana válida), sem precisar de lista de bloqueio pra cada uma
+const REGEX_ROMANO_VALIDO = /^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
+function ehNumeralRomanoValido(s){ return s.length > 0 && REGEX_ROMANO_VALIDO.test(s); }
 function normalizarNumeraisRomanos(texto){
-  // só converte quando a palavra está TODA em maiúscula no texto original —
-  // numeral romano de verdade sempre aparece assim ("Cap. VI", "Século
-  // XXI"). Sem essa exigência, palavras comuns do português que por acaso
-  // só têm letras romanas (MIL, CIVIL, VI, MIM...) virariam número à toa
-  return texto.replace(/\b[IVXLCDM]{1,8}\b/g, (match) => {
+  // (?<![\p{L}\p{N}])...(?![\p{L}\p{N}]) é a fronteira de palavra de
+  // verdade — o \b padrão do JS só entende letra/número em ASCII, então
+  // uma letra acentuada logo do lado (tipo "CÓDIGO") quebrava errado e
+  // confundia o "C" isolado com o numeral romano 100
+  return texto.replace(/(?<![\p{L}\p{N}])[IVXLCDM]{1,8}(?![\p{L}\p{N}])/gu, (match) => {
+    if(match === 'LI') return match; // ambíguo com o verbo "li" mesmo em maiúscula, mantém como está
+    if(!ehNumeralRomanoValido(match)) return match;
     const valor = romanoParaArabico(match);
     return valor > 0 && valor < 4000 ? String(valor) : match;
   });
@@ -4448,6 +4488,7 @@ async function enviarUpload(){
   mostrarBarraProgresso(status, 0, 'Lendo o arquivo...');
 
   const arquivo = input.files[0];
+  const nomeArquivoAtual = arquivo.name;
   let textoBruto;
   try{
     textoBruto = await extrairTextoDoArquivo(arquivo, (paginaAtual, totalPaginas) => {
@@ -4478,62 +4519,100 @@ async function enviarUpload(){
     questoesParsed.map(q=>({explicacao: q.explicacao, enunciado: q.textoBrutoParaBibliografia}))
   );
 
-  if(bibliografias.some(b => !b)){
-    extracaoEmAndamento = false;
-    status.innerHTML = '<p style="color:#B00020">Não conseguimos identificar com certeza a bibliografia desse arquivo — não bate com nada da lista fechada do edital. Confirma o livro/norma com o Carlos antes de tentar de novo.</p>';
-    return;
-  }
+  // separa em 2 grupos: as que identificaram bibliografia vão direto pro
+  // banco de verdade; as que não identificaram vão pro rascunho, esperando
+  // alguém (o autor, ou o admin) escolher manualmente depois — nunca mais
+  // trava o processo inteiro por causa de 1 questão sem bibliografia clara
+  const prontasParaQuestoes = [];
+  const paraRascunho = [];
+  questoesParsed.forEach((q, i) => {
+    if(bibliografias[i]) prontasParaQuestoes.push({questao: q, bib: bibliografias[i]});
+    else paraRascunho.push(q);
+  });
 
   mostrarBarraProgresso(status, 88, 'Localizando bibliografia...');
-  let mapaBibliografiaId, resultadosInsercao;
+  let mapaBibliografiaId;
   try{
     // só BUSCA a bibliografia entre as que já existem — nunca cria uma
-    // nova aqui. Se alguma não for encontrada, para tudo com erro claro em
-    // vez de cadastrar algo fora da lista fechada do edital
-    const entradasUnicas = [...new Map(bibliografias.map(b => [b.modulo+'|'+b.titulo, b])).values()];
+    // nova aqui. Se alguma não for encontrada (bem raro, já que a lista
+    // vem direto do banco), essa questão específica também vai pro
+    // rascunho, em vez de travar o lote inteiro
+    const entradasUnicas = [...new Map(prontasParaQuestoes.map(p => [p.bib.modulo+'|'+p.bib.titulo, p.bib])).values()];
     const resultadosBibliografia = await Promise.all(entradasUnicas.map(async entrada => {
       const {data: existente} = await sb.from('bibliografia').select('id').eq('titulo', entrada.titulo).eq('modulo_pscpp', entrada.modulo).maybeSingle();
-      if(!existente) throw new Error('A bibliografia "' + entrada.titulo + '" (' + entrada.modulo + ') não foi encontrada no banco. Confirma com o Carlos antes de continuar — não cadastro bibliografia nova automaticamente.');
-      return {chave: entrada.modulo+'|'+entrada.titulo, id: existente.id};
+      return {chave: entrada.modulo+'|'+entrada.titulo, id: existente?.id || null};
     }));
     mapaBibliografiaId = {};
     resultadosBibliografia.forEach(r => { mapaBibliografiaId[r.chave] = r.id; });
+  }catch(erroBusca){
+    extracaoEmAndamento = false;
+    status.innerHTML = `<p style="color:#B00020">Não consegui consultar a bibliografia no banco: ${escapeHtml(erroBusca.message)}</p>`;
+    return;
+  }
 
-    mostrarBarraProgresso(status, 95, `Cadastrando ${questoesParsed.length} questões...`);
-    resultadosInsercao = await Promise.all(questoesParsed.map(async (q, i) => {
-      const bib = bibliografias[i];
-      // só considera duplicata de verdade quando enunciado E alternativas
-      // batem igual — enunciado sozinho pode repetir por acaso entre
-      // questões diferentes (mesma pergunta, respostas diferentes)
-      const {data: existente} = await sb.from('questoes')
-        .select('id')
-        .eq('enunciado', q.enunciado)
-        .eq('alternativas', q.alternativas)
-        .maybeSingle();
-      if(existente) return {pulada: true};
+  // qualquer questão cuja bibliografia identificada não bateu com nada no
+  // banco (raro) também vai pro rascunho, em vez de travar tudo
+  for(let i = prontasParaQuestoes.length - 1; i >= 0; i--){
+    const chave = prontasParaQuestoes[i].bib.modulo+'|'+prontasParaQuestoes[i].bib.titulo;
+    if(!mapaBibliografiaId[chave]){
+      paraRascunho.push(prontasParaQuestoes[i].questao);
+      prontasParaQuestoes.splice(i, 1);
+    }
+  }
 
-      const {error: erroInsertQuestao} = await sb.from('questoes').insert({
+  let quantasCadastradas = 0, quantasPuladas = 0, quantasRascunho = 0;
+  try{
+    if(prontasParaQuestoes.length){
+      mostrarBarraProgresso(status, 92, `Cadastrando ${prontasParaQuestoes.length} questões...`);
+      const resultadosInsercao = await Promise.all(prontasParaQuestoes.map(async ({questao: q, bib}) => {
+        // só considera duplicata de verdade quando enunciado E alternativas
+        // batem igual — enunciado sozinho pode repetir por acaso entre
+        // questões diferentes (mesma pergunta, respostas diferentes)
+        const {data: existente} = await sb.from('questoes')
+          .select('id')
+          .eq('enunciado', q.enunciado)
+          .eq('alternativas', q.alternativas)
+          .maybeSingle();
+        if(existente) return {pulada: true};
+
+        const {error: erroInsertQuestao} = await sb.from('questoes').insert({
+          enunciado: q.enunciado,
+          alternativas: q.alternativas,
+          gabarito: q.gabarito,
+          autor_id: usuarioAtual.id,
+          capitulo: extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null,
+          tipo_questao: null,
+          modulo_pscpp: bib.modulo,
+          bibliografia_id: mapaBibliografiaId[bib.modulo+'|'+bib.titulo],
+          explicacao: q.explicacao || null,
+          explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada'
+        });
+        if(erroInsertQuestao) throw new Error('Não consegui cadastrar uma questão: ' + erroInsertQuestao.message);
+        return {pulada: false};
+      }));
+      quantasPuladas = resultadosInsercao.filter(r => r.pulada).length;
+      quantasCadastradas = resultadosInsercao.length - quantasPuladas;
+    }
+
+    if(paraRascunho.length){
+      mostrarBarraProgresso(status, 97, `Salvando ${paraRascunho.length} questão(ões) pendente(s) de revisão...`);
+      await Promise.all(paraRascunho.map(q => sb.from('questoes_rascunho').insert({
         enunciado: q.enunciado,
         alternativas: q.alternativas,
         gabarito: q.gabarito,
-        autor_id: usuarioAtual.id,
-        capitulo: extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null,
-        tipo_questao: null,
-        modulo_pscpp: bib.modulo,
-        bibliografia_id: mapaBibliografiaId[bib.modulo+'|'+bib.titulo],
         explicacao: q.explicacao || null,
-        explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada'
-      });
-      if(erroInsertQuestao) throw new Error('Não consegui cadastrar uma questão: ' + erroInsertQuestao.message);
-      return {pulada: false};
-    }));
+        explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada',
+        capitulo: extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null,
+        autor_id: usuarioAtual.id,
+        nome_arquivo_origem: nomeArquivoAtual || null
+      })));
+      quantasRascunho = paraRascunho.length;
+    }
   }catch(erroCadastro){
     extracaoEmAndamento = false;
     status.innerHTML = `<p style="color:#B00020">Travou no meio do cadastro: ${escapeHtml(erroCadastro.message)}</p><p style="color:#888;font-size:var(--fs-b);margin-top:8px">Copia essa mensagem e manda pro Claude — pode ser falta de permissão no banco, não é necessariamente algo errado no arquivo.</p>`;
     return;
   }
-  const quantasPuladas = resultadosInsercao.filter(r => r.pulada).length;
-  const quantasInseridas = resultadosInsercao.length - quantasPuladas;
 
   // NOTA: checagem de duplicata via pg_trgm ainda não implementada aqui –
   // precisa de uma função RPC no Postgres (similaridade de enunciado) que
@@ -4542,7 +4621,9 @@ async function enviarUpload(){
   extracaoEmAndamento = false;
   mostrarBarraProgresso(status, 100, 'Concluído!');
   const textoPuladas = quantasPuladas ? ` (${quantasPuladas} já existia${quantasPuladas>1?'m':''} igual e ${quantasPuladas>1?'foram puladas':'foi pulada'})` : '';
-  status.innerHTML += `<p style="color:#1B5E20;text-align:center;margin-top:8px">${quantasInseridas} questões cadastradas!${textoPuladas}</p>`;
+  const textoRascunho = quantasRascunho ? ` <span style="color:#B8860B">${quantasRascunho} precisam de revisão manual (bibliografia não identificada) — veja a notificação no Início.</span>` : '';
+  status.innerHTML += `<p style="color:#1B5E20;text-align:center;margin-top:8px">${quantasCadastradas} questões cadastradas!${textoPuladas}</p>${textoRascunho ? `<p style="text-align:center;margin-top:6px">${textoRascunho}</p>` : ''}`;
+  if(quantasRascunho) atualizarNotificacoesOrdenadas();
 }
 
 /* ============================================================
@@ -4604,6 +4685,120 @@ function alternarTipoUpload(tipo){
   document.getElementById('secao-upload-planilha').classList.toggle('hidden', tipo!=='planilha');
   document.getElementById('upload-status').innerHTML = '';
   document.getElementById('upload-planilha-status').innerHTML = '';
+}
+
+/* ============================================================
+   Revisão de rascunhos pendentes — questões extraídas de PDF cuja
+   bibliografia não foi identificada automaticamente, esperando alguém
+   (o autor, ou o admin) escolher manualmente entre o que já existe
+   ============================================================ */
+async function abrirRevisaoRascunho(){
+  abrirModal('modal-revisao-rascunho');
+  const container = document.getElementById('lista-rascunhos-pendentes');
+  container.innerHTML = '<p style="text-align:center;color:#888">Carregando...</p>';
+
+  let query = sb.from('questoes_rascunho').select('*, usuarios(nome)').order('criado_em', {ascending:false});
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  const {data} = await query;
+
+  if(!data || !data.length){
+    container.innerHTML = '<p style="text-align:center;color:#888">Nenhuma pendência no momento.</p>';
+    return;
+  }
+
+  // agrupa por arquivo de origem — na prática, questões do mesmo PDF são
+  // quase sempre do mesmo livro, então resolve o grupo inteiro de uma vez
+  const grupos = {};
+  data.forEach(r => {
+    const chave = r.nome_arquivo_origem || `sem-nome-${r.id}`;
+    if(!grupos[chave]) grupos[chave] = [];
+    grupos[chave].push(r);
+  });
+
+  if(!bibliografiaCache || !bibliografiaCache.length) await carregarBibliografia();
+
+  container.innerHTML = Object.entries(grupos).map(([nomeArquivo, itens]) => {
+    const idGrupo = 'grupo-' + btoa(unescape(encodeURIComponent(nomeArquivo))).replace(/[^a-zA-Z0-9]/g,'');
+    const autorNome = itens[0].usuarios?.nome || 'Alguém';
+    const opcoesModulo = modulosPscpp.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+    return `
+    <div style="border:0.5px solid #ddd;border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-weight:600;font-size:var(--fs-e)">${escapeHtml(nomeArquivo === `sem-nome-${itens[0].id}` ? 'Upload sem nome de arquivo' : nomeArquivo)}</div>
+      <div style="color:#888;font-size:var(--fs-b);margin-bottom:10px">${itens.length} questão${itens.length>1?'ões':''} · enviado por ${escapeHtml(autorNome)}</div>
+      <details style="margin-bottom:10px">
+        <summary style="cursor:pointer;color:#666;font-size:var(--fs-b)">Ver enunciados</summary>
+        <div style="margin-top:8px;max-height:150px;overflow-y:auto;font-size:var(--fs-b);color:#555">
+          ${itens.map(q => `<p style="margin-bottom:6px">${escapeHtml(q.enunciado.slice(0,150))}${q.enunciado.length>150?'...':''}</p>`).join('')}
+        </div>
+      </details>
+      <select id="${idGrupo}-modulo" class="filter-select" style="margin-bottom:8px" onchange="atualizarPublicacoesRevisao('${idGrupo}')">
+        <option value="">Escolhe o módulo...</option>
+        ${opcoesModulo}
+      </select>
+      <select id="${idGrupo}-publicacao" class="filter-select" style="margin-bottom:8px" disabled>
+        <option value="">Escolhe o módulo primeiro</option>
+      </select>
+      <div style="display:flex;gap:8px">
+        <button class="btn-secundario" style="flex:1" onclick="descartarGrupoRascunho('${nomeArquivo.replace(/'/g,"\\'")}')">Descartar</button>
+        <button class="btn-primario" style="flex:1" onclick="resolverGrupoRascunho('${nomeArquivo.replace(/'/g,"\\'")}', '${idGrupo}')">Cadastrar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function atualizarPublicacoesRevisao(idGrupo){
+  const modulo = document.getElementById(idGrupo+'-modulo').value;
+  const elPublicacao = document.getElementById(idGrupo+'-publicacao');
+  if(!modulo){
+    elPublicacao.innerHTML = '<option value="">Escolhe o módulo primeiro</option>';
+    elPublicacao.disabled = true;
+    return;
+  }
+  const opcoes = bibliografiaCache.filter(b => b.modulo_pscpp === modulo);
+  elPublicacao.innerHTML = '<option value="">Escolhe a publicação...</option>' + opcoes.map(b=>`<option value="${b.id}">${escapeHtml(b.titulo)}</option>`).join('');
+  elPublicacao.disabled = false;
+}
+
+async function resolverGrupoRascunho(nomeArquivo, idGrupo){
+  const modulo = document.getElementById(idGrupo+'-modulo').value;
+  const bibliografiaId = document.getElementById(idGrupo+'-publicacao').value;
+  if(!modulo || !bibliografiaId){
+    alert('Escolhe o módulo e a publicação antes de cadastrar.');
+    return;
+  }
+
+  let query = sb.from('questoes_rascunho').select('*').eq('nome_arquivo_origem', nomeArquivo);
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  const {data: itens} = await query;
+  if(!itens || !itens.length) return;
+
+  await Promise.all(itens.map(async q => {
+    await sb.from('questoes').insert({
+      enunciado: q.enunciado,
+      alternativas: q.alternativas,
+      gabarito: q.gabarito,
+      autor_id: q.autor_id,
+      capitulo: q.capitulo,
+      tipo_questao: null,
+      modulo_pscpp: modulo,
+      bibliografia_id: bibliografiaId,
+      explicacao: q.explicacao,
+      explicacao_origem: q.explicacao_origem
+    });
+    await sb.from('questoes_rascunho').delete().eq('id', q.id);
+  }));
+
+  await abrirRevisaoRascunho(); // recarrega a lista
+  await atualizarNotificacoesOrdenadas();
+}
+
+async function descartarGrupoRascunho(nomeArquivo){
+  if(!confirm('Descartar essas questões de vez? Isso não pode ser desfeito.')) return;
+  let query = sb.from('questoes_rascunho').delete().eq('nome_arquivo_origem', nomeArquivo);
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  await query;
+  await abrirRevisaoRascunho();
+  await atualizarNotificacoesOrdenadas();
 }
 
 async function baixarModeloPlanilha(){
