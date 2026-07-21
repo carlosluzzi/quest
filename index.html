@@ -836,7 +836,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-explicacao-questao" onclick="if(event.target===this) fecharModal('modal-explicacao-questao')">
-  <div class="modal-conteudo">
+  <div class="modal-conteudo" style="max-width:700px">
     <h3 class="config-title">Explicação</h3>
     <div id="conteudo-explicacao-questao"></div>
     <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-explicacao-questao')">Fechar</button>
@@ -999,9 +999,10 @@ function formatarEnunciado(texto){
   if(!texto) return '(enunciado vazio – questão pode estar malformada)';
   const escaped = escapeHtml(texto);
 
-  // 1. Assertivas romanas
-  if(/\s\(?[IVXLCDM]{1,6}\)/.test(escaped)){
-    const partes = escaped.split(/(?=\s\(?[IVXLCDM]{1,6}\))/).map(p=>p.trim()).filter(Boolean);
+  // 1. Assertivas romanas — aceita tanto "I)" quanto "I." como marcador,
+  // já que os PDFs reais usam os dois formatos dependendo da fonte
+  if(/\s\(?[IVXLCDM]{1,6}[).]/.test(escaped)){
+    const partes = escaped.split(/(?=\s\(?[IVXLCDM]{1,6}[).])/).map(p=>p.trim()).filter(Boolean);
     return [partes[0]||'', ...partes.slice(1).map(p=>`<div class="enunciado-linha">${p}</div>`)].join('');
   }
 
@@ -3779,6 +3780,17 @@ function parsearQuestoesDoTexto(textoBruto){
       .split(/\n\s*(?=[a-eA-E]\)\s)/)
       .map(a => a.trim().replace(/\s+/g,' '))
       .filter(a => /^[a-eA-E]\)/.test(a))
+      // remove ruído de rodapé de página que pode grudar na última
+      // alternativa (o corte da zona da pergunta só para no "GABARITO",
+      // então "Página N", cabeçalho repetido e "QUESTÃO N - CHAVE DE
+      // RESPOSTA" ainda ficam para trás, coladinhos)
+      .map(a => a
+        .replace(/\s*PSCPP\s*[-–—].*$/i, '')
+        .replace(/\s*Pagina\s+\d+.*$/i, '')
+        .replace(/\s*Página\s+\d+.*$/i, '')
+        .replace(/\s*QUEST[ÃA]O\s*N?º?\s*\d+\s*[-–—]\s*CHAVE\s+DE\s+RESPOSTA.*$/i, '')
+        .trim()
+      )
       // normaliza pro padrão (a)-(e) minúsculo, independente de como veio no original
       .map((a,idx) => `(${String.fromCharCode(97+idx)}) ${a.replace(/^[a-eA-E]\)\s*/,'')}`);
 
