@@ -1024,6 +1024,18 @@ function formatarEnunciado(texto){
     return [antes, ...partesLista.map(p=>`<div class="enunciado-linha">${p}</div>`)].join('');
   }
 
+  // 4. Letras minúsculas com parêntese ("a) ... b) ... c) ...") — formato
+  // usado na análise de cada alternativa dentro da explicação, ancorado no
+  // "a)" literal pra não confundir com parênteses soltos no meio do texto
+  const anchorMinuscula = escaped.match(/\ba\)\s/);
+  if(anchorMinuscula){
+    const idx = anchorMinuscula.index;
+    const antes = escaped.slice(0, idx).trim();
+    const zonaLista = escaped.slice(idx);
+    const partesLista = zonaLista.split(/(?=\s?[a-f]\)\s)/).map(p=>p.trim()).filter(Boolean);
+    return [antes, ...partesLista.map(p=>`<div class="enunciado-linha">${p}</div>`)].join('');
+  }
+
   return escaped;
 }
 
@@ -1629,6 +1641,7 @@ function trocarAba(nome){
   document.getElementById('content').scrollTop = 0;
   if(nome==='forum'){ carregarForum(); }
   if(nome==='placar') carregarMetricasPessoais();
+  if(nome==='quests') contarDisponiveisAgora();
   if(nome==='adicionar' && !extracaoEmAndamento){
     document.getElementById('upload-status').innerHTML = '';
     document.getElementById('upload-planilha-status').innerHTML = '';
@@ -2081,14 +2094,20 @@ async function buscarQuestoesFiltradas(apenasContagem = false){
 }
 
 let contadorDebounce = null;
-function atualizarContadorDisponiveis(){
-  clearTimeout(contadorDebounce);
-  contadorDebounce = setTimeout(async ()=>{
-    const el = document.getElementById('contador-disponiveis');
-    el.textContent = 'Contando...';
+async function contarDisponiveisAgora(){
+  const el = document.getElementById('contador-disponiveis');
+  el.textContent = 'Contando...';
+  try{
     const questoes = await buscarQuestoesFiltradas(true); // leve — só conta, não precisa das colunas todas
     el.textContent = `${questoes.length} ${questoes.length===1?'questão disponível':'questões disponíveis'} com esses filtros`;
-  }, 300);
+  }catch(erro){
+    el.textContent = 'Não consegui contar as questões disponíveis agora.';
+    console.error('erro ao contar questões disponíveis:', erro);
+  }
+}
+function atualizarContadorDisponiveis(){
+  clearTimeout(contadorDebounce);
+  contadorDebounce = setTimeout(contarDisponiveisAgora, 300);
 }
 
 // SuperQuest: simulado fixo de 70 questões variadas, sem filtro nenhum – regras
@@ -3748,7 +3767,7 @@ function limparEnunciado(texto){
       continue;
     }
   }
-  return linhasLimpas.join('\n').replace(/^\s*\n/gm, '').trim();
+  return linhasLimpas.join('\n').replace(/^\s*\n/gm, '').replace(/[ \t]{2,}/g, ' ').trim();
 }
 
 function parsearQuestoesDoTexto(textoBruto){
@@ -3802,6 +3821,7 @@ function parsearQuestoesDoTexto(textoBruto){
       .replace(/GABARITO\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
       .replace(/^Página \d+.*$/gim, '')
       .replace(/^\s*\n/gm, '')
+      .replace(/[ \t]{2,}/g, ' ')
       .trim();
 
     if(enunciado && alternativas.length >= 4 && gabarito){
