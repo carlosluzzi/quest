@@ -209,9 +209,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #aba-adicionar{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
 #aba-adicionar.hidden{display:none}
 @media(min-width:1100px){
-  #aba-adicionar{position:static;inset:auto;background:none;display:block;padding:0;z-index:auto}
-  #aba-adicionar .modal-conteudo{max-width:none;max-height:none;overflow-y:visible;padding:0;border-radius:0;background:none;box-shadow:none}
-  #titulo-adicionar-questoes{font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 14px 0}
+  #aba-adicionar{position:static;inset:auto;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 100px);padding:0;z-index:auto}
+  #aba-adicionar .modal-conteudo{max-width:520px;width:100%;max-height:none;overflow-y:visible;padding:0;border-radius:0;background:none;box-shadow:none}
+  #titulo-adicionar-questoes{font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 14px 0;text-align:center}
   #card-adicionar-questoes{max-width:520px}
 }
 .modal-conteudo-fluxo-topico{height:420px;box-sizing:border-box}
@@ -1614,7 +1614,7 @@ function trocarAba(nome){
   document.getElementById('content').scrollTop = 0;
   if(nome==='forum'){ carregarForum(); }
   if(nome==='placar') carregarMetricasPessoais();
-  if(nome==='adicionar'){
+  if(nome==='adicionar' && !extracaoEmAndamento){
     document.getElementById('upload-status').innerHTML = '';
     document.getElementById('upload-planilha-status').innerHTML = '';
   }
@@ -4313,7 +4313,7 @@ function limparArquivoSelecionado(){
   document.getElementById('upload-status').innerHTML = '';
 }
 
-async function extrairTextoDoArquivo(arquivo){
+async function extrairTextoDoArquivo(arquivo, aoProgredir){
   const arrayBuffer = await arquivo.arrayBuffer();
 
   // confere a assinatura real do arquivo (todo PDF de verdade começa com
@@ -4326,6 +4326,7 @@ async function extrairTextoDoArquivo(arquivo){
 
   if(!ehPdfDeVerdade){
     // não é PDF de verdade (texto puro com nome .pdf) — lê direto como texto
+    if(aoProgredir) aoProgredir(1, 1);
     return new TextDecoder('utf-8').decode(arrayBuffer);
   }
 
@@ -4354,6 +4355,7 @@ async function extrairTextoDoArquivo(arquivo){
         yAnterior = y;
       });
       textoCompleto += textoPagina + '\n\n';
+      if(aoProgredir) aoProgredir(p, pdf.numPages);
     }
     return textoCompleto;
   }catch(erroPdf){
@@ -4364,24 +4366,46 @@ async function extrairTextoDoArquivo(arquivo){
   }
 }
 
+// Barra de progresso real (não é decoração — o percentual reflete o
+// progresso de verdade, tipo "página 4 de 12"), usada durante a extração
+function mostrarBarraProgresso(elStatus, percentual, texto){
+  elStatus.innerHTML = `
+    <p style="text-align:center;color:#666;font-size:var(--fs-b);margin-bottom:6px">${escapeHtml(texto)}</p>
+    <div style="background:#EEE;border-radius:6px;height:10px;overflow:hidden">
+      <div style="width:${percentual}%;background:#D97757;height:100%;border-radius:6px;transition:width 0.2s"></div>
+    </div>
+    <p style="text-align:center;color:#888;font-size:var(--fs-b);margin-top:6px">${percentual}%</p>
+  `;
+}
+
+let extracaoEmAndamento = false; // protege a mensagem de status de ser
+// apagada sem querer se a pessoa trocar de aba enquanto ainda está rodando
+
 async function enviarUpload(){
   const input = document.getElementById('upload-arquivo');
   const status = document.getElementById('upload-status');
   if(!input.files.length){ status.innerHTML = '<p style="color:#B00020">Escolha um PDF primeiro.</p>'; return; }
 
-  status.innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg><p style="text-align:center">Extraindo questões...</p>';
+  extracaoEmAndamento = true;
+  mostrarBarraProgresso(status, 0, 'Lendo o arquivo...');
 
   const arquivo = input.files[0];
   let textoBruto;
   try{
-    textoBruto = await extrairTextoDoArquivo(arquivo);
+    textoBruto = await extrairTextoDoArquivo(arquivo, (paginaAtual, totalPaginas) => {
+      const percentual = Math.round((paginaAtual/totalPaginas) * 70); // extração = até 70% da barra
+      mostrarBarraProgresso(status, percentual, `Lendo página ${paginaAtual} de ${totalPaginas}...`);
+    });
   }catch(e){
+    extracaoEmAndamento = false;
     status.innerHTML = `<p style="color:#B00020">Não consegui ler o arquivo: ${e.message}</p>`;
     return;
   }
 
+  mostrarBarraProgresso(status, 75, 'Identificando as questões...');
   const questoesParsed = parsearQuestoesDoTexto(textoBruto);
   if(!questoesParsed.length){
+    extracaoEmAndamento = false;
     const trecho = (textoBruto || '').slice(0, 600);
     status.innerHTML = `
       <p style="color:#B00020">Nenhuma questão identificada nesse arquivo.</p>
@@ -4391,15 +4415,18 @@ async function enviarUpload(){
     return;
   }
 
+  mostrarBarraProgresso(status, 82, 'Identificando a bibliografia...');
   const bibliografias = resolverBibliografiaDoLote(
     questoesParsed.map(q=>({explicacao: q.explicacao, enunciado: q.textoBrutoParaBibliografia}))
   );
 
   if(bibliografias.some(b => !b)){
+    extracaoEmAndamento = false;
     status.innerHTML = '<p style="color:#B00020">Não conseguimos identificar com certeza a bibliografia desse arquivo — não bate com nada da lista fechada do edital. Confirma o livro/norma com o Carlos antes de tentar de novo.</p>';
     return;
   }
 
+  mostrarBarraProgresso(status, 88, 'Cadastrando bibliografia...');
   // cria (ou acha) as linhas de bibliografia necessárias — uma vez por
   // entrada única do lote, em paralelo (nunca sequência de await)
   const entradasUnicas = [...new Map(bibliografias.map(b => [b.modulo+'|'+b.titulo, b])).values()];
@@ -4417,9 +4444,20 @@ async function enviarUpload(){
   const mapaBibliografiaId = {};
   resultadosBibliografia.forEach(r => { mapaBibliografiaId[r.chave] = r.id; });
 
-  await Promise.all(questoesParsed.map((q, i) => {
+  mostrarBarraProgresso(status, 95, `Cadastrando ${questoesParsed.length} questões...`);
+  const resultadosInsercao = await Promise.all(questoesParsed.map(async (q, i) => {
     const bib = bibliografias[i];
-    return sb.from('questoes').insert({
+    // só considera duplicata de verdade quando enunciado E alternativas
+    // batem igual — enunciado sozinho pode repetir por acaso entre
+    // questões diferentes (mesma pergunta, respostas diferentes)
+    const {data: existente} = await sb.from('questoes')
+      .select('id')
+      .eq('enunciado', q.enunciado)
+      .eq('alternativas', q.alternativas)
+      .maybeSingle();
+    if(existente) return {pulada: true};
+
+    await sb.from('questoes').insert({
       enunciado: q.enunciado,
       alternativas: q.alternativas,
       gabarito: q.gabarito,
@@ -4431,13 +4469,19 @@ async function enviarUpload(){
       explicacao: q.explicacao || null,
       explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada'
     });
+    return {pulada: false};
   }));
+  const quantasPuladas = resultadosInsercao.filter(r => r.pulada).length;
+  const quantasInseridas = resultadosInsercao.length - quantasPuladas;
 
   // NOTA: checagem de duplicata via pg_trgm ainda não implementada aqui –
   // precisa de uma função RPC no Postgres (similaridade de enunciado) que
   // ainda não foi criada no schema. A adicionar numa próxima passada.
 
-  status.innerHTML = `<p style="color:#1B5E20">${questoesParsed.length} questões cadastradas!</p>`;
+  extracaoEmAndamento = false;
+  mostrarBarraProgresso(status, 100, 'Concluído!');
+  const textoPuladas = quantasPuladas ? ` (${quantasPuladas} já existia${quantasPuladas>1?'m':''} igual e ${quantasPuladas>1?'foram puladas':'foi pulada'})` : '';
+  status.innerHTML += `<p style="color:#1B5E20;text-align:center;margin-top:8px">${quantasInseridas} questões cadastradas!${textoPuladas}</p>`;
 }
 
 /* ============================================================
@@ -4538,6 +4582,7 @@ async function enviarPlanilha(){
   const status = document.getElementById('upload-planilha-status');
   if(!input.files.length){ status.innerHTML = '<p style="color:#B00020">Escolha uma planilha primeiro.</p>'; return; }
 
+  extracaoEmAndamento = true;
   status.innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg><p style="text-align:center">Lendo planilha...</p>';
 
   const modulosValidos = ['Manobrabilidade','Arte Naval','Navegação em Águas Restritas','Legislação','Meteorologia e Oceanografia','Comunicações','Conhecimentos Gerais'];
@@ -4551,11 +4596,13 @@ async function enviarPlanilha(){
     const planilha = livro.Sheets[livro.SheetNames[0]];
     linhas = XLSX.utils.sheet_to_json(planilha, {defval:''});
   }catch(e){
+    extracaoEmAndamento = false;
     status.innerHTML = `<p style="color:#B00020">Não consegui ler essa planilha: ${escapeHtml(e.message)}</p>`;
     return;
   }
 
   if(!linhas.length){
+    extracaoEmAndamento = false;
     status.innerHTML = '<p style="color:#B00020">Planilha vazia, ou as colunas não batem com o modelo. Baixa o modelo de novo se precisar.</p>';
     return;
   }
@@ -4595,15 +4642,18 @@ async function enviarPlanilha(){
   });
 
   if(erros.length){
+    extracaoEmAndamento = false;
     status.innerHTML = `<p style="color:#B00020">${erros.length} linha(s) com problema – corrige na planilha e sobe de novo:</p><p style="color:#B00020;font-size:var(--fs-b)">${erros.slice(0,6).map(e=>escapeHtml(e)).join('<br>')}</p>`;
     return;
   }
   if(!questoesValidas.length){
+    extracaoEmAndamento = false;
     status.innerHTML = '<p style="color:#B00020">Nenhuma questão preenchida na planilha (só achei a linha de exemplo).</p>';
     return;
   }
 
   await Promise.all(questoesValidas.map(q => sb.from('questoes').insert(q)));
+  extracaoEmAndamento = false;
   status.innerHTML = `<p style="color:#1B5E20">${questoesValidas.length} questões cadastradas!</p>`;
 }
 
