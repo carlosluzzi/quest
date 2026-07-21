@@ -4227,6 +4227,7 @@ async function abrirDetalheCadernoConcluido(cadernoId){
 function atualizarNomeArquivoSelecionado(){
   const input = document.getElementById('upload-arquivo');
   const el = document.getElementById('nome-arquivo-selecionado');
+  document.getElementById('upload-status').innerHTML = '';
   if(input.files.length){
     el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${escapeHtml(input.files[0].name)}</span><button type="button" onclick="limparArquivoSelecionado()" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px;flex-shrink:0" title="Remover arquivo">✕</button>`;
   }else{
@@ -4407,6 +4408,8 @@ function alternarTipoUpload(tipo){
   document.getElementById('toggle-upload-planilha').classList.toggle('active', tipo==='planilha');
   document.getElementById('secao-upload-pdf').classList.toggle('hidden', tipo!=='pdf');
   document.getElementById('secao-upload-planilha').classList.toggle('hidden', tipo!=='planilha');
+  document.getElementById('upload-status').innerHTML = '';
+  document.getElementById('upload-planilha-status').innerHTML = '';
 }
 
 function baixarModeloPlanilha(){
@@ -4428,6 +4431,7 @@ function baixarModeloPlanilha(){
 function atualizarNomePlanilhaSelecionada(){
   const input = document.getElementById('upload-planilha');
   const el = document.getElementById('nome-planilha-selecionada');
+  document.getElementById('upload-planilha-status').innerHTML = '';
   if(input.files.length){
     el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${escapeHtml(input.files[0].name)}</span><button type="button" onclick="limparPlanilhaSelecionada()" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px;flex-shrink:0" title="Remover planilha">✕</button>`;
   }else{
