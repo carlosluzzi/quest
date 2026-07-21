@@ -1614,6 +1614,10 @@ function trocarAba(nome){
   document.getElementById('content').scrollTop = 0;
   if(nome==='forum'){ carregarForum(); }
   if(nome==='placar') carregarMetricasPessoais();
+  if(nome==='adicionar'){
+    document.getElementById('upload-status').innerHTML = '';
+    document.getElementById('upload-planilha-status').innerHTML = '';
+  }
 }
 
 function abrirModal(id){ document.getElementById(id).classList.remove('hidden'); }
