@@ -176,6 +176,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .item-lista-modulo:active{background:#F5F5F4}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0;white-space:pre-wrap}
 .enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap}
+.linha-numerada{display:flex;gap:8px;margin-top:10px;align-items:flex-start}
+.linha-marcador{flex-shrink:0;font-weight:600;min-width:26px}
+.linha-texto{flex:1;white-space:pre-wrap}
 .alternativa{display:block;width:100%;text-align:left;background:#F5F5F6;border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:var(--fs-d)}
 .alternativa.correta{background:#E1F5E1;color:#1B5E20;font-weight:600}
 .alternativa.errada-escolhida{background:#FBE1E1;color:#9E1B1B;font-weight:600}
@@ -999,17 +1002,28 @@ function formatarEnunciado(texto){
   if(!texto) return '(enunciado vazio – questão pode estar malformada)';
   const escaped = escapeHtml(texto);
 
+  // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
+  // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
+  // a segunda linha fica alinhada embaixo do TEXTO, não embaixo do marcador
+  function linhaMarcada(parte, regexMarcador){
+    const m = parte.match(regexMarcador);
+    if(!m) return `<div class="enunciado-linha">${parte}</div>`;
+    const marcador = m[0].trim();
+    const resto = parte.slice(m[0].length).trim();
+    return `<div class="linha-numerada"><span class="linha-marcador">${marcador}</span><span class="linha-texto">${resto}</span></div>`;
+  }
+
   // 1. Assertivas romanas — aceita tanto "I)" quanto "I." como marcador,
   // já que os PDFs reais usam os dois formatos dependendo da fonte
   if(/\s\(?[IVXLCDM]{1,6}[).]/.test(escaped)){
     const partes = escaped.split(/(?=\s\(?[IVXLCDM]{1,6}[).])/).map(p=>p.trim()).filter(Boolean);
-    return [partes[0]||'', ...partes.slice(1).map(p=>`<div class="enunciado-linha">${p}</div>`)].join('');
+    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(?[IVXLCDM]{1,6}[).]/))].join('');
   }
 
   // 2. Parênteses vazios (Certo/Errado, ordenação)
   if(/\(\s*\)/.test(escaped)){
     const partes = escaped.split(/(?=\s\(\s*\))/).map(p=>p.trim()).filter(Boolean);
-    return [partes[0]||'', ...partes.slice(1).map(p=>`<div class="enunciado-linha">${p}</div>`)].join('');
+    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(\s*\)/))].join('');
   }
 
   // 3. Maiúsculas com ponto (correlação) – ancorado no "A." literal, pra não
@@ -1021,7 +1035,7 @@ function formatarEnunciado(texto){
     const antes = escaped.slice(0, idx).trim();
     const zonaLista = escaped.slice(idx);
     const partesLista = zonaLista.split(/(?=\s?[A-F]\.\s)/).map(p=>p.trim()).filter(Boolean);
-    return [antes, ...partesLista.map(p=>`<div class="enunciado-linha">${p}</div>`)].join('');
+    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[A-F]\./))].join('');
   }
 
   // 4. Letras minúsculas com parêntese ("a) ... b) ... c) ...") — formato
@@ -1033,7 +1047,7 @@ function formatarEnunciado(texto){
     const antes = escaped.slice(0, idx).trim();
     const zonaLista = escaped.slice(idx);
     const partesLista = zonaLista.split(/(?=\s?[a-f]\)\s)/).map(p=>p.trim()).filter(Boolean);
-    return [antes, ...partesLista.map(p=>`<div class="enunciado-linha">${p}</div>`)].join('');
+    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[a-f]\)/))].join('');
   }
 
   return escaped;
@@ -2438,7 +2452,7 @@ async function renderizarListaNotasQuestao(){
   if(!data || !data.length){ el.innerHTML = ''; return; }
   el.innerHTML = `<div style="margin-bottom:14px">` + data.map(n => `
     <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
-      <p style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${escapeHtml(n.texto)}</p>
+      <p style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${formatarEnunciado(n.texto)}</p>
       <button onclick="excluirNotaQuestao('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
     </div>`).join('') + `</div>`;
 }
@@ -2526,7 +2540,7 @@ function renderizarQuestaoAtual(){
         }else if(alt.letra === alternativaSelecionadaAtual){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
-        return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} onclick="selecionarAlternativa('${alt.letra}')"><strong>${alt.letra})</strong> ${alt.texto}</button>`;
+        return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} onclick="selecionarAlternativa('${alt.letra}')"><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><strong style="flex-shrink:0">${alt.letra})</strong> <span>${alt.texto}</span></span></button>`;
       }).join('')
     : '<p style="color:#B00020;font-size:var(--fs-d)">Alternativas não identificadas nessa questão (pode estar malformada) – considere excluir pra você.</p>';
 
@@ -2813,7 +2827,7 @@ function renderizarListaComentarios(lista){
           <span style="font-size:var(--fs-b);color:#888;white-space:nowrap">${tempoRelativo(c.criado_em)}</span>
         </div>
         ${citacao}
-        <div style="font-size:var(--fs-d)">${escapeHtml(c.texto)}</div>
+        <div style="font-size:var(--fs-d)">${formatarEnunciado(c.texto)}</div>
         <button onclick="responderComentario('${c.id}')" style="background:none;border:none;padding:0;color:#888;font-size:var(--fs-b);cursor:pointer;text-decoration:underline;margin-top:2px">Responder</button>
       </div>
     </div>`;
@@ -2856,15 +2870,15 @@ async function renderizarDetalheQuestao(questaoId){
     ${questao ? `
     <div class="section-title" style="margin-top:0">Questão</div>
     <div class="card-questao">
-      <p style="font-size:var(--fs-d);color:#111;white-space:pre-wrap;margin:0">${escapeHtml(questao.enunciado || '')}</p>
-      ${questao.alternativas ? `<p style="font-size:var(--fs-d);color:#111;white-space:pre-wrap;margin:10px 0 0">${escapeHtml(questao.alternativas)}</p>` : ''}
+      <p style="font-size:var(--fs-d);color:#111;margin:0">${formatarEnunciado(questao.enunciado || '')}</p>
+      ${questao.alternativas ? `<div style="font-size:var(--fs-d);color:#111;margin:10px 0 0">${extrairAlternativas(questao.alternativas).map(alt=>`<div class="linha-numerada"><span class="linha-marcador">${alt.letra})</span><span class="linha-texto">${alt.texto}</span></div>`).join('')}</div>` : ''}
     </div>` : ''}
 
     ${(minhasNotasDaQuestao||[]).length ? `
     <div class="section-title">Suas notas</div>
     ${minhasNotasDaQuestao.map(n=>`
     <div class="card-questao">
-      <p style="font-size:var(--fs-d);color:#111;margin:0">${escapeHtml(n.texto)}</p>
+      <p style="font-size:var(--fs-d);color:#111;margin:0">${formatarEnunciado(n.texto)}</p>
       <p style="font-size:var(--fs-b);color:#888;margin-top:6px">${new Date(n.criado_em).toLocaleDateString('pt-BR')}</p>
     </div>`).join('')}` : ''}
 
@@ -3049,7 +3063,7 @@ async function renderizarTopico(topicoId){
         <span style="font-size:var(--fs-d);color:#666">${escapeHtml(propostaPendente.usuarios?.nome||'Alguém')} propôs esta edição:</span>
       </div>
       <div style="font-size:var(--fs-d);color:#111;line-height:1.6">${formatarEnunciado(propostaPendente.enunciado)}</div>
-      <div style="font-size:var(--fs-d);margin-top:16px">${extrairAlternativas(propostaPendente.alternativas).map(alt=>`<div class="enunciado-linha">(${alt.letra}) ${alt.texto}</div>`).join('')}</div>
+      <div style="font-size:var(--fs-d);margin-top:16px">${extrairAlternativas(propostaPendente.alternativas).map(alt=>`<div class="linha-numerada"><span class="linha-marcador">${alt.letra})</span><span class="linha-texto">${alt.texto}</span></div>`).join('')}</div>
       <div style="font-size:var(--fs-d);margin-top:16px;font-weight:600">Gabarito: ${escapeHtml((propostaPendente.gabarito||'').toUpperCase())}</div>
     </div>`
   ) : '';
@@ -4315,7 +4329,7 @@ function renderizarNotasMetricas(elNotas, infoPorQuestao){
       partes.push(new Date(n.criado_em).toLocaleDateString('pt-BR'));
       return `<div style="cursor:pointer;position:relative;padding:12px 0;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${n.questao_id}')">
         <button onclick="event.stopPropagation();excluirNotaDaListaMetricas('${n.id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px" title="Excluir nota">✕</button>
-        <p style="font-size:var(--fs-d);color:#111;margin:0 24px 8px 0">${escapeHtml(n.texto)}</p>
+        <p style="font-size:var(--fs-d);color:#111;margin:0 24px 8px 0">${formatarEnunciado(n.texto)}</p>
         <div style="font-size:var(--fs-b);color:#888">${partes.join(' · ')}</div>
       </div>`;
     }).join('');
