@@ -3786,7 +3786,7 @@ function limparEnunciado(texto){
       continue;
     }
   }
-  return linhasLimpas.join('\n').replace(/^\s*\n/gm, '').replace(/[ \t]{2,}/g, ' ').trim();
+  return linhasLimpas.join('\n').replace(/^\s*\n/gm, '').replace(/[ \t]{2,}/g, ' ').replace(/ +([,.;:)])/g, '$1').trim();
 }
 
 function parsearQuestoesDoTexto(textoBruto){
@@ -3816,7 +3816,7 @@ function parsearQuestoesDoTexto(textoBruto){
     const alternativas = zonaPergunta
       .slice(matchAlt ? matchAlt.index : zonaPergunta.length)
       .split(/\n\s*(?=[a-eA-E]\)\s)/)
-      .map(a => a.trim().replace(/\s+/g,' '))
+      .map(a => a.trim().replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1'))
       .filter(a => /^[a-eA-E]\)/.test(a))
       // remove ruído de rodapé de página que pode grudar na última
       // alternativa (o corte da zona da pergunta só para no "GABARITO",
@@ -3841,6 +3841,7 @@ function parsearQuestoesDoTexto(textoBruto){
       .replace(/^Página \d+.*$/gim, '')
       .replace(/^\s*\n/gm, '')
       .replace(/[ \t]{2,}/g, ' ')
+      .replace(/ +([,.;:)])/g, '$1')
       .trim();
 
     if(enunciado && alternativas.length >= 4 && gabarito){
@@ -3903,7 +3904,7 @@ function parsearPorRespostaComoCorte(texto){
 
     const alternativas = textoComAlternativas
       .split(/\n\s*(?=[a-eA-E]\)\s)/)
-      .map(a => a.trim().replace(/\s+/g,' '))
+      .map(a => a.trim().replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1'))
       .filter(a => /^[a-eA-E]\)/.test(a))
       .map((a,idx) => `(${String.fromCharCode(97+idx)}) ${a.replace(/^[a-eA-E]\)\s*/,'')}`);
 
