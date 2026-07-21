@@ -3647,7 +3647,7 @@ const BIBLIOGRAFIA_FECHADA = [
    cabeçalho repetido na seção de gabarito. Testado contra amostras reais
    dos PDFs enviados pelo Carlos antes de entrar em produção.
    ============================================================ */
-const REGEX_RESPOSTA = /(?:RESPOSTA|GABARITO)\s*(?:[:\-—]|■)?\s*(?:ALTERNATIVA\s*)?([A-E])\b/gi;
+const REGEX_RESPOSTA = /(?:RESPOSTA|GABARITO)\b\s*\S{0,4}\s*(?:ALTERNATIVA\s*)?([A-E])\b/gi;
 const REGEX_INICIO_QUESTAO = /(?:GABARITO\s*[–\-—]\s*)?QUEST[ÃA]O(?:\s+(\d+)\s+DE\s+\d+|\s*N?º?\s*(\d+)\b(?!\s*[–\-—]\s*(?:GABARITO|CHAVE\s+DE\s+RESPOSTA)))/gi;
 
 function encontrarIniciosQuestao(texto){
@@ -3665,7 +3665,7 @@ function encontrarIniciosQuestao(texto){
 // de uma linha, tipo uma citação de bibliografia que quebra) — os formatos
 // vistos até agora nos PDFs reais
 const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
-const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*:/i;
+const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*(:|\s{2,})/i;
 function limparEnunciado(texto){
   const linhas = texto.split('\n');
   const linhasLimpas = [];
@@ -3673,6 +3673,9 @@ function limparEnunciado(texto){
   // linhas até achar uma em branco) | pulando_valor_colado (label:valor na
   // mesma linha, só aceita NO MÁXIMO 1 linha extra de continuação)
   let modo = 'normal';
+  let linhasPuladasNoValor = 0; // trava de segurança pro modo pulando_valor_multi — nem
+  // todo formato tem linha em branco separando metadado de enunciado, então
+  // limita a no máximo 2 linhas de valor, mesmo sem achar uma em branco
   for(const linha of linhas){
     const linhaLimpa = linha.trim();
     // detecta um label novo em QUALQUER estado (mesmo no meio de estar
@@ -3681,7 +3684,7 @@ function limparEnunciado(texto){
       modo = 'esperando_valor_solto';
       continue;
     }
-    if(PREFIXOS_METADADO.test(linha)){
+    if(PREFIXOS_METADADO.test(linhaLimpa)){
       modo = 'pulando_valor_colado';
       continue;
     }
@@ -3695,11 +3698,20 @@ function limparEnunciado(texto){
       // label quebrado em 2 linhas físicas (ex: "CARACTERISTICA" numa
       // linha, "DO PSCPP" na de baixo) — ainda é label, não é o valor
       if(/^(DO\s+PSCPP|REPRODUZIDA)\s*:?\s*$/i.test(linhaLimpa)) continue;
-      modo = 'pulando_valor_multi'; // achou a 1ª linha do valor — pula até a próxima em branco
+      modo = 'pulando_valor_multi'; // achou a 1ª linha do valor
+      linhasPuladasNoValor = 1;
       continue;
     }
     if(modo === 'pulando_valor_multi'){
       if(!linhaLimpa){ modo = 'normal'; continue; } // linha em branco = fim do valor
+      if(linhasPuladasNoValor >= 1){
+        // trava de segurança: já pulou 1 linha de valor e não achou linha em
+        // branco — essa linha aqui já é conteúdo real, não é mais metadado
+        modo = 'normal';
+        linhasLimpas.push(linha);
+        continue;
+      }
+      linhasPuladasNoValor++;
       continue; // ainda dentro do valor (pode ter mais de 1 linha), continua pulando
     }
     if(modo === 'pulando_valor_colado'){
@@ -3750,7 +3762,7 @@ function parsearQuestoesDoTexto(textoBruto){
     // explicação: tira a própria linha "RESPOSTA:/GABARITO:" e cabeçalhos
     // repetidos tipo "QUESTÃO Nº 1 – GABARITO COMENTADO" / "GABARITO — QUESTÃO 1"
     const explicacao = zonaExplicacao
-      .replace(/(?:RESPOSTA|GABARITO)\s*(?:[:\-—]|■)?\s*(?:ALTERNATIVA\s*)?[A-E]\b.*$/im, '')
+      .replace(/(?:RESPOSTA|GABARITO)\b\s*\S{0,4}\s*(?:ALTERNATIVA\s*)?[A-E]\b.*$/im, '')
       .replace(/QUEST[ÃA]O\s*N?º?\s*\d+\s*[–\-—]\s*(?:GABARITO.*|CHAVE\s+DE\s+RESPOSTA)$/gim, '')
       .replace(/GABARITO\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
       .replace(/^Página \d+.*$/gim, '')
@@ -3771,6 +3783,67 @@ function parsearQuestoesDoTexto(textoBruto){
       });
     }
   }
+
+  // reserva: alguns formatos usam "Questão N de M" como RODAPÉ da própria
+  // página (depois do conteúdo), não como cabeçalho antes dele — nesse
+  // caso a estratégia acima não acha nada, porque o corte fica no lugar
+  // errado. Detecta isso e tenta de novo cortando só por RESPOSTA/GABARITO
+  // (que sempre é confiável, em qualquer formato visto até agora)
+  if(!questoes.length){
+    return parsearPorRespostaComoCorte(texto);
+  }
+  return questoes;
+}
+
+function parsearPorRespostaComoCorte(texto){
+  const respostas = [...texto.matchAll(REGEX_RESPOSTA)];
+  if(!respostas.length) return [];
+  const questoes = [];
+  let inicioUnidade = 0;
+  respostas.forEach((resp, i) => {
+    const fimResposta = resp.index + resp[0].length;
+    const antesResposta = texto.slice(inicioUnidade, resp.index);
+    inicioUnidade = fimResposta;
+
+    const gabarito = resp[1].toLowerCase();
+
+    // acha o ÚLTIMO bloco de alternativas antes dessa resposta (o mais
+    // próximo dela é o da pergunta de verdade — qualquer coisa antes disso
+    // é sobra da explicação da pergunta anterior, e vira ruído descartado)
+    const blocosAlt = [...antesResposta.matchAll(/\n\s*a\)\s/gi)];
+    if(!blocosAlt.length) return;
+    const inicioAlt = blocosAlt[blocosAlt.length-1].index;
+    const textoComAlternativas = antesResposta.slice(inicioAlt);
+    const textoAntesAlt = antesResposta.slice(0, inicioAlt);
+
+    // enunciado = o último parágrafo antes das alternativas, descartando
+    // qualquer coisa de mais de 1 parágrafo atrás (isso é sobra da questão
+    // anterior: explicação, rodapé "Questão N de M", etc.)
+    const paragrafos = textoAntesAlt.split(/\n\s*\n/).filter(p=>p.trim());
+    const enunciadoBruto = paragrafos.length ? paragrafos[paragrafos.length-1] : '';
+    const enunciado = limparEnunciado(
+      enunciadoBruto
+        .replace(/^.*QUEST[ÃA]O\s*(?:\s+\d+\s+DE\s+\d+|N?º?\s*\d+).*$/gim, '')
+        .replace(/^[A-Z][\w\s—-]{0,60}Cap\.\s*\d+.*$/gim, '') // rodapé tipo "H Quest Nav I — Cap. 10"
+    );
+
+    const alternativas = textoComAlternativas
+      .split(/\n\s*(?=[a-eA-E]\)\s)/)
+      .map(a => a.trim().replace(/\s+/g,' '))
+      .filter(a => /^[a-eA-E]\)/.test(a))
+      .map((a,idx) => `(${String.fromCharCode(97+idx)}) ${a.replace(/^[a-eA-E]\)\s*/,'')}`);
+
+    if(enunciado && alternativas.length >= 4 && gabarito){
+      questoes.push({
+        numero: i+1,
+        enunciado,
+        alternativas: alternativas.join('\n'),
+        gabarito,
+        explicacao: null, // formato de rodapé não separa explicação de forma confiável, deixa em branco
+        textoBrutoParaBibliografia: antesResposta
+      });
+    }
+  });
   return questoes;
 }
 
@@ -4264,7 +4337,23 @@ async function extrairTextoDoArquivo(arquivo){
     for(let p=1; p<=pdf.numPages; p++){
       const pagina = await pdf.getPage(p);
       const conteudo = await pagina.getTextContent();
-      textoCompleto += conteudo.items.map(item => item.str).join(' ') + '\n\n';
+      // o pdf.js só devolve pedacinhos de texto soltos, sem quebra de linha
+      // nenhuma — precisa reconstruir comparando a posição vertical (Y) de
+      // cada pedaço: se mudou de linha na página, é quebra de linha de
+      // verdade; se ficou na mesma altura, é só continuação da mesma linha
+      let yAnterior = null;
+      let textoPagina = '';
+      conteudo.items.forEach(item => {
+        const y = item.transform[5];
+        if(yAnterior !== null && Math.abs(y - yAnterior) > 2){
+          textoPagina += '\n';
+        }else if(textoPagina){
+          textoPagina += ' ';
+        }
+        textoPagina += item.str;
+        yAnterior = y;
+      });
+      textoCompleto += textoPagina + '\n\n';
     }
     return textoCompleto;
   }catch(erroPdf){
