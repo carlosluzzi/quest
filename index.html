@@ -3642,8 +3642,8 @@ const BIBLIOGRAFIA_FECHADA = [
    cabeçalho repetido na seção de gabarito. Testado contra amostras reais
    dos PDFs enviados pelo Carlos antes de entrar em produção.
    ============================================================ */
-const REGEX_RESPOSTA = /(?:RESPOSTA|GABARITO)\s*[:\-—]\s*([A-E])\b/gi;
-const REGEX_INICIO_QUESTAO = /(?:GABARITO\s*[–\-—]\s*)?QUEST[ÃA]O(?:\s+(\d+)\s+DE\s+\d+|\s*N?º?\s*(\d+)(?!\s*[–\-—]\s*GABARITO))/gi;
+const REGEX_RESPOSTA = /(?:RESPOSTA|GABARITO)\s*(?:[:\-—]|■)?\s*(?:ALTERNATIVA\s*)?([A-E])\b/gi;
+const REGEX_INICIO_QUESTAO = /(?:GABARITO\s*[–\-—]\s*)?QUEST[ÃA]O(?:\s+(\d+)\s+DE\s+\d+|\s*N?º?\s*(\d+)\b(?!\s*[–\-—]\s*(?:GABARITO|CHAVE\s+DE\s+RESPOSTA)))/gi;
 
 function encontrarIniciosQuestao(texto){
   const brutos = [...texto.matchAll(REGEX_INICIO_QUESTAO)];
@@ -3655,22 +3655,57 @@ function encontrarIniciosQuestao(texto){
 // qualquer linha de continuação delas (quando o texto quebra em 2 linhas,
 // a linha de baixo geralmente começa em minúscula, diferente do enunciado
 // de verdade que sempre começa em maiúscula)
-const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTERÍSTICA DO PSCPP REPRODUZIDA)\s*:/i;
+// aceita tanto "DISCIPLINA: valor" (numa linha só) quanto "DISCIPLINA"
+// sozinho, com o valor em linha(s) separada(s) embaixo (às vezes com mais
+// de uma linha, tipo uma citação de bibliografia que quebra) — os formatos
+// vistos até agora nos PDFs reais
+const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
+const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*:/i;
 function limparEnunciado(texto){
   const linhas = texto.split('\n');
   const linhasLimpas = [];
-  let pularProximaSeMinuscula = false;
+  // normal | esperando_valor_solto (label sozinho, valor pode ter várias
+  // linhas até achar uma em branco) | pulando_valor_colado (label:valor na
+  // mesma linha, só aceita NO MÁXIMO 1 linha extra de continuação)
+  let modo = 'normal';
   for(const linha of linhas){
-    if(PREFIXOS_METADADO.test(linha)){
-      pularProximaSeMinuscula = true;
+    const linhaLimpa = linha.trim();
+    // detecta um label novo em QUALQUER estado (mesmo no meio de estar
+    // pulando o valor de outro label — evita engolir tudo de uma vez)
+    if(PADRAO_LABEL_METADADO.test(linhaLimpa)){
+      modo = 'esperando_valor_solto';
       continue;
     }
-    if(pularProximaSeMinuscula){
-      pularProximaSeMinuscula = false;
-      if(linha.trim() && !/^[A-ZÀ-Ú]/.test(linha.trim())) continue;
+    if(PREFIXOS_METADADO.test(linha)){
+      modo = 'pulando_valor_colado';
+      continue;
     }
-    if(/^Página \d+/i.test(linha.trim())) continue;
-    linhasLimpas.push(linha);
+    if(modo === 'normal'){
+      if(/^Página \d+/i.test(linhaLimpa)) continue;
+      linhasLimpas.push(linha);
+      continue;
+    }
+    if(modo === 'esperando_valor_solto'){
+      if(!linhaLimpa) continue; // ainda não chegou o valor, ignora linha em branco
+      // label quebrado em 2 linhas físicas (ex: "CARACTERISTICA" numa
+      // linha, "DO PSCPP" na de baixo) — ainda é label, não é o valor
+      if(/^(DO\s+PSCPP|REPRODUZIDA)\s*:?\s*$/i.test(linhaLimpa)) continue;
+      modo = 'pulando_valor_multi'; // achou a 1ª linha do valor — pula até a próxima em branco
+      continue;
+    }
+    if(modo === 'pulando_valor_multi'){
+      if(!linhaLimpa){ modo = 'normal'; continue; } // linha em branco = fim do valor
+      continue; // ainda dentro do valor (pode ter mais de 1 linha), continua pulando
+    }
+    if(modo === 'pulando_valor_colado'){
+      // valor já começou colado no "label:" — só aceita NO MÁXIMO uma
+      // linha extra de continuação (e só se ela parecer mesmo continuação,
+      // começando em minúscula — enunciado de verdade começa maiúsculo)
+      modo = 'normal';
+      if(linhaLimpa && !/^[A-ZÀ-Ú]/.test(linhaLimpa)) continue;
+      linhasLimpas.push(linha);
+      continue;
+    }
   }
   return linhasLimpas.join('\n').replace(/^\s*\n/gm, '').trim();
 }
@@ -3710,8 +3745,8 @@ function parsearQuestoesDoTexto(textoBruto){
     // explicação: tira a própria linha "RESPOSTA:/GABARITO:" e cabeçalhos
     // repetidos tipo "QUESTÃO Nº 1 – GABARITO COMENTADO" / "GABARITO — QUESTÃO 1"
     const explicacao = zonaExplicacao
-      .replace(/(?:RESPOSTA|GABARITO)\s*[:\-—]\s*[A-E]\b.*$/im, '')
-      .replace(/QUEST[ÃA]O\s*N?º?\s*\d+\s*[–\-—]\s*GABARITO.*$/gim, '')
+      .replace(/(?:RESPOSTA|GABARITO)\s*(?:[:\-—]|■)?\s*(?:ALTERNATIVA\s*)?[A-E]\b.*$/im, '')
+      .replace(/QUEST[ÃA]O\s*N?º?\s*\d+\s*[–\-—]\s*(?:GABARITO.*|CHAVE\s+DE\s+RESPOSTA)$/gim, '')
       .replace(/GABARITO\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
       .replace(/^Página \d+.*$/gim, '')
       .replace(/^\s*\n/gm, '')
@@ -3723,7 +3758,11 @@ function parsearQuestoesDoTexto(textoBruto){
         enunciado,
         alternativas: alternativas.join(' '),
         gabarito,
-        explicacao: explicacao || null
+        explicacao: explicacao || null,
+        // texto bruto (com os metadados tipo "BIBLIOGRAFIA: SANTOS...")
+        // que a limpeza do enunciado tira — precisa dele intacto pra
+        // identificar a bibliografia, senão a informação já foi descartada
+        textoBrutoParaBibliografia: (matchAlt ? zonaPergunta.slice(0, matchAlt.index) : zonaPergunta) + ' ' + zonaExplicacao
       });
     }
   }
@@ -4258,7 +4297,7 @@ async function enviarUpload(){
   }
 
   const bibliografias = resolverBibliografiaDoLote(
-    questoesParsed.map(q=>({explicacao:q.explicacao, enunciado:q.enunciado}))
+    questoesParsed.map(q=>({explicacao: q.explicacao, enunciado: q.textoBrutoParaBibliografia}))
   );
 
   if(bibliografias.some(b => !b)){
@@ -4290,7 +4329,7 @@ async function enviarUpload(){
       alternativas: q.alternativas,
       gabarito: q.gabarito,
       autor_id: usuarioAtual.id,
-      capitulo: extrairCapituloDoTexto(q.explicacao || q.enunciado) || null,
+      capitulo: extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null,
       tipo_questao: null,
       modulo_pscpp: bib.modulo,
       bibliografia_id: mapaBibliografiaId[bib.modulo+'|'+bib.titulo],
