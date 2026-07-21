@@ -4248,7 +4248,12 @@ async function enviarUpload(){
 
   const questoesParsed = parsearQuestoesDoTexto(textoBruto);
   if(!questoesParsed.length){
-    status.innerHTML = '<p style="color:#B00020">Nenhuma questão identificada nesse arquivo. Confere se o formato bate com o que o app já reconhece.</p>';
+    const trecho = (textoBruto || '').slice(0, 600);
+    status.innerHTML = `
+      <p style="color:#B00020">Nenhuma questão identificada nesse arquivo.</p>
+      <p style="color:#888;font-size:var(--fs-b);margin-top:8px">Isso é o que o app conseguiu ler do arquivo (primeiros 600 caracteres) — copia esse trecho e manda pro Claude, ajuda a entender o que aconteceu:</p>
+      <textarea readonly style="width:100%;height:140px;font-size:11px;font-family:monospace;margin-top:6px;padding:8px;border:0.5px solid #ddd;border-radius:6px;color:#444" onclick="this.select()">${escapeHtml(trecho) || '(vazio — o app não conseguiu ler nada do arquivo)'}</textarea>
+    `;
     return;
   }
 
