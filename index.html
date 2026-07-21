@@ -4313,6 +4313,27 @@ function limparArquivoSelecionado(){
   document.getElementById('upload-status').innerHTML = '';
 }
 
+let workerBlobUrlCache = null; // baixa o worker só uma vez, reaproveita depois
+async function obterWorkerSrcSeguro(){
+  if(workerBlobUrlCache) return workerBlobUrlCache;
+  // baixar o worker como blob local, em vez de apontar direto pra URL do
+  // cdnjs, evita um travamento silencioso conhecido do pdf.js quando o
+  // worker é carregado de um domínio diferente (sem erro nenhum, só trava
+  // pra sempre) — https://github.com/mozilla/pdf.js/issues/7304
+  const resposta = await fetch('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js');
+  if(!resposta.ok) throw new Error('não consegui baixar o worker do pdf.js (status ' + resposta.status + ')');
+  const codigo = await resposta.text();
+  workerBlobUrlCache = URL.createObjectURL(new Blob([codigo], {type:'application/javascript'}));
+  return workerBlobUrlCache;
+}
+
+function comLimiteDeTempo(promessa, segundos, mensagemErro){
+  return Promise.race([
+    promessa,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(mensagemErro)), segundos*1000))
+  ]);
+}
+
 async function extrairTextoDoArquivo(arquivo, aoProgredir){
   const arrayBuffer = await arquivo.arrayBuffer();
 
@@ -4332,8 +4353,12 @@ async function extrairTextoDoArquivo(arquivo, aoProgredir){
 
   try{
     if(typeof pdfjsLib === 'undefined') throw new Error('biblioteca de PDF não carregou');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = await comLimiteDeTempo(
+      obterWorkerSrcSeguro(), 15, 'Não consegui baixar o componente de leitura de PDF (demorou demais). Confere sua internet e tenta de novo.'
+    );
+    const pdf = await comLimiteDeTempo(
+      pdfjsLib.getDocument({data: arrayBuffer}).promise, 20, 'A leitura do PDF travou (demorou demais pra abrir). Tenta de novo, ou tenta outro arquivo.'
+    );
     let textoCompleto = '';
     for(let p=1; p<=pdf.numPages; p++){
       const pagina = await pdf.getPage(p);
