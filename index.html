@@ -680,17 +680,17 @@ input,select,textarea{font-family:inherit;font-size:16px}
         <input type="file" id="upload-arquivo" accept="application/pdf" class="hidden" onchange="atualizarNomeArquivoSelecionado()">
         <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 6px" onclick="document.getElementById('upload-arquivo').click()">Escolher arquivo</button>
         <div id="nome-arquivo-selecionado" style="color:#888;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhum arquivo selecionado</div>
-        <div id="upload-status"></div>
-        <button class="btn-primario" onclick="enviarUpload()">Extrair questões</button>
+        <div id="upload-status" style="margin:14px 0"></div>
+        <button class="btn-primario" onclick="enviarUpload()">Cadastrar questões</button>
       </div>
 
       <div id="secao-upload-planilha" class="hidden">
-        <p style="color:#666;font-size:var(--fs-d)">Preenche a planilha-modelo com as questões (sem precisar de IA, é só copiar e colar) e sobe ela aqui.</p>
+        <p style="color:#666;font-size:var(--fs-d)">Selecione a planilha com as questões que você deseja adicionar ao banco.</p>
         <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 10px;white-space:nowrap" onclick="baixarModeloPlanilha()">Baixar planilha-modelo</button>
         <input type="file" id="upload-planilha" accept=".xlsx" class="hidden" onchange="atualizarNomePlanilhaSelecionada()">
         <button type="button" class="btn-secundario" style="width:100%;margin-bottom:6px;white-space:nowrap" onclick="document.getElementById('upload-planilha').click()">Escolher planilha preenchida</button>
         <div id="nome-planilha-selecionada" style="color:#888;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhuma planilha selecionada</div>
-        <div id="upload-planilha-status"></div>
+        <div id="upload-planilha-status" style="margin:14px 0"></div>
         <button class="btn-primario" onclick="enviarPlanilha()">Cadastrar questões</button>
       </div>
 
@@ -860,7 +860,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 <div id="view-topico-detalhe" class="hidden">
   <div class="topbar-voltar">
-    <button onclick="fecharViewTopico()" style="color:#444;font-size:16px;cursor:pointer;background:none;border:none;padding:0">← Fórum</button>
+    <button onclick="fecharViewTopico()" style="color:#444;font-size:16px;cursor:pointer;background:none;border:none;padding:0">← <span id="texto-voltar-topico">Fórum</span></button>
   </div>
   <div id="conteudo-topico-detalhe" style="position:relative"></div>
 </div>
@@ -1635,8 +1635,9 @@ function mostrarCarregandoTopico(){
   const altura = modoTopicoModal ? '200px' : '100%';
   el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:${altura}"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
 }
-function abrirViewTopico(){
+function abrirViewTopico(rotuloVoltar){
   modoTopicoModal = false;
+  document.getElementById('texto-voltar-topico').textContent = rotuloVoltar || 'Fórum';
   document.getElementById('view-topico-detalhe').classList.remove('hidden');
 }
 function fecharViewTopico(){ document.getElementById('view-topico-detalhe').classList.add('hidden'); }
@@ -1773,7 +1774,7 @@ async function coletarNotificacaoRespostaDiscussao(){
   });
 }
 function abrirTopicoNotificado(topicoId){
-  abrirViewTopico();
+  abrirViewTopico('Início');
   mostrarCarregandoTopico();
   renderizarTopico(topicoId);
 }
@@ -2821,8 +2822,8 @@ async function renderizarDetalheQuestao(questaoId){
 
     ${!temTopicoAtivo ? `
     <div style="display:flex;gap:8px;margin-top:16px">
-      <button class="btn-secundario" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px" onclick="fecharTopicoAtual(); abrirModalNovoTopico('${questaoId}','erro')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Reportar erro</button>
-      <button class="btn-primario" style="flex:1" onclick="fecharTopicoAtual(); abrirModalNovoTopico('${questaoId}','geral')">Abrir discussão</button>
+      <button style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;font-size:var(--fs-e);border-radius:8px;background:#fff;color:#A32D2D;border:0.5px solid #F7C1C1;font-family:inherit;cursor:pointer" onclick="abrirModalNovoTopico('${questaoId}','erro')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Reportar erro</button>
+      <button class="btn-primario" style="flex:1" onclick="abrirModalNovoTopico('${questaoId}','geral')">Abrir discussão</button>
     </div>` : ''}
   `;
   document.getElementById(containerTopicoAtual()).innerHTML = html;
@@ -2830,7 +2831,7 @@ async function renderizarDetalheQuestao(questaoId){
 
 async function abrirDetalheQuestao(questaoId){
   mostrarCarregandoTopico();
-  abrirViewTopico();
+  abrirViewTopico('Desempenho');
   await renderizarDetalheQuestao(questaoId);
 }
 
@@ -3756,7 +3757,7 @@ function parsearQuestoesDoTexto(textoBruto){
       questoes.push({
         numero: parseInt(iniciosQuestao[i][1] || iniciosQuestao[i][2], 10),
         enunciado,
-        alternativas: alternativas.join(' '),
+        alternativas: alternativas.join('\n'),
         gabarito,
         explicacao: explicacao || null,
         // texto bruto (com os metadados tipo "BIBLIOGRAFIA: SANTOS...")
@@ -4139,7 +4140,7 @@ function renderizarNotasMetricas(elNotas, infoPorQuestao){
       const partes = [];
       if(info?.modulo_pscpp) partes.push(escapeHtml(info.modulo_pscpp));
       if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
-      if(info?.capitulo) partes.push('Cap. ' + escapeHtml(info.capitulo));
+      if(info?.capitulo) partes.push('Capítulo ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
       partes.push(new Date(n.criado_em).toLocaleDateString('pt-BR'));
       return `<div class="card-questao" style="cursor:pointer;position:relative" onclick="abrirDetalheQuestao('${n.questao_id}')">
         <button onclick="event.stopPropagation();excluirNotaDaListaMetricas('${n.id}')" style="position:absolute;top:10px;right:10px;background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px" title="Excluir nota">✕</button>
@@ -4272,7 +4273,7 @@ async function extrairTextoDoArquivo(arquivo){
 async function enviarUpload(){
   const input = document.getElementById('upload-arquivo');
   const status = document.getElementById('upload-status');
-  if(!input.files.length){ status.textContent = 'Escolha um PDF primeiro.'; return; }
+  if(!input.files.length){ status.innerHTML = '<p style="color:#B00020">Escolha um PDF primeiro.</p>'; return; }
 
   status.innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg><p style="text-align:center">Extraindo questões...</p>';
 
@@ -4438,7 +4439,7 @@ function limparPlanilhaSelecionada(){
 async function enviarPlanilha(){
   const input = document.getElementById('upload-planilha');
   const status = document.getElementById('upload-planilha-status');
-  if(!input.files.length){ status.textContent = 'Escolha uma planilha primeiro.'; return; }
+  if(!input.files.length){ status.innerHTML = '<p style="color:#B00020">Escolha uma planilha primeiro.</p>'; return; }
 
   status.innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg><p style="text-align:center">Lendo planilha...</p>';
 
