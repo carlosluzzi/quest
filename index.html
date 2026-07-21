@@ -1018,29 +1018,33 @@ function formatarEnunciado(texto){
     return `<div class="linha-numerada"><span class="linha-marcador">${marcador}</span><span class="linha-texto">${resto}</span></div>`;
   }
 
-  // 1. Assertivas romanas — aceita tanto "I)" quanto "I." como marcador,
+  // 1. Maiúsculas com ponto ou parêntese (correlação) – ancorado no "A." ou
+  // "A)" literal, pra não confundir com uma letra maiúscula solta que
+  // aparece por acaso no meio de uma frase normal (ex: "a coluna B." não é
+  // item de lista). Checado ANTES do caso de numeral romano de propósito:
+  // "C", "D", "L", "I", "V", "X", "M" também são letras romanas válidas, e
+  // sem essa ordem, uma lista "A) B) C)" acaba sendo mal interpretada
+  // quando chega no "C)" (que bateria como numeral romano C=100 sozinho)
+  const anchorA = escaped.match(/\bA[).]\s/);
+  if(anchorA){
+    const idx = anchorA.index;
+    const antes = escaped.slice(0, idx).trim();
+    const zonaLista = escaped.slice(idx);
+    const partesLista = zonaLista.split(/(?=\s?[A-F][).]\s)/).map(p=>p.trim()).filter(Boolean);
+    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[A-F][).]/))].join('');
+  }
+
+  // 2. Assertivas romanas — aceita tanto "I)" quanto "I." como marcador,
   // já que os PDFs reais usam os dois formatos dependendo da fonte
   if(/\s\(?[IVXLCDM]{1,6}[).]/.test(escaped)){
     const partes = escaped.split(/(?=\s\(?[IVXLCDM]{1,6}[).])/).map(p=>p.trim()).filter(Boolean);
     return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(?[IVXLCDM]{1,6}[).]/))].join('');
   }
 
-  // 2. Parênteses vazios (Certo/Errado, ordenação)
+  // 3. Parênteses vazios (Certo/Errado, ordenação)
   if(/\(\s*\)/.test(escaped)){
     const partes = escaped.split(/(?=\s\(\s*\))/).map(p=>p.trim()).filter(Boolean);
     return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(\s*\)/))].join('');
-  }
-
-  // 3. Maiúsculas com ponto (correlação) – ancorado no "A." literal, pra não
-  // confundir com uma letra maiúscula solta que aparece por acaso no meio de
-  // uma frase normal (ex: "a coluna B." não é item de lista)
-  const anchorA = escaped.match(/\bA\.\s/);
-  if(anchorA){
-    const idx = anchorA.index;
-    const antes = escaped.slice(0, idx).trim();
-    const zonaLista = escaped.slice(idx);
-    const partesLista = zonaLista.split(/(?=\s?[A-F]\.\s)/).map(p=>p.trim()).filter(Boolean);
-    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[A-F]\./))].join('');
   }
 
   // 4. Letras minúsculas com parêntese ("a) ... b) ... c) ...") — formato
@@ -1053,6 +1057,26 @@ function formatarEnunciado(texto){
     const zonaLista = escaped.slice(idx);
     const partesLista = zonaLista.split(/(?=\s?[a-f]\)\s)/).map(p=>p.trim()).filter(Boolean);
     return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[a-f]\)/))].join('');
+  }
+
+  // 5. Números arábicos soltos com ponto ou parêntese ("1. ... 2. ..." ou
+  // "1) ... 2) ...") — ancorado em "1)"/"1." seguido de "2)"/"2." (exige os
+  // dois em sequência, senão qualquer "1." solto no meio de uma frase
+  // normal ia disparar isso à toa)
+  if(/\b1[).]\s.*?\b2[).]\s/s.test(escaped)){
+    const anchor1 = escaped.match(/\b1[).]\s/);
+    const idx = anchor1.index;
+    const antes = escaped.slice(0, idx).trim();
+    const zonaLista = escaped.slice(idx);
+    const partesLista = zonaLista.split(/(?=\s?\d{1,2}[).]\s)/).map(p=>p.trim()).filter(Boolean);
+    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^\d{1,2}[).]/))].join('');
+  }
+
+  // 6. Marcador de bullet ("•") — qualquer ocorrência já é sinal suficiente,
+  // símbolo bem específico, sem risco de confundir com texto normal
+  if(/•/.test(escaped)){
+    const partes = escaped.split(/(?=•)/).map(p=>p.trim()).filter(Boolean);
+    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^•/))].join('');
   }
 
   return escaped;
