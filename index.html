@@ -174,11 +174,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .item-lista-modulo{padding:9px 8px;font-size:12px;line-height:1.3;color:#111;cursor:pointer;border-bottom:0.5px solid #eee}
 .item-lista-modulo:last-child{border-bottom:none}
 .item-lista-modulo:active{background:#F5F5F4}
-.card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0;white-space:pre-wrap}
+.card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0}
 .enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap}
 .linha-numerada{display:flex;gap:8px;margin-top:10px;align-items:flex-start}
 .linha-marcador{flex-shrink:0;font-weight:600;min-width:26px}
-.linha-texto{flex:1;white-space:pre-wrap}
+.linha-texto{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:break-word}
 .alternativa{display:block;width:100%;text-align:left;background:#F5F5F6;border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:var(--fs-d)}
 .alternativa.correta{background:#E1F5E1;color:#1B5E20;font-weight:600}
 .alternativa.errada-escolhida{background:#FBE1E1;color:#9E1B1B;font-weight:600}
@@ -1000,7 +1000,12 @@ function formatQuestaoCompleta(texto){
 //   3. Maiúsculas seguidas de ponto (A. B. C...) – questões de correlação
 function formatarEnunciado(texto){
   if(!texto) return '(enunciado vazio – questão pode estar malformada)';
-  const escaped = escapeHtml(texto);
+  // colapsa qualquer quebra de linha/espaço interno pra um espaço só, ANTES
+  // de dividir em itens — sem isso, o texto respeita as quebras de linha
+  // originais do PDF (que quebravam numa largura de página estreita),
+  // fazendo o parágrafo parecer cortado antes da borda da tela, em vez de
+  // fluir naturalmente até o final e quebrar só onde o navegador decidir
+  const escaped = escapeHtml(texto).replace(/\s+/g, ' ').trim();
 
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
   // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
@@ -1055,7 +1060,7 @@ function formatarEnunciado(texto){
 
 function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
-  const escaped = escapeHtml(alternativasTexto);
+  const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim();
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
     const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
@@ -2540,7 +2545,7 @@ function renderizarQuestaoAtual(){
         }else if(alt.letra === alternativaSelecionadaAtual){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
-        return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} onclick="selecionarAlternativa('${alt.letra}')"><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><strong style="flex-shrink:0">${alt.letra})</strong> <span>${alt.texto}</span></span></button>`;
+        return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} onclick="selecionarAlternativa('${alt.letra}')"><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><strong style="flex-shrink:0">${alt.letra})</strong> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
       }).join('')
     : '<p style="color:#B00020;font-size:var(--fs-d)">Alternativas não identificadas nessa questão (pode estar malformada) – considere excluir pra você.</p>';
 
@@ -2635,9 +2640,9 @@ function abrirExplicacaoQuestao(questaoId){
   if(!q){ el.innerHTML = ''; abrirModal('modal-explicacao-questao'); return; }
 
   if(q.explicacao_origem === 'fonte_original'){
-    el.innerHTML = `<div style="margin:0;line-height:1.5;color:#111;white-space:pre-wrap">${formatarEnunciado(q.explicacao)}</div>`;
+    el.innerHTML = `<div style="margin:0;line-height:1.5;color:#111">${formatarEnunciado(q.explicacao)}</div>`;
   }else if(q.explicacao_origem === 'gerada_web'){
-    el.innerHTML = `<div style="margin:0 0 10px 0;line-height:1.5;color:#111;white-space:pre-wrap">${formatarEnunciado(q.explicacao)}</div><span style="font-size:var(--fs-b);color:#888">(baseada em busca na web)</span>`;
+    el.innerHTML = `<div style="margin:0 0 10px 0;line-height:1.5;color:#111">${formatarEnunciado(q.explicacao)}</div><span style="font-size:var(--fs-b);color:#888">(baseada em busca na web)</span>`;
   }else{
     el.innerHTML = `<p style="margin:0 0 14px 0;color:#666">Ainda não geramos uma explicação pra essa questão.</p><button class="btn-primario" onclick="gerarExplicacao('${questaoId}')">Gerar explicação (busca na web)</button>`;
   }
