@@ -265,7 +265,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 <script>
@@ -4192,6 +4192,7 @@ function atualizarNomeArquivoSelecionado(){
 function limparArquivoSelecionado(){
   document.getElementById('upload-arquivo').value = '';
   atualizarNomeArquivoSelecionado();
+  document.getElementById('upload-status').innerHTML = '';
 }
 
 async function extrairTextoDoArquivo(arquivo){
@@ -4212,7 +4213,7 @@ async function extrairTextoDoArquivo(arquivo){
 
   try{
     if(typeof pdfjsLib === 'undefined') throw new Error('biblioteca de PDF não carregou');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
     let textoCompleto = '';
     for(let p=1; p<=pdf.numPages; p++){
@@ -4387,6 +4388,7 @@ function atualizarNomePlanilhaSelecionada(){
 function limparPlanilhaSelecionada(){
   document.getElementById('upload-planilha').value = '';
   atualizarNomePlanilhaSelecionada();
+  document.getElementById('upload-planilha-status').innerHTML = '';
 }
 
 async function enviarPlanilha(){
