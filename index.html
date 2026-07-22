@@ -934,7 +934,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-70';
+const VERSAO_APP = '2026-07-22-71';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2141,7 +2141,7 @@ function selecionarFiltroSelect(nivel, valor){
     elCap.disabled = true;
     if(valor){
       const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===valor);
-      elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>`<option value="${p.id}">${escapeHtml(p.titulo)}</option>`).join('');
+      elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>`<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`).join('');
       elPub.disabled = false;
     }else{
       elPub.innerHTML = '<option value="">Todas as publicações</option>';
@@ -3455,7 +3455,7 @@ function calcularEvolucaoSemanalModulo(){
   // geral da tela
   const corteEvolucao = Date.now() - evolucaoSemanasExibidas*7*24*60*60*1000;
   const mapaBibliografiaTitulo = {};
-  bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.titulo; });
+  bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
   const respostasDoModulo = metricasRespostasCache.filter(r => {
     const mod = metricasQuestoesInfoCache[r.questao_id]?.modulo_pscpp;
     if(modulosFiltradosMetricas.size > 0 && !modulosFiltradosMetricas.has(mod)) return false;
@@ -4438,7 +4438,7 @@ function renderizarMetricasPessoais(){
   // filtro de matéria (livro) também em cascata, junto com o de módulo
   if(materiasFiltradasMetricas.size > 0){
     const mapaBibliografiaTitulo = {};
-    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.titulo; });
+    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
     respostas = respostas.filter(r => {
       const bibId = infoPorQuestao[r.questao_id]?.bibliografia_id;
       return bibId && materiasFiltradasMetricas.has(mapaBibliografiaTitulo[bibId]);
@@ -4549,7 +4549,7 @@ function renderizarMetricasPessoais(){
   function linhaQuestaoDificil(p){
     const info = infoPorQuestao[p.questaoId];
     const mapaBibliografiaTitulo = {};
-    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.titulo; });
+    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
     const partes = [];
     if(info?.modulo_pscpp){
       const svg = modIconesCustomSvg[info.modulo_pscpp] ? modIconesCustomSvg[info.modulo_pscpp]('#111') : '';
@@ -4576,7 +4576,7 @@ function renderizarMetricasPessoais(){
 function renderizarNotasMetricas(elNotas, infoPorQuestao){
   if(metricasNotasCache.length){
     const mapaBibliografiaTitulo = {};
-    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.titulo; });
+    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
     elNotas.innerHTML = metricasNotasCache.map(n=>{
       const info = infoPorQuestao[n.questao_id];
       const partes = [];
@@ -5075,7 +5075,7 @@ function atualizarPublicacoesRevisao(idGrupo){
     return;
   }
   const opcoes = bibliografiaCache.filter(b => b.modulo_pscpp === modulo);
-  elPublicacao.innerHTML = '<option value="">Escolhe a publicação...</option>' + opcoes.map(b=>`<option value="${b.id}">${escapeHtml(b.titulo)}</option>`).join('');
+  elPublicacao.innerHTML = '<option value="">Escolhe a publicação...</option>' + opcoes.map(b=>`<option value="${b.id}">${escapeHtml(b.nome_exibicao || b.titulo)}</option>`).join('');
   elPublicacao.disabled = false;
 }
 
