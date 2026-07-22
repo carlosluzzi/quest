@@ -752,6 +752,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-perfil')">Fechar</button>
     <button class="btn-secundario" style="width:100%;color:#B00020;margin-top:10px" onclick="sair()">Sair da conta</button>
+    <div style="text-align:center;color:#bbb;font-size:var(--fs-a);margin-top:14px">versão do app: <span id="versao-app-exibida"></span></div>
   </div>
 </div>
 
@@ -922,7 +923,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-04';
+const VERSAO_APP = '2026-07-22-05';
 
 function verificarVersaoNova(){
   const versaoVista = localStorage.getItem('claudequest_versao_vista');
@@ -1325,6 +1326,7 @@ function atualizarAvatarUI(){
 
 function abrirModalPerfil(){
   atualizarAvatarUI();
+  document.getElementById('versao-app-exibida').textContent = VERSAO_APP;
   abrirModal('modal-perfil');
 }
 
