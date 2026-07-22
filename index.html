@@ -62,7 +62,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 }
 #metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:32px;min-height:32px;max-height:32px;padding-top:0;padding-bottom:0;box-sizing:border-box}
 #aba-quests .filter-select{height:32px;box-sizing:border-box}
-.filter-select{font-size:16px;padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
+.filter-select{font-size:var(--fs-e);padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
@@ -171,7 +171,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 /* --- Questão --- */
 .card-questao{background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:18px;margin-bottom:8px}
-.item-lista-modulo{padding:9px 8px;font-size:12px;line-height:1.3;color:#111;cursor:pointer;border-bottom:0.5px solid #eee}
+.item-lista-modulo{padding:9px 8px;font-size:var(--fs-e);line-height:1.3;color:#111;cursor:pointer;border-bottom:0.5px solid #eee}
 .item-lista-modulo:last-child{border-bottom:none}
 .item-lista-modulo:active{background:#F5F5F4}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0}
@@ -190,7 +190,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .info-icone svg{flex-shrink:0}
 
 /* --- Placar --- */
-.linha-placar{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #EEE}
 
 /* --- Modal genérico --- */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
@@ -418,9 +417,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <p>Acompanhe seu desempenho por módulo, por tipo de questão, por publicação – e veja direto as questões que você mais erra, seus favoritos e suas notas escritas, tudo num só lugar.</p>
     </div>
     <div class="onboarding-step" data-step="5">
-      <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#D97757" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-      <h1>Placar entre amigos</h1>
-      <p>Vocês veem, lado a lado, quantas questões cada um respondeu e a % de acerto – sem ranking, só os números.</p>
+      <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#D97757" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></div>
+      <h1>No computador, arrasta e solta</h1>
+      <p>Pra adicionar questões, não precisa nem clicar em "Escolher arquivo" — em qualquer tela do app, é só arrastar o PDF ou a planilha direto pra cima da janela e soltar. Ele já reconhece o tipo de arquivo e leva pra tela certa, com tudo pré-carregado.</p>
     </div>
   </div>
 
@@ -466,13 +465,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
     </div>
 
     <div id="container-notificacoes-ordenadas"></div>
-    <div class="card-inicio">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-weight:600;font-size:var(--fs-e)">Placar entre amigos</div>
-        <span class="info-icone" onclick="abrirModal('modal-info-wilson')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
-      </div>
-      <div id="lista-placar"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>
-    </div>
     <div style="height:48px"></div>
   </div>
 
@@ -574,13 +566,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
     </div>
 
     <div id="metricas-conteudo" class="hidden">
-    <div class="section-title" style="margin-top:0"><span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></span>Seu desempenho</div>
-    <div style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px" onclick="toggleFiltroModulo()">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
       <span style="font-size:var(--fs-d);font-weight:600;color:#111">Módulos</span>
-      <span class="chev" id="chev-filtro-modulo" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
     </div>
-    <div id="conteudo-filtro-modulo" class="conteudo-colapsavel" style="margin-bottom:12px">
+    <div id="conteudo-filtro-modulo" class="conteudo-colapsavel open" style="margin-bottom:12px">
       <div style="display:flex;gap:8px">
         <div style="flex:1;min-width:0">
           <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis</div>
@@ -656,7 +646,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div class="section-title"><span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>Por publicação</div>
     <div id="lista-metricas-publicacao"></div>
 
-    <div class="section-title"><span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>Suas questões mais difíceis</div>
+    <div class="section-title"><span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>Suas questões mais difíceis <span class="info-icone" onclick="abrirModal('modal-info-wilson')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span></div>
     <div id="lista-metricas-piores"></div>
 
     <div class="section-title"><span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></span>Suas notas</div>
@@ -1616,7 +1606,6 @@ async function mostrarAppShell(){
   await Promise.all([
     carregarBibliografia(),
     verificarCadernoEmAndamento(),
-    carregarPlacar(),
     atualizarNotificacoesForum(),
     verificarNotificacoesExtras(),
     carregarTotalUsuarios()
@@ -3255,17 +3244,6 @@ async function executarAnulacaoQuestao(){
 /* ============================================================
    PLACAR
    ============================================================ */
-async function carregarPlacar(){
-  const {data, error} = await sb.rpc('get_placar');
-  const el = document.getElementById('lista-placar');
-  if(error){ el.innerHTML = '<p style="color:#B00020">Erro ao carregar placar.</p>'; return; }
-  el.innerHTML = (data||[]).map(p=>`
-    <div class="linha-placar">
-      <span>${escapeHtml(p.nome)}</span>
-      <span>${p.total_respondidas} respondidas · ${p.pct_acerto}%</span>
-    </div>`).join('');
-}
-
 let metricasFiltroDias = 30; // 30 dias é o padrão ao entrar na aba
 let metricasDataInicio = null; // filtro customizado, tem prioridade sobre metricasFiltroDias quando preenchido
 let metricasDataFim = null;
@@ -3514,7 +3492,7 @@ function linhaComparativaModulo(nome, pctAcerto, pctRecuperacao, pctRetencao, ac
   const textoInfo = linhasInfo.map(l=>`<div>${escapeHtml(l)}</div>`).join('');
   return `
     <div style="display:flex;gap:12px;align-items:center;padding:10px 0;cursor:pointer" onclick="mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)">
-      <div style="width:112px;flex-shrink:0;font-size:13px;font-weight:600;color:#111;line-height:1.25;min-height:33px;display:flex;align-items:center">${escapeHtml(nome)}</div>
+      <div style="width:112px;flex-shrink:0;font-size:var(--fs-d);font-weight:600;color:#111;line-height:1.25;min-height:33px;display:flex;align-items:center">${escapeHtml(nome)}</div>
       <div style="flex:1">
         ${barraFina(pctAcerto, 100, '#1BAF7A', '%')}
         ${pctRecuperacao !== null ? barraFina(pctRecuperacao, 100, '#EDA100', '%') : barraSemDado()}
@@ -3545,7 +3523,7 @@ window.addEventListener('click', (e)=>{
   if(popup && e.target !== popup) popup.style.display = 'none';
 });
 function legendaBarrasModulo(){
-  return `<div style="display:flex;gap:14px;margin-bottom:8px;font-size:11px;color:#888">
+  return `<div style="display:flex;gap:14px;margin-bottom:8px;font-size:var(--fs-d);color:#888">
     <span><span style="display:inline-block;width:8px;height:8px;background:#1BAF7A;border-radius:2px;margin-right:4px"></span>% de acerto</span>
     <span><span style="display:inline-block;width:8px;height:8px;background:#EDA100;border-radius:2px;margin-right:4px"></span>% de recuperação</span>
     <span><span style="display:inline-block;width:8px;height:8px;background:#4A3AA7;border-radius:2px;margin-right:4px"></span>% de retenção</span>
@@ -4274,47 +4252,10 @@ function renderizarMetricasPessoais(){
   renderizarGraficoEvolucao();
 
   /* ---- por tipo de questão ---- */
-  const statsPorTipo = {};
-  respostas.forEach(r=>{
-    const tipo = infoPorQuestao[r.questao_id]?.tipo_questao || 'Sem tipo';
-    if(!statsPorTipo[tipo]) statsPorTipo[tipo] = {total:0, acertos:0};
-    statsPorTipo[tipo].total++;
-    if(r.correta) statsPorTipo[tipo].acertos++;
-  });
-  const linhasTipo = Object.entries(statsPorTipo).map(([tipo, s])=>({
-    tipo, total: s.total, acertos: s.acertos, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
-  })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
-  const maiorTotalTipo = Math.max(...linhasTipo.map(l=>l.total), 1);
-  elTipo.innerHTML = `<div class="card-questao">
-    ${legendaBarras()}
-    ${linhasTipo.map(l=>{
-      const cor = l.pctAcerto >= 70 ? '#8FA878' : l.pctAcerto >= 50 ? '#C9A165' : '#C48787';
-      return linhaComparativa(escapeHtml(l.tipo), l.acertos, l.total, l.pctAcerto, maiorTotalTipo, cor);
-    }).join('')}
-  </div>`;
+  elTipo.innerHTML = '<p style="color:#888;font-size:var(--fs-d)">A ser implementado.</p>';
 
   /* ---- por publicação ---- */
-  const mapaBibliografia = {};
-  bibliografiaCache.forEach(b=>{ mapaBibliografia[b.id] = b.titulo; });
-  const statsPorPublicacao = {};
-  respostas.forEach(r=>{
-    const bibId = infoPorQuestao[r.questao_id]?.bibliografia_id;
-    const titulo = bibId ? (mapaBibliografia[bibId] || 'Publicação não identificada') : 'Sem publicação identificada';
-    if(!statsPorPublicacao[titulo]) statsPorPublicacao[titulo] = {total:0, acertos:0};
-    statsPorPublicacao[titulo].total++;
-    if(r.correta) statsPorPublicacao[titulo].acertos++;
-  });
-  const linhasPublicacao = Object.entries(statsPorPublicacao).map(([titulo, s])=>({
-    titulo, total: s.total, acertos: s.acertos, pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0
-  })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
-  const maiorTotalPublicacao = Math.max(...linhasPublicacao.map(l=>l.total), 1);
-  elPublicacao.innerHTML = `<div class="card-questao">
-    ${legendaBarras()}
-    ${linhasPublicacao.map(l=>{
-      const cor = l.pctAcerto >= 70 ? '#8FA878' : l.pctAcerto >= 50 ? '#C9A165' : '#C48787';
-      return linhaComparativa(escapeHtml(l.titulo), l.acertos, l.total, l.pctAcerto, maiorTotalPublicacao, cor);
-    }).join('')}
-  </div>`;
+  elPublicacao.innerHTML = '<p style="color:#888;font-size:var(--fs-d)">A ser implementado.</p>';
 
   /* ---- suas questões mais difíceis (Wilson Score, por questão individual) ---- */
   const statsPorQuestao = {};
@@ -4331,7 +4272,7 @@ function renderizarMetricasPessoais(){
 
   function linhaQuestaoDificil(p){
     const info = infoPorQuestao[p.questaoId];
-    return `<div style="cursor:pointer;padding:12px 0;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${p.questaoId}')">
+    return `<div style="cursor:pointer;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${p.questaoId}')">
       ${info ? tagModulo(info.modulo_pscpp) : ''}
       <p style="font-size:var(--fs-d);margin-top:6px;color:#111">${escapeHtml((info?.enunciado||'').slice(0,100))}...</p>
       <div style="color:#888;font-size:var(--fs-b);margin-top:6px">${p.erros} ${p.erros===1?'erro':'erros'} em ${p.tentativas} ${p.tentativas===1?'tentativa':'tentativas'}</div>
@@ -4339,8 +4280,9 @@ function renderizarMetricasPessoais(){
   }
 
   elPiores.innerHTML = piores.length
-    ? `<div class="card-questao">${piores.map(linhaQuestaoDificil).join('')}</div>`
+    ? montarCarrosselCadernos(piores.map(linhaQuestaoDificil), 'carrossel-dificeis')
     : '<p style="color:#888;font-size:var(--fs-d)">Nenhum erro registrado nesse período – mandou bem!</p>';
+  if(piores.length > 5) initCarrosselCaderno('carrossel-dificeis', Math.ceil(piores.length/5));
 
   /* ---- suas notas (atalho de revisão) — não depende do filtro de período ---- */
   renderizarNotasMetricas(elNotas, infoPorQuestao);
