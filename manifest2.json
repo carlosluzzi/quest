@@ -1,0 +1,15 @@
+{
+  "name": "Pilotquest",
+  "short_name": "Pilotquest",
+  "description": "Banco de questões colaborativo pro PSCPP",
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": ["standalone"],
+  "background_color": "#FBFBFA",
+  "theme_color": "#B23A34",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "assets2/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets2/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
