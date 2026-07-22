@@ -3728,7 +3728,7 @@ function encontrarIniciosQuestao(texto){
 // sozinho, com o valor em linha(s) separada(s) embaixo (às vezes com mais
 // de uma linha, tipo uma citação de bibliografia que quebra) — os formatos
 // vistos até agora nos PDFs reais
-const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
+const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO(\s+PSCPP)?)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
 const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*(:|\s{2,})/i;
 function limparEnunciado(texto){
   const linhas = texto.split('\n');
@@ -3761,16 +3761,22 @@ function limparEnunciado(texto){
       if(!linhaLimpa) continue; // ainda não chegou o valor, ignora linha em branco
       // label quebrado em 2 linhas físicas (ex: "CARACTERISTICA" numa
       // linha, "DO PSCPP" na de baixo) — ainda é label, não é o valor
-      if(/^(DO\s+PSCPP|REPRODUZIDA)\s*:?\s*$/i.test(linhaLimpa)) continue;
+      if(/^(DO\s+PSCPP|PSCPP|REPRODUZIDA)\s*:?\s*$/i.test(linhaLimpa)) continue;
       modo = 'pulando_valor_multi'; // achou a 1ª linha do valor
       linhasPuladasNoValor = 1;
       continue;
     }
     if(modo === 'pulando_valor_multi'){
       if(!linhaLimpa){ modo = 'normal'; continue; } // linha em branco = fim do valor
-      if(linhasPuladasNoValor >= 1){
-        // trava de segurança: já pulou 1 linha de valor e não achou linha em
-        // branco — essa linha aqui já é conteúdo real, não é mais metadado
+      // linha terminando em ano de publicação (ex: "Butterworth-Heinemann,
+      // 2012.") é sinal forte de que ainda é parte de uma citação
+      // bibliográfica quebrada em 2+ linhas, não conteúdo novo — nesse
+      // caso continua pulando mesmo já tendo passado da 1ª linha
+      const pareceFimDeCitacao = /\b(19|20)\d{2}\.?\s*$/.test(linhaLimpa);
+      if(linhasPuladasNoValor >= 1 && !pareceFimDeCitacao){
+        // trava de segurança: já pulou 1 linha de valor, não achou linha em
+        // branco, e essa linha não parece continuação de citação — trata
+        // como conteúdo real, não é mais metadado
         modo = 'normal';
         linhasLimpas.push(linha);
         continue;
@@ -3779,16 +3785,25 @@ function limparEnunciado(texto){
       continue; // ainda dentro do valor (pode ter mais de 1 linha), continua pulando
     }
     if(modo === 'pulando_valor_colado'){
-      // valor já começou colado no "label:" — só aceita NO MÁXIMO uma
-      // linha extra de continuação (e só se ela parecer mesmo continuação,
-      // começando em minúscula — enunciado de verdade começa maiúsculo)
+      // valor já começou colado no "label:" — aceita continuação se a
+      // linha parecer mesmo parte do valor: começa em minúscula (frase
+      // cortada no meio), OU termina em ano de publicação (citação
+      // bibliográfica quebrada, tipo "...Oxford: Elsevier\nButterworth-
+      // Heinemann, 2012." — aqui "Butterworth" começa maiúscula, mas ainda
+      // é parte da mesma citação, não conteúdo novo)
       modo = 'normal';
-      if(linhaLimpa && !/^[A-ZÀ-Ú]/.test(linhaLimpa)) continue;
+      const pareceContinuacao = linhaLimpa && (!/^[A-ZÀ-Ú]/.test(linhaLimpa) || /\b(19|20)\d{2}\.?\s*$/.test(linhaLimpa));
+      if(pareceContinuacao) continue;
       linhasLimpas.push(linha);
       continue;
     }
   }
-  return linhasLimpas.join('\n').replace(/^\s*\n/gm, '').replace(/[ \t]{2,}/g, ' ').replace(/ +([,.;:)])/g, '$1').trim();
+  return linhasLimpas.join('\n')
+    .replace(/^\s*\n/gm, '')
+    .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n') // letra isolada que "quebrou" de uma palavra (artefato do pdf.js), não é palavra válida sozinha em português
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/ +([,.;:)])/g, '$1')
+    .trim();
 }
 
 function parsearQuestoesDoTexto(textoBruto){
@@ -3826,6 +3841,7 @@ function parsearQuestoesDoTexto(textoBruto){
       // RESPOSTA" ainda ficam para trás, coladinhos)
       .map(a => a
         .replace(/\s*PSCPP\s*[-–—].*$/i, '')
+        .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/, '')
         .replace(/\s*Pagina\s+\d+.*$/i, '')
         .replace(/\s*Página\s+\d+.*$/i, '')
         .replace(/\s*QUEST[ÃA]O\s*N?º?\s*\d+\s*[-–—]\s*CHAVE\s+DE\s+RESPOSTA.*$/i, '')
@@ -3842,6 +3858,7 @@ function parsearQuestoesDoTexto(textoBruto){
       .replace(/GABARITO\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
       .replace(/^Página \d+.*$/gim, '')
       .replace(/^\s*\n/gm, '')
+      .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n')
       .replace(/[ \t]{2,}/g, ' ')
       .replace(/ +([,.;:)])/g, '$1')
       .trim();
@@ -3908,6 +3925,13 @@ function parsearPorRespostaComoCorte(texto){
       .split(/\n\s*(?=[a-eA-E]\)\s)/)
       .map(a => a.trim().replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1'))
       .filter(a => /^[a-eA-E]\)/.test(a))
+      .map(a => a
+        .replace(/\s*PSCPP\s*[-–—].*$/i, '')
+        .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/, '')
+        .replace(/\s*Pagina\s+\d+.*$/i, '')
+        .replace(/\s*Página\s+\d+.*$/i, '')
+        .trim()
+      )
       .map((a,idx) => `(${String.fromCharCode(97+idx)}) ${a.replace(/^[a-eA-E]\)\s*/,'')}`);
 
     if(enunciado && alternativas.length >= 4 && gabarito){
