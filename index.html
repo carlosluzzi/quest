@@ -933,7 +933,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-59';
+const VERSAO_APP = '2026-07-22-60';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3859,8 +3859,8 @@ function encontrarIniciosQuestao(texto){
 // sozinho, com o valor em linha(s) separada(s) embaixo (às vezes com mais
 // de uma linha, tipo uma citação de bibliografia que quebra) — os formatos
 // vistos até agora nos PDFs reais
-const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO(\s+PSCPP)?)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
-const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*(:|\s{2,})/i;
+const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|CARACTER[ÍI]STICA(\s+DO(\s+PSCPP)?)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
+const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*(:|\s{2,})/i;
 // palavras curtas comuns do português que não podem ser confundidas com
 // subscrito, mesmo aparecendo isoladas numa "linha" quebrada
 const PALAVRAS_CURTAS_COMUNS_SUBSCRITO = new Set(['de','da','do','em','um','uma','no','na','ao','os','as','eu','ou','se','me','te','lhe','há','já','só','aí']);
@@ -3953,13 +3953,16 @@ function limparEnunciado(textoOriginal){
     }
     if(modo === 'pulando_valor_multi'){
       if(!linhaLimpa){ modo = 'normal'; continue; } // linha em branco = fim do valor
-      // 2 sinais de que a linha ainda é continuação do valor (não conteúdo
+      // 3 sinais de que a linha ainda é continuação do valor (não conteúdo
       // novo): termina em ano de publicação (citação bibliográfica quebrada,
       // ex: "Butterworth-Heinemann, 2012."), OU começa em minúscula (frase
-      // cortada no meio, ex: "...ataque" numa linha, "efetivo." na de baixo)
+      // cortada no meio, ex: "...ataque" numa linha, "efetivo." na de baixo),
+      // OU fecha um parêntese logo no início (ex: "Architecture Series)."
+      // fechando o "(Principles of Naval" que ficou aberto na linha anterior)
       const pareceFimDeCitacao = /\b(19|20)\d{2}\.?\s*$/.test(linhaLimpa);
       const comecaMinuscula = /^[a-zà-ÿ]/.test(linhaLimpa);
-      if(linhasPuladasNoValor >= 1 && !pareceFimDeCitacao && !comecaMinuscula){
+      const fechaParenteseNoInicio = /^[^()]{0,30}\)/.test(linhaLimpa);
+      if(linhasPuladasNoValor >= 1 && !pareceFimDeCitacao && !comecaMinuscula && !fechaParenteseNoInicio){
         // trava de segurança: já pulou 1 linha de valor, não achou linha em
         // branco, e essa linha não parece continuação — trata como
         // conteúdo real, não é mais metadado
@@ -3978,7 +3981,7 @@ function limparEnunciado(textoOriginal){
       // Heinemann, 2012." — aqui "Butterworth" começa maiúscula, mas ainda
       // é parte da mesma citação, não conteúdo novo)
       modo = 'normal';
-      const pareceContinuacao = linhaLimpa && (!/^[A-ZÀ-Ú]/.test(linhaLimpa) || /\b(19|20)\d{2}\.?\s*$/.test(linhaLimpa));
+      const pareceContinuacao = linhaLimpa && (!/^[A-ZÀ-Ú]/.test(linhaLimpa) || /\b(19|20)\d{2}\.?\s*$/.test(linhaLimpa) || /^[^()]{0,30}\)/.test(linhaLimpa));
       if(pareceContinuacao) continue;
       linhasLimpas.push(linha);
       continue;
