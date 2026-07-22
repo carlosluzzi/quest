@@ -9,8 +9,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Claudequest">
 <link rel="icon" href="assets2/favicon.png" type="image/png">
-<link rel="apple-touch-icon" href="assets2/icon-180.png">
-<link rel="apple-touch-icon-precomposed" href="assets2/icon-180.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets2/icon-180.png">
+<link rel="apple-touch-icon-precomposed" sizes="180x180" href="assets2/icon-180.png">
 <title>Claudequest</title>
 <meta property="og:title" content="Claudequest">
 <meta property="og:description" content="Banco de questões colaborativo pra estudar juntos pro PSCPP.">
@@ -934,7 +934,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-61';
+const VERSAO_APP = '2026-07-22-62';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
