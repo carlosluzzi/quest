@@ -922,7 +922,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-03';
+const VERSAO_APP = '2026-07-22-04';
 
 function verificarVersaoNova(){
   const versaoVista = localStorage.getItem('claudequest_versao_vista');
@@ -1013,7 +1013,7 @@ function formatarEnunciado(texto){
   // fazendo o parágrafo parecer cortado antes da borda da tela, em vez de
   // fluir naturalmente até o final e quebrar só onde o navegador decidir
   const escaped = escapeHtml(texto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-ú]+)_([A-Za-z]\d{1,2})\b/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0") em subscrito visual de verdade
+    .replace(/([A-Za-zÀ-ú]+)_([A-Za-z0-9∞]{1,3})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
   // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
@@ -1022,8 +1022,17 @@ function formatarEnunciado(texto){
     const m = parte.match(regexMarcador);
     if(!m) return `<div class="enunciado-linha">${parte}</div>`;
     const marcador = m[0].trim();
-    const resto = parte.slice(m[0].length).trim();
-    return `<div class="linha-numerada"><span class="linha-marcador">${marcador}</span><span class="linha-texto">${resto}</span></div>`;
+    let resto = parte.slice(m[0].length).trim();
+    // separa a frase de instrução final ("Assinale a alternativa...") do
+    // último item numerado, quando ela vem grudada sem marcador próprio —
+    // ela não é parte do item, é a instrução da questão inteira
+    const anchorInstrucao = resto.match(/\s(Assinale a alternativa|Marque a alternativa|Indique a alternativa)/i);
+    let instrucaoSeparada = '';
+    if(anchorInstrucao){
+      instrucaoSeparada = `<div class="enunciado-linha">${resto.slice(anchorInstrucao.index).trim()}</div>`;
+      resto = resto.slice(0, anchorInstrucao.index).trim();
+    }
+    return `<div class="linha-numerada"><span class="linha-marcador">${marcador}</span><span class="linha-texto">${resto}</span></div>${instrucaoSeparada}`;
   }
 
   // 1. Maiúsculas com ponto ou parêntese (correlação) – ancorado no "A." ou
@@ -1093,7 +1102,7 @@ function formatarEnunciado(texto){
 function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-ú]+)_([A-Za-z]\d{1,2})\b/g, '$1<sub>$2</sub>');
+    .replace(/([A-Za-zÀ-ú]+)_([A-Za-z0-9∞]{1,3})/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
     const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
@@ -3750,11 +3759,25 @@ function encontrarIniciosQuestao(texto){
 // vistos até agora nos PDFs reais
 const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO(\s+PSCPP)?)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
 const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*(:|\s{2,})/i;
+// palavras curtas comuns do português que não podem ser confundidas com
+// subscrito, mesmo aparecendo isoladas numa "linha" quebrada
+const PALAVRAS_CURTAS_COMUNS_SUBSCRITO = new Set(['de','da','do','em','um','uma','no','na','ao','os','as','eu','ou','se','me','te','lhe','há','já','só','aí']);
+// junta de volta um subscrito de fórmula física/matemática que quebrou em
+// "linhas" separadas na extração do PDF (a posição vertical menor do
+// subscrito confunde o pdf.js) — cobre letra sozinha (C_R), letra+número
+// (C_D0), 2 letras (C_Th) e símbolo (V_∞). Marca com "_" pra depois virar
+// subscrito visual de verdade na hora de exibir
+function mesclarSubscritosQuebrados(texto){
+  return texto.replace(/\b([A-Za-z])\n\s*([A-Za-z0-9∞]{1,3})\s*\n/g, (m, principal, candidato) => {
+    return PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase()) ? m : `${principal}_${candidato}\n`;
+  });
+}
+
 function limparEnunciado(textoOriginal){
   // insere espaço quando um marcador de lista (I. II. a) A. etc.) vem
   // colado direto no texto seguinte, sem espaço nenhum — acontece às
   // vezes na extração do PDF
-  const texto = textoOriginal.replace(/\b([IVXLCDM]{1,6}[).]|[a-eA-E][).])([A-Za-zÀ-ÿ])/g, '$1 $2');
+  const texto = mesclarSubscritosQuebrados(textoOriginal).replace(/\b([IVXLCDM]{1,6}[).]|[a-eA-E][).])([A-Za-zÀ-ÿ])/g, '$1 $2');
   const linhas = texto.split('\n');
   const linhasLimpas = [];
   // normal | esperando_valor_solto (label sozinho, valor pode ter várias
@@ -3822,10 +3845,9 @@ function limparEnunciado(textoOriginal){
       continue;
     }
   }
-  return linhasLimpas.join('\n')
+  return mesclarSubscritosQuebrados(linhasLimpas.join('\n'))
     .replace(/^\s*\n/gm, '')
     .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n') // letra isolada que "quebrou" de uma palavra (artefato do pdf.js), não é palavra válida sozinha em português
-    .replace(/([A-Za-z])\n\s*([A-Za-z]\d{1,2})\s*\n/g, '$1_$2\n') // subscrito tipo "C" + "D0" (variável física) que quebrou de linha por causa da posição vertical menor do subscrito
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/ +([,.;:)])/g, '$1')
     .replace(/\( +/g, '(')
@@ -3859,7 +3881,7 @@ function parsearQuestoesDoTexto(textoBruto){
     const alternativas = zonaPergunta
       .slice(matchAlt ? matchAlt.index : zonaPergunta.length)
       .split(/\n\s*(?=[a-eA-E]\)\s)/)
-      .map(a => a.trim().replace(/([A-Za-z])\n\s*([A-Za-z]\d{1,2})\s*\n/g, '$1_$2\n').replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1'))
+      .map(a => mesclarSubscritosQuebrados(a.trim()).replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1'))
       .filter(a => /^[a-eA-E]\)/.test(a))
       // remove ruído de rodapé de página que pode grudar na última
       // alternativa (o corte da zona da pergunta só para no "GABARITO",
@@ -3878,7 +3900,7 @@ function parsearQuestoesDoTexto(textoBruto){
 
     // explicação: tira a própria linha "RESPOSTA:/GABARITO:" e cabeçalhos
     // repetidos tipo "QUESTÃO Nº 1 – GABARITO COMENTADO" / "GABARITO — QUESTÃO 1"
-    const explicacao = zonaExplicacao
+    const explicacao = mesclarSubscritosQuebrados(zonaExplicacao)
       .replace(/\b([IVXLCDM]{1,6}[).]|[a-eA-E][).])([A-Za-zÀ-ÿ])/g, '$1 $2')
       .replace(/(?:RESPOSTA|GABARITO)\b\s*\S{0,4}\s*(?:ALTERNATIVA\s*)?[A-E]\b.*$/im, '')
       .replace(/QUEST[ÃA]O\s*N?º?\s*\d+\s*[–\-—]\s*(?:GABARITO.*|CHAVE\s+DE\s+RESPOSTA)$/gim, '')
@@ -3886,8 +3908,7 @@ function parsearQuestoesDoTexto(textoBruto){
       .replace(/^Página \d+.*$/gim, '')
       .replace(/^\s*\n/gm, '')
       .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n')
-      .replace(/([A-Za-z])\n\s*([A-Za-z]\d{1,2})\s*\n/g, '$1_$2\n')
-      .replace(/[ \t]{2,}/g, ' ')
+            .replace(/[ \t]{2,}/g, ' ')
       .replace(/ +([,.;:)])/g, '$1')
       .trim();
 
@@ -3951,7 +3972,7 @@ function parsearPorRespostaComoCorte(texto){
 
     const alternativas = textoComAlternativas
       .split(/\n\s*(?=[a-eA-E]\)\s)/)
-      .map(a => a.trim().replace(/([A-Za-z])\n\s*([A-Za-z]\d{1,2})\s*\n/g, '$1_$2\n').replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1').replace(/\( +/g, '('))
+      .map(a => mesclarSubscritosQuebrados(a.trim()).replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1').replace(/\( +/g, '('))
       .filter(a => /^[a-eA-E]\)/.test(a))
       .map(a => a
         .replace(/\s*PSCPP\s*[-–—].*$/i, '')
