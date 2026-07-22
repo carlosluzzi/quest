@@ -933,7 +933,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-56';
+const VERSAO_APP = '2026-07-22-57';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1069,7 +1069,7 @@ function formatarEnunciado(texto){
   // "C", "D", "L", "I", "V", "X", "M" também são letras romanas válidas, e
   // sem essa ordem, uma lista "A) B) C)" acaba sendo mal interpretada
   // quando chega no "C)" (que bateria como numeral romano C=100 sozinho)
-  const anchorA = escaped.match(/\bA[).]\s/);
+  const anchorA = /\bA[).]\s/.test(escaped) && /\bB[).]\s/.test(escaped) ? escaped.match(/\bA[).]\s/) : null;
   if(anchorA){
     const idx = anchorA.index;
     const antes = escaped.slice(0, idx).trim();
@@ -1086,8 +1086,8 @@ function formatarEnunciado(texto){
   // numerais romanos válidos sozinhos — D (drag), L (lift), M (moment), C
   // (coeficiente), V (velocidade), X — que aparecem soltas no meio de
   // frases normais seguidas de ponto
-  if(/\bI\s?[).\-–—‒]\s/.test(escaped) && /\s\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/.test(escaped)){
-    const partes = escaped.split(/(?<!\se)(?<!,)(?<![Aa]penas)(?<![Ss]omente)(?<!\sSó)(?=\s\(?[IVXLCDM]{1,6}\s?[).\-–—‒])/).map(p=>p.trim()).filter(Boolean);
+  if(/\bI\s?[).\-–—‒]\s?/.test(escaped) && /\s\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/.test(escaped)){
+    const partes = escaped.split(/(?<!\se)(?<!,)(?<![Aa]penas)(?<![Ss]omente)(?<!\sSó)(?<![Gg]abarito:)(?<![Gg]abarito: )(?=\s\(?[IVXLCDM]{1,6}\s?[).\-–—‒])/).map(p=>p.trim()).filter(Boolean);
     const normalizarMarcadorRomano = t => t.replace(/^(\(?[IVXLCDM]{1,6})\s?[-–—‒]\s*/, '$1. ');
     return [normalizarMarcadorRomano(partes[0]||''), ...partes.slice(1).map(p=>linhaMarcada(p, /^\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/))].join('');
   }
