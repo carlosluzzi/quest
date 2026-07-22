@@ -933,7 +933,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-47';
+const VERSAO_APP = '2026-07-22-49';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1045,7 +1045,7 @@ function formatarEnunciado(texto){
   function linhaMarcada(parte, regexMarcador){
     const m = parte.match(regexMarcador);
     if(!m) return `<div class="enunciado-linha">${parte}</div>`;
-    const marcador = m[0].trim();
+    const marcador = m[0].trim().replace(/\s*[-–—‒]\s*$/, '.'); // padroniza traço pro formato ponto (só afeta numerais romanos com traço, tipo "I —")
     let resto = parte.slice(m[0].length).trim();
     // várias frases marcam o início de uma seção nova dentro da
     // explicação (fonte, texto original, análise, dica) — quando vêm
@@ -1078,16 +1078,18 @@ function formatarEnunciado(texto){
     return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[A-F][).]/))].join('');
   }
 
-  // 2. Assertivas romanas — aceita tanto "I)" quanto "I." como marcador,
-  // já que os PDFs reais usam os dois formatos dependendo da fonte.
-  // Ancorado no "I." ou "I)" literal (o primeiro item de toda lista romana
-  // de verdade), pra não confundir com letras físicas comuns em textos de
-  // hidrodinâmica que também são numerais romanos válidos sozinhos — D
-  // (drag), L (lift), M (moment), C (coeficiente), V (velocidade), X — que
-  // aparecem soltas no meio de frases normais seguidas de ponto
-  if(/\bI[).]\s/.test(escaped) && /\s\(?[IVXLCDM]{1,6}[).]/.test(escaped)){
-    const partes = escaped.split(/(?=\s\(?[IVXLCDM]{1,6}[).])/).map(p=>p.trim()).filter(Boolean);
-    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(?[IVXLCDM]{1,6}[).]/))].join('');
+  // 2. Assertivas romanas — aceita "I)", "I.", ou "I —"/"I -"/"I –" (traço,
+  // com ou sem espaço antes, dependendo da fonte do PDF) como marcador, e
+  // padroniza tudo pro formato ponto na hora de exibir, que é o padrão do
+  // resto do app. Ancorado no "I." (ou variante) literal, pra não confundir
+  // com letras físicas comuns em textos de hidrodinâmica que também são
+  // numerais romanos válidos sozinhos — D (drag), L (lift), M (moment), C
+  // (coeficiente), V (velocidade), X — que aparecem soltas no meio de
+  // frases normais seguidas de ponto
+  if(/\bI\s?[).\-–—‒]\s/.test(escaped) && /\s\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/.test(escaped)){
+    const partes = escaped.split(/(?=\s\(?[IVXLCDM]{1,6}\s?[).\-–—‒])/).map(p=>p.trim()).filter(Boolean);
+    const normalizarMarcadorRomano = t => t.replace(/^(\(?[IVXLCDM]{1,6})\s?[-–—‒]\s*/, '$1. ');
+    return [normalizarMarcadorRomano(partes[0]||''), ...partes.slice(1).map(p=>linhaMarcada(p, /^\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/))].join('');
   }
 
   // 3. Parênteses vazios (Certo/Errado, ordenação)
@@ -4025,7 +4027,7 @@ function parsearQuestoesDoTexto(textoBruto){
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões" — .*$/s pra pegar tudo que vier depois também (página, próxima questão colada)
         .replace(/\s*[A-ZÀ-Ú][A-ZÀ-Ú\s]{5,50}—.*?Caps?\.\s*[\d,\se]+\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '') // rodapé tipo "Nome do Livro, Edição – Chapter N (...) | N" — .*$/s pra pegar tudo que vier depois também
-        .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '')
+        .replace(/[A-ZÀ-Ú]\s+[A-Za-zà-ú]{4,}[a-zA-ZÀ-ú0-9\s]{0,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // exige uma palavra de verdade (4+ letras) logo depois da maiúscula, senão bate por engano num numeral romano solto (ex: "III" ou "IV" dentro de "I, II, III e IV")
         .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
         .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '') // idem em inglês
         .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/i, '') // idem, mas colado sem quebra de linha antes
@@ -4051,7 +4053,7 @@ function parsearQuestoesDoTexto(textoBruto){
       .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões"
         .replace(/\s*[A-ZÀ-Ú][A-ZÀ-Ú\s]{5,50}—.*?Caps?\.\s*[\d,\se]+\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões"
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '')
-      .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // rodapé tipo "Título (AUTOR, ano) — Capítulo N | 30 q"
+      .replace(/[A-ZÀ-Ú]\s+[A-Za-zà-ú]{4,}[a-zA-ZÀ-ú0-9\s]{0,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // exige uma palavra de verdade (4+ letras) logo depois da maiúscula, senão bate por engano num numeral romano solto (ex: "III" ou "IV" dentro de "I, II, III e IV")
       .replace(/\s*Publica[çc][ãa]o:\s*.*$/is, '') // linha de citação bibliográfica no fim da explicação, desnecessária
       .replace(/^\s*\n/gm, '')
       .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n')
@@ -4130,7 +4132,7 @@ function parsearPorRespostaComoCorte(texto){
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões" — .*$/s pra pegar tudo que vier depois também (página, próxima questão colada)
         .replace(/\s*[A-ZÀ-Ú][A-ZÀ-Ú\s]{5,50}—.*?Caps?\.\s*[\d,\se]+\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '') // rodapé tipo "Nome do Livro, Edição – Chapter N (...) | N" — .*$/s pra pegar tudo que vier depois também
-        .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '')
+        .replace(/[A-ZÀ-Ú]\s+[A-Za-zà-ú]{4,}[a-zA-ZÀ-ú0-9\s]{0,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // exige uma palavra de verdade (4+ letras) logo depois da maiúscula, senão bate por engano num numeral romano solto (ex: "III" ou "IV" dentro de "I, II, III e IV")
         .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
         .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '') // idem em inglês
         .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/i, '') // idem, mas colado sem quebra de linha antes
