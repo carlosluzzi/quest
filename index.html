@@ -454,7 +454,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="view-aba" id="aba-inicio">
     <div class="card-inicio" style="background:#B23A34;color:#fff">
       <div style="font-size:var(--fs-f);font-weight:600" id="inicio-saudacao">Olá!</div>
-      <div style="font-size:var(--fs-d);opacity:0.85;display:flex;align-items:center;gap:6px" id="inicio-contagem-pscpp"><span id="inicio-contagem-pscpp-texto">Faltam ... dias para o PSCPP</span> <span class="info-icone" style="color:#fff" onclick="abrirModal('modal-info-contagem-pscpp')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span></div>
+      <div style="font-size:var(--fs-d);opacity:0.85;display:flex;align-items:center;gap:6px" id="inicio-contagem-pscpp"><span id="inicio-contagem-pscpp-texto">Faltam ... dias para o PSCPP</span> <span class="info-icone" onclick="abrirModal('modal-info-contagem-pscpp')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span></div>
     </div>
 
     <div id="caderno-em-andamento" class="hidden">
@@ -933,7 +933,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-41';
+const VERSAO_APP = '2026-07-22-47';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1036,7 +1036,8 @@ function formatarEnunciado(texto){
   // fluir naturalmente até o final e quebrar só onde o navegador decidir
   const escaped = escapeHtml(texto).replace(/\s+/g, ' ').trim()
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞,]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-z0-9∞,]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{1,2})_([A-Za-zαβγδεθλμπρστφχψω])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito, o resto fica solto (ex: "N'_vv" → só o 1º v é subscrito)
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεθλμπρστφχψω0-9∞,]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
   // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
@@ -1134,7 +1135,8 @@ function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞,]{1,6})/g, '$1<sup>$2</sup>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-z0-9∞,]{1,6})/g, '$1<sub>$2</sub>');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{1,2})_([A-Za-zαβγδεθλμπρστφχψω])/g, '$1<sub>$2</sub>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεθλμπρστφχψω0-9∞,]{1,6})/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
     const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
@@ -3856,7 +3858,7 @@ const PALAVRAS_CURTAS_COMUNS_SUBSCRITO = new Set(['de','da','do','em','um','uma'
 // (C_D0), 2 letras (C_Th) e símbolo (V_∞). Marca com "_" pra depois virar
 // subscrito visual de verdade na hora de exibir
 function mesclarSubscritosQuebrados(texto){
-  return texto.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεθλμπρστφχψω]|\d+)\n\s*(-?[A-Za-z0-9∞,]{1,6})\s*\n/g, (m, principal, candidato) => {
+  const comQuebraDeLinha = texto.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεθλμπρστφχψω]['′]{0,2}|\d+)\n\s*(-?[A-Za-zαβγδεθλμπρστφχψω0-9∞,]{1,6})\s*\n/g, (m, principal, candidato) => {
     if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
     // sobrescrito (expoente), não subscrito: número negativo (notação
     // científica, ex: "10^-6"), base numérica (mesmo caso), ou letra de
@@ -3864,14 +3866,31 @@ function mesclarSubscritosQuebrados(texto){
     const ehExpoente = /^-\d/.test(candidato) || /^\d+$/.test(principal) || (/^\d{1,2}$/.test(candidato) && /^(m|s|cm|km|kg|g|l|ml|n|pa|hz)$/i.test(principal));
     return `${principal}${ehExpoente?'^':'_'}${candidato}\n`;
   });
+  // caso adicional: "Letra' + letra curta" colado, sem quebra de linha
+  // nenhuma (ex: "N'v", "N'δ") — o apóstrofo é sinal forte o bastante de
+  // notação de derivada hidrodinâmica pra tratar sempre como subscrito,
+  // mesmo que a questão original não tenha vindo com quebra de linha
+  return comQuebraDeLinha.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεθλμπρστφχψω]['′]{1,2})([a-zA-Zαβγδεθλμπρστφχψω])/g, (m, principal, candidato) => {
+    if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
+    return `${principal}_${candidato}`;
+  });
 }
 
 // rede de segurança final: roda depois de tudo já montado, garantindo a
 // limpeza do rodapé "Página N de M" / "Page N of M" independentemente de
 // qual caminho do parser o texto passou antes (às vezes um formato de PDF
 // escapa das limpezas anteriores por algum detalhe de estrutura)
+// reconhece especificamente a notação de derivadas hidrodinâmicas de
+// manobra (X', Y', N' + subscrito conhecido: u, v, r, δ, 0), convertendo
+// pra subscrito mesmo quando vem tudo grudado sem separação nenhuma no
+// PDF original — diferente de mesclarSubscritosQuebrados, que só cobre o
+// caso de quebra de linha, essa aqui cobre o caso de já vir junto
+function converterDerivadasManobra(texto){
+  return texto.replace(/\b([XYN]')(u|v|r|0|δ)(?![a-zA-Zà-ú])/g, '$1_$2');
+}
+
 function limparRodapePaginaFinal(texto){
-  return texto
+  return converterDerivadasManobra(texto)
     .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '')
     .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '')
     .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*(\n|$)/gi, '$2')
@@ -4006,7 +4025,7 @@ function parsearQuestoesDoTexto(textoBruto){
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões" — .*$/s pra pegar tudo que vier depois também (página, próxima questão colada)
         .replace(/\s*[A-ZÀ-Ú][A-ZÀ-Ú\s]{5,50}—.*?Caps?\.\s*[\d,\se]+\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '') // rodapé tipo "Nome do Livro, Edição – Chapter N (...) | N" — .*$/s pra pegar tudo que vier depois também
-        .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/, '')
+        .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '')
         .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
         .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '') // idem em inglês
         .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/i, '') // idem, mas colado sem quebra de linha antes
@@ -4032,6 +4051,7 @@ function parsearQuestoesDoTexto(textoBruto){
       .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões"
         .replace(/\s*[A-ZÀ-Ú][A-ZÀ-Ú\s]{5,50}—.*?Caps?\.\s*[\d,\se]+\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões"
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '')
+      .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // rodapé tipo "Título (AUTOR, ano) — Capítulo N | 30 q"
       .replace(/\s*Publica[çc][ãa]o:\s*.*$/is, '') // linha de citação bibliográfica no fim da explicação, desnecessária
       .replace(/^\s*\n/gm, '')
       .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n')
@@ -4110,7 +4130,7 @@ function parsearPorRespostaComoCorte(texto){
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões" — .*$/s pra pegar tudo que vier depois também (página, próxima questão colada)
         .replace(/\s*[A-ZÀ-Ú][A-ZÀ-Ú\s]{5,50}—.*?Caps?\.\s*[\d,\se]+\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '') // rodapé tipo "Nome do Livro, Edição – Chapter N (...) | N" — .*$/s pra pegar tudo que vier depois também
-        .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/, '')
+        .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '')
         .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
         .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '') // idem em inglês
         .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/i, '') // idem, mas colado sem quebra de linha antes
