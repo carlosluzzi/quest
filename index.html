@@ -933,7 +933,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-53';
+const VERSAO_APP = '2026-07-22-54';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1051,7 +1051,7 @@ function formatarEnunciado(texto){
     // explicação (fonte, texto original, análise, dica) — quando vêm
     // grudadas no último item sem marcador próprio, cada uma precisa virar
     // seu próprio parágrafo separado, não ficar junto do texto do item
-    const regexSecoes = /\s?(FONTE\s*\(|TEXTO\s+ORIGINAL|Análise\s*:|💡|Assinale a alternativa|Marque a alternativa|Indique a alternativa)/gi;
+    const regexSecoes = /\s?(FONTE\s*\(|TEXTO\s+ORIGINAL|Análise\s*:|💡|Assinale a alternativa|Marque a alternativa|Indique a alternativa|Est[ãa]o\s+(?:CORRETAS|INCORRETAS)|S[ãa]o\s+(?:CORRETAS|INCORRETAS))/gi;
     const pontos = [...resto.matchAll(regexSecoes)].map(x => x.index + (x[0].length - x[1].length)); // pula o espaço opcional que às vezes vem antes, começando o corte exatamente na palavra-gatilho
     let secoesSeparadas = '';
     if(pontos.length){
