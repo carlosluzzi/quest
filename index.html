@@ -925,7 +925,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-24';
+const VERSAO_APP = '2026-07-22-25';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3827,6 +3827,20 @@ function mesclarSubscritosQuebrados(texto){
   });
 }
 
+// rede de segurança final: roda depois de tudo já montado, garantindo a
+// limpeza do rodapé "Página N de M" / "Page N of M" independentemente de
+// qual caminho do parser o texto passou antes (às vezes um formato de PDF
+// escapa das limpezas anteriores por algum detalhe de estrutura)
+function limparRodapePaginaFinal(texto){
+  return texto
+    .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '')
+    .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '')
+    .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*(\n|$)/gi, '$2')
+    .replace(/\s*Page\s+\d+\s*(of\s*\d+)?\s*(\n|$)/gi, '$2')
+    .replace(/^\s*\n/gm, '')
+    .trim();
+}
+
 function limparEnunciado(textoOriginal){
   // insere espaço quando um marcador de lista (I. II. a) A. etc.) vem
   // colado direto no texto seguinte, sem espaço nenhum — acontece às
@@ -3900,13 +3914,13 @@ function limparEnunciado(textoOriginal){
       continue;
     }
   }
-  return mesclarSubscritosQuebrados(linhasLimpas.join('\n'))
+  return limparRodapePaginaFinal(mesclarSubscritosQuebrados(linhasLimpas.join('\n'))
     .replace(/^\s*\n/gm, '')
     .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n') // letra isolada que "quebrou" de uma palavra (artefato do pdf.js), não é palavra válida sozinha em português
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/ +([,.;:)·/])/g, '$1')
     .replace(/\( +/g, '(')
-    .trim();
+    .trim());
 }
 
 function parsearQuestoesDoTexto(textoBruto){
@@ -3944,9 +3958,14 @@ function parsearQuestoesDoTexto(textoBruto){
       // RESPOSTA" ainda ficam para trás, coladinhos)
       .map(a => a
         .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/i, '')
+        .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões" — .*$/s pra pegar tudo que vier depois também (página, próxima questão colada)
+        .replace(/\s*[A-ZÀ-Ú][A-ZÀ-Ú\s]{5,50}—.*?Caps?\.\s*[\d,\se]+\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
+        .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '') // rodapé tipo "Nome do Livro, Edição – Chapter N (...) | N" — .*$/s pra pegar tudo que vier depois também
         .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/, '')
-        .replace(/\s*Pagina\s+\d+.*$/i, '')
-        .replace(/\s*Página\s+\d+.*$/i, '')
+        .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
+        .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '') // idem em inglês
+        .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/i, '') // idem, mas colado sem quebra de linha antes
+        .replace(/\s*Page\s+\d+\s*(of\s*\d+)?\s*$/i, '')
         .replace(/\s*QUEST[ÃA]O\s*N?º?\s*\d+\s*[-–—]\s*CHAVE\s+DE\s+RESPOSTA.*$/i, '')
         .trim()
       )
@@ -3955,25 +3974,31 @@ function parsearQuestoesDoTexto(textoBruto){
 
     // explicação: tira a própria linha "RESPOSTA:/GABARITO:" e cabeçalhos
     // repetidos tipo "QUESTÃO Nº 1 – GABARITO COMENTADO" / "GABARITO — QUESTÃO 1"
-    const explicacao = mesclarSubscritosQuebrados(zonaExplicacao)
+    const explicacao = limparRodapePaginaFinal(mesclarSubscritosQuebrados(zonaExplicacao)
       .replace(/\b([IVXLCDM]{1,6}[).]|[a-eA-E][).])([A-Za-zÀ-ÿ])/g, '$1 $2')
       .replace(/(?:RESPOSTA|GABARITO)\b\s*\S{0,4}\s*(?:ALTERNATIVA\s*)?[A-E]\b.*$/im, '')
       .replace(/QUEST[ÃA]O\s*N?º?\s*\d+\s*[–\-—]\s*(?:GABARITO.*|CHAVE\s+DE\s+RESPOSTA)$/gim, '')
       .replace(/GABARITO\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
-      .replace(/^Página \d+.*$/gim, '')
+      .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
+      .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '') // idem em inglês
+      .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/i, '') // idem, mas colado sem quebra de linha antes
+      .replace(/\s*Page\s+\d+\s*(of\s*\d+)?\s*$/i, '')
       .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/is, '') // rodapé de página repetido (formato varia bastante)
+      .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões"
+        .replace(/\s*[A-ZÀ-Ú][A-ZÀ-Ú\s]{5,50}—.*?Caps?\.\s*[\d,\se]+\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões"
+        .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '')
       .replace(/\s*Publica[çc][ãa]o:\s*.*$/is, '') // linha de citação bibliográfica no fim da explicação, desnecessária
       .replace(/^\s*\n/gm, '')
       .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n')
             .replace(/[ \t]{2,}/g, ' ')
       .replace(/ +([,.;:)·/])/g, '$1')
-      .trim();
+      .trim());
 
     if(enunciado && alternativas.length >= 4 && gabarito){
       questoes.push({
         numero: parseInt(iniciosQuestao[i][1] || iniciosQuestao[i][2], 10),
         enunciado,
-        alternativas: alternativas.join('\n'),
+        alternativas: limparRodapePaginaFinal(alternativas.join('\n')),
         gabarito,
         explicacao: explicacao || null,
         // texto bruto (com os metadados tipo "BIBLIOGRAFIA: SANTOS...")
@@ -4033,9 +4058,14 @@ function parsearPorRespostaComoCorte(texto){
       .filter(a => /^[a-eA-E]\)/.test(a))
       .map(a => a
         .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/i, '')
+        .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões" — .*$/s pra pegar tudo que vier depois também (página, próxima questão colada)
+        .replace(/\s*[A-ZÀ-Ú][A-ZÀ-Ú\s]{5,50}—.*?Caps?\.\s*[\d,\se]+\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
+        .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '') // rodapé tipo "Nome do Livro, Edição – Chapter N (...) | N" — .*$/s pra pegar tudo que vier depois também
         .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/, '')
-        .replace(/\s*Pagina\s+\d+.*$/i, '')
-        .replace(/\s*Página\s+\d+.*$/i, '')
+        .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
+        .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '') // idem em inglês
+        .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/i, '') // idem, mas colado sem quebra de linha antes
+        .replace(/\s*Page\s+\d+\s*(of\s*\d+)?\s*$/i, '')
         .trim()
       )
       .map((a,idx) => `(${String.fromCharCode(97+idx)}) ${a.replace(/^[a-eA-E]\)\s*/,'')}`);
@@ -4044,7 +4074,7 @@ function parsearPorRespostaComoCorte(texto){
       questoes.push({
         numero: i+1,
         enunciado,
-        alternativas: alternativas.join('\n'),
+        alternativas: limparRodapePaginaFinal(alternativas.join('\n')),
         gabarito,
         explicacao: null, // formato de rodapé não separa explicação de forma confiável, deixa em branco
         textoBrutoParaBibliografia: antesResposta
