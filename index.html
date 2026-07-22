@@ -925,7 +925,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-26';
+const VERSAO_APP = '2026-07-22-30';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3790,8 +3790,14 @@ const REGEX_INICIO_QUESTAO = /(?:GABARITO\s*[–\-—]\s*)?QUEST[ÃA]O(?:\s+(\d+
 
 function encontrarIniciosQuestao(texto){
   const brutos = [...texto.matchAll(REGEX_INICIO_QUESTAO)];
-  // tira as que vieram prefixadas de "GABARITO —" (são a repetição, não o início real)
-  return brutos.filter(m => !/^GABARITO/i.test(m[0]));
+  // tira as que vieram prefixadas de "GABARITO —" ou "Resolução:" (são a
+  // repetição do número da questão dentro do gabarito, não o início real)
+  return brutos.filter(m => {
+    if(/^GABARITO/i.test(m[0])) return false;
+    const antes = texto.slice(Math.max(0, m.index-20), m.index);
+    if(/Resolu[çc][ãa]o\s*:?\s*$/i.test(antes)) return false;
+    return true;
+  });
 }
 
 // tira linhas de metadado (DISCIPLINA:/BIBLIOGRAFIA:/DIFICULDADE:/...) e
@@ -3930,6 +3936,12 @@ function parsearQuestoesDoTexto(textoBruto){
     const fimBloco = i+1 < iniciosQuestao.length ? iniciosQuestao[i+1].index : texto.length;
     const bloco = texto.slice(inicioBloco, fimBloco);
 
+    // regra: procurar capítulo é sempre a PRIMEIRA coisa a fazer, no texto
+    // ainda 100% bruto — antes de separar enunciado/alternativas/explicação
+    // e antes de qualquer limpeza (que pode apagar a única linha que citava
+    // a seção/capítulo, como aconteceu com o Bertram e a linha "Publicação:")
+    const capituloDoBlocoBruto = extrairCapituloDoTexto(bloco);
+
     // dentro desse bloco, acha a primeira resposta (separa enunciado+alts de explicação)
     const respostaNoBloco = [...bloco.matchAll(REGEX_RESPOSTA)][0];
     const zonaPergunta = respostaNoBloco ? bloco.slice(0, respostaNoBloco.index) : bloco;
@@ -3997,6 +4009,7 @@ function parsearQuestoesDoTexto(textoBruto){
         alternativas: limparRodapePaginaFinal(alternativas.join('\n')),
         gabarito,
         explicacao: explicacao || null,
+        capituloDetectado: capituloDoBlocoBruto,
         // texto bruto (com os metadados tipo "BIBLIOGRAFIA: SANTOS...")
         // que a limpeza do enunciado tira — precisa dele intacto pra
         // identificar a bibliografia, senão a informação já foi descartada
@@ -4027,6 +4040,9 @@ function parsearPorRespostaComoCorte(texto){
     inicioUnidade = fimResposta;
 
     const gabarito = resp[1].toLowerCase();
+
+    // regra: procurar capítulo é sempre a primeira coisa, no texto ainda bruto
+    const capituloDoBlocoBruto = extrairCapituloDoTexto(antesResposta);
 
     // acha o ÚLTIMO bloco de alternativas antes dessa resposta (o mais
     // próximo dela é o da pergunta de verdade — qualquer coisa antes disso
@@ -4073,6 +4089,7 @@ function parsearPorRespostaComoCorte(texto){
         alternativas: limparRodapePaginaFinal(alternativas.join('\n')),
         gabarito,
         explicacao: null, // formato de rodapé não separa explicação de forma confiável, deixa em branco
+        capituloDetectado: capituloDoBlocoBruto,
         textoBrutoParaBibliografia: antesResposta
       });
     }
@@ -4133,7 +4150,18 @@ function textoContemTermo(textoNorm, termoNorm){
   return textoNorm.includes(termoNorm);
 }
 function extrairCapituloDoTexto(texto){
-  const m = (texto||'').match(/\bcap(?:[íi]tulos?|\.)\s*n?º?\s*(\d{1,2})\b/i);
+  const t = texto || '';
+  // 1º: procura padrão "seção/section/item N.M" ou "p. X | N.M" — o
+  // primeiro número antes do ponto já indica o capítulo, seguindo a
+  // convenção acadêmica de numeração (Capítulo.Seção.Subseção) — pega
+  // citações que nunca dizem "capítulo" explicitamente, tipo "item 3.1"
+  // ou "section 2.1" (inglês)
+  let m = t.match(/\b(?:se[çc][ãa]o|section|item|fig(?:ure|ura)?)\s*(\d{1,2})\.\d/i);
+  if(m) return parseInt(m[1],10);
+  m = t.match(/\|\s*(\d{1,2})\.\d/);
+  if(m) return parseInt(m[1],10);
+  // 2º: recurso — procura literalmente "capítulo N" / "cap. N"
+  m = t.match(/\bcap(?:[íi]tulos?|\.)\s*n?º?\s*(\d{1,2})\b/i) || t.match(/\bChapter\s*(\d{1,2})\b/i);
   return m ? parseInt(m[1],10) : null;
 }
 function identificarBibliografia(explicacao, enunciado){
@@ -4778,7 +4806,7 @@ async function enviarUpload(){
           alternativas: q.alternativas,
           gabarito: q.gabarito,
           autor_id: usuarioAtual.id,
-          capitulo: extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null,
+          capitulo: q.capituloDetectado || extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null,
           tipo_questao: null,
           modulo_pscpp: bib.modulo,
           bibliografia_id: mapaBibliografiaId[bib.modulo+'|'+bib.titulo],
@@ -4800,7 +4828,7 @@ async function enviarUpload(){
         gabarito: q.gabarito,
         explicacao: q.explicacao || null,
         explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada',
-        capitulo: extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null,
+        capitulo: q.capituloDetectado || extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null,
         autor_id: usuarioAtual.id,
         nome_arquivo_origem: nomeArquivoAtual || null
       })));
