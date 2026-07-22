@@ -923,7 +923,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-09';
+const VERSAO_APP = '2026-07-22-12';
 
 function verificarVersaoNova(){
   const versaoVista = localStorage.getItem('claudequest_versao_vista');
@@ -3772,7 +3772,7 @@ const PALAVRAS_CURTAS_COMUNS_SUBSCRITO = new Set(['de','da','do','em','um','uma'
 // (C_D0), 2 letras (C_Th) e símbolo (V_∞). Marca com "_" pra depois virar
 // subscrito visual de verdade na hora de exibir
 function mesclarSubscritosQuebrados(texto){
-  return texto.replace(/([A-Za-zαβγδεθλμπρστφχψω]|\d+)\n\s*(-?[A-Za-z0-9∞]{1,3})\s*\n/g, (m, principal, candidato) => {
+  return texto.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεθλμπρστφχψω]|\d+)\n\s*(-?[A-Za-z0-9∞]{1,3})\s*\n/g, (m, principal, candidato) => {
     if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
     // sobrescrito (expoente), não subscrito: número negativo (notação
     // científica, ex: "10^-6"), base numérica (mesmo caso), ou letra de
@@ -3916,6 +3916,8 @@ function parsearQuestoesDoTexto(textoBruto){
       .replace(/QUEST[ÃA]O\s*N?º?\s*\d+\s*[–\-—]\s*(?:GABARITO.*|CHAVE\s+DE\s+RESPOSTA)$/gim, '')
       .replace(/GABARITO\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
       .replace(/^Página \d+.*$/gim, '')
+      .replace(/\s*PSCPP\s*[-–—].*$/is, '') // rodapé de página repetido, tipo "PSCPP — BANCO DE QUESTÕES ... Página N" (formato pode variar)
+      .replace(/\s*Publica[çc][ãa]o:\s*.*$/is, '') // linha de citação bibliográfica no fim da explicação, desnecessária
       .replace(/^\s*\n/gm, '')
       .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n')
             .replace(/[ \t]{2,}/g, ' ')
