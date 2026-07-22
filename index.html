@@ -995,7 +995,8 @@ function formatarEnunciado(texto){
   // originais do PDF (que quebravam numa largura de página estreita),
   // fazendo o parágrafo parecer cortado antes da borda da tela, em vez de
   // fluir naturalmente até o final e quebrar só onde o navegador decidir
-  const escaped = escapeHtml(texto).replace(/\s+/g, ' ').trim();
+  const escaped = escapeHtml(texto).replace(/\s+/g, ' ').trim()
+    .replace(/([A-Za-zÀ-ú]+)_([A-Za-z]\d{1,2})\b/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0") em subscrito visual de verdade
 
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
   // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
@@ -1074,7 +1075,8 @@ function formatarEnunciado(texto){
 
 function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
-  const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim();
+  const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
+    .replace(/([A-Za-zÀ-ú]+)_([A-Za-z]\d{1,2})\b/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
     const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
@@ -3730,7 +3732,11 @@ function encontrarIniciosQuestao(texto){
 // vistos até agora nos PDFs reais
 const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO(\s+PSCPP)?)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
 const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*(:|\s{2,})/i;
-function limparEnunciado(texto){
+function limparEnunciado(textoOriginal){
+  // insere espaço quando um marcador de lista (I. II. a) A. etc.) vem
+  // colado direto no texto seguinte, sem espaço nenhum — acontece às
+  // vezes na extração do PDF
+  const texto = textoOriginal.replace(/\b([IVXLCDM]{1,6}[).]|[a-eA-E][).])([A-Za-zÀ-ÿ])/g, '$1 $2');
   const linhas = texto.split('\n');
   const linhasLimpas = [];
   // normal | esperando_valor_solto (label sozinho, valor pode ter várias
@@ -3801,8 +3807,10 @@ function limparEnunciado(texto){
   return linhasLimpas.join('\n')
     .replace(/^\s*\n/gm, '')
     .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n') // letra isolada que "quebrou" de uma palavra (artefato do pdf.js), não é palavra válida sozinha em português
+    .replace(/([A-Za-z])\n\s*([A-Za-z]\d{1,2})\s*\n/g, '$1_$2\n') // subscrito tipo "C" + "D0" (variável física) que quebrou de linha por causa da posição vertical menor do subscrito
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/ +([,.;:)])/g, '$1')
+    .replace(/\( +/g, '(')
     .trim();
 }
 
@@ -3833,7 +3841,7 @@ function parsearQuestoesDoTexto(textoBruto){
     const alternativas = zonaPergunta
       .slice(matchAlt ? matchAlt.index : zonaPergunta.length)
       .split(/\n\s*(?=[a-eA-E]\)\s)/)
-      .map(a => a.trim().replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1'))
+      .map(a => a.trim().replace(/([A-Za-z])\n\s*([A-Za-z]\d{1,2})\s*\n/g, '$1_$2\n').replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1'))
       .filter(a => /^[a-eA-E]\)/.test(a))
       // remove ruído de rodapé de página que pode grudar na última
       // alternativa (o corte da zona da pergunta só para no "GABARITO",
@@ -3853,12 +3861,14 @@ function parsearQuestoesDoTexto(textoBruto){
     // explicação: tira a própria linha "RESPOSTA:/GABARITO:" e cabeçalhos
     // repetidos tipo "QUESTÃO Nº 1 – GABARITO COMENTADO" / "GABARITO — QUESTÃO 1"
     const explicacao = zonaExplicacao
+      .replace(/\b([IVXLCDM]{1,6}[).]|[a-eA-E][).])([A-Za-zÀ-ÿ])/g, '$1 $2')
       .replace(/(?:RESPOSTA|GABARITO)\b\s*\S{0,4}\s*(?:ALTERNATIVA\s*)?[A-E]\b.*$/im, '')
       .replace(/QUEST[ÃA]O\s*N?º?\s*\d+\s*[–\-—]\s*(?:GABARITO.*|CHAVE\s+DE\s+RESPOSTA)$/gim, '')
       .replace(/GABARITO\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
       .replace(/^Página \d+.*$/gim, '')
       .replace(/^\s*\n/gm, '')
       .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n')
+      .replace(/([A-Za-z])\n\s*([A-Za-z]\d{1,2})\s*\n/g, '$1_$2\n')
       .replace(/[ \t]{2,}/g, ' ')
       .replace(/ +([,.;:)])/g, '$1')
       .trim();
@@ -3923,7 +3933,7 @@ function parsearPorRespostaComoCorte(texto){
 
     const alternativas = textoComAlternativas
       .split(/\n\s*(?=[a-eA-E]\)\s)/)
-      .map(a => a.trim().replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1'))
+      .map(a => a.trim().replace(/([A-Za-z])\n\s*([A-Za-z]\d{1,2})\s*\n/g, '$1_$2\n').replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1').replace(/\( +/g, '('))
       .filter(a => /^[a-eA-E]\)/.test(a))
       .map(a => a
         .replace(/\s*PSCPP\s*[-–—].*$/i, '')
