@@ -919,6 +919,28 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     storage: window.localStorage
   }
 });
+// Muda esse valor toda vez que uma versão nova do index.html for entregue —
+// é o que permite ao app avisar "carreguei a versão nova" na primeira
+// abertura depois do deploy, sem precisar adivinhar se já propagou ou não
+const VERSAO_APP = '2026-07-22-01';
+
+function verificarVersaoNova(){
+  const versaoVista = localStorage.getItem('claudequest_versao_vista');
+  if(versaoVista === VERSAO_APP) return; // já viu essa versão, não mostra de novo
+  localStorage.setItem('claudequest_versao_vista', VERSAO_APP);
+  if(versaoVista === null) return; // primeira vez usando o app de verdade (não é atualização, não precisa avisar)
+
+  const aviso = document.createElement('div');
+  aviso.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 16px);left:50%;transform:translateX(-50%);background:#1B5E20;color:#fff;padding:10px 18px;border-radius:10px;font-size:var(--fs-d);box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:9999;text-align:center';
+  aviso.textContent = `✓ Versão nova carregada (${VERSAO_APP})`;
+  document.body.appendChild(aviso);
+  setTimeout(() => {
+    aviso.style.transition = 'opacity 0.6s';
+    aviso.style.opacity = '0';
+    setTimeout(() => aviso.remove(), 600);
+  }, 5000);
+}
+
 let usuarioAtual = null;       // linha da tabela usuarios
 let modulosPscpp = [];
 let bibliografiaCache = [];
@@ -1618,6 +1640,7 @@ async function mostrarAppShell(){
   document.getElementById('app-shell').classList.add('ativo');
   document.getElementById('wrapper-barra-adicionar').classList.remove('hidden'); // app abre sempre na aba Início
   medirAlturaNav(); // só mede depois que o menu está visível de verdade, senão dá 0
+  verificarVersaoNova();
   medirAlturaTopbar(); // idem, pro cabeçalho principal
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança
   iniciarRealtimeForum();
