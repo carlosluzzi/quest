@@ -725,6 +725,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-perfil" onclick="if(event.target===this) fecharModal('modal-perfil')">
   <div class="modal-conteudo">
     <h3 class="config-title">Seu perfil</h3>
+    <div style="text-align:center;color:#bbb;font-size:var(--fs-a);margin-bottom:14px">versão do app: <span id="versao-app-exibida"></span></div>
 
     <div style="text-align:center;margin-bottom:14px">
       <div id="avatar-perfil-preview" style="width:140px;height:140px;border-radius:50%;background:#D97757;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:44px;margin:0 auto 16px;overflow:hidden">?</div>
@@ -752,7 +753,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-perfil')">Fechar</button>
     <button class="btn-secundario" style="width:100%;color:#B00020;margin-top:10px" onclick="sair()">Sair da conta</button>
-    <div style="text-align:center;color:#bbb;font-size:var(--fs-a);margin-top:14px">versão do app: <span id="versao-app-exibida"></span></div>
   </div>
 </div>
 
@@ -923,7 +923,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-05';
+const VERSAO_APP = '2026-07-22-06';
 
 function verificarVersaoNova(){
   const versaoVista = localStorage.getItem('claudequest_versao_vista');
