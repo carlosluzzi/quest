@@ -395,7 +395,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div class="onboarding-step ativo" data-step="0">
       <div class="onboarding-icone"><img src="assets2/favicon.png" alt="Pilotquest" width="44" height="44" style="border-radius:12px"></div>
       <h1>Bem-vindo(a) ao Pilotquest</h1>
-      <p>Aqui é onde vocês vão estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
+      <p>Aqui é onde vamos estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
     </div>
     <div class="onboarding-step" data-step="1">
       <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#B23A34" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
@@ -421,6 +421,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#B23A34" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></div>
       <h1>No computador, arrasta e solta</h1>
       <p>Pra adicionar questões, não precisa nem clicar em "Escolher arquivo" — em qualquer tela do app, é só arrastar o PDF ou a planilha direto pra cima da janela e soltar. Ele já reconhece o tipo de arquivo e leva pra tela certa, com tudo pré-carregado.</p>
+    </div>
+    <div class="onboarding-step" data-step="6">
+      <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#B23A34" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></div>
+      <h1>Boa sorte na prova!</h1>
+      <p>Você já viu o essencial. Agora é só clicar abaixo, entrar, e começar a estudar com o pessoal. Espero que o Pilotquest ajude bastante nessa reta final — bons estudos!</p>
     </div>
   </div>
 
@@ -934,7 +939,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-75';
+const VERSAO_APP = '2026-07-22-76';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
