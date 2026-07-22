@@ -454,7 +454,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="view-aba" id="aba-inicio">
     <div class="card-inicio" style="background:#B23A34;color:#fff">
       <div style="font-size:var(--fs-f);font-weight:600" id="inicio-saudacao">Olá!</div>
-      <div style="font-size:var(--fs-d);opacity:0.85;display:flex;align-items:center;gap:6px" id="inicio-contagem-pscpp"><span id="inicio-contagem-pscpp-texto">Faltam ... dias para o PSCPP</span> <span class="info-icone" style="color:#fff;opacity:0.85" onclick="abrirModal('modal-info-contagem-pscpp')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span></div>
+      <div style="font-size:var(--fs-d);opacity:0.85;display:flex;align-items:center;gap:6px" id="inicio-contagem-pscpp"><span id="inicio-contagem-pscpp-texto">Faltam ... dias para o PSCPP</span> <span class="info-icone" style="color:#fff" onclick="abrirModal('modal-info-contagem-pscpp')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span></div>
     </div>
 
     <div id="caderno-em-andamento" class="hidden">
@@ -770,7 +770,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-info-contagem-pscpp">
   <div class="modal-conteudo">
     <h3 class="config-title">Contagem regressiva</h3>
-    <p>Quantos dias faltam até a data prevista do PSCPP: <strong>06/11/2027</strong>. É só uma referência pra te ajudar a planejar o ritmo de estudo — a data oficial pode mudar, vale sempre confirmar com a fonte oficial.</p>
+    <p>Quantos dias faltam até a data prevista do PSCPP: <strong>06/11/2027</strong>. É só uma referência pra ajudar a planejar o ritmo de estudo.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-contagem-pscpp')">Fechar</button>
   </div>
 </div>
@@ -933,7 +933,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-39';
+const VERSAO_APP = '2026-07-22-41';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
