@@ -7,18 +7,18 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Claudequest">
+<meta name="apple-mobile-web-app-title" content="Pilotquest">
 <link rel="icon" href="assets2/favicon.png" type="image/png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets2/icon-180.png">
 <link rel="apple-touch-icon-precomposed" sizes="180x180" href="assets2/icon-180.png">
-<title>Claudequest</title>
-<meta property="og:title" content="Claudequest">
+<title>Pilotquest</title>
+<meta property="og:title" content="Pilotquest">
 <meta property="og:description" content="Banco de questões colaborativo pra estudar juntos pro PSCPP.">
-<meta property="og:image" content="https://pscpp-quest.vercel.app/assets2/og-image.png">
-<meta property="og:url" content="https://pscpp-quest.vercel.app/">
+<meta property="og:image" content="https://pilotquest.com.br/assets2/og-image.png">
+<meta property="og:url" content="https://pilotquest.com.br/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://pscpp-quest.vercel.app/assets2/og-image.png">
+<meta name="twitter:image" content="https://pilotquest.com.br/assets2/og-image.png">
 <link rel="manifest" href="manifest2.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -334,7 +334,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </form>
 
   <form id="login-form-definir-senha" class="hidden" onsubmit="event.preventDefault(); definirSenha();">
-    <p style="margin-bottom:16px" id="saudacao-definir-senha">Defina seu nome e sua senha pra começar a usar o Claudequest.</p>
+    <p style="margin-bottom:16px" id="saudacao-definir-senha">Defina seu nome e sua senha pra começar a usar o Pilotquest.</p>
     <input type="text" id="novo-nome" placeholder="Seu nome" autocomplete="name" required>
     <div class="campo-senha-wrapper">
       <input type="password" id="nova-senha" placeholder="Nova senha" autocomplete="new-password" required>
@@ -394,7 +394,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="onboarding-conteudo" id="onboarding-conteudo">
     <div class="onboarding-step ativo" data-step="0">
       <div class="onboarding-icone"><img src="assets2/favicon.png" alt="Pilotquest" width="44" height="44" style="border-radius:12px"></div>
-      <h1>Bem-vindo(a) ao Claudequest</h1>
+      <h1>Bem-vindo(a) ao Pilotquest</h1>
       <p>Aqui é onde vocês vão estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
     </div>
     <div class="onboarding-step" data-step="1">
@@ -934,13 +934,13 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-72';
+const VERSAO_APP = '2026-07-22-75';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
-  const versaoVista = localStorage.getItem('claudequest_versao_vista');
+  const versaoVista = localStorage.getItem('pilotquest_versao_vista');
   if(versaoVista === VERSAO_APP) return; // já viu essa versão, não mostra de novo
-  localStorage.setItem('claudequest_versao_vista', VERSAO_APP);
+  localStorage.setItem('pilotquest_versao_vista', VERSAO_APP);
   if(versaoVista === null) return; // primeira vez usando o app de verdade (não é atualização, não precisa avisar)
 
   const aviso = document.createElement('div');
@@ -1206,7 +1206,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
       campoNome.value = nomePreDefinido;
       campoNome.classList.add('hidden');
       campoNome.required = false;
-      document.getElementById('saudacao-definir-senha').textContent = `Olá, ${nomePreDefinido}! Defina sua senha pra começar a usar o Claudequest.`;
+      document.getElementById('saudacao-definir-senha').textContent = `Olá, ${nomePreDefinido}! Defina sua senha pra começar a usar o Pilotquest.`;
     }
     return;
   }
@@ -1258,7 +1258,7 @@ async function processarConvite(id){
     return; // campos-convite continua escondido, só aparece a mensagem
   }
   conviteAtual = convite;
-  document.getElementById('saudacao-convite').textContent = `Olá, ${convite.apelido}! Cadastre seu email e crie uma senha pra começar a usar o Claudequest.`;
+  document.getElementById('saudacao-convite').textContent = `Olá, ${convite.apelido}! Cadastre seu email e crie uma senha pra começar a usar o Pilotquest.`;
   document.getElementById('campos-convite').classList.remove('hidden');
 }
 
@@ -5286,7 +5286,7 @@ async function gerarLinkConvite(){
   if(error){ resultadoEl.innerHTML = `<p style="color:#B00020;font-size:var(--fs-d)">Erro: ${escapeHtml(error.message)}</p>`; return; }
 
   const link = `${window.location.origin}${window.location.pathname}?convite=${data.id}`;
-  const textoWhatsapp = encodeURIComponent(`E aiiii ${apelido}! Te chamei pro Claudequest – nosso banco de questões pra estudar juntos pro PSCPP 🚢, Bora?\n\n${link}`);
+  const textoWhatsapp = encodeURIComponent(`E aiiii ${apelido}! Te chamei pro Pilotquest – nosso banco de questões pra estudar juntos pro PSCPP 🚢, Bora?\n\n${link}`);
   resultadoEl.innerHTML = `
     <div class="card-questao">
       <p style="font-size:var(--fs-b);word-break:break-all;color:#666">${escapeHtml(link)}</p>
