@@ -568,7 +568,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div id="metricas-conteudo" class="hidden">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
-      <span style="font-size:var(--fs-d);font-weight:600;color:#111">Módulos</span>
+      <span style="font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em">Módulos</span>
     </div>
     <div id="conteudo-filtro-modulo" class="conteudo-colapsavel open" style="margin-bottom:12px">
       <div style="display:flex;gap:8px">
@@ -585,7 +585,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
     <div style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:20px;margin-bottom:8px" onclick="toggleFiltroMateria()">
       <span style="width:28px;height:28px;border-radius:9px;background:#FBEEE8;color:#D97757;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
-      <span style="font-size:var(--fs-d);font-weight:600;color:#111">Publicações</span>
+      <span style="font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em">Publicações</span>
       <span class="chev" id="chev-filtro-materia" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
     </div>
     <div id="conteudo-filtro-materia" class="conteudo-colapsavel" style="margin-bottom:12px">
@@ -622,6 +622,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <input type="date" id="metricas-data-fim" class="filter-select" style="margin-bottom:0" onchange="aplicarFiltroDatasCustomizadas()">
     </div>
     <div id="metricas-redefinir-datas" class="hidden" style="font-size:var(--fs-c);color:#888;text-align:right;margin-top:12px;margin-bottom:14px;cursor:pointer;text-decoration:underline" onclick="redefinirFiltroDatas()">Redefinir</div>
+
+    <div style="border-top:1px solid #eee;margin:24px 0"></div>
 
     <div id="metricas-resumo-geral" style="margin-top:16px"></div>
 
@@ -923,7 +925,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-12';
+const VERSAO_APP = '2026-07-22-13';
 
 function verificarVersaoNova(){
   const versaoVista = localStorage.getItem('claudequest_versao_vista');
