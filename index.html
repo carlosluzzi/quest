@@ -934,7 +934,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-71';
+const VERSAO_APP = '2026-07-22-72';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2111,7 +2111,7 @@ function retomarCaderno(){
 async function carregarBibliografia(){
   const {data} = await sb.from('bibliografia').select('*');
   bibliografiaCache = data || [];
-  modulosPscpp = [...new Set(bibliografiaCache.map(b=>b.modulo_pscpp))];
+  modulosPscpp = [...new Set(bibliografiaCache.map(b=>b.modulo_pscpp))].sort((a,b)=>a.localeCompare(b,'pt'));
   const el = document.getElementById('filtro-modulo');
   el.innerHTML = '<option value="">Todos os módulos</option>' + modulosPscpp.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
   await carregarCadernosExistentes();
@@ -2140,7 +2140,7 @@ function selecionarFiltroSelect(nivel, valor){
     elCap.innerHTML = '<option value="">Todos os capítulos</option>';
     elCap.disabled = true;
     if(valor){
-      const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===valor);
+      const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===valor).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
       elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>`<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`).join('');
       elPub.disabled = false;
     }else{
@@ -3701,7 +3701,7 @@ function legendaBarras(){
     <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#C9A165;border-radius:2px"></span>% de acertos</span>
   </div>`;
 }
-const MODULOS_PSCPP = ['Manobrabilidade','Arte Naval','Navegação em Águas Restritas','Legislação','Meteorologia e Oceanografia','Comunicações','Conhecimentos Gerais'];
+const MODULOS_PSCPP = ['Arte Naval','Comunicações','Conhecimentos Gerais','Legislação','Manobrabilidade','Meteorologia e Oceanografia','Navegação em Águas Restritas'];
 
 // Lista fechada de bibliografia oficial do PSCPP, por módulo — extraída do
 // dossiê do projeto (Anexo 2-B do edital da Marinha). Cada entrada tem:
@@ -3720,8 +3720,8 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Arte Naval", autorBusca:["hensen", "estabilidade", "rebocadores"], autor:"HENSEN, H.; VAN DER LAAN, M.", titulo:"Estabilidade dos Rebocadores", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["1428"], autor:"IMO", titulo:"Required Pilot Transfer Arrangements (MSC.1/Circ.1428)", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["circ.1428"], autor:"IMO", titulo:"Required Pilot Transfer Arrangements (MSC.1/Circ.1428)", capitulos:null},
-  {modulo:"Arte Naval", autorBusca:["1495"], autor:"IMO", titulo:"Unified Interpretation of SOLAS V/23.3.3 (MSC.1/Circ.1495/Rev.1)", capitulos:null},
-  {modulo:"Arte Naval", autorBusca:["circ.1495"], autor:"IMO", titulo:"Unified Interpretation of SOLAS V/23.3.3 (MSC.1/Circ.1495/Rev.1)", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["1495"], autor:"IMO", titulo:"SOLAS 1974 (as amended), Regra V/23.3.3", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["circ.1495"], autor:"IMO", titulo:"SOLAS 1974 (as amended), Regra V/23.3.3", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["1045"], autor:"IMO", titulo:"Pilot Transfer Arrangements (Resolution A.1045(27))", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["1108"], autor:"IMO", titulo:"Amendments to the Recommendation on Pilot Transfer Arrangements (Resolution A.1108(29))", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["solas", "1974"], autor:"IMO", titulo:"SOLAS 1974 (as amended), Regra V/23.3.3", capitulos:null},
@@ -4335,8 +4335,8 @@ function listaMateriasDisponiveis(){
   if(modulosFiltradosMetricas.size === 0) return []; // só mostra livros depois de escolher um módulo
   const titulos = bibliografiaCache
     .filter(b => modulosFiltradosMetricas.has(b.modulo_pscpp))
-    .map(b => b.titulo);
-  return [...new Set(titulos)].sort((a,b)=>a.localeCompare(b));
+    .map(b => b.nome_exibicao || b.titulo);
+  return [...new Set(titulos)].sort((a,b)=>a.localeCompare(b,'pt'));
 }
 let materiasFiltradasMetricas = new Set(); // vazio = considera todas automaticamente
 function toggleFiltroModulo(){
@@ -5074,7 +5074,7 @@ function atualizarPublicacoesRevisao(idGrupo){
     elPublicacao.disabled = true;
     return;
   }
-  const opcoes = bibliografiaCache.filter(b => b.modulo_pscpp === modulo);
+  const opcoes = bibliografiaCache.filter(b => b.modulo_pscpp === modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
   elPublicacao.innerHTML = '<option value="">Escolhe a publicação...</option>' + opcoes.map(b=>`<option value="${b.id}">${escapeHtml(b.nome_exibicao || b.titulo)}</option>`).join('');
   elPublicacao.disabled = false;
 }
