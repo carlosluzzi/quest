@@ -177,7 +177,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0}
 .enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap}
 .linha-numerada{display:flex;gap:8px;margin-top:10px;align-items:flex-start}
-.linha-marcador{flex-shrink:0;font-weight:600;min-width:26px}
+.linha-marcador{flex-shrink:0;font-weight:400;min-width:16px}
 .linha-texto{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:break-word}
 .alternativa{display:block;width:100%;text-align:left;background:#F5F5F6;border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:var(--fs-d)}
 .alternativa.correta{background:#E1F5E1;color:#1B5E20;font-weight:600}
@@ -727,7 +727,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-perfil" onclick="if(event.target===this) fecharModal('modal-perfil')">
   <div class="modal-conteudo">
     <h3 class="config-title">Seu perfil</h3>
-    <div style="text-align:center;color:#bbb;font-size:var(--fs-a);margin-bottom:14px">versão do app: <span id="versao-app-exibida"></span></div>
+    <div id="linha-versao-perfil" style="text-align:center;color:#bbb;font-size:var(--fs-a);margin-bottom:14px" class="hidden">versão do app: <span id="versao-app-exibida"></span></div>
 
     <div style="text-align:center;margin-bottom:14px">
       <div id="avatar-perfil-preview" style="width:140px;height:140px;border-radius:50%;background:#D97757;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:44px;margin:0 auto 16px;overflow:hidden">?</div>
@@ -925,9 +925,10 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-13';
+const VERSAO_APP = '2026-07-22-17';
 
 function verificarVersaoNova(){
+  if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
   const versaoVista = localStorage.getItem('claudequest_versao_vista');
   if(versaoVista === VERSAO_APP) return; // já viu essa versão, não mostra de novo
   localStorage.setItem('claudequest_versao_vista', VERSAO_APP);
@@ -1016,8 +1017,8 @@ function formatarEnunciado(texto){
   // fazendo o parágrafo parecer cortado antes da borda da tela, em vez de
   // fluir naturalmente até o final e quebrar só onde o navegador decidir
   const escaped = escapeHtml(texto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,3})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-z0-9∞]{1,3})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞,]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-z0-9∞,]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
   // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
@@ -1106,8 +1107,8 @@ function formatarEnunciado(texto){
 function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,3})/g, '$1<sup>$2</sup>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-z0-9∞]{1,3})/g, '$1<sub>$2</sub>');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞,]{1,6})/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-z0-9∞,]{1,6})/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
     const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
@@ -1331,6 +1332,7 @@ function atualizarAvatarUI(){
 function abrirModalPerfil(){
   atualizarAvatarUI();
   document.getElementById('versao-app-exibida').textContent = VERSAO_APP;
+  document.getElementById('linha-versao-perfil').classList.toggle('hidden', !usuarioAtual?.is_admin);
   abrirModal('modal-perfil');
 }
 
@@ -2593,7 +2595,7 @@ function renderizarQuestaoAtual(){
         }else if(alt.letra === alternativaSelecionadaAtual){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
-        return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} onclick="selecionarAlternativa('${alt.letra}')"><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><strong style="flex-shrink:0">${alt.letra})</strong> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
+        return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} onclick="selecionarAlternativa('${alt.letra}')"><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
       }).join('')
     : '<p style="color:#B00020;font-size:var(--fs-d)">Alternativas não identificadas nessa questão (pode estar malformada) – considere excluir pra você.</p>';
 
@@ -3774,7 +3776,7 @@ const PALAVRAS_CURTAS_COMUNS_SUBSCRITO = new Set(['de','da','do','em','um','uma'
 // (C_D0), 2 letras (C_Th) e símbolo (V_∞). Marca com "_" pra depois virar
 // subscrito visual de verdade na hora de exibir
 function mesclarSubscritosQuebrados(texto){
-  return texto.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεθλμπρστφχψω]|\d+)\n\s*(-?[A-Za-z0-9∞]{1,3})\s*\n/g, (m, principal, candidato) => {
+  return texto.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεθλμπρστφχψω]|\d+)\n\s*(-?[A-Za-z0-9∞,]{1,6})\s*\n/g, (m, principal, candidato) => {
     if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
     // sobrescrito (expoente), não subscrito: número negativo (notação
     // científica, ex: "10^-6"), base numérica (mesmo caso), ou letra de
