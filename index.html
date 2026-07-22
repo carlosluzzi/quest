@@ -925,7 +925,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-30';
+const VERSAO_APP = '2026-07-22-34';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1028,16 +1028,19 @@ function formatarEnunciado(texto){
     if(!m) return `<div class="enunciado-linha">${parte}</div>`;
     const marcador = m[0].trim();
     let resto = parte.slice(m[0].length).trim();
-    // separa a frase de instrução final ("Assinale a alternativa...") do
-    // último item numerado, quando ela vem grudada sem marcador próprio —
-    // ela não é parte do item, é a instrução da questão inteira
-    const anchorInstrucao = resto.match(/\s(Assinale a alternativa|Marque a alternativa|Indique a alternativa)/i);
-    let instrucaoSeparada = '';
-    if(anchorInstrucao){
-      instrucaoSeparada = `<div class="enunciado-linha">${resto.slice(anchorInstrucao.index).trim()}</div>`;
-      resto = resto.slice(0, anchorInstrucao.index).trim();
+    // várias frases marcam o início de uma seção nova dentro da
+    // explicação (fonte, texto original, análise, dica) — quando vêm
+    // grudadas no último item sem marcador próprio, cada uma precisa virar
+    // seu próprio parágrafo separado, não ficar junto do texto do item
+    const regexSecoes = /\s(FONTE\s*\(|TEXTO\s+ORIGINAL|Análise\s*:|💡|Assinale a alternativa|Marque a alternativa|Indique a alternativa)/gi;
+    const pontos = [...resto.matchAll(regexSecoes)].map(x => x.index);
+    let secoesSeparadas = '';
+    if(pontos.length){
+      const secoes = pontos.map((p, i) => resto.slice(p, pontos[i+1] ?? resto.length).trim());
+      secoesSeparadas = secoes.map(s => `<div class="enunciado-linha">${s}</div>`).join('');
+      resto = resto.slice(0, pontos[0]).trim();
     }
-    return `<div class="linha-numerada"><span class="linha-marcador">${marcador}</span><span class="linha-texto">${resto}</span></div>${instrucaoSeparada}`;
+    return `<div class="linha-numerada"><span class="linha-marcador">${marcador}</span><span class="linha-texto">${resto}</span></div>${secoesSeparadas}`;
   }
 
   // 1. Maiúsculas com ponto ou parêntese (correlação) – ancorado no "A." ou
@@ -1052,13 +1055,18 @@ function formatarEnunciado(texto){
     const idx = anchorA.index;
     const antes = escaped.slice(0, idx).trim();
     const zonaLista = escaped.slice(idx);
-    const partesLista = zonaLista.split(/(?=\s?[A-F][).]\s)/).map(p=>p.trim()).filter(Boolean);
+    const partesLista = zonaLista.split(/(?=\b[A-F][).]\s)/).map(p=>p.trim()).filter(Boolean);
     return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[A-F][).]/))].join('');
   }
 
   // 2. Assertivas romanas — aceita tanto "I)" quanto "I." como marcador,
-  // já que os PDFs reais usam os dois formatos dependendo da fonte
-  if(/\s\(?[IVXLCDM]{1,6}[).]/.test(escaped)){
+  // já que os PDFs reais usam os dois formatos dependendo da fonte.
+  // Ancorado no "I." ou "I)" literal (o primeiro item de toda lista romana
+  // de verdade), pra não confundir com letras físicas comuns em textos de
+  // hidrodinâmica que também são numerais romanos válidos sozinhos — D
+  // (drag), L (lift), M (moment), C (coeficiente), V (velocidade), X — que
+  // aparecem soltas no meio de frases normais seguidas de ponto
+  if(/\bI[).]\s/.test(escaped) && /\s\(?[IVXLCDM]{1,6}[).]/.test(escaped)){
     const partes = escaped.split(/(?=\s\(?[IVXLCDM]{1,6}[).])/).map(p=>p.trim()).filter(Boolean);
     return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(?[IVXLCDM]{1,6}[).]/))].join('');
   }
@@ -1077,7 +1085,7 @@ function formatarEnunciado(texto){
     const idx = anchorMinuscula.index;
     const antes = escaped.slice(0, idx).trim();
     const zonaLista = escaped.slice(idx);
-    const partesLista = zonaLista.split(/(?=\s?[a-f]\)\s)/).map(p=>p.trim()).filter(Boolean);
+    const partesLista = zonaLista.split(/(?=\b[a-f]\)\s)/).map(p=>p.trim()).filter(Boolean);
     return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[a-f]\)/))].join('');
   }
 
@@ -1090,7 +1098,7 @@ function formatarEnunciado(texto){
     const idx = anchor1.index;
     const antes = escaped.slice(0, idx).trim();
     const zonaLista = escaped.slice(idx);
-    const partesLista = zonaLista.split(/(?=\s?\d{1,2}[).]\s)/).map(p=>p.trim()).filter(Boolean);
+    const partesLista = zonaLista.split(/(?=\b\d{1,2}[).]\s)/).map(p=>p.trim()).filter(Boolean);
     return [antes, ...partesLista.map(p=>linhaMarcada(p, /^\d{1,2}[).]/))].join('');
   }
 
@@ -2089,6 +2097,14 @@ async function carregarBibliografia(){
 let filtroSelecionado = {modulo:null, publicacao:null, capitulo:null, tipoQuestao:null};
 let quantidadeSelecionada = 15;
 
+// decide se o livro cita capítulos em português ou inglês, baseado no
+// próprio título — usado só pra rotular o filtro (ex: "Chapter 6" em vez
+// de só "6"), sem mexer no número em si, que já é 100% numérico
+function rotuloCapituloDoLivro(titulo){
+  const palavrasInglesas = /\b(the|of|and|for|in|on|ship|guide|practice|practices|principles|design|resistance|flow|hydrodynamics|dimensions|data|infrastructure|channels|approach)\b/i;
+  return palavrasInglesas.test(titulo || '') ? 'Chapter' : 'Capítulo';
+}
+
 function selecionarFiltroSelect(nivel, valor){
   filtroSelecionado[nivel] = (valor && valor!=='todos') ? valor : null;
 
@@ -2116,8 +2132,10 @@ function selecionarFiltroSelect(nivel, valor){
     if(valor){
       // capítulos vêm das próprias questões já cadastradas com essa bibliografia (campo livre por questão)
       sb.from('questoes').select('capitulo').eq('bibliografia_id', valor).then(({data})=>{
-        const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))];
-        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+        const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a-b);
+        const livro = bibliografiaCache.find(b=>b.id===valor);
+        const rotulo = rotuloCapituloDoLivro(livro?.titulo);
+        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${rotulo} ${escapeHtml(c)}</option>`).join('');
         elCap.disabled = false;
         atualizarContadorDisponiveis();
       });
@@ -4499,7 +4517,7 @@ function renderizarNotasMetricas(elNotas, infoPorQuestao){
       const partes = [];
       if(info?.modulo_pscpp) partes.push(escapeHtml(info.modulo_pscpp));
       if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
-      if(info?.capitulo) partes.push('Capítulo ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
+      if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
       partes.push(new Date(n.criado_em).toLocaleDateString('pt-BR'));
       return `<div style="cursor:pointer;position:relative;padding:12px 0;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${n.questao_id}')">
         <button onclick="event.stopPropagation();excluirNotaDaListaMetricas('${n.id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px" title="Excluir nota">✕</button>
