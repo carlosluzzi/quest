@@ -4123,6 +4123,12 @@ function renderizarMetricasPessoais(){
   elPiores.innerHTML = '';
   elNotas.innerHTML = '';
 
+  // a caixinha de escolher módulo/publicação tem que aparecer sempre, mesmo
+  // sem nenhuma resposta registrada ainda — antes ficava vazia nesse caso,
+  // porque só era preenchida mais adiante, depois de um retorno antecipado
+  if(!document.getElementById('metricas-modulos-disponiveis').innerHTML) renderizarListasFiltroModulo();
+  if(!document.getElementById('metricas-materias-disponiveis').innerHTML) renderizarListasFiltroMateria();
+
   const respostasBrutas = metricasRespostasCache.filter(r => passaNoFiltroPeriodo(r.respondido_em));
 
   if(!respostasBrutas.length){
