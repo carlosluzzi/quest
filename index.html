@@ -318,7 +318,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="view-login" class="hidden">
 <div class="login-inner">
   <div style="text-align:center;margin-bottom:16px">
-    <img src="assets2/logo.png" alt="Pilotquest" style="height:32px;width:auto">
+    <img src="assets2/logo.png" alt="Pilotquest" style="height:34px;width:auto">
   </div>
 
   <form id="login-form-entrar" onsubmit="event.preventDefault(); entrar();">
@@ -442,7 +442,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 
   <div class="topbar">
-    <img src="assets2/logo.png" alt="Pilotquest" style="height:36px;width:auto;display:block">
+    <img src="assets2/logo.png" alt="Pilotquest" style="height:34px;width:auto;display:block">
     <div style="display:flex;align-items:center;gap:10px">
       <button class="btn-secundario hidden" id="btn-abrir-admin" style="width:auto;padding:6px 12px;font-size:var(--fs-b);font-weight:700;text-transform:uppercase;letter-spacing:0.03em" onclick="abrirModal('modal-admin')">Admin</button>
       <button class="avatar-btn" onclick="abrirModalPerfil()" id="avatar-inicial">?</button>
@@ -934,7 +934,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-62';
+const VERSAO_APP = '2026-07-22-63';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
