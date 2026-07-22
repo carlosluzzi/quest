@@ -152,7 +152,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   #nav-item-adicionar{display:flex;gap:8px;padding-left:10px;padding-right:10px}
   #nav-item-adicionar .nav-label{white-space:nowrap}
   #wrapper-barra-adicionar{display:none}
-  #view-topico-detalhe{left:250px !important}
+  #view-topico-detalhe{left:250px !important;width:calc(100% - 250px) !important}
   .nav-icon{width:24px;height:24px}
   .nav-label{font-size:var(--fs-e)}
   .content{grid-column:2;grid-row:2;padding:32px 48px;max-width:1320px;width:100%}
@@ -934,7 +934,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-65';
+const VERSAO_APP = '2026-07-22-68';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3580,13 +3580,14 @@ function linhaComparativaModulo(nome, pctAcerto, pctRecuperacao, pctRetencao, ac
   linhasInfo.push(retencaoTotal ? `% de retenção: ${retencaoSucesso} de ${retencaoTotal}` : '% de retenção: sem dado suficiente ainda');
   const textoInfo = linhasInfo.map(l=>`<div>${escapeHtml(l)}</div>`).join('');
   return `
-    <div style="display:flex;gap:12px;align-items:center;padding:10px 0;cursor:pointer" onclick="mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)">
-      <div style="width:104px;flex-shrink:0;font-size:var(--fs-d);font-weight:600;color:#111;line-height:1.25;min-height:33px;display:flex;align-items:center">${escapeHtml(nome)}</div>
-      <div style="flex:1">
-        ${barraFina(pctAcerto, 100, '#1BAF7A', '%')}
-        ${pctRecuperacao !== null ? barraFina(pctRecuperacao, 100, '#EDA100', '%') : barraSemDado()}
-        ${pctRetencao !== null ? barraFina(pctRetencao, 100, '#4A3AA7', '%') : barraSemDado()}
+    <div style="padding:12px 0;cursor:pointer;border-bottom:0.5px solid #f0f0ee" onclick="mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+        <span style="font-size:var(--fs-d);font-weight:600;color:#111">${escapeHtml(nome)}</span>
+        <span style="font-size:var(--fs-b);color:#888;flex-shrink:0;margin-left:10px">${acertos}/${total} acertos</span>
       </div>
+      ${barraFina(pctAcerto, 100, '#1BAF7A', '%')}
+      ${pctRecuperacao !== null ? barraFina(pctRecuperacao, 100, '#EDA100', '%') : barraSemDado()}
+      ${pctRetencao !== null ? barraFina(pctRetencao, 100, '#4A3AA7', '%') : barraSemDado()}
     </div>`;
 }
 function mostrarInfoModulo(event, nome, textoInfo){
@@ -4550,7 +4551,10 @@ function renderizarMetricasPessoais(){
     const mapaBibliografiaTitulo = {};
     bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.titulo; });
     const partes = [];
-    if(info?.modulo_pscpp) partes.push(escapeHtml(info.modulo_pscpp));
+    if(info?.modulo_pscpp){
+      const svg = modIconesCustomSvg[info.modulo_pscpp] ? modIconesCustomSvg[info.modulo_pscpp]('#111') : '';
+      partes.push(`<span style="display:inline-flex;align-items:center;gap:5px">${svg?`<span class="icone-modulo-mini">${svg}</span>`:''}${escapeHtml(info.modulo_pscpp)}</span>`);
+    }
     if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
     if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
     if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
