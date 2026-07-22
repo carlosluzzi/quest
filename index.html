@@ -934,7 +934,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-63';
+const VERSAO_APP = '2026-07-22-65';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3581,7 +3581,7 @@ function linhaComparativaModulo(nome, pctAcerto, pctRecuperacao, pctRetencao, ac
   const textoInfo = linhasInfo.map(l=>`<div>${escapeHtml(l)}</div>`).join('');
   return `
     <div style="display:flex;gap:12px;align-items:center;padding:10px 0;cursor:pointer" onclick="mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)">
-      <div style="width:112px;flex-shrink:0;font-size:var(--fs-d);font-weight:600;color:#111;line-height:1.25;min-height:33px;display:flex;align-items:center">${escapeHtml(nome)}</div>
+      <div style="width:104px;flex-shrink:0;font-size:var(--fs-d);font-weight:600;color:#111;line-height:1.25;min-height:33px;display:flex;align-items:center">${escapeHtml(nome)}</div>
       <div style="flex:1">
         ${barraFina(pctAcerto, 100, '#1BAF7A', '%')}
         ${pctRecuperacao !== null ? barraFina(pctRecuperacao, 100, '#EDA100', '%') : barraSemDado()}
@@ -3613,9 +3613,9 @@ window.addEventListener('click', (e)=>{
 });
 function legendaBarrasModulo(){
   return `<div style="display:flex;gap:14px;margin-bottom:8px;font-size:var(--fs-d);color:#888">
-    <span><span style="display:inline-block;width:8px;height:8px;background:#1BAF7A;border-radius:2px;margin-right:4px"></span>% de acerto</span>
-    <span><span style="display:inline-block;width:8px;height:8px;background:#EDA100;border-radius:2px;margin-right:4px"></span>% de recuperação</span>
-    <span><span style="display:inline-block;width:8px;height:8px;background:#4A3AA7;border-radius:2px;margin-right:4px"></span>% de retenção</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#1BAF7A;border-radius:2px"></span>% de acerto</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#EDA100;border-radius:2px"></span>% de recuperação</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#4A3AA7;border-radius:2px"></span>% de retenção</span>
   </div>`;
 }
 
@@ -3695,9 +3695,9 @@ function linhaComparativa(nome, acertos, total, pct, maximo, corPct){
 }
 function legendaBarras(){
   return `<div style="display:flex;gap:14px;margin-bottom:8px;font-size:11px;color:#888">
-    <span><span style="display:inline-block;width:8px;height:8px;background:#8FA878;border-radius:2px;margin-right:4px"></span>Acertos</span>
-    <span><span style="display:inline-block;width:8px;height:8px;background:#B5B5B0;border-radius:2px;margin-right:4px"></span>Respondidas</span>
-    <span><span style="display:inline-block;width:8px;height:8px;background:#C9A165;border-radius:2px;margin-right:4px"></span>% de acertos</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#8FA878;border-radius:2px"></span>Acertos</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#B5B5B0;border-radius:2px"></span>Respondidas</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#C9A165;border-radius:2px"></span>% de acertos</span>
   </div>`;
 }
 const MODULOS_PSCPP = ['Manobrabilidade','Arte Naval','Navegação em Águas Restritas','Legislação','Meteorologia e Oceanografia','Comunicações','Conhecimentos Gerais'];
@@ -4547,9 +4547,15 @@ function renderizarMetricasPessoais(){
 
   function linhaQuestaoDificil(p){
     const info = infoPorQuestao[p.questaoId];
+    const mapaBibliografiaTitulo = {};
+    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.titulo; });
+    const partes = [];
+    if(info?.modulo_pscpp) partes.push(escapeHtml(info.modulo_pscpp));
+    if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
+    if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
+    if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
     return `<div style="cursor:pointer;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${p.questaoId}')">
-      ${info ? tagModulo(info.modulo_pscpp) : ''}
-      <p style="font-size:var(--fs-d);margin-top:6px;color:#111">${escapeHtml((info?.enunciado||'').slice(0,100))}...</p>
+      <div style="font-size:var(--fs-d);color:#111;font-weight:600">${partes.length ? partes.join(' · ') : 'Questão'}</div>
       <div style="color:#888;font-size:var(--fs-b);margin-top:6px">${p.erros} ${p.erros===1?'erro':'erros'} em ${p.tentativas} ${p.tentativas===1?'tentativa':'tentativas'}</div>
     </div>`;
   }
