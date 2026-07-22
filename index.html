@@ -925,7 +925,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-25';
+const VERSAO_APP = '2026-07-22-26';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3659,7 +3659,6 @@ const MODULOS_PSCPP = ['Manobrabilidade','Arte Naval','Navegação em Águas Res
 const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Arte Naval", autorBusca:["clark"], autor:"CLARK, I. C.", titulo:"Mooring and Anchoring Ships: Principles and Practice, v.1", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["fonseca"], autor:"FONSECA, M. M.", titulo:"Arte Naval, v.1", capitulos:null},
-  {modulo:"Arte Naval", autorBusca:["an"], autor:"FONSECA, M. M.", titulo:"Arte Naval, v.1", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["fragoso"], autor:"FRAGOSO, O.; CAJATY, M.", titulo:"Rebocadores Portuários", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["rp"], autor:"FRAGOSO, O.; CAJATY, M.", titulo:"Rebocadores Portuários", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["hensen", "tug"], autor:"HENSEN, H.", titulo:"Tug Use in Port: A Practical Guide", capitulos:null},
@@ -3707,14 +3706,12 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Legislação", autorBusca:["7.642"], autor:"BRASIL", titulo:"Lei nº 7.642/1987 — Procuradoria Especial da Marinha", capitulos:null},
   {modulo:"Legislação", autorBusca:["pem"], autor:"BRASIL", titulo:"Lei nº 7.642/1987 — Procuradoria Especial da Marinha", capitulos:null},
   {modulo:"Legislação", autorBusca:["7.652"], autor:"BRASIL", titulo:"Lei nº 7.652/1988 — Registro da Propriedade Marítima", capitulos:null},
-  {modulo:"Legislação", autorBusca:["rpm"], autor:"BRASIL", titulo:"Lei nº 7.652/1988 — Registro da Propriedade Marítima", capitulos:null},
   {modulo:"Legislação", autorBusca:["9.432"], autor:"BRASIL", titulo:"Lei nº 9.432/1997 — Ordenação do Transporte Aquaviário", capitulos:null},
   {modulo:"Legislação", autorBusca:["lei complementar", "97/1999"], autor:"BRASIL", titulo:"Lei Complementar nº 97/1999 (cap. VI, art. 17)", capitulos:null},
   {modulo:"Legislação", autorBusca:["12.815", "lei dos portos"], autor:"BRASIL", titulo:"Lei nº 12.815/2013 — Lei dos Portos", capitulos:null},
   {modulo:"Legislação", autorBusca:["14.813"], autor:"BRASIL", titulo:"Lei nº 14.813/2024 — Regulamenta a atividade de praticagem", capitulos:null},
   {modulo:"Legislação", autorBusca:["9.537", "lesta"], autor:"BRASIL", titulo:"Lei nº 9.537/1997 — LESTA", capitulos:null},
   {modulo:"Legislação", autorBusca:["2.180", "tribunal marítimo"], autor:"BRASIL", titulo:"Lei nº 2.180/1954 — Tribunal Marítimo", capitulos:null},
-  {modulo:"Legislação", autorBusca:["tm"], autor:"BRASIL", titulo:"Lei nº 2.180/1954 — Tribunal Marítimo", capitulos:null},
   {modulo:"Legislação", autorBusca:["carta 12.000"], autor:"DHN", titulo:"Publicações Náuticas (Cartas Náuticas, Carta 12.000, Avisos aos Navegantes, Roteiro, Lista de Faróis, Lista de Auxílios-Rádio, Tábuas das Marés, Cartas de Correntes de Maré, Cartas Piloto)", capitulos:null},
   {modulo:"Legislação", autorBusca:["960", "certification for maritime pilots"], autor:"IMO", titulo:"Recommendations on Training and Certification for Maritime Pilots (Resolution A.960(23))", capitulos:null},
   {modulo:"Legislação", autorBusca:["normam-601", "normam 601"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-601/DHN", capitulos:null},
@@ -3753,7 +3750,6 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Meteorologia e Oceanografia", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["mesquita", "ondas"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["ynoue"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
-  {modulo:"Meteorologia e Oceanografia", autorBusca:["rita"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["bento"], autor:"BENTO, C. N. S.", titulo:"Navegação Integrada", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["norberto"], autor:"BENTO, C. N. S.", titulo:"Navegação Integrada", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["solas", "2024"], autor:"IMO", titulo:"SOLAS Consolidated Edition 2024 (Capítulo V)", capitulos:null},
