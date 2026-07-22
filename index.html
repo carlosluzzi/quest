@@ -925,7 +925,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-17';
+const VERSAO_APP = '2026-07-22-24';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3659,41 +3659,62 @@ const MODULOS_PSCPP = ['Manobrabilidade','Arte Naval','Navegação em Águas Res
 const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Arte Naval", autorBusca:["clark"], autor:"CLARK, I. C.", titulo:"Mooring and Anchoring Ships: Principles and Practice, v.1", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["fonseca"], autor:"FONSECA, M. M.", titulo:"Arte Naval, v.1", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["an"], autor:"FONSECA, M. M.", titulo:"Arte Naval, v.1", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["fragoso"], autor:"FRAGOSO, O.; CAJATY, M.", titulo:"Rebocadores Portuários", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["rp"], autor:"FRAGOSO, O.; CAJATY, M.", titulo:"Rebocadores Portuários", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["hensen", "tug"], autor:"HENSEN, H.", titulo:"Tug Use in Port: A Practical Guide", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["tup"], autor:"HENSEN, H.", titulo:"Tug Use in Port: A Practical Guide", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["tup4"], autor:"HENSEN, H.", titulo:"Tug Use in Port: A Practical Guide", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["hensen", "estabilidade", "rebocadores"], autor:"HENSEN, H.; VAN DER LAAN, M.", titulo:"Estabilidade dos Rebocadores", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["1428"], autor:"IMO", titulo:"Required Pilot Transfer Arrangements (MSC.1/Circ.1428)", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["circ.1428"], autor:"IMO", titulo:"Required Pilot Transfer Arrangements (MSC.1/Circ.1428)", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["1495"], autor:"IMO", titulo:"Unified Interpretation of SOLAS V/23.3.3 (MSC.1/Circ.1495/Rev.1)", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["circ.1495"], autor:"IMO", titulo:"Unified Interpretation of SOLAS V/23.3.3 (MSC.1/Circ.1495/Rev.1)", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["1045"], autor:"IMO", titulo:"Pilot Transfer Arrangements (Resolution A.1045(27))", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["1108"], autor:"IMO", titulo:"Amendments to the Recommendation on Pilot Transfer Arrangements (Resolution A.1108(29))", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["solas", "1974"], autor:"IMO", titulo:"SOLAS 1974 (as amended), Regra V/23.3.3", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["macelrevey"], autor:"MacELREVEY, D. H.", titulo:"Shiphandling for the Mariner", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["shfm"], autor:"MacELREVEY, D. H.", titulo:"Shiphandling for the Mariner", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["nayak", "pilotage"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 3, 4, 13-19)", capitulos:[3, 4, 13, 14, 15, 16, 17, 18, 19]},
-  {modulo:"Arte Naval", autorBusca:["pianc", "ship dimensions"], autor:"PIANC", titulo:"Ship Dimensions and Data for Design of Marine Infrastructure", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["tpmp"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 3, 4, 13-19)", capitulos:[3, 4, 13, 14, 15, 16, 17, 18, 19]},
+  {modulo:"Arte Naval", autorBusca:["pianc 235"], autor:"PIANC", titulo:"Ship Dimensions and Data for Design of Marine Infrastructure (Report Nº 235)", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["pianc", "ship dimensions"], autor:"PIANC", titulo:"Ship Dimensions and Data for Design of Marine Infrastructure (Report Nº 235)", capitulos:null},
   {modulo:"Comunicações", autorBusca:["radioperador"], autor:"DIRETORIA DE PORTOS E COSTAS", titulo:"Manual do Curso Especial de Radioperador Geral", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["erog"], autor:"DIRETORIA DE PORTOS E COSTAS", titulo:"Manual do Curso Especial de Radioperador Geral", capitulos:null},
   {modulo:"Comunicações", autorBusca:["international code of signals"], autor:"IMO", titulo:"International Code of Signals", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["cis"], autor:"IMO", titulo:"International Code of Signals", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["ics"], autor:"IMO", titulo:"International Code of Signals", capitulos:null},
   {modulo:"Comunicações", autorBusca:["918", "communication phrases"], autor:"IMO", titulo:"Standard Marine Communication Phrases (Resolution A.918(22))", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["smcp"], autor:"IMO", titulo:"Standard Marine Communication Phrases (Resolution A.918(22))", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["2.508", "marpol"], autor:"BRASIL", titulo:"Decreto nº 2.508/1998 — MARPOL 73/78", capitulos:null},
-  {modulo:"Conhecimentos Gerais", autorBusca:["conapra", "planejamento portuário"], autor:"CONAPRA", titulo:"Planejamento Portuário: Recomendações para Acessos Náuticos", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["planejamento portuário"], autor:"CONAPRA", titulo:"Planejamento Portuário: Recomendações para Acessos Náuticos", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["1598", "fatigue"], autor:"IMO", titulo:"Guidelines on Fatigue (MSC.1/Circ.1598)", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["ship/port interface"], autor:"IMO", titulo:"Ship/Port Interface: List of Publications (FAL.6/Circ.14/Rev.2)", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["fal.6"], autor:"IMO", titulo:"Ship/Port Interface: List of Publications (FAL.6/Circ.14/Rev.2)", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["livingstone"], autor:"LIVINGSTONE, G. H.; LIVINGSTONE, G. H.", titulo:"Shiphandling the Beautiful Game, v.1", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["stbg"], autor:"LIVINGSTONE, G. H.; LIVINGSTONE, G. H.", titulo:"Shiphandling the Beautiful Game, v.1", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["sbg"], autor:"LIVINGSTONE, G. H.; LIVINGSTONE, G. H.", titulo:"Shiphandling the Beautiful Game, v.1", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["normam-224", "normam 224"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-224/DPC", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["declaração universal", "direitos humanos"], autor:"ONU", titulo:"Declaração Universal dos Direitos Humanos", capitulos:null},
-  {modulo:"Conhecimentos Gerais", autorBusca:["pianc", "harbour approach"], autor:"PIANC", titulo:"Harbour Approach Channels: Design Guidelines", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["pianc 121"], autor:"PIANC", titulo:"Harbour Approach Channels: Design Guidelines", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["pimenta"], autor:"PIMENTA, M. G.", titulo:"Direito Processual Marítimo", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["dpm"], autor:"PIMENTA, M. G.", titulo:"Direito Processual Marítimo", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["stopford"], autor:"STOPFORD, M.", titulo:"Economia Marítima", capitulos:null},
   {modulo:"Legislação", autorBusca:["2.596", "rlesta"], autor:"BRASIL", titulo:"Decreto nº 2.596/1998 — RLESTA", capitulos:null},
   {modulo:"Legislação", autorBusca:["12.481"], autor:"BRASIL", titulo:"Decreto nº 12.481/2025 — Política Marítima Nacional", capitulos:null},
+  {modulo:"Legislação", autorBusca:["pmn"], autor:"BRASIL", titulo:"Decreto nº 12.481/2025 — Política Marítima Nacional", capitulos:null},
   {modulo:"Legislação", autorBusca:["2.256"], autor:"BRASIL", titulo:"Decreto nº 2.256/1997", capitulos:null},
   {modulo:"Legislação", autorBusca:["7.642"], autor:"BRASIL", titulo:"Lei nº 7.642/1987 — Procuradoria Especial da Marinha", capitulos:null},
+  {modulo:"Legislação", autorBusca:["pem"], autor:"BRASIL", titulo:"Lei nº 7.642/1987 — Procuradoria Especial da Marinha", capitulos:null},
   {modulo:"Legislação", autorBusca:["7.652"], autor:"BRASIL", titulo:"Lei nº 7.652/1988 — Registro da Propriedade Marítima", capitulos:null},
+  {modulo:"Legislação", autorBusca:["rpm"], autor:"BRASIL", titulo:"Lei nº 7.652/1988 — Registro da Propriedade Marítima", capitulos:null},
   {modulo:"Legislação", autorBusca:["9.432"], autor:"BRASIL", titulo:"Lei nº 9.432/1997 — Ordenação do Transporte Aquaviário", capitulos:null},
   {modulo:"Legislação", autorBusca:["lei complementar", "97/1999"], autor:"BRASIL", titulo:"Lei Complementar nº 97/1999 (cap. VI, art. 17)", capitulos:null},
   {modulo:"Legislação", autorBusca:["12.815", "lei dos portos"], autor:"BRASIL", titulo:"Lei nº 12.815/2013 — Lei dos Portos", capitulos:null},
   {modulo:"Legislação", autorBusca:["14.813"], autor:"BRASIL", titulo:"Lei nº 14.813/2024 — Regulamenta a atividade de praticagem", capitulos:null},
   {modulo:"Legislação", autorBusca:["9.537", "lesta"], autor:"BRASIL", titulo:"Lei nº 9.537/1997 — LESTA", capitulos:null},
   {modulo:"Legislação", autorBusca:["2.180", "tribunal marítimo"], autor:"BRASIL", titulo:"Lei nº 2.180/1954 — Tribunal Marítimo", capitulos:null},
+  {modulo:"Legislação", autorBusca:["tm"], autor:"BRASIL", titulo:"Lei nº 2.180/1954 — Tribunal Marítimo", capitulos:null},
   {modulo:"Legislação", autorBusca:["carta 12.000"], autor:"DHN", titulo:"Publicações Náuticas (Cartas Náuticas, Carta 12.000, Avisos aos Navegantes, Roteiro, Lista de Faróis, Lista de Auxílios-Rádio, Tábuas das Marés, Cartas de Correntes de Maré, Cartas Piloto)", capitulos:null},
   {modulo:"Legislação", autorBusca:["960", "certification for maritime pilots"], autor:"IMO", titulo:"Recommendations on Training and Certification for Maritime Pilots (Resolution A.960(23))", capitulos:null},
   {modulo:"Legislação", autorBusca:["normam-601", "normam 601"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-601/DHN", capitulos:null},
@@ -3706,39 +3727,59 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Legislação", autorBusca:["normam-302", "normam 302"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-302/DPC", capitulos:null},
   {modulo:"Legislação", autorBusca:["normam-201", "normam 201"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-201/DPC (cap. 7, arts. 7.1-7.3 e 7.10-7.14)", capitulos:[7]},
   {modulo:"Legislação", autorBusca:["política nacional de defesa"], autor:"MINISTÉRIO DA DEFESA", titulo:"Política Nacional de Defesa", capitulos:null},
+  {modulo:"Legislação", autorBusca:["md35"], autor:"MINISTÉRIO DA DEFESA", titulo:"Glossário das Forças Armadas (MD35-G-01)", capitulos:null},
   {modulo:"Legislação", autorBusca:["glossário", "forças armadas"], autor:"MINISTÉRIO DA DEFESA", titulo:"Glossário das Forças Armadas (MD35-G-01)", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["bertram"], autor:"BERTRAM, V.", titulo:"Practical Ship Hydrodynamics", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["crenshaw"], autor:"CRENSHAW, R. S.", titulo:"Naval Shiphandling", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["1228", "adverse weather"], autor:"IMO", titulo:"Revised Guidance to the Master for Avoiding Dangerous Situations in Adverse Weather and Sea Conditions (MSC.1/Circ.1228)", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["circ.1228"], autor:"IMO", titulo:"Revised Guidance to the Master for Avoiding Dangerous Situations in Adverse Weather and Sea Conditions (MSC.1/Circ.1228)", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["a.601"], autor:"IMO", titulo:"Provision and Display of Manoeuvring Information on Board Ships (Resolution A.601(15))", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["601", "manoeuvring information"], autor:"IMO", titulo:"Provision and Display of Manoeuvring Information on Board Ships (Resolution A.601(15))", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["1053", "explanatory notes"], autor:"IMO", titulo:"Explanatory Notes to the Standards for Ship Manoeuvrability (MSC/Circ.1053)", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["circ.1053"], autor:"IMO", titulo:"Explanatory Notes to the Standards for Ship Manoeuvrability (MSC/Circ.1053)", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["137(76)", "manoeuvrability"], autor:"IMO", titulo:"Standards for Ship Manoeuvrability (Resolution MSC.137(76))", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["larsson", "raven"], autor:"LARSSON, L.; RAVEN, H. C.", titulo:"Ship Resistance and Flow", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["lewis", "naval architecture"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["santos", "manobrabilidade", "seculo"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["mesquita", "manobrabilidade"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-4)", capitulos:[3, 4]},
+  {modulo:"Manobrabilidade", autorBusca:["mesquita", "hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-4)", capitulos:[3, 4]},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["lobo", "soares"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["valgas"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["normam-701", "normam 701"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-701/DHN", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["miguens", "ciência e a arte", "45"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
-  {modulo:"Meteorologia e Oceanografia", autorBusca:["pianc", "hydro/meteo"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["pianc 117"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["hydro/meteo"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["mesquita", "ondas"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["ynoue"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["rita"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["bento"], autor:"BENTO, C. N. S.", titulo:"Navegação Integrada", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["norberto"], autor:"BENTO, C. N. S.", titulo:"Navegação Integrada", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["solas", "2024"], autor:"IMO", titulo:"SOLAS Consolidated Edition 2024 (Capítulo V)", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["colreg"], autor:"IMO", titulo:"COLREG, Consolidated Edition 2018", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["ripeam"], autor:"IMO", titulo:"COLREG, Consolidated Edition 2018", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["1580", "dp systems"], autor:"IMO", titulo:"Guidelines for Vessels with DP Systems (MSC.1/Circ.1580)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["circ.1580"], autor:"IMO", titulo:"Guidelines for Vessels with DP Systems (MSC.1/Circ.1580)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["imo", "dp", "systems"], autor:"IMO", titulo:"Guidelines for Vessels with DP Systems (MSC.1/Circ.1580)", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["738", "dp operator"], autor:"IMO", titulo:"Guidelines for DP Operator Training (MSC.1/Circ.738/Rev.2)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["circ.738"], autor:"IMO", titulo:"Guidelines for DP Operator Training (MSC.1/Circ.738/Rev.2)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["imo", "dp", "operator"], autor:"IMO", titulo:"Guidelines for DP Operator Training (MSC.1/Circ.738/Rev.2)", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["ecdis"], autor:"IMO", titulo:"Performance Standards for ECDIS (Resolution MSC.530(106))", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["1106", "ais"], autor:"IMO", titulo:"Revised Guidelines for AIS (Resolution A.1106(29))", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["192(79)", "radar equipment"], autor:"IMO", titulo:"Adoption of the Revised Performance Standards for Radar Equipment (Resolution MSC.192(79))", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["imo", "radar"], autor:"IMO", titulo:"Adoption of the Revised Performance Standards for Radar Equipment (Resolution MSC.192(79))", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["bridge procedures"], autor:"INTERNATIONAL CHAMBER OF SHIPPING", titulo:"Bridge Procedures Guide", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["bpg"], autor:"INTERNATIONAL CHAMBER OF SHIPPING", titulo:"Bridge Procedures Guide", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["normam-501", "normam 501"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-501/DHN", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["normam-511", "normam 511"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-511/DHN", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["normam-202", "normam 202"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-202/DPC", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["miguens"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte (v.1 e v.3, exceto cap. 45)", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["ciência e a arte"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte (v.1 e v.3, exceto cap. 45)", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["nayak", "pilotage"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6, 13)", capitulos:[5, 6, 13]},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["tpmp"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6, 13)", capitulos:[5, 6, 13]},
   {modulo:"Navegação em Águas Restritas", autorBusca:["swift", "bailey"], autor:"SWIFT, A. J.; BAILEY, T. J.", titulo:"Bridge Team Management: a Practical Guide", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["btm"], autor:"SWIFT, A. J.; BAILEY, T. J.", titulo:"Bridge Team Management: a Practical Guide", capitulos:null},
 ];
 
 /* ============================================================
@@ -3902,7 +3943,7 @@ function parsearQuestoesDoTexto(textoBruto){
       // então "Página N", cabeçalho repetido e "QUESTÃO N - CHAVE DE
       // RESPOSTA" ainda ficam para trás, coladinhos)
       .map(a => a
-        .replace(/\s*PSCPP\s*[-–—].*$/i, '')
+        .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/i, '')
         .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/, '')
         .replace(/\s*Pagina\s+\d+.*$/i, '')
         .replace(/\s*Página\s+\d+.*$/i, '')
@@ -3920,7 +3961,7 @@ function parsearQuestoesDoTexto(textoBruto){
       .replace(/QUEST[ÃA]O\s*N?º?\s*\d+\s*[–\-—]\s*(?:GABARITO.*|CHAVE\s+DE\s+RESPOSTA)$/gim, '')
       .replace(/GABARITO\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
       .replace(/^Página \d+.*$/gim, '')
-      .replace(/\s*PSCPP\s*[-–—].*$/is, '') // rodapé de página repetido, tipo "PSCPP — BANCO DE QUESTÕES ... Página N" (formato pode variar)
+      .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/is, '') // rodapé de página repetido (formato varia bastante)
       .replace(/\s*Publica[çc][ãa]o:\s*.*$/is, '') // linha de citação bibliográfica no fim da explicação, desnecessária
       .replace(/^\s*\n/gm, '')
       .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n')
@@ -3991,7 +4032,7 @@ function parsearPorRespostaComoCorte(texto){
       .map(a => mesclarSubscritosQuebrados(a.trim()).replace(/\s+/g,' ').replace(/ +([,.;:)·/])/g, '$1').replace(/\( +/g, '('))
       .filter(a => /^[a-eA-E]\)/.test(a))
       .map(a => a
-        .replace(/\s*PSCPP\s*[-–—].*$/i, '')
+        .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/i, '')
         .replace(/\s+[A-ZÀ-Ú][a-zA-ZÀ-ú0-9\s]{3,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/, '')
         .replace(/\s*Pagina\s+\d+.*$/i, '')
         .replace(/\s*Página\s+\d+.*$/i, '')
@@ -4053,6 +4094,18 @@ function normalizarBusca(texto){
   const comRomanosConvertidos = normalizarNumeraisRomanos(texto||'');
   return comRomanosConvertidos.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 }
+// termos curtos (siglas, números) exigem fronteira de palavra, senão batem
+// como substring dentro de qualquer palavra maior sem relação nenhuma
+// (ex: "bpg" batendo dentro de "abpgordável") — frases longas (com espaço)
+// continuam com busca simples, risco de falso positivo é bem menor nelas
+function textoContemTermo(textoNorm, termoNorm){
+  if(termoNorm.length <= 5 && !/\s/.test(termoNorm)){
+    const escapado = termoNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(?<![\\p{L}\\p{N}])${escapado}(?![\\p{L}\\p{N}])`, 'u');
+    return regex.test(textoNorm);
+  }
+  return textoNorm.includes(termoNorm);
+}
 function extrairCapituloDoTexto(texto){
   const m = (texto||'').match(/\bcap(?:[íi]tulos?|\.)\s*n?º?\s*(\d{1,2})\b/i);
   return m ? parseInt(m[1],10) : null;
@@ -4068,7 +4121,7 @@ function identificarBibliografia(explicacao, enunciado){
   for(const texto of textos){
     const textoNorm = normalizarBusca(texto);
     const candidatosBrutos = BIBLIOGRAFIA_FECHADA.filter(entrada =>
-      entrada.autorBusca.every(termo => textoNorm.includes(normalizarBusca(termo)))
+      entrada.autorBusca.every(termo => textoContemTermo(textoNorm, normalizarBusca(termo)))
     );
     // dedup por módulo+título — 2 entradas do mesmo livro (com termos de
     // busca diferentes, tipo "miguens" e o título por extenso) não contam
