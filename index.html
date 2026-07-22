@@ -922,7 +922,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-02';
+const VERSAO_APP = '2026-07-22-03';
 
 function verificarVersaoNova(){
   const versaoVista = localStorage.getItem('claudequest_versao_vista');
@@ -931,14 +931,9 @@ function verificarVersaoNova(){
   if(versaoVista === null) return; // primeira vez usando o app de verdade (não é atualização, não precisa avisar)
 
   const aviso = document.createElement('div');
-  aviso.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 16px);left:50%;transform:translateX(-50%);background:#1B5E20;color:#fff;padding:10px 18px;border-radius:10px;font-size:var(--fs-d);box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:9999;text-align:center';
-  aviso.textContent = `✓ Versão nova carregada (${VERSAO_APP})`;
+  aviso.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 16px);left:50%;transform:translateX(-50%);background:#1B5E20;color:#fff;padding:10px 14px 10px 18px;border-radius:10px;font-size:var(--fs-d);box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:9999;display:flex;align-items:center;gap:14px';
+  aviso.innerHTML = `<span>✓ Versão nova carregada (${VERSAO_APP})</span><button style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-weight:600;cursor:pointer;font-family:inherit" onclick="this.parentElement.remove()">OK</button>`;
   document.body.appendChild(aviso);
-  setTimeout(() => {
-    aviso.style.transition = 'opacity 0.6s';
-    aviso.style.opacity = '0';
-    setTimeout(() => aviso.remove(), 600);
-  }, 5000);
 }
 
 let usuarioAtual = null;       // linha da tabela usuarios
