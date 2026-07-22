@@ -933,7 +933,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-54';
+const VERSAO_APP = '2026-07-22-56';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1036,7 +1036,7 @@ function formatarEnunciado(texto){
   // fluir naturalmente até o final e quebrar só onde o navegador decidir
   const escaped = escapeHtml(texto).replace(/\s+/g, ' ').trim()
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞,]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{1,2})_([A-Za-zαβγδεθλμπρστφχψω])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito, o resto fica solto (ex: "N'_vv" → só o 1º v é subscrito)
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεθλμπρστφχψω])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito, o resto fica solto (ex: "N'_vv" → só o 1º v é subscrito)
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεθλμπρστφχψω0-9∞,]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
@@ -1137,7 +1137,7 @@ function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞,]{1,6})/g, '$1<sup>$2</sup>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{1,2})_([A-Za-zαβγδεθλμπρστφχψω])/g, '$1<sub>$2</sub>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεθλμπρστφχψω])/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεθλμπρστφχψω0-9∞,]{1,6})/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
@@ -3253,14 +3253,24 @@ async function verificarMaioriaTopico(topicoId){
    atingir maioria; aí sim os campos propostos são aplicados
    automaticamente (ver verificarMaioriaTopico)
    ============================================================ */
+// remove os marcadores de subscrito/sobrescrito (_ e ^), voltando pro
+// texto puro sem underscore/circunflexo visível — usado só na hora de
+// mostrar numa caixa de texto simples, que nunca consegue renderizar
+// <sub>/<sup> de verdade (é só texto puro). Ao salvar, mesclarSubscritosQuebrados
+// roda de novo e recoloca os marcadores certos automaticamente
+function removerMarcadoresSubscrito(texto){
+  return (texto||'')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_([A-Za-zαβγδεθλμπρστφχψω0-9∞,]{1,6})/g, '$1$2')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-zαβγδεθλμπρστφχψω0-9∞,]{1,6})/g, '$1$2');
+}
 async function abrirFormularioEdicao(questaoId, topicoId){
   const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
   const html = `
     <div class="section-title" style="margin-top:0">Propor edição</div>
     <label style="font-size:var(--fs-b);color:#888">Enunciado</label>
-    <textarea id="edicao-enunciado" class="filter-select" style="min-height:90px">${escapeHtml(q.enunciado||'')}</textarea>
+    <textarea id="edicao-enunciado" class="filter-select" style="min-height:90px">${escapeHtml(removerMarcadoresSubscrito(q.enunciado))}</textarea>
     <label style="font-size:var(--fs-b);color:#888">Alternativas</label>
-    <textarea id="edicao-alternativas" class="filter-select" style="min-height:90px">${escapeHtml(q.alternativas||'')}</textarea>
+    <textarea id="edicao-alternativas" class="filter-select" style="min-height:90px">${escapeHtml(removerMarcadoresSubscrito(q.alternativas))}</textarea>
     <label style="font-size:var(--fs-b);color:#888">Gabarito (uma letra, a-e)</label>
     <input type="text" id="edicao-gabarito" class="filter-select" value="${escapeHtml(q.gabarito||'')}" maxlength="1">
     <button class="btn-primario" onclick="enviarPropostaEdicao('${questaoId}','${topicoId}')">Enviar proposta</button>
@@ -3270,8 +3280,8 @@ async function abrirFormularioEdicao(questaoId, topicoId){
 }
 
 async function enviarPropostaEdicao(questaoId, topicoId){
-  const enunciado = document.getElementById('edicao-enunciado').value.trim();
-  const alternativas = document.getElementById('edicao-alternativas').value.trim();
+  const enunciado = mesclarSubscritosQuebrados(document.getElementById('edicao-enunciado').value.trim());
+  const alternativas = mesclarSubscritosQuebrados(document.getElementById('edicao-alternativas').value.trim());
   const gabarito = document.getElementById('edicao-gabarito').value.trim().toLowerCase();
   const {error} = await sb.from('propostas_edicao').insert({
     topico_id: topicoId, questao_id: questaoId, enunciado, alternativas, gabarito, criado_por: usuarioAtual.id
