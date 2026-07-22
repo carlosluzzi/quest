@@ -923,7 +923,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-06';
+const VERSAO_APP = '2026-07-22-09';
 
 function verificarVersaoNova(){
   const versaoVista = localStorage.getItem('claudequest_versao_vista');
@@ -1014,7 +1014,8 @@ function formatarEnunciado(texto){
   // fazendo o parágrafo parecer cortado antes da borda da tela, em vez de
   // fluir naturalmente até o final e quebrar só onde o navegador decidir
   const escaped = escapeHtml(texto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-ú]+)_([A-Za-z0-9∞]{1,3})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,3})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-z0-9∞]{1,3})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
   // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
@@ -1103,7 +1104,8 @@ function formatarEnunciado(texto){
 function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-ú]+)_([A-Za-z0-9∞]{1,3})/g, '$1<sub>$2</sub>');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,3})/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-z0-9∞]{1,3})/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
     const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
@@ -3770,8 +3772,13 @@ const PALAVRAS_CURTAS_COMUNS_SUBSCRITO = new Set(['de','da','do','em','um','uma'
 // (C_D0), 2 letras (C_Th) e símbolo (V_∞). Marca com "_" pra depois virar
 // subscrito visual de verdade na hora de exibir
 function mesclarSubscritosQuebrados(texto){
-  return texto.replace(/\b([A-Za-z])\n\s*([A-Za-z0-9∞]{1,3})\s*\n/g, (m, principal, candidato) => {
-    return PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase()) ? m : `${principal}_${candidato}\n`;
+  return texto.replace(/([A-Za-zαβγδεθλμπρστφχψω]|\d+)\n\s*(-?[A-Za-z0-9∞]{1,3})\s*\n/g, (m, principal, candidato) => {
+    if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
+    // sobrescrito (expoente), não subscrito: número negativo (notação
+    // científica, ex: "10^-6"), base numérica (mesmo caso), ou letra de
+    // unidade seguida só de dígito (ex: "m^2" = metro quadrado, "s^-1")
+    const ehExpoente = /^-\d/.test(candidato) || /^\d+$/.test(principal) || (/^\d{1,2}$/.test(candidato) && /^(m|s|cm|km|kg|g|l|ml|n|pa|hz)$/i.test(principal));
+    return `${principal}${ehExpoente?'^':'_'}${candidato}\n`;
   });
 }
 
@@ -3817,15 +3824,16 @@ function limparEnunciado(textoOriginal){
     }
     if(modo === 'pulando_valor_multi'){
       if(!linhaLimpa){ modo = 'normal'; continue; } // linha em branco = fim do valor
-      // linha terminando em ano de publicação (ex: "Butterworth-Heinemann,
-      // 2012.") é sinal forte de que ainda é parte de uma citação
-      // bibliográfica quebrada em 2+ linhas, não conteúdo novo — nesse
-      // caso continua pulando mesmo já tendo passado da 1ª linha
+      // 2 sinais de que a linha ainda é continuação do valor (não conteúdo
+      // novo): termina em ano de publicação (citação bibliográfica quebrada,
+      // ex: "Butterworth-Heinemann, 2012."), OU começa em minúscula (frase
+      // cortada no meio, ex: "...ataque" numa linha, "efetivo." na de baixo)
       const pareceFimDeCitacao = /\b(19|20)\d{2}\.?\s*$/.test(linhaLimpa);
-      if(linhasPuladasNoValor >= 1 && !pareceFimDeCitacao){
+      const comecaMinuscula = /^[a-zà-ÿ]/.test(linhaLimpa);
+      if(linhasPuladasNoValor >= 1 && !pareceFimDeCitacao && !comecaMinuscula){
         // trava de segurança: já pulou 1 linha de valor, não achou linha em
-        // branco, e essa linha não parece continuação de citação — trata
-        // como conteúdo real, não é mais metadado
+        // branco, e essa linha não parece continuação — trata como
+        // conteúdo real, não é mais metadado
         modo = 'normal';
         linhasLimpas.push(linha);
         continue;
@@ -3851,7 +3859,7 @@ function limparEnunciado(textoOriginal){
     .replace(/^\s*\n/gm, '')
     .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n') // letra isolada que "quebrou" de uma palavra (artefato do pdf.js), não é palavra válida sozinha em português
     .replace(/[ \t]{2,}/g, ' ')
-    .replace(/ +([,.;:)])/g, '$1')
+    .replace(/ +([,.;:)·/])/g, '$1')
     .replace(/\( +/g, '(')
     .trim();
 }
@@ -3883,7 +3891,7 @@ function parsearQuestoesDoTexto(textoBruto){
     const alternativas = zonaPergunta
       .slice(matchAlt ? matchAlt.index : zonaPergunta.length)
       .split(/\n\s*(?=[a-eA-E]\)\s)/)
-      .map(a => mesclarSubscritosQuebrados(a.trim()).replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1'))
+      .map(a => mesclarSubscritosQuebrados(a.trim()).replace(/\s+/g,' ').replace(/ +([,.;:)·/])/g, '$1'))
       .filter(a => /^[a-eA-E]\)/.test(a))
       // remove ruído de rodapé de página que pode grudar na última
       // alternativa (o corte da zona da pergunta só para no "GABARITO",
@@ -3911,7 +3919,7 @@ function parsearQuestoesDoTexto(textoBruto){
       .replace(/^\s*\n/gm, '')
       .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n')
             .replace(/[ \t]{2,}/g, ' ')
-      .replace(/ +([,.;:)])/g, '$1')
+      .replace(/ +([,.;:)·/])/g, '$1')
       .trim();
 
     if(enunciado && alternativas.length >= 4 && gabarito){
@@ -3974,7 +3982,7 @@ function parsearPorRespostaComoCorte(texto){
 
     const alternativas = textoComAlternativas
       .split(/\n\s*(?=[a-eA-E]\)\s)/)
-      .map(a => mesclarSubscritosQuebrados(a.trim()).replace(/\s+/g,' ').replace(/ +([,.;:)])/g, '$1').replace(/\( +/g, '('))
+      .map(a => mesclarSubscritosQuebrados(a.trim()).replace(/\s+/g,' ').replace(/ +([,.;:)·/])/g, '$1').replace(/\( +/g, '('))
       .filter(a => /^[a-eA-E]\)/.test(a))
       .map(a => a
         .replace(/\s*PSCPP\s*[-–—].*$/i, '')
