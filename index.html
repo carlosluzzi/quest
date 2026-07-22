@@ -934,7 +934,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-68';
+const VERSAO_APP = '2026-07-22-70';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3596,14 +3596,14 @@ function mostrarInfoModulo(event, nome, textoInfo){
   if(!popup){
     popup = document.createElement('div');
     popup.id = 'popup-info-modulo';
-    popup.style.cssText = 'position:fixed;background:#111;color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.7;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.25);max-width:220px';
+    popup.style.cssText = 'position:fixed;background:#111;color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.7;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.25);max-width:280px';
     document.body.appendChild(popup);
   }
   popup.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${nome}</div>${textoInfo}`;
   popup.style.display = 'block';
   const x = event.clientX || (event.touches && event.touches[0]?.clientX) || window.innerWidth/2;
   const y = event.clientY || (event.touches && event.touches[0]?.clientY) || window.innerHeight/2;
-  popup.style.left = Math.max(8, Math.min(x, window.innerWidth - 228)) + 'px';
+  popup.style.left = Math.max(8, Math.min(x, window.innerWidth - 288)) + 'px';
   popup.style.top = (y + 12) + 'px';
   clearTimeout(window._timeoutPopupModulo);
   window._timeoutPopupModulo = setTimeout(()=>{ popup.style.display = 'none'; }, 3000);
@@ -4559,7 +4559,7 @@ function renderizarMetricasPessoais(){
     if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
     if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
     return `<div style="cursor:pointer;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${p.questaoId}')">
-      <div style="font-size:var(--fs-d);color:#111;font-weight:600">${partes.length ? partes.join(' · ') : 'Questão'}</div>
+      <div style="font-size:var(--fs-d);color:#888">${partes.length ? partes.join(' · ') : 'Questão'}</div>
       <div style="color:#888;font-size:var(--fs-b);margin-top:6px">${p.erros} ${p.erros===1?'erro':'erros'} em ${p.tentativas} ${p.tentativas===1?'tentativa':'tentativas'}</div>
     </div>`;
   }
