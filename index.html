@@ -441,7 +441,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 
   <div class="topbar">
-    <img src="assets2/logo.png" alt="Pilotquest" style="height:32px;width:auto;display:block">
+    <img src="assets2/logo.png" alt="Pilotquest" style="height:36px;width:auto;display:block">
     <div style="display:flex;align-items:center;gap:10px">
       <button class="btn-secundario hidden" id="btn-abrir-admin" style="width:auto;padding:6px 12px;font-size:var(--fs-b);font-weight:700;text-transform:uppercase;letter-spacing:0.03em" onclick="abrirModal('modal-admin')">Admin</button>
       <button class="avatar-btn" onclick="abrirModalPerfil()" id="avatar-inicial">?</button>
@@ -454,7 +454,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="view-aba" id="aba-inicio">
     <div class="card-inicio" style="background:#B23A34;color:#fff">
       <div style="font-size:var(--fs-f);font-weight:600" id="inicio-saudacao">Olá!</div>
-      <div style="font-size:var(--fs-d);opacity:0.85">Bora estudar</div>
+      <div style="font-size:var(--fs-d);opacity:0.85;display:flex;align-items:center;gap:6px" id="inicio-contagem-pscpp"><span id="inicio-contagem-pscpp-texto">Faltam ... dias para o PSCPP</span> <span class="info-icone" style="color:#fff;opacity:0.85" onclick="abrirModal('modal-info-contagem-pscpp')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span></div>
     </div>
 
     <div id="caderno-em-andamento" class="hidden">
@@ -767,6 +767,14 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-info-contagem-pscpp">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Contagem regressiva</h3>
+    <p>Quantos dias faltam até a data prevista do PSCPP: <strong>06/11/2027</strong>. É só uma referência pra te ajudar a planejar o ritmo de estudo — a data oficial pode mudar, vale sempre confirmar com a fonte oficial.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-contagem-pscpp')">Fechar</button>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-info-resolucao">
   <div class="modal-conteudo">
     <h3 class="config-title">Como funciona "Marcar como resolvido"</h3>
@@ -925,7 +933,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-38';
+const VERSAO_APP = '2026-07-22-39';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -975,6 +983,16 @@ function saudacaoHora(){
   if(h < 12) return 'Bom dia';
   if(h < 18) return 'Boa tarde';
   return 'Boa noite';
+}
+
+// contagem regressiva de dias até a data prevista do PSCPP — atualizada
+// junto com a saudação, toda vez que a aba Início carrega
+function diasAteOPscpp(){
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  const dataPscpp = new Date(2027, 10, 6); // mês é 0-indexado: 10 = novembro
+  const diffMs = dataPscpp - hoje;
+  return Math.max(0, Math.ceil(diffMs / (1000*60*60*24)));
 }
 
 function primeiroNomeDe(nomeCompleto){
@@ -1631,6 +1649,7 @@ async function concluirOnboarding(){
    ============================================================ */
 async function mostrarAppShell(){
   document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${primeiroNomeDe(usuarioAtual.nome)}!`;
+  document.getElementById('inicio-contagem-pscpp-texto').textContent = `Faltam ${diasAteOPscpp()} dias para o PSCPP`;
   atualizarAvatarUI();
   document.getElementById('perfil-nome-exibicao').textContent = usuarioAtual.nome_completo || usuarioAtual.nome;
   if(usuarioAtual.is_admin){
