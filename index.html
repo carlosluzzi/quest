@@ -939,7 +939,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-84';
+const VERSAO_APP = '2026-07-22-85';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4056,7 +4056,7 @@ function parsearQuestoesDoTexto(textoBruto){
       .map(a => a
         .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/i, '')
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões" — .*$/s pra pegar tudo que vier depois também (página, próxima questão colada)
-        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\.\s*[\d,\se]+\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
+        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '') // rodapé tipo "Nome do Livro, Edição – Chapter N (...) | N" — .*$/s pra pegar tudo que vier depois também
         .replace(/[A-ZÀ-Ú]\s+[A-Za-zà-ú]{4,}[a-zA-ZÀ-ú0-9\s]{0,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // exige uma palavra de verdade (4+ letras) logo depois da maiúscula, senão bate por engano num numeral romano solto (ex: "III" ou "IV" dentro de "I, II, III e IV")
         .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
@@ -4082,7 +4082,7 @@ function parsearQuestoesDoTexto(textoBruto){
       .replace(/\s*Page\s+\d+\s*(of\s*\d+)?\s*$/i, '')
       .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/is, '') // rodapé de página repetido (formato varia bastante)
       .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões"
-        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\.\s*[\d,\se]+\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões"
+        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões"
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '')
       .replace(/[A-ZÀ-Ú]\s+[A-Za-zà-ú]{4,}[a-zA-ZÀ-ú0-9\s]{0,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // exige uma palavra de verdade (4+ letras) logo depois da maiúscula, senão bate por engano num numeral romano solto (ex: "III" ou "IV" dentro de "I, II, III e IV")
       .replace(/\s*Publica[çc][ãa]o:\s*.*$/is, '') // linha de citação bibliográfica no fim da explicação, desnecessária
@@ -4161,7 +4161,7 @@ function parsearPorRespostaComoCorte(texto){
       .map(a => a
         .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/i, '')
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões" — .*$/s pra pegar tudo que vier depois também (página, próxima questão colada)
-        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\.\s*[\d,\se]+\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
+        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '') // rodapé tipo "Nome do Livro, Edição – Chapter N (...) | N" — .*$/s pra pegar tudo que vier depois também
         .replace(/[A-ZÀ-Ú]\s+[A-Za-zà-ú]{4,}[a-zA-ZÀ-ú0-9\s]{0,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // exige uma palavra de verdade (4+ letras) logo depois da maiúscula, senão bate por engano num numeral romano solto (ex: "III" ou "IV" dentro de "I, II, III e IV")
         .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
