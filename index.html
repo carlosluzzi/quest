@@ -939,7 +939,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-86';
+const VERSAO_APP = '2026-07-23-01';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3803,9 +3803,9 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Manobrabilidade", autorBusca:["circ.1053"], autor:"IMO", titulo:"Explanatory Notes to the Standards for Ship Manoeuvrability (MSC/Circ.1053)", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["137(76)", "manoeuvrability"], autor:"IMO", titulo:"Standards for Ship Manoeuvrability (Resolution MSC.137(76))", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["larsson", "raven"], autor:"LARSSON, L.; RAVEN, H. C.", titulo:"Ship Resistance and Flow", capitulos:null},
-  {modulo:"Manobrabilidade", autorBusca:["naval architecture", "resistance"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Resistance", capitulos:null},
-  {modulo:"Manobrabilidade", autorBusca:["naval architecture", "propulsion"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Propulsion", capitulos:null},
-  {modulo:"Manobrabilidade", autorBusca:["naval architecture", "controllability"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Controllability", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["lewis", "resistance"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Resistance", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["lewis", "propulsion"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Propulsion", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["lewis", "controllability"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Controllability", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["santos", "manobrabilidade", "seculo"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["mesquita", "manobrabilidade"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-4)", capitulos:[3, 4]},
@@ -3819,6 +3819,7 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Meteorologia e Oceanografia", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["mesquita", "ondas"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["ynoue"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["meteorologia", "nocoes basicas"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["bento"], autor:"BENTO, C. N. S.", titulo:"Navegação Integrada", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["norberto"], autor:"BENTO, C. N. S.", titulo:"Navegação Integrada", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["solas", "2024"], autor:"IMO", titulo:"SOLAS Consolidated Edition 2024 (Capítulo V)", capitulos:null},
@@ -3854,8 +3855,8 @@ const BIBLIOGRAFIA_FECHADA = [
    cabeçalho repetido na seção de gabarito. Testado contra amostras reais
    dos PDFs enviados pelo Carlos antes de entrar em produção.
    ============================================================ */
-const REGEX_RESPOSTA = /(?:RESPOSTA|GABARITO)\b\s*\S{0,4}\s*(?:ALTERNATIVA\s*)?([A-E])\b/gi;
-const REGEX_INICIO_QUESTAO = /(?:GABARITO\s*[–\-—]\s*)?QUEST[ÃA]O(?:\s+(\d+)\s+DE\s+\d+|\s*N?º?\s*(\d+)\b(?!\s*[–\-—]\s*(?:GABARITO|CHAVE\s+DE\s+RESPOSTA)))/gi;
+const REGEX_RESPOSTA = /(?:RESPOSTA|GABARITO)\b\s*(?:CORRETA\s*)?\S{0,4}\s*(?:ALTERNATIVA\s*)?([A-E])\b/g;
+const REGEX_INICIO_QUESTAO = /(?:GABARITO(?:\s+\w+)?\s*[–\-—]\s*)?QUEST[ÃA]O(?:\s+(\d+)\s+DE\s+\d+|\s*N?º?\s*(\d+)\b(?!\s*[–\-—]\s*(?:GABARITO|CHAVE\s+DE\s+RESPOSTA)))/gi;
 
 function encontrarIniciosQuestao(texto){
   const brutos = [...texto.matchAll(REGEX_INICIO_QUESTAO)];
@@ -4062,7 +4063,12 @@ function parsearQuestoesDoTexto(textoBruto){
       .map(a => a
         .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/i, '')
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões" — .*$/s pra pegar tudo que vier depois também (página, próxima questão colada)
-        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
+        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé de citação ABNT completa (autor, título, edição...) — específico do jeito que a Pantoja cita o BENTO/Navegação Integrada
+        .replace(/\s*BENTO,\s*Carlos\s*Norberto\s*Stumpf\.\s*Navega[çc][ãa]o\s*Integrada\..*$/is, '') // idem, específico do jeito que a Pantoja cita o Meteorologia (Noções Básicas)
+        .replace(/\s*Meteorologia\s*\(Noções\s*Básicas\)\s*[-–—].*$/is, '') // idem, específico do Princípios de Hidrodinâmica (Mesquita/Santos)
+        .replace(/\s*Princípios\s*de\s*Hidrodinâmica\s*e\s*a\s*Ação\s*das\s*Ondas\s*sobre\s*o\s*Movimento\s*do\s*Navio\s*\(SANTOS.*$/is, '')
+        // idem, específico do Ship Resistance and Flow (Larsson/Raven), formato de citação da Pantoja
+        .replace(/\s*Ship\s*Resistance\s*and\s*Flow\s*\(LARSSON.*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '') // rodapé tipo "Nome do Livro, Edição – Chapter N (...) | N" — .*$/s pra pegar tudo que vier depois também
         .replace(/[A-ZÀ-Ú]\s+[A-Za-zà-ú]{4,}[a-zA-ZÀ-ú0-9\s]{0,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // exige uma palavra de verdade (4+ letras) logo depois da maiúscula, senão bate por engano num numeral romano solto (ex: "III" ou "IV" dentro de "I, II, III e IV")
         .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
@@ -4079,16 +4085,21 @@ function parsearQuestoesDoTexto(textoBruto){
     // repetidos tipo "QUESTÃO Nº 1 – GABARITO COMENTADO" / "GABARITO — QUESTÃO 1"
     const explicacao = limparRodapePaginaFinal(mesclarSubscritosQuebrados(zonaExplicacao)
       .replace(/\b([IVXLCDM]{1,6}[).]|[a-eA-E][).])([A-Za-zÀ-ÿ])/g, '$1 $2')
-      .replace(/(?:RESPOSTA|GABARITO)\b\s*\S{0,4}\s*(?:ALTERNATIVA\s*)?[A-E]\b.*$/im, '')
+      .replace(/(?:RESPOSTA|GABARITO)\b\s*(?:CORRETA\s*)?\S{0,4}\s*(?:ALTERNATIVA\s*)?[A-E]\b.*$/m, '')
       .replace(/QUEST[ÃA]O\s*N?º?\s*\d+\s*[–\-—]\s*(?:GABARITO.*|CHAVE\s+DE\s+RESPOSTA)$/gim, '')
-      .replace(/GABARITO\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
+      .replace(/GABARITO(?:\s+\w+)?\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
       .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
       .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '') // idem em inglês
       .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/i, '') // idem, mas colado sem quebra de linha antes
       .replace(/\s*Page\s+\d+\s*(of\s*\d+)?\s*$/i, '')
       .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/is, '') // rodapé de página repetido (formato varia bastante)
       .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões"
-        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões"
+        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé de citação ABNT completa (autor, título, edição...) — específico do jeito que a Pantoja cita o BENTO/Navegação Integrada
+        .replace(/\s*BENTO,\s*Carlos\s*Norberto\s*Stumpf\.\s*Navega[çc][ãa]o\s*Integrada\..*$/is, '') // idem, específico do jeito que a Pantoja cita o Meteorologia (Noções Básicas)
+        .replace(/\s*Meteorologia\s*\(Noções\s*Básicas\)\s*[-–—].*$/is, '') // idem, específico do Princípios de Hidrodinâmica (Mesquita/Santos)
+        .replace(/\s*Princípios\s*de\s*Hidrodinâmica\s*e\s*a\s*Ação\s*das\s*Ondas\s*sobre\s*o\s*Movimento\s*do\s*Navio\s*\(SANTOS.*$/is, '')
+        // idem, específico do Ship Resistance and Flow (Larsson/Raven), formato de citação da Pantoja
+        .replace(/\s*Ship\s*Resistance\s*and\s*Flow\s*\(LARSSON.*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões"
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '')
       .replace(/[A-ZÀ-Ú]\s+[A-Za-zà-ú]{4,}[a-zA-ZÀ-ú0-9\s]{0,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // exige uma palavra de verdade (4+ letras) logo depois da maiúscula, senão bate por engano num numeral romano solto (ex: "III" ou "IV" dentro de "I, II, III e IV")
       .replace(/\s*Publica[çc][ãa]o:\s*.*$/is, '') // linha de citação bibliográfica no fim da explicação, desnecessária
@@ -4167,7 +4178,12 @@ function parsearPorRespostaComoCorte(texto){
       .map(a => a
         .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/i, '')
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões" — .*$/s pra pegar tudo que vier depois também (página, próxima questão colada)
-        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
+        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé de citação ABNT completa (autor, título, edição...) — específico do jeito que a Pantoja cita o BENTO/Navegação Integrada
+        .replace(/\s*BENTO,\s*Carlos\s*Norberto\s*Stumpf\.\s*Navega[çc][ãa]o\s*Integrada\..*$/is, '') // idem, específico do jeito que a Pantoja cita o Meteorologia (Noções Básicas)
+        .replace(/\s*Meteorologia\s*\(Noções\s*Básicas\)\s*[-–—].*$/is, '') // idem, específico do Princípios de Hidrodinâmica (Mesquita/Santos)
+        .replace(/\s*Princípios\s*de\s*Hidrodinâmica\s*e\s*a\s*Ação\s*das\s*Ondas\s*sobre\s*o\s*Movimento\s*do\s*Navio\s*\(SANTOS.*$/is, '')
+        // idem, específico do Ship Resistance and Flow (Larsson/Raven), formato de citação da Pantoja
+        .replace(/\s*Ship\s*Resistance\s*and\s*Flow\s*\(LARSSON.*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
         .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '') // rodapé tipo "Nome do Livro, Edição – Chapter N (...) | N" — .*$/s pra pegar tudo que vier depois também
         .replace(/[A-ZÀ-Ú]\s+[A-Za-zà-ú]{4,}[a-zA-ZÀ-ú0-9\s]{0,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // exige uma palavra de verdade (4+ letras) logo depois da maiúscula, senão bate por engano num numeral romano solto (ex: "III" ou "IV" dentro de "I, II, III e IV")
         .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
