@@ -939,7 +939,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-85';
+const VERSAO_APP = '2026-07-22-86';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1042,8 +1042,8 @@ function formatarEnunciado(texto){
   // fluir naturalmente até o final e quebrar só onde o navegador decidir
   const escaped = escapeHtml(texto).replace(/\s+/g, ' ').trim()
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞,]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεθλμπρστφχψω])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito, o resto fica solto (ex: "N'_vv" → só o 1º v é subscrito)
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεθλμπρστφχψω0-9∞,]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito, o resto fica solto (ex: "N'_vv" → só o 1º v é subscrito)
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
   // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
@@ -1075,7 +1075,7 @@ function formatarEnunciado(texto){
   // "C", "D", "L", "I", "V", "X", "M" também são letras romanas válidas, e
   // sem essa ordem, uma lista "A) B) C)" acaba sendo mal interpretada
   // quando chega no "C)" (que bateria como numeral romano C=100 sozinho)
-  const anchorA = /\bA[).]\s/.test(escaped) && /\bB[).]\s/.test(escaped) ? escaped.match(/\bA[).]\s/) : null;
+  const anchorA = /(?<!\()\bA[).]\s/.test(escaped) && /(?<!\()\bB[).]\s/.test(escaped) ? escaped.match(/(?<!\()\bA[).]\s/) : null;
   if(anchorA){
     const idx = anchorA.index;
     const antes = escaped.slice(0, idx).trim();
@@ -1143,8 +1143,8 @@ function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞,]{1,6})/g, '$1<sup>$2</sup>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεθλμπρστφχψω])/g, '$1<sub>$2</sub>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεθλμπρστφχψω0-9∞,]{1,6})/g, '$1<sub>$2</sub>');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])/g, '$1<sub>$2</sub>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
     const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
@@ -3275,8 +3275,8 @@ async function verificarMaioriaTopico(topicoId){
 // roda de novo e recoloca os marcadores certos automaticamente
 function removerMarcadoresSubscrito(texto){
   return (texto||'')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_([A-Za-zαβγδεθλμπρστφχψω0-9∞,]{1,6})/g, '$1$2')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-zαβγδεθλμπρστφχψω0-9∞,]{1,6})/g, '$1$2');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})/g, '$1$2')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})/g, '$1$2');
 }
 async function abrirFormularioEdicao(questaoId, topicoId){
   const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
@@ -3888,7 +3888,13 @@ const PALAVRAS_CURTAS_COMUNS_SUBSCRITO = new Set(['de','da','do','em','um','uma'
 // (C_D0), 2 letras (C_Th) e símbolo (V_∞). Marca com "_" pra depois virar
 // subscrito visual de verdade na hora de exibir
 function mesclarSubscritosQuebrados(texto){
-  const comQuebraDeLinha = texto.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεθλμπρστφχψω]['′]{0,2}|\d+)\n\s*(-?[A-Za-zαβγδεθλμπρστφχψω0-9∞,]{1,6})\s*\n/g, (m, principal, candidato) => {
+  // remove espaço sobrando entre uma letra (grega ou não) e o apóstrofo
+  // logo depois dela — artefato comum da extração de PDF em notação tipo
+  // "YB'( η ')", que deveria ser "YB'(η')"
+  const semEspacoSobrando = texto
+    .replace(/([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])\s+(['′])/g, '$1$2')
+    .replace(/\( +/g, '(');
+  const comQuebraDeLinha = semEspacoSobrando.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψω]['′]{0,2}|\d+)\n\s*(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})\s*\n/g, (m, principal, candidato) => {
     if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
     // sobrescrito (expoente), não subscrito: número negativo (notação
     // científica, ex: "10^-6"), base numérica (mesmo caso), ou letra de
@@ -3900,10 +3906,10 @@ function mesclarSubscritosQuebrados(texto){
   // nenhuma (ex: "N'v", "N'δ") — o apóstrofo é sinal forte o bastante de
   // notação de derivada hidrodinâmica pra tratar sempre como subscrito,
   // mesmo que a questão original não tenha vindo com quebra de linha
-  return comQuebraDeLinha.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεθλμπρστφχψω]['′]{1,2})\s?([a-zA-Zαβγδεθλμπρστφχψω])/g, (m, principal, candidato) => {
+  return comQuebraDeLinha.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψω]['′]{1,2})\s?([a-zA-Zαβγδεζηθικλμνξοπρστυφχψω])/g, (m, principal, candidato) => {
     if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
     return `${principal}_${candidato}`;
-  });
+  }).replace(/\b([xy])0\b/g, '$1_0'); // notação de posição/referência (deslocamento em x0/y0 da linha de centro), comum em manobrabilidade
 }
 
 // rede de segurança final: roda depois de tudo já montado, garantindo a
