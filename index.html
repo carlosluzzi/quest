@@ -939,7 +939,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-81';
+const VERSAO_APP = '2026-07-22-82';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3796,7 +3796,9 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Manobrabilidade", autorBusca:["circ.1053"], autor:"IMO", titulo:"Explanatory Notes to the Standards for Ship Manoeuvrability (MSC/Circ.1053)", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["137(76)", "manoeuvrability"], autor:"IMO", titulo:"Standards for Ship Manoeuvrability (Resolution MSC.137(76))", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["larsson", "raven"], autor:"LARSSON, L.; RAVEN, H. C.", titulo:"Ship Resistance and Flow", capitulos:null},
-  {modulo:"Manobrabilidade", autorBusca:["lewis", "naval architecture"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["naval architecture", "resistance"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Resistance", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["naval architecture", "propulsion"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Propulsion", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["naval architecture", "controllability"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Controllability", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["santos", "manobrabilidade", "seculo"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["mesquita", "manobrabilidade"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-4)", capitulos:[3, 4]},
