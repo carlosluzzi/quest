@@ -939,7 +939,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-23-01';
+const VERSAO_APP = '2026-07-23-03';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3878,8 +3878,8 @@ function encontrarIniciosQuestao(texto){
 // sozinho, com o valor em linha(s) separada(s) embaixo (às vezes com mais
 // de uma linha, tipo uma citação de bibliografia que quebra) — os formatos
 // vistos até agora nos PDFs reais
-const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|CARACTER[ÍI]STICA(\s+DO(\s+PSCPP)?)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
-const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*(:|\s{2,})/i;
+const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|PSCPP|CARACTER[ÍI]STICA(\s+DO(\s+PSCPP)?)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
+const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|PSCPP|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*(:|\s{2,})/i;
 // palavras curtas comuns do português que não podem ser confundidas com
 // subscrito, mesmo aparecendo isoladas numa "linha" quebrada
 const PALAVRAS_CURTAS_COMUNS_SUBSCRITO = new Set(['de','da','do','em','um','uma','no','na','ao','os','as','eu','ou','se','me','te','lhe','há','já','só','aí']);
@@ -3892,8 +3892,11 @@ function mesclarSubscritosQuebrados(texto){
   // remove espaço sobrando entre uma letra (grega ou não) e o apóstrofo
   // logo depois dela — artefato comum da extração de PDF em notação tipo
   // "YB'( η ')", que deveria ser "YB'(η')"
+  // e entre símbolos matemáticos (∆, √) e o que vem logo depois — tipo
+  // "∆ VP" que deveria ser "∆VP", ou "√ (AM)" que deveria ser "√(AM)"
   const semEspacoSobrando = texto
     .replace(/([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])\s+(['′])/g, '$1$2')
+    .replace(/([∆√])\s+(?=[A-Za-zΑ-Ωα-ω(])/g, '$1')
     .replace(/\( +/g, '(');
   const comQuebraDeLinha = semEspacoSobrando.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψω]['′]{0,2}|\d+)\n\s*(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})\s*\n/g, (m, principal, candidato) => {
     if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
