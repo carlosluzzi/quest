@@ -939,7 +939,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-23-04';
+const VERSAO_APP = '2026-07-23-05';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4813,18 +4813,28 @@ async function extrairTextoDoArquivo(arquivo, aoProgredir){
       // o pdf.js só devolve pedacinhos de texto soltos, sem quebra de linha
       // nenhuma — precisa reconstruir comparando a posição vertical (Y) de
       // cada pedaço: se mudou de linha na página, é quebra de linha de
-      // verdade; se ficou na mesma altura, é só continuação da mesma linha
+      // verdade; se ficou na mesma altura, é só continuação da mesma linha.
+      // Além disso, alguns PDFs (texto justificado) quebram uma única
+      // palavra em vários itens de renderização SEM espaço real entre eles
+      // (ex: "duração" vira os itens "du","r","a","ç","ã","o", cada um
+      // terminando exatamente onde o próximo começa) — por isso também
+      // comparamos a posição horizontal (X): só insere espaço quando existe
+      // uma distância real entre o fim do item anterior e o início deste,
+      // senão gruda os pedaços sem espaço nenhum
       let yAnterior = null;
+      let xFimAnterior = null;
       let textoPagina = '';
       conteudo.items.forEach(item => {
         const y = item.transform[5];
+        const xInicio = item.transform[4];
         if(yAnterior !== null && Math.abs(y - yAnterior) > 2){
           textoPagina += '\n';
-        }else if(textoPagina){
+        }else if(textoPagina && xFimAnterior !== null && (xInicio - xFimAnterior) > 1){
           textoPagina += ' ';
         }
         textoPagina += item.str;
         yAnterior = y;
+        xFimAnterior = xInicio + (item.width || 0);
       });
       textoCompleto += textoPagina + '\n\n';
       if(aoProgredir) aoProgredir(p, pdf.numPages);
