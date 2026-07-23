@@ -939,7 +939,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-23-03';
+const VERSAO_APP = '2026-07-23-04';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3894,11 +3894,29 @@ function mesclarSubscritosQuebrados(texto){
   // "YB'( η ')", que deveria ser "YB'(η')"
   // e entre símbolos matemáticos (∆, √) e o que vem logo depois — tipo
   // "∆ VP" que deveria ser "∆VP", ou "√ (AM)" que deveria ser "√(AM)"
+  // e também espaço ANTES do símbolo, tipo "V/ √(gl)" que deveria ser "V/√(gl)"
   const semEspacoSobrando = texto
     .replace(/([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])\s+(['′])/g, '$1$2')
     .replace(/([∆√])\s+(?=[A-Za-zΑ-Ωα-ω(])/g, '$1')
+    .replace(/\/\s+(?=[∆√])/g, '/')
     .replace(/\( +/g, '(');
-  const comQuebraDeLinha = semEspacoSobrando.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψω]['′]{0,2}|\d+)\n\s*(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})\s*\n/g, (m, principal, candidato) => {
+  // FnL / Fnh (número de Froude, com o L ou h subscrito) — comum em textos
+  // de resistência ao avanço/manobrabilidade
+  const comFnCorrigido = semEspacoSobrando.replace(/\bFn\s?([Lh])\b/g, 'Fn_$1');
+  // dentro de expressões matemáticas compactas (tanh(...), sin(...) etc.),
+  // remove espaço entre número/letra e letra grega — só dentro dos
+  // parênteses de uma função conhecida, pra não arriscar colar letra grega
+  // com a palavra seguinte na prosa normal (ex: "o ângulo θ é" tem que
+  // continuar com espaço)
+  const comExpressoesLimpa = comFnCorrigido.replace(/\b(tanh|sinh|cosh|sin|cos|tan|sqrt|ln|log)\(([^)]*)\)/gi, (m, fn, dentro) => {
+    const limpo = dentro
+      .replace(/(\d)\s+([Α-Ωα-ω])/g, '$1$2')
+      .replace(/([Α-Ωα-ω])\s+([a-zA-Z0-9])/g, '$1$2')
+      .replace(/([a-zA-Z0-9])\/\s+([Α-Ωα-ω])/g, '$1/$2')
+      .replace(/\s+$/, '');
+    return fn + '(' + limpo + ')';
+  });
+  const comQuebraDeLinha = comExpressoesLimpa.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψω]['′]{0,2}|\d+)\n\s*(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})\s*\n/g, (m, principal, candidato) => {
     if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
     // sobrescrito (expoente), não subscrito: número negativo (notação
     // científica, ex: "10^-6"), base numérica (mesmo caso), ou letra de
@@ -3940,10 +3958,16 @@ function limparRodapePaginaFinal(texto){
 }
 
 function limparEnunciado(textoOriginal){
+  // remove resíduo de citação bibliográfica que às vezes sobra colado no
+  // início do enunciado (tipo "I.IV Series. Jersey City: SNAME, 2010. Cap.
+  // 5 — Título do Capítulo, seção 5.2.1." antes do texto de verdade) —
+  // acontece quando a citação da Ship Resistance and Flow (Larsson/Raven)
+  // é longa demais e passa da minha janela de continuação de metadado
+  const semResiduoDeCitacao = textoOriginal.replace(/^.*?SNAME,\s*\d{4}\.\s*Cap\.\s*\d+\s*[-–—]\s*.*?se[çc][ãa]o\s*[\d.]+\.\s*/is, '');
   // insere espaço quando um marcador de lista (I. II. a) A. etc.) vem
   // colado direto no texto seguinte, sem espaço nenhum — acontece às
   // vezes na extração do PDF
-  const texto = mesclarSubscritosQuebrados(textoOriginal).replace(/\b([IVXLCDM]{1,6}[).]|[a-eA-E][).])([A-Za-zÀ-ÿ])/g, '$1 $2');
+  const texto = mesclarSubscritosQuebrados(semResiduoDeCitacao).replace(/\b([IVXLCDM]{1,6}[).]|[a-eA-E][).])([A-Za-zÀ-ÿ])/g, '$1 $2');
   const linhas = texto.split('\n');
   const linhasLimpas = [];
   // normal | esperando_valor_solto (label sozinho, valor pode ter várias
