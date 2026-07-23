@@ -939,7 +939,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-82';
+const VERSAO_APP = '2026-07-22-84';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2016,30 +2016,37 @@ async function coletarNotificacaoForum(){
 }
 
 /* 7. PDF novo no banco – questões de outras pessoas desde a última vez
-   que você viu esse aviso */
+   que você viu esse aviso, agrupadas por módulo */
 async function coletarNotificacaoPdfNovo(){
   const marco = usuarioAtual.pdf_novo_visto_em || '1970-01-01T00:00:00Z';
-  const {data} = await sb.from('questoes').select('id, criado_em, usuarios(nome)').neq('autor_id', usuarioAtual.id).gt('criado_em', marco);
+  const {data} = await sb.from('questoes').select('id, criado_em, modulo_pscpp, usuarios(nome)').neq('autor_id', usuarioAtual.id).gt('criado_em', marco);
   const total = (data||[]).length;
   if(!total) return [];
   const timestamp = data.reduce((max,q)=> q.criado_em > max ? q.criado_em : max, data[0].criado_em);
-  const porAutor = {};
+
+  // agrupa primeiro por módulo, depois por autor dentro de cada módulo
+  const porModulo = {};
   data.forEach(q=>{
+    const modulo = q.modulo_pscpp || 'Sem módulo';
     const nome = q.usuarios?.nome || 'Alguém';
-    porAutor[nome] = (porAutor[nome]||0) + 1;
+    if(!porModulo[modulo]) porModulo[modulo] = {};
+    porModulo[modulo][nome] = (porModulo[modulo][nome]||0) + 1;
   });
-  const linhas = Object.entries(porAutor).map(([nome, qtd])=>{
-    const qtdTexto = qtd===1 ? '1 questão nova adicionada' : `${qtd} questões novas adicionadas`;
-    return `<div>${qtdTexto} por ${escapeHtml(nome)}</div>`;
-  }).join('');
-  const html = `
+
+  const cards = Object.entries(porModulo).map(([modulo, porAutor])=>{
+    const linhas = Object.entries(porAutor).map(([nome, qtd])=>{
+      const qtdTexto = qtd===1 ? '1 questão adicionada' : `${qtd} questões adicionadas`;
+      return `<div>${qtdTexto} por ${escapeHtml(nome)}</div>`;
+    }).join('');
+    return `
     <div>
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarPdfNovoVisto()">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Questões novas no banco</div>
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Questões de ${escapeHtml(modulo)} novas no banco</div>
         <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">${linhas}</div>
       </button>
     </div>`;
-  return [{timestamp, html}];
+  }).join('');
+  return [{timestamp, html: cards}];
 }
 
 /* 8. Proposta nova (edição ou anulação) que alguém abriu numa discussão –
