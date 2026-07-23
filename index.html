@@ -708,7 +708,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <span id="badge-forum" class="badge-notificacao hidden">0</span>
     </div>
     <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor"><path d="M2 17.87a1 1 0 0 0-1 1v1.5a.25.25 0 0 0 .25.25h3.5a.25.25 0 0 0 .25-.25v-1.5a1 1 0 0 0-1-1Zm6-3a1 1 0 0 0-1 1v4.5a.25.25 0 0 0 .25.25h3.5a.25.25 0 0 0 .25-.25v-4.5a1 1 0 0 0-1-1Zm6-3.5a1 1 0 0 0-1 1v8a.25.25 0 0 0 .25.25h3.5a.25.25 0 0 0 .25-.25v-8a1 1 0 0 0-1-1Zm5.25 9.25h3.5a.25.25 0 0 0 .25-.25v-12a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v12a.25.25 0 0 0 .25.25M18.07 4.21l.31.46A.74.74 0 0 0 19 5a.74.74 0 0 0 .62-.38l2-3.5a.75.75 0 0 0 0-.79a.72.72 0 0 0-.71-.33l-4 .5a.75.75 0 0 0-.53 1.16l.3.46a.24.24 0 0 1-.07.34L2.45 11.92a1 1 0 0 0-.28 1.39a1 1 0 0 0 .83.44a.94.94 0 0 0 .55-.17l14.17-9.44a.25.25 0 0 1 .35.07M1 24h22a1 1 0 0 0 .31-1.95A1 1 0 0 0 23 22H1a1 1 0 0 0-.31.05A1 1 0 0 0 1 24"/></svg></span><span class="nav-label">Desempenho</span>
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M.75 23.25h22.5M6 16.25H3a.76.76 0 0 0-.75.75v6.25h4.5V17a.76.76 0 0 0-.75-.75m7.5-4h-3a.76.76 0 0 0-.75.75v10.25h4.5V13a.76.76 0 0 0-.75-.75m7.5-4h-3a.76.76 0 0 0-.75.75v14.25h4.5V9a.76.76 0 0 0-.75-.75m-16.82.99l16.07-7.3m-1.19 3.19l1.19-3.19L17.07.75"/></svg></span><span class="nav-label">Desempenho</span>
     </div>
     <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
@@ -939,7 +939,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-22-80';
+const VERSAO_APP = '2026-07-22-81';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
