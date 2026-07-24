@@ -964,7 +964,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-24-02';
+const VERSAO_APP = '2026-07-24-03';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4125,7 +4125,7 @@ function limparEnunciado(textoOriginal){
   // 5 — Título do Capítulo, seção 5.2.1." antes do texto de verdade) —
   // acontece quando a citação da Ship Resistance and Flow (Larsson/Raven)
   // é longa demais e passa da minha janela de continuação de metadado
-  const semResiduoDeCitacao = textoOriginal.replace(/^.*?SNAME,\s*\d{4}\.\s*Cap\.\s*\d+\s*[-–—]\s*.*?se[çc][ãa]o\s*[\d.]+\.\s*/is, '');
+  const semResiduoDeCitacao = textoOriginal.replace(/^.*?SNAME,\s*\d{4}\.\s*Cap\.\s*\d+\s*[-–—]\s*.*?\.(?!\d)(?:\s*se[çc][ãa]o\s*[\d.]+\.(?!\d))?\s*/is, '');
   // insere espaço quando um marcador de lista (I. II. a) A. etc.) vem
   // colado direto no texto seguinte, sem espaço nenhum — acontece às
   // vezes na extração do PDF
