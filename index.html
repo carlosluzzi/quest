@@ -939,7 +939,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-23-06';
+const VERSAO_APP = '2026-07-23-07';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3879,6 +3879,12 @@ function encontrarIniciosQuestao(texto){
 // de uma linha, tipo uma citação de bibliografia que quebra) — os formatos
 // vistos até agora nos PDFs reais
 const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|PSCPP|CARACTER[ÍI]STICA(\s+DO(\s+PSCPP)?)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
+// linha isolada que só descreve o tipo da questão (ex: "Múltipla escolha
+// (direta)"), sem nenhum outro conteúdo — aparece às vezes numa linha
+// própria logo depois de "QUESTÃO N" e antes de "DISCIPLINA", precisa ser
+// descartada por inteiro. Bem restrito de propósito (a linha inteira tem
+// que ser só isso) pra não arriscar bater em conteúdo de verdade
+const PADRAO_LINHA_TIPO_QUESTAO_ISOLADA = /^Múltipla escolha\s*\([^)]*\)\s*$/i;
 const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|PSCPP|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*(:|\s)/i;
 // palavras curtas comuns do português que não podem ser confundidas com
 // subscrito, mesmo aparecendo isoladas numa "linha" quebrada
@@ -3981,6 +3987,9 @@ function limparEnunciado(textoOriginal){
     const linhaLimpa = linha.trim();
     // detecta um label novo em QUALQUER estado (mesmo no meio de estar
     // pulando o valor de outro label — evita engolir tudo de uma vez)
+    if(PADRAO_LINHA_TIPO_QUESTAO_ISOLADA.test(linhaLimpa)){
+      continue;
+    }
     if(PADRAO_LABEL_METADADO.test(linhaLimpa)){
       modo = 'esperando_valor_solto';
       continue;
