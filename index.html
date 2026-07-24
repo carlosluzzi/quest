@@ -964,7 +964,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-24-01';
+const VERSAO_APP = '2026-07-24-02';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2187,11 +2187,28 @@ async function carregarBibliografia(){
   modulosPscpp = [...new Set(bibliografiaCache.map(b=>b.modulo_pscpp))].sort((a,b)=>a.localeCompare(b,'pt'));
   const el = document.getElementById('filtro-modulo');
   el.innerHTML = '<option value="">Todos os módulos</option>' + modulosPscpp.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+  await carregarFiltroUsuarioAdmin();
   await carregarCadernosExistentes();
   atualizarContadorDisponiveis(); // mostra o total desde o início, sem esperar filtro nenhum
 }
 
-let filtroSelecionado = {modulo:null, publicacao:null, capitulo:null, tipoQuestao:null};
+// filtro de usuário na aba Quest — só aparece pro admin, fica antes de
+// todos os outros filtros na cadeia (usuário → módulo → publicação →
+// capítulo → tipo)
+async function carregarFiltroUsuarioAdmin(){
+  const elFiltro = document.getElementById('filtro-usuario-admin');
+  if(!usuarioAtual?.is_admin){ elFiltro.classList.add('hidden'); return; }
+  const {data} = await sb.from('questoes').select('autor_id, usuarios(nome)').eq('anulada', false);
+  const mapaAutores = {};
+  (data||[]).forEach(q => {
+    if(q.autor_id && q.usuarios?.nome) mapaAutores[q.autor_id] = q.usuarios.nome;
+  });
+  const autores = Object.entries(mapaAutores).sort((a,b)=>a[1].localeCompare(b[1],'pt'));
+  elFiltro.innerHTML = '<option value="">Todos os usuários</option>' + autores.map(([id,nome])=>`<option value="${id}">${escapeHtml(nome)}</option>`).join('');
+  elFiltro.classList.remove('hidden');
+}
+
+let filtroSelecionado = {usuario:null, modulo:null, publicacao:null, capitulo:null, tipoQuestao:null};
 let quantidadeSelecionada = 15;
 
 // decide se o livro cita capítulos em português ou inglês, baseado no
@@ -2256,6 +2273,7 @@ function selecionarQuantidade(botao, valor){
 // pelo contador ao vivo e pelo montarCaderno de verdade, pra nunca ficarem dessincronizados
 async function buscarQuestoesFiltradas(apenasContagem = false){
   let query = sb.from('questoes').select(apenasContagem ? 'id' : '*').eq('anulada', false);
+  if(filtroSelecionado.usuario) query = query.eq('autor_id', filtroSelecionado.usuario);
   if(filtroSelecionado.modulo) query = query.eq('modulo_pscpp', filtroSelecionado.modulo);
   if(filtroSelecionado.publicacao) query = query.eq('bibliografia_id', filtroSelecionado.publicacao);
   if(filtroSelecionado.capitulo) query = query.eq('capitulo', filtroSelecionado.capitulo);
