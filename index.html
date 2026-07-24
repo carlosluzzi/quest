@@ -245,7 +245,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .banco-alt-btn:disabled{cursor:default;opacity:0.9}
 .banco-resultado{font-size:var(--fs-e);font-weight:600;margin-top:14px;padding:10px 0;text-align:center;height:44px;box-sizing:border-box}
 .btn-icone-pequeno{width:24px;height:24px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#888;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
-.banco-acoes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:20px}
+.banco-acoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:8px;margin-top:20px}
 .banco-acao-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:12px;border:0.5px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#666;position:relative}
 .badge-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#E24B4A}
 .banco-acao-btn.ativo{background:#F2DAD8;border-color:#B23A34;color:#B23A34}
@@ -491,6 +491,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
         </div>
 
         <input type="text" id="nome-caderno" class="filter-select" placeholder="Nome do caderno (opcional)">
+
+        <select class="filter-select hidden" id="filtro-usuario-admin" onchange="selecionarFiltroSelect('usuario', this.value)">
+          <option value="">Todos os usuários</option>
+        </select>
 
         <select class="filter-select" id="filtro-modulo" onchange="selecionarFiltroSelect('modulo', this.value)">
           <option value="">Todos os módulos</option>
@@ -845,6 +849,27 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-editar-questao-admin" onclick="if(event.target===this) fecharModal('modal-editar-questao-admin')">
+  <div class="modal-conteudo popup-texto-longo" style="display:flex;flex-direction:column">
+    <h3 class="config-title">Editar questão (admin)</h3>
+    <p style="color:#888;font-size:var(--fs-b);margin-top:-14px;margin-bottom:16px">Isso aplica direto, sem passar por votação da comunidade.</p>
+    <div style="flex:1;overflow-y:auto;padding-right:4px">
+      <label style="font-size:var(--fs-b);color:#888">Enunciado</label>
+      <textarea id="admin-edicao-enunciado" class="filter-select" style="min-height:100px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Alternativas</label>
+      <textarea id="admin-edicao-alternativas" class="filter-select" style="min-height:100px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Gabarito (uma letra, a-e)</label>
+      <input type="text" id="admin-edicao-gabarito" class="filter-select" maxlength="1">
+      <label style="font-size:var(--fs-b);color:#888">Explicação</label>
+      <textarea id="admin-edicao-explicacao" class="filter-select" style="min-height:120px"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-shrink:0">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-editar-questao-admin')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="salvarEdicaoDiretaAdmin()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-explicacao-questao" onclick="if(event.target===this) fecharModal('modal-explicacao-questao')">
   <div class="modal-conteudo" style="max-width:700px">
     <h3 class="config-title">Explicação</h3>
@@ -939,7 +964,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-23-07';
+const VERSAO_APP = '2026-07-24-01';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1826,16 +1851,17 @@ async function verificarNotificacoesExtras(){
 // sempre fixo em primeiro) se reordenam juntas por data – a mais recente
 // sempre vai pro topo, não importa o tipo dela
 async function atualizarNotificacoesOrdenadas(){
-  const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum, itensPropostaNova, itensRascunho] = await Promise.all([
+  const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum, itensPropostaNova, itensRascunho, itensFormatacao] = await Promise.all([
     coletarNotificacaoAnulacao(),
     coletarNotificacaoRespostaDiscussao(),
     coletarNotificacaoQuestaoCorrigida(),
     coletarNotificacaoPdfNovo(),
     coletarNotificacaoForum(),
     coletarNotificacaoPropostaNova(),
-    coletarNotificacaoRascunhoPendente()
+    coletarNotificacaoRascunhoPendente(),
+    coletarNotificacaoRelatoFormatacao()
   ]);
-  const todos = [...itensAnulacao, ...itensDiscussao, ...itensCorrigida, ...itensPdfNovo, ...itensForum, ...itensPropostaNova, ...itensRascunho];
+  const todos = [...itensAnulacao, ...itensDiscussao, ...itensCorrigida, ...itensPdfNovo, ...itensForum, ...itensPropostaNova, ...itensRascunho, ...itensFormatacao];
   todos.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
   document.getElementById('container-notificacoes-ordenadas').innerHTML = todos.map(item=>item.html).join('');
 }
@@ -2100,6 +2126,41 @@ async function coletarNotificacaoRascunhoPendente(){
       </button>
     </div>`;
   return [{timestamp, html}];
+}
+
+/* 10. Relatos de problema de formatação — só o admin vê. Uma questão =
+   um card, mesmo que várias pessoas tenham reportado a mesma */
+async function coletarNotificacaoRelatoFormatacao(){
+  if(!usuarioAtual?.is_admin) return [];
+  const {data} = await sb.from('relatos_formatacao').select('id, questao_id, criado_em, usuarios(nome), questoes(enunciado)').eq('visto', false);
+  if(!data || !data.length) return [];
+
+  const porQuestao = {};
+  data.forEach(r => {
+    if(!porQuestao[r.questao_id]) porQuestao[r.questao_id] = [];
+    porQuestao[r.questao_id].push(r);
+  });
+
+  return Object.entries(porQuestao).map(([questaoId, relatos]) => {
+    const nomes = [...new Set(relatos.map(r=>r.usuarios?.nome).filter(Boolean))];
+    const verbo = nomes.length===1 ? 'reportou' : 'reportaram';
+    const timestamp = relatos.reduce((max,r)=> r.criado_em > max ? r.criado_em : max, relatos[0].criado_em);
+    const preview = (relatos[0].questoes?.enunciado || '').slice(0, 70);
+    const texto = `${formatarListaNomes(nomes)} ${verbo} problema de formatação: "${escapeHtml(preview)}${preview.length>=70?'...':''}"`;
+    const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirQuestaoReportadaFormatacao('${questaoId}')">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B8860B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg> Problema de formatação reportado</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">${texto}</div>
+      </button>
+    </div>`;
+    return {timestamp, html};
+  });
+}
+async function abrirQuestaoReportadaFormatacao(questaoId){
+  await sb.from('relatos_formatacao').update({visto:true}).eq('questao_id', questaoId);
+  abrirDetalheQuestao(questaoId, 'Início');
+  await atualizarNotificacoesOrdenadas();
 }
 
 function retomarCaderno(){
@@ -2585,6 +2646,73 @@ async function excluirNotaQuestao(notaId){
   renderizarQuestaoAtual();
 }
 
+// Reporte de formatação — 1 clique só, sem formulário. Qualquer pessoa que
+// notar algo estranho na formatação (não confundir com "Discutir", que é
+// pra questões de conteúdo/gabarito) avisa o admin direto, sem precisar
+// escrever nada
+async function reportarProblemaFormatacao(questaoId){
+  const btn = document.getElementById('btn-reportar-formatacao-'+questaoId);
+  if(btn) btn.disabled = true;
+  const {error} = await sb.from('relatos_formatacao').insert({questao_id: questaoId, usuario_id: usuarioAtual.id});
+  if(error){
+    alert('Erro ao reportar: '+error.message);
+    if(btn) btn.disabled = false;
+    return;
+  }
+  if(btn){
+    btn.classList.add('ativo');
+    const span = btn.querySelector('span');
+    if(span) span.textContent = 'Reportado!';
+    setTimeout(()=>{
+      btn.classList.remove('ativo');
+      if(span) span.textContent = 'Formatação';
+      btn.disabled = false;
+    }, 2500);
+  }
+}
+
+// Edição direta do admin — diferente de "Propor edição" (que passa por
+// votação da comunidade), essa aplica na hora, sem votar. Só aparece o
+// botão pra quem é admin
+let questaoEdicaoAdminAtual = null;
+async function abrirEdicaoDiretaAdmin(questaoId){
+  const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
+  if(!q){ alert('Não consegui carregar essa questão.'); return; }
+  questaoEdicaoAdminAtual = questaoId;
+  document.getElementById('admin-edicao-enunciado').value = removerMarcadoresSubscrito(q.enunciado);
+  document.getElementById('admin-edicao-alternativas').value = removerMarcadoresSubscrito(q.alternativas);
+  document.getElementById('admin-edicao-gabarito').value = (q.gabarito||'').toUpperCase();
+  document.getElementById('admin-edicao-explicacao').value = removerMarcadoresSubscrito(q.explicacao || '');
+  abrirModal('modal-editar-questao-admin');
+}
+async function salvarEdicaoDiretaAdmin(){
+  if(!questaoEdicaoAdminAtual) return;
+  const enunciado = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-enunciado').value.trim());
+  const alternativas = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-alternativas').value.trim());
+  const gabarito = document.getElementById('admin-edicao-gabarito').value.trim().toLowerCase();
+  const explicacao = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-explicacao').value.trim());
+  const {error} = await sb.from('questoes').update({
+    enunciado, alternativas, gabarito,
+    explicacao: explicacao || null,
+    explicacao_origem: explicacao ? 'fonte_original' : 'nunca_gerada',
+    atualizado_em: new Date().toISOString()
+  }).eq('id', questaoEdicaoAdminAtual);
+  if(error){ alert('Erro ao salvar: '+error.message); return; }
+  // marca quaisquer relatos de formatação dessa questão como vistos, já
+  // que acabou de ser corrigida
+  await sb.from('relatos_formatacao').update({visto:true}).eq('questao_id', questaoEdicaoAdminAtual);
+  fecharModal('modal-editar-questao-admin');
+  const idAtualizado = questaoEdicaoAdminAtual;
+  questaoEdicaoAdminAtual = null;
+  // atualiza a questão em memória, se estiver visível em algum contexto
+  const idx = questoesCaderno.findIndex(x=>x.id===idAtualizado);
+  if(idx !== -1){
+    questoesCaderno[idx] = {...questoesCaderno[idx], enunciado, alternativas, gabarito, explicacao: explicacao||null};
+    renderizarQuestaoAtual();
+  }
+  await atualizarNotificacoesOrdenadas();
+}
+
 function fecharCadernoResolucao(){
   document.getElementById('quests-resolucao').classList.add('hidden');
   document.getElementById('quests-filtros').classList.remove('hidden');
@@ -2696,6 +2824,15 @@ function renderizarQuestaoAtual(){
         <span>Notas</span>
         ${notasDoUsuario.has(q.id)?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
+      <button class="banco-acao-btn" onclick="reportarProblemaFormatacao('${q.id}')" id="btn-reportar-formatacao-${q.id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
+        <span>Formatação</span>
+      </button>
+      ${usuarioAtual?.is_admin ? `
+      <button class="banco-acao-btn" onclick="abrirEdicaoDiretaAdmin('${q.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+        <span>Editar</span>
+      </button>` : ''}
     </div>`;
   document.getElementById('questao-atual').innerHTML = html;
 }
@@ -2983,6 +3120,7 @@ async function renderizarDetalheQuestao(questaoId){
     <div class="card-questao">
       <p style="font-size:var(--fs-d);color:#111;margin:0">${formatarEnunciado(questao.enunciado || '')}</p>
       ${questao.alternativas ? `<div style="font-size:var(--fs-d);color:#111;margin:10px 0 0">${extrairAlternativas(questao.alternativas).map(alt=>`<div class="linha-numerada"><span class="linha-marcador">${alt.letra})</span><span class="linha-texto">${alt.texto}</span></div>`).join('')}</div>` : ''}
+      ${usuarioAtual?.is_admin ? `<button class="btn-secundario" style="width:100%;margin-top:14px" onclick="abrirEdicaoDiretaAdmin('${questaoId}')">Editar (admin)</button>` : ''}
     </div>` : ''}
 
     ${(minhasNotasDaQuestao||[]).length ? `
@@ -3015,9 +3153,9 @@ async function renderizarDetalheQuestao(questaoId){
   document.getElementById(containerTopicoAtual()).innerHTML = html;
 }
 
-async function abrirDetalheQuestao(questaoId){
+async function abrirDetalheQuestao(questaoId, rotuloVoltar){
   mostrarCarregandoTopico();
-  abrirViewTopico('Desempenho');
+  abrirViewTopico(rotuloVoltar || 'Desempenho');
   await renderizarDetalheQuestao(questaoId);
 }
 
