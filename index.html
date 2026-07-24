@@ -939,7 +939,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-23-05';
+const VERSAO_APP = '2026-07-23-06';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3856,7 +3856,7 @@ const BIBLIOGRAFIA_FECHADA = [
    dos PDFs enviados pelo Carlos antes de entrar em produção.
    ============================================================ */
 const REGEX_RESPOSTA = /(?:RESPOSTA|GABARITO)\b\s*(?:CORRETA\s*)?\S{0,4}\s*(?:ALTERNATIVA\s*)?([A-E])\b/g;
-const REGEX_INICIO_QUESTAO = /(?:GABARITO(?:\s+\w+)?\s*[–\-—]\s*)?QUEST[ÃA]O(?:\s+(\d+)\s+DE\s+\d+|\s*N?º?\s*(\d+)\b(?!\s*[–\-—]\s*(?:GABARITO|CHAVE\s+DE\s+RESPOSTA)))/gi;
+const REGEX_INICIO_QUESTAO = /(?:GABARITO(?:\s+\w+)?\s*[–\-—]\s*)?QUEST[ÃA]O(?:\s+(\d+)\s+DE\s+\d+|\s*N?º?\s*(\d+)\b(?!\s*[–\-—]?\s*(?:GABARITO|CHAVE\s+DE\s+RESPOSTA)))/gi;
 
 function encontrarIniciosQuestao(texto){
   const brutos = [...texto.matchAll(REGEX_INICIO_QUESTAO)];
@@ -3879,7 +3879,7 @@ function encontrarIniciosQuestao(texto){
 // de uma linha, tipo uma citação de bibliografia que quebra) — os formatos
 // vistos até agora nos PDFs reais
 const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|PSCPP|CARACTER[ÍI]STICA(\s+DO(\s+PSCPP)?)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
-const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|PSCPP|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*(:|\s{2,})/i;
+const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|PSCPP|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*(:|\s)/i;
 // palavras curtas comuns do português que não podem ser confundidas com
 // subscrito, mesmo aparecendo isoladas numa "linha" quebrada
 const PALAVRAS_CURTAS_COMUNS_SUBSCRITO = new Set(['de','da','do','em','um','uma','no','na','ao','os','as','eu','ou','se','me','te','lhe','há','já','só','aí']);
@@ -4075,7 +4075,7 @@ function parsearQuestoesDoTexto(textoBruto){
     const matchAlt = zonaPergunta.match(/\n\s*[a-eA-E]\)\s*/);
     const enunciado = limparEnunciado(
       (matchAlt ? zonaPergunta.slice(0, matchAlt.index) : zonaPergunta)
-        .replace(/QUEST[ÃA]O(?:\s+\d+\s+DE\s+\d+|\s*N?º?\s*\d+)/i, '')
+        .replace(/QUEST[ÃA]O(?:\s+\d+\s+DE\s+\d+|\s*N?º?\s*\d+)[^\n]*/i, '')
     );
 
     const alternativas = zonaPergunta
