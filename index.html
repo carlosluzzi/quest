@@ -964,7 +964,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-24-05';
+const VERSAO_APP = '2026-07-25-01';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2352,6 +2352,7 @@ async function gerarSuperQuest(){
   indiceQuestaoAtual = 0;
   respostasPorQuestao = {};
   alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
   await carregarFavoritosENotas(pool.map(q=>q.id));
 
   document.getElementById('quests-filtros').classList.add('hidden');
@@ -2409,6 +2410,7 @@ async function montarCaderno(){
   indiceQuestaoAtual = 0;
   respostasPorQuestao = {};
   alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
   await carregarFavoritosENotas(questoesFiltradas.map(q=>q.id));
 
   document.getElementById('quests-filtros').classList.add('hidden');
@@ -2570,6 +2572,7 @@ async function retomarCadernoEspecifico(cadernoId){
   const {data: respostasDoCaderno} = await sb.from('respostas').select('*').eq('caderno_id', cadernoId);
   respostasPorQuestao = {};
   alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
   (respostasDoCaderno||[]).forEach(r=>{ respostasPorQuestao[r.questao_id] = {letra:r.resposta_dada, correta:r.correta}; });
 
   questoesCaderno = questoes || [];
@@ -2608,6 +2611,47 @@ async function confirmarExclusaoCaderno(){
 }
 
 let alternativaSelecionadaAtual = null; // marcada mas ainda não confirmada – reseta a cada troca de questão
+let alternativasRiscadasAtual = new Set(); // "eliminadas" visualmente (pressionar e segurar) – reseta a cada troca de questão
+
+// Pressionar e segurar risca uma alternativa (elimina ela visualmente, sem
+// contar como resposta); toque/clique rápido continua selecionando como
+// resposta, igual sempre foi. Uma alternativa riscada não pode ser
+// selecionada – só desriscada com outro pressionar e segurar.
+const DURACAO_PRESSIONAR_LONGO_MS = 500;
+let pressTimerAlternativa = null;
+let pressLetraAtual = null;
+let pressFoiLongo = false;
+function iniciarPressionarAlternativa(letra){
+  pressLetraAtual = letra;
+  pressFoiLongo = false;
+  clearTimeout(pressTimerAlternativa);
+  pressTimerAlternativa = setTimeout(()=>{
+    pressFoiLongo = true;
+    alternarRiscoAlternativa(letra);
+  }, DURACAO_PRESSIONAR_LONGO_MS);
+}
+function cancelarPressionarAlternativa(){
+  clearTimeout(pressTimerAlternativa);
+}
+function finalizarPressionarAlternativa(letra){
+  clearTimeout(pressTimerAlternativa);
+  const foiLongo = pressFoiLongo;
+  pressLetraAtual = null;
+  pressFoiLongo = false;
+  if(!foiLongo && !alternativasRiscadasAtual.has(letra)){
+    selecionarAlternativa(letra);
+  }
+}
+function alternarRiscoAlternativa(letra){
+  if(alternativasRiscadasAtual.has(letra)){
+    alternativasRiscadasAtual.delete(letra);
+  }else{
+    alternativasRiscadasAtual.add(letra);
+    if(alternativaSelecionadaAtual === letra) alternativaSelecionadaAtual = null; // se estava selecionada, desmarca ao riscar
+  }
+  if(navigator.vibrate) navigator.vibrate(30); // feedback tátil rápido, se o aparelho suportar
+  renderizarQuestaoAtual();
+}
 let favoritosDoUsuario = new Set();
 let notasDoUsuario = new Set();
 let topicosPendentesDoUsuario = new Set();
@@ -2773,6 +2817,7 @@ function renderizarPillsCaderno(){
 function irParaQuestao(i){
   indiceQuestaoAtual = i;
   alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
   renderizarQuestaoAtual();
 }
 
@@ -2786,6 +2831,7 @@ async function confirmarRespostaCaderno(){
   const q = questoesCaderno[indiceQuestaoAtual];
   await responderQuestao(q.id, alternativaSelecionadaAtual);
   alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
 }
 
 async function abrirInfoQuestao(questaoId){
@@ -2812,14 +2858,18 @@ function renderizarQuestaoAtual(){
 
   const htmlAlternativas = alternativas.length
     ? alternativas.map(alt=>{
+        const riscada = alternativasRiscadasAtual.has(alt.letra);
         let estilo = '';
         if(jaRespondida){
           if(alt.letra === gabarito) estilo = 'background:#EAF3DE;border-color:#639922;color:#27500A';
           else if(alt.letra === resposta.letra) estilo = 'background:#FCEBEB;border-color:#E24B4A;color:#A32D2D';
+        }else if(riscada){
+          estilo = 'opacity:0.4;text-decoration:line-through;background:#F5F5F4;border-color:#ddd';
         }else if(alt.letra === alternativaSelecionadaAtual){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
-        return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} onclick="selecionarAlternativa('${alt.letra}')"><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
+        const handlers = jaRespondida ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}')" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="event.preventDefault();iniciarPressionarAlternativa('${alt.letra}')" ontouchend="finalizarPressionarAlternativa('${alt.letra}')" ontouchmove="cancelarPressionarAlternativa()" ontouchcancel="cancelarPressionarAlternativa()"`;
+        return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
       }).join('')
     : '<p style="color:#B00020;font-size:var(--fs-d)">Alternativas não identificadas nessa questão (pode estar malformada) – considere excluir pra você.</p>';
 
@@ -2960,6 +3010,7 @@ async function finalizarCaderno(){
   questoesCaderno = [];
   respostasPorQuestao = {};
   alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
   document.getElementById('quests-resolucao').classList.add('hidden');
   document.getElementById('quests-filtros').classList.remove('hidden');
   await carregarCadernosExistentes();
