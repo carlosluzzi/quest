@@ -964,7 +964,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-24-03';
+const VERSAO_APP = '2026-07-24-05';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1703,9 +1703,7 @@ async function mostrarAppShell(){
 
   await Promise.all([
     carregarBibliografia(),
-    verificarCadernoEmAndamento(),
     atualizarNotificacoesForum(),
-    verificarNotificacoesExtras(),
     carregarTotalUsuarios()
   ]);
   // só agora, com tudo pronto de verdade, a tela aparece – nada de spinner
@@ -1840,13 +1838,9 @@ async function verificarCadernoEmAndamento(){
 }
 
 /* ============================================================
-   4 NOTIFICAÇÕES NOVAS DO ÍNCIO – mesmo padrão visual dos cards já
+   NOTIFICAÇÕES DO ÍNCIO – mesmo padrão visual dos cards já
    existentes (Cadernos em andamento / Novidades no Fórum)
    ============================================================ */
-async function verificarNotificacoesExtras(){
-  await atualizarNotificacoesOrdenadas();
-}
-
 // Todas as notificações "de verdade" (não o Cadernos em andamento, que fica
 // sempre fixo em primeiro) se reordenam juntas por data – a mais recente
 // sempre vai pro topo, não importa o tipo dela
@@ -2008,8 +2002,10 @@ function marcarCorrigidasVistas(cadernoId){
 /* 4. Novidades no Fórum – tópicos ativos (abertos, ou resolvidos que você
    ainda não votou/concordou) */
 async function coletarNotificacaoForum(){
-  const {data: todosTopicos} = await sb.from('topicos').select('id, status, criado_em');
-  const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id);
+  const [{data: todosTopicos}, {data: meusVotos}] = await Promise.all([
+    sb.from('topicos').select('id, status, criado_em'),
+    sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id)
+  ]);
   const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
 
   const ativos = (todosTopicos||[]).filter(t => t.status==='aberto' || !idsVotados.has(t.id));
@@ -2187,8 +2183,8 @@ async function carregarBibliografia(){
   modulosPscpp = [...new Set(bibliografiaCache.map(b=>b.modulo_pscpp))].sort((a,b)=>a.localeCompare(b,'pt'));
   const el = document.getElementById('filtro-modulo');
   el.innerHTML = '<option value="">Todos os módulos</option>' + modulosPscpp.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
-  await carregarFiltroUsuarioAdmin();
-  await carregarCadernosExistentes();
+  // independentes entre si (tabelas diferentes) – rodar em paralelo
+  await Promise.all([carregarFiltroUsuarioAdmin(), carregarCadernosExistentes()]);
   atualizarContadorDisponiveis(); // mostra o total desde o início, sem esperar filtro nenhum
 }
 
@@ -2418,6 +2414,20 @@ async function carregarCadernosExistentes(){
   const concluidos = todos.filter(c=>c.status==='finalizado');
   totalCadernosAndamento = andamento.length;
   totalCadernosConcluidos = concluidos.length;
+
+  // atualiza o card "Cadernos em andamento" da Início — mesmo dado que
+  // verificarCadernoEmAndamento() calcularia, sem precisar de outra consulta
+  // à mesma tabela (é chamado sozinho de novo só depois de finalizar um
+  // caderno, quando esse carregamento aqui não roda)
+  const cardEl = document.getElementById('caderno-em-andamento');
+  if(cardEl){
+    if(andamento.length > 0){
+      cardEl.classList.remove('hidden');
+      document.getElementById('caderno-em-andamento-info').textContent = andamento.length===1 ? '1 caderno esperando você' : `${andamento.length} cadernos esperando você`;
+    }else{
+      cardEl.classList.add('hidden');
+    }
+  }
 
   document.getElementById('titulo-cadernos-andamento').textContent = `Cadernos em andamento (${andamento.length})`;
   document.getElementById('titulo-cadernos-concluidos').textContent = `Cadernos concluídos (${concluidos.length})`;
