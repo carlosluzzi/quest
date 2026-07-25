@@ -313,14 +313,14 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <!-- TELA: LOGIN / DEFINIR SENHA -->
 <!-- ============================================================ -->
 <div id="view-splash" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#F9F9F7;z-index:100;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + var(--padding-extra-baixo, 24px)) 24px;box-sizing:border-box">
-  <img src="assets2/logo.png" alt="Pilotquest" style="height:44px;width:auto;margin-bottom:24px">
+  <img src="assets2/logo.png" alt="Pilotquest" width="430" height="88" style="height:44px;width:auto;margin-bottom:24px">
   <div class="loading-bar" style="margin:0"><div class="loading-bar-fill"></div></div>
 </div>
 
 <div id="view-login" class="hidden">
 <div class="login-inner">
   <div style="text-align:center;margin-bottom:16px">
-    <img src="assets2/logo.png" alt="Pilotquest" style="height:34px;width:auto">
+    <img src="assets2/logo.png" alt="Pilotquest" width="430" height="88" style="height:34px;width:auto">
   </div>
 
   <form id="login-form-entrar" onsubmit="event.preventDefault(); entrar();">
@@ -383,7 +383,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div id="view-instalar-app" class="hidden">
 <div class="login-inner">
   <div style="text-align:center">
-    <img src="assets2/logo.png" alt="Pilotquest" style="height:40px;width:auto;margin-bottom:24px;margin-left:-9px">
+    <img src="assets2/logo.png" alt="Pilotquest" width="430" height="88" style="height:40px;width:auto;margin-bottom:24px;margin-left:-9px">
     <h1>Instale como app</h1>
     <p id="instrucao-instalacao-navegador">Carregando instruções pro seu aparelho...</p>
     <p style="color:#888;font-size:var(--fs-d);margin-top:16px">Assim você tem acesso rápido, direto da tela inicial,<br>sem a barra do navegador ocupando espaço.</p>
@@ -449,7 +449,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 
   <div class="topbar">
-    <img src="assets2/logo.png" alt="Pilotquest" style="height:34px;width:auto;display:block">
+    <img src="assets2/logo.png" alt="Pilotquest" width="430" height="88" style="height:34px;width:auto;display:block">
     <div style="display:flex;align-items:center;gap:10px">
       <button class="btn-secundario hidden" id="btn-abrir-admin" style="width:auto;padding:6px 12px;font-size:var(--fs-b);font-weight:700;text-transform:uppercase;letter-spacing:0.03em" onclick="abrirModal('modal-admin')">Admin</button>
       <button class="avatar-btn" onclick="abrirModalPerfil()" id="avatar-inicial">?</button>
@@ -966,7 +966,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-04';
+const VERSAO_APP = '2026-07-25-05';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2627,24 +2627,42 @@ const DURACAO_PRESSIONAR_LONGO_MS = 350;
 let pressTimerAlternativa = null;
 let pressLetraAtual = null;
 let pressFoiLongo = false;
+let pressMoveu = false;
+let ultimaSelecaoPorToque = 0; // debounce – evita que o clique "fantasma" que o navegador dispara depois de um toque conte como um segundo clique
 function iniciarPressionarAlternativa(letra){
   pressLetraAtual = letra;
   pressFoiLongo = false;
+  pressMoveu = false;
   clearTimeout(pressTimerAlternativa);
   pressTimerAlternativa = setTimeout(()=>{
-    pressFoiLongo = true;
-    alternarRiscoAlternativa(letra);
+    if(!pressMoveu){
+      pressFoiLongo = true;
+      alternarRiscoAlternativa(letra);
+    }
   }, DURACAO_PRESSIONAR_LONGO_MS);
+}
+// dedo se moveu (rolando a tela) – cancela o risco, e não bloqueia a rolagem
+// natural do navegador (por isso não usamos preventDefault aqui)
+function moverDurantePressionar(){
+  pressMoveu = true;
+  clearTimeout(pressTimerAlternativa);
 }
 function cancelarPressionarAlternativa(){
   clearTimeout(pressTimerAlternativa);
 }
-function finalizarPressionarAlternativa(letra){
+function finalizarPressionarAlternativa(letra, viaToque){
   clearTimeout(pressTimerAlternativa);
   const foiLongo = pressFoiLongo;
+  const moveu = pressMoveu;
   pressLetraAtual = null;
   pressFoiLongo = false;
-  if(!foiLongo && !alternativasRiscadasAtual.has(letra)){
+  pressMoveu = false;
+  if(viaToque){
+    ultimaSelecaoPorToque = Date.now();
+  }else if(Date.now() - ultimaSelecaoPorToque < 500){
+    return; // esse mouseup é só o eco sintético do toque que acabou de acontecer
+  }
+  if(!foiLongo && !moveu && !alternativasRiscadasAtual.has(letra)){
     selecionarAlternativa(letra);
   }
 }
@@ -2874,7 +2892,7 @@ function renderizarQuestaoAtual(){
         }else if(alt.letra === alternativaSelecionadaAtual){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
-        const handlers = jaRespondida ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}')" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="event.preventDefault();iniciarPressionarAlternativa('${alt.letra}')" ontouchend="finalizarPressionarAlternativa('${alt.letra}')" ontouchmove="cancelarPressionarAlternativa()" ontouchcancel="cancelarPressionarAlternativa()"`;
+        const handlers = jaRespondida ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}', false)" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="iniciarPressionarAlternativa('${alt.letra}')" ontouchend="finalizarPressionarAlternativa('${alt.letra}', true)" ontouchmove="moverDurantePressionar()" ontouchcancel="cancelarPressionarAlternativa()"`;
         return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
       }).join('')
     : '<p style="color:#B00020;font-size:var(--fs-d)">Alternativas não identificadas nessa questão (pode estar malformada) – considere excluir pra você.</p>';
