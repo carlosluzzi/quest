@@ -966,7 +966,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-03';
+const VERSAO_APP = '2026-07-25-04';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1244,7 +1244,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   }
   const {data:{session}} = await sb.auth.getSession();
   if(session){
-    await posLogin();
+    await posLogin(undefined, undefined, session.user);
   }else{
     document.getElementById('view-splash').classList.add('hidden');
     document.getElementById('view-login').classList.remove('hidden');
@@ -1265,7 +1265,7 @@ function toggleSenhaVisivel(inputId, btn){
 async function entrar(){
   const email = document.getElementById('login-email').value.trim();
   const senha = document.getElementById('login-senha').value;
-  const {error} = await sb.auth.signInWithPassword({email, password:senha});
+  const {data, error} = await sb.auth.signInWithPassword({email, password:senha});
   const erroEl = document.getElementById('login-erro');
   if(error){
     erroEl.textContent = 'Email ou senha incorretos.';
@@ -1273,7 +1273,7 @@ async function entrar(){
     return;
   }
   erroEl.classList.add('hidden');
-  await posLogin();
+  await posLogin(undefined, undefined, data.user);
 }
 
 let conviteAtual = null;
@@ -1340,7 +1340,7 @@ async function cadastrarComConvite(){
     // marca o convite como usado, vinculado ao novo usuário
     await sb.from('convites').update({usado:true, usuario_id: data.user.id, usado_em: new Date().toISOString()}).eq('id', conviteAtual.id);
 
-    await posLogin(conviteAtual.apelido, conviteAtual.nome_completo);
+    await posLogin(conviteAtual.apelido, conviteAtual.nome_completo, data.user);
   }catch(e){
     erroEl.textContent = 'Erro inesperado ao cadastrar: ' + (e?.message || e);
     erroEl.classList.remove('hidden');
@@ -1370,13 +1370,13 @@ async function definirSenha(){
     erroEl.classList.remove('hidden');
     return;
   }
-  const {error} = await sb.auth.updateUser({password:s1});
+  const {data, error} = await sb.auth.updateUser({password:s1});
   if(error){
     erroEl.textContent = 'Erro ao definir senha: ' + error.message;
     erroEl.classList.remove('hidden');
     return;
   }
-  await posLogin(nome);
+  await posLogin(nome, undefined, data.user);
 }
 
 function atualizarAvatarUI(){
@@ -1532,8 +1532,12 @@ async function sair(){
   location.reload();
 }
 
-async function posLogin(nomeInformado, nomeCompletoInformado){
-  const {data:{user}} = await sb.auth.getUser();
+async function posLogin(nomeInformado, nomeCompletoInformado, usuarioAuthFornecido){
+  // se quem chamou já tem o usuário em mãos (do próprio getSession/signIn/
+  // signUp/updateUser), reaproveita em vez de fazer outra chamada de rede
+  // pra buscar a mesma informação de novo (getUser() é mais lento de
+  // propósito que getSession(), porque valida direto no servidor)
+  const user = usuarioAuthFornecido || (await sb.auth.getUser()).data.user;
   if(!user) return;
 
   let {data: perfil} = await sb.from('usuarios').select('*').eq('id', user.id).single();
