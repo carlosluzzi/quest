@@ -2041,16 +2041,26 @@ async function coletarNotificacaoForum(){
    que você viu esse aviso, agrupadas por módulo */
 async function coletarNotificacaoPdfNovo(){
   const marco = usuarioAtual.pdf_novo_visto_em || '1970-01-01T00:00:00Z';
-  const {data} = await sb.from('questoes').select('id, criado_em, modulo_pscpp, usuarios(nome)').neq('autor_id', usuarioAtual.id).gt('criado_em', marco);
+  const {data} = await sb.from('questoes').select('id, criado_em, modulo_pscpp, autor_id').neq('autor_id', usuarioAtual.id).gt('criado_em', marco);
   const total = (data||[]).length;
   if(!total) return [];
   const timestamp = data.reduce((max,q)=> q.criado_em > max ? q.criado_em : max, data[0].criado_em);
+
+  // busca o nome só dos autores que realmente aparecem aqui (geralmente
+  // pouquíssimos), em vez de fazer join linha a linha — evita que essa
+  // consulta fique pesada só porque o total de questões novas cresceu
+  const idsAutores = [...new Set(data.map(q=>q.autor_id).filter(Boolean))];
+  const {data: autoresInfo} = idsAutores.length
+    ? await sb.from('usuarios').select('id, nome').in('id', idsAutores)
+    : {data: []};
+  const mapaNomes = {};
+  (autoresInfo||[]).forEach(a => { mapaNomes[a.id] = a.nome; });
 
   // agrupa primeiro por módulo, depois por autor dentro de cada módulo
   const porModulo = {};
   data.forEach(q=>{
     const modulo = q.modulo_pscpp || 'Sem módulo';
-    const nome = q.usuarios?.nome || 'Alguém';
+    const nome = mapaNomes[q.autor_id] || 'Alguém';
     if(!porModulo[modulo]) porModulo[modulo] = {};
     porModulo[modulo][nome] = (porModulo[modulo][nome]||0) + 1;
   });
@@ -2194,12 +2204,14 @@ async function carregarBibliografia(){
 async function carregarFiltroUsuarioAdmin(){
   const elFiltro = document.getElementById('filtro-usuario-admin');
   if(!usuarioAtual?.is_admin){ elFiltro.classList.add('hidden'); return; }
-  const {data} = await sb.from('questoes').select('autor_id, usuarios(nome)').eq('anulada', false);
-  const mapaAutores = {};
-  (data||[]).forEach(q => {
-    if(q.autor_id && q.usuarios?.nome) mapaAutores[q.autor_id] = q.usuarios.nome;
-  });
-  const autores = Object.entries(mapaAutores).sort((a,b)=>a[1].localeCompare(b[1],'pt'));
+  // usa uma função no banco que já devolve só os autores distintos, em vez
+  // de buscar toda questão do banco pra filtrar aqui — isso cresceria sem
+  // necessidade conforme o banco de questões aumenta (bug real: com 100
+  // questões novas da Pantoja, essa consulta ficou visivelmente mais pesada
+  // antes dessa correção)
+  const {data, error} = await sb.rpc('usuarios_com_questoes');
+  if(error){ console.error('erro ao carregar filtro de usuário:', error); return; }
+  const autores = (data||[]).map(r=>[r.autor_id, r.nome]).sort((a,b)=>a[1].localeCompare(b[1],'pt'));
   elFiltro.innerHTML = '<option value="">Todos os usuários</option>' + autores.map(([id,nome])=>`<option value="${id}">${escapeHtml(nome)}</option>`).join('');
   elFiltro.classList.remove('hidden');
 }
