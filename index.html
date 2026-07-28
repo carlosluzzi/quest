@@ -980,7 +980,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-22';
+const VERSAO_APP = '2026-07-25-23';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1796,7 +1796,7 @@ async function atualizarAbaAtual(){
   }else if(abaAtiva === 'forum'){
     await carregarForum();
   }else if(abaAtiva === 'placar'){
-    await carregarMetricasPessoais();
+    await carregarMetricasPessoais(true);
   }
   // 'adicionar' é formulário de upload, não tem dado nenhum pra recarregar
 }
@@ -4079,9 +4079,11 @@ function passaNoFiltroPeriodo(dataIso){
   return true;
 }
 
-async function carregarMetricasPessoais(){
-  document.getElementById('metricas-carregando-inicial').classList.remove('hidden');
-  document.getElementById('metricas-conteudo').classList.add('hidden');
+async function carregarMetricasPessoais(viaPullToRefresh){
+  if(!viaPullToRefresh){
+    document.getElementById('metricas-carregando-inicial').classList.remove('hidden');
+    document.getElementById('metricas-conteudo').classList.add('hidden');
+  }
 
   const [{data: respostasBrutas}, {data: minhasNotas}, {data: todasQuestoesBanco}, {data: minhasExclusoes}] = await Promise.all([
     sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em').eq('usuario_id', usuarioAtual.id),
