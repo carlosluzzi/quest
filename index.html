@@ -980,7 +980,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-23';
+const VERSAO_APP = '2026-07-25-24';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5841,6 +5841,22 @@ async function buscarCadernoAdmin(){
     spinner.classList.remove('girando');
   }
 
+  // Depois de carregar, precisa de um reset diferente do normal: NÃO pode remover 'escondida' da
+  // seta ao mesmo tempo que o container encolhe, senão a seta reaparece com fade-in bem no meio
+  // do encolhimento (pisca por um instante). Encolhe primeiro, e só reseta a seta depois, sem
+  // transição nenhuma, já com tudo escondido.
+  function finalizarCarregamento(){
+    indicador.classList.remove('ativo');
+    indicador.style.height='0px';
+    spinner.classList.remove('girando');
+    setTimeout(()=>{
+      seta.style.transition='none';
+      seta.classList.remove('pronta','escondida');
+      seta.offsetHeight; // força o navegador a aplicar antes de religar a transição
+      seta.style.transition='';
+    },200); // mesma duração da transição de altura do indicador
+  }
+
   contentEl.addEventListener('touchstart',(e)=>{
     if(atualizando) return;
     if(contentEl.scrollTop<=0){
@@ -5881,7 +5897,7 @@ async function buscarCadernoAdmin(){
       seta.classList.add('escondida');
       spinner.classList.add('girando');
       try{ await atualizarAbaAtual(); }catch(e){}
-      resetVisual();
+      finalizarCarregamento();
       atualizando=false;
     }else{
       resetVisual();
