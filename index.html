@@ -113,6 +113,14 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:#B23A34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0;border:none;padding:0;margin:0;-webkit-appearance:none;appearance:none;cursor:pointer;overflow:hidden}
 
 .content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
+#ptr-indicator{display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height 0.2s ease;flex-shrink:0;position:relative}
+#ptr-indicator.ativo{transition:none}
+#ptr-seta{width:20px;height:20px;color:#999;transition:transform 0.25s ease,opacity 0.15s ease;transform:rotate(0deg);position:absolute}
+#ptr-seta.pronta{transform:rotate(180deg);color:#B23A34}
+#ptr-seta.escondida{opacity:0}
+#ptr-spinner{width:20px;height:20px;border-radius:50%;border:2.5px solid #F2DAD8;border-top-color:#B23A34;opacity:0;transition:opacity 0.2s ease;position:absolute}
+#ptr-spinner.girando{opacity:1;animation:ptr-girar 0.7s linear infinite}
+@keyframes ptr-girar{to{transform:rotate(360deg)}}
 
 /* --- Bottom nav --- */
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
@@ -455,6 +463,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <button class="btn-secundario hidden" id="btn-abrir-admin" style="width:auto;padding:6px 12px;font-size:var(--fs-b);font-weight:700;text-transform:uppercase;letter-spacing:0.03em" onclick="abrirModal('modal-admin')">Admin</button>
       <button class="avatar-btn" onclick="abrirModalPerfil()" id="avatar-inicial">?</button>
     </div>
+  </div>
+
+  <div id="ptr-indicator">
+    <svg id="ptr-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    <div id="ptr-spinner"></div>
   </div>
 
   <div class="content" id="content">
@@ -967,7 +980,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-21';
+const VERSAO_APP = '2026-07-25-22';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1767,6 +1780,26 @@ document.addEventListener('focusout', (e)=>{
     if(nav) nav.classList.remove('teclado-aberto');
   }
 });
+
+// recarrega os dados da aba que estiver ativa no momento — usado pelo
+// puxar-pra-atualizar. Cada aba tem sua própria noção do que "atualizar"
+// significa; dentro de um caderno respondendo questões não faz sentido
+// nenhum, então não faz nada nesse caso
+async function atualizarAbaAtual(){
+  const abaAtiva = document.querySelector('#bottom-nav .nav-item.active')?.dataset.aba;
+  if(abaAtiva === 'inicio'){
+    await atualizarNotificacoesForum();
+  }else if(abaAtiva === 'quests'){
+    const resolucaoVisivel = !document.getElementById('quests-resolucao').classList.contains('hidden');
+    if(resolucaoVisivel) return; // no meio de um caderno, não atualiza
+    await carregarBibliografia();
+  }else if(abaAtiva === 'forum'){
+    await carregarForum();
+  }else if(abaAtiva === 'placar'){
+    await carregarMetricasPessoais();
+  }
+  // 'adicionar' é formulário de upload, não tem dado nenhum pra recarregar
+}
 
 function trocarAba(nome){
   document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
@@ -5787,6 +5820,72 @@ async function buscarCadernoAdmin(){
   if(error || !data || !data.length){ el.innerHTML = '<p>Nada encontrado (ou você não tem permissão admin).</p>'; return; }
   el.innerHTML = data.map(r=>`<div class="card-questao">Resposta: ${r.resposta_dada} – ${r.correta?'✅':'❌'}</div>`).join('');
 }
+
+// Puxar-pra-atualizar (pull-to-refresh) — só ativa quando o scroll já está
+// no topo, pra nunca interferir na rolagem normal
+(function initPullToRefresh(){
+  const contentEl=document.getElementById('content');
+  const indicador=document.getElementById('ptr-indicator');
+  const seta=document.getElementById('ptr-seta');
+  const spinner=document.getElementById('ptr-spinner');
+  if(!contentEl||!indicador||!seta||!spinner) return;
+  const LIMIAR=64,MAX_ARRASTO=90;
+  let yInicial=null,arrastando=false,atualizando=false,passouLimiar=false;
+
+  function resetVisual(){
+    indicador.classList.remove('ativo');
+    indicador.style.height='0px';
+    seta.classList.remove('pronta','escondida');
+    spinner.classList.remove('girando');
+  }
+
+  contentEl.addEventListener('touchstart',(e)=>{
+    if(atualizando) return;
+    if(contentEl.scrollTop<=0){
+      yInicial=e.touches[0].clientY;
+      arrastando=true;
+      passouLimiar=false;
+    }else{
+      yInicial=null;
+      arrastando=false;
+    }
+  },{passive:true});
+
+  contentEl.addEventListener('touchmove',(e)=>{
+    if(!arrastando||yInicial===null||atualizando) return;
+    const delta=e.touches[0].clientY-yInicial;
+    if(delta<=0){ resetVisual(); return; }
+    if(contentEl.scrollTop>0){ arrastando=false; return; }
+    const distancia=Math.min(delta*0.5,MAX_ARRASTO);
+    indicador.classList.add('ativo');
+    indicador.style.height=distancia+'px';
+    // seta só alterna entre 2 estados (normal / virada) ao cruzar o limiar — nunca gira
+    // proporcional ao dedo, evita a sensação de travado. Transição suave fica por conta do CSS.
+    const cruzouAgora=distancia>=LIMIAR;
+    if(cruzouAgora!==passouLimiar){
+      passouLimiar=cruzouAgora;
+      seta.classList.toggle('pronta',passouLimiar);
+    }
+  },{passive:true});
+
+  contentEl.addEventListener('touchend',async()=>{
+    if(!arrastando||yInicial===null){ yInicial=null; return; }
+    arrastando=false;
+    yInicial=null;
+    if(passouLimiar&&!atualizando){
+      atualizando=true;
+      indicador.classList.remove('ativo');
+      indicador.style.height='44px';
+      seta.classList.add('escondida');
+      spinner.classList.add('girando');
+      try{ await atualizarAbaAtual(); }catch(e){}
+      resetVisual();
+      atualizando=false;
+    }else{
+      resetVisual();
+    }
+  },{passive:true});
+})();
 </script>
 </body>
 </html>
