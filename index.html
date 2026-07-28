@@ -967,7 +967,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-10';
+const VERSAO_APP = '2026-07-25-13';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2384,6 +2384,7 @@ async function gerarSuperQuest(){
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
   questoesExcluidasAtual = new Set();
+  alturasQuestoesExcluidas = {};
   await carregarFavoritosENotas(pool.map(q=>q.id));
 
   document.getElementById('quests-filtros').classList.add('hidden');
@@ -2443,6 +2444,7 @@ async function montarCaderno(){
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
   questoesExcluidasAtual = new Set();
+  alturasQuestoesExcluidas = {};
   await carregarFavoritosENotas(questoesFiltradas.map(q=>q.id));
 
   document.getElementById('quests-filtros').classList.add('hidden');
@@ -2614,6 +2616,7 @@ async function retomarCadernoEspecifico(cadernoId){
   // certo, em vez de esquecer e mostrar a questão de novo
   const idsQuestoesCaderno = questoesCaderno.map(q=>q.id);
   questoesExcluidasAtual = new Set();
+  alturasQuestoesExcluidas = {};
   if(idsQuestoesCaderno.length){
     const {data: exclusoesDoCaderno} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoesCaderno);
     (exclusoesDoCaderno||[]).forEach(e=>{ questoesExcluidasAtual.add(e.questao_id); });
@@ -2656,6 +2659,7 @@ async function confirmarExclusaoCaderno(){
 let alternativaSelecionadaAtual = null; // marcada mas ainda não confirmada – reseta a cada troca de questão
 let alternativasRiscadasAtual = new Set(); // "eliminadas" visualmente (pressionar e segurar) – reseta a cada troca de questão
 let questoesExcluidasAtual = new Set(); // ids das questões excluídas nesse caderno – fica na MESMA posição, só troca o conteúdo mostrado por um aviso
+let alturasQuestoesExcluidas = {}; // altura em px que cada questão ocupava no momento exato de ser excluída — pro aviso ocupar o mesmo espaço, nem mais nem menos
 
 // Pressionar e segurar risca uma alternativa (elimina ela visualmente, sem
 // contar como resposta); toque/clique rápido continua selecionando como
@@ -2717,16 +2721,19 @@ function alternarRiscoAlternativa(letra){
 let favoritosDoUsuario = new Set();
 let notasDoUsuario = new Set();
 let topicosPendentesDoUsuario = new Set();
+let relatosFormatacaoDoUsuario = new Set();
 
 async function carregarFavoritosENotas(idsQuestoes){
-  if(!idsQuestoes.length){ favoritosDoUsuario = new Set(); notasDoUsuario = new Set(); topicosPendentesDoUsuario = new Set(); return; }
-  const [{data: favs}, {data: nts}, {data: topicosDasQuestoes}] = await Promise.all([
+  if(!idsQuestoes.length){ favoritosDoUsuario = new Set(); notasDoUsuario = new Set(); topicosPendentesDoUsuario = new Set(); relatosFormatacaoDoUsuario = new Set(); return; }
+  const [{data: favs}, {data: nts}, {data: topicosDasQuestoes}, {data: relatos}] = await Promise.all([
     sb.from('favoritos').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
     sb.from('notas').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
-    sb.from('topicos').select('id, questao_id, status').in('questao_id', idsQuestoes)
+    sb.from('topicos').select('id, questao_id, status').in('questao_id', idsQuestoes),
+    sb.from('relatos_formatacao').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes)
   ]);
   favoritosDoUsuario = new Set((favs||[]).map(f=>f.questao_id));
   notasDoUsuario = new Set((nts||[]).map(n=>n.questao_id));
+  relatosFormatacaoDoUsuario = new Set((relatos||[]).map(r=>r.questao_id));
 
   // uma questão tem "bolinha" de Discutir se tiver algum tópico ainda ativo
   // pra esse usuário: aberto, ou resolvido mas que ele ainda não votou/concordou
@@ -2799,21 +2806,25 @@ async function excluirNotaQuestao(notaId){
 async function reportarProblemaFormatacao(questaoId){
   const btn = document.getElementById('btn-reportar-formatacao-'+questaoId);
   if(btn) btn.disabled = true;
-  const {error} = await sb.from('relatos_formatacao').insert({questao_id: questaoId, usuario_id: usuarioAtual.id});
-  if(error){
-    alert('Erro ao reportar: '+error.message);
-    if(btn) btn.disabled = false;
-    return;
+  const jaReportada = relatosFormatacaoDoUsuario.has(questaoId);
+
+  if(jaReportada){
+    // desfaz: apaga o relato de verdade, não só o efeito visual — é isso
+    // que faz a notificação sumir pro admin também, na próxima atualização
+    const {error} = await sb.from('relatos_formatacao').delete().eq('questao_id', questaoId).eq('usuario_id', usuarioAtual.id);
+    if(error){ alert('Erro ao desfazer: '+error.message); if(btn) btn.disabled = false; return; }
+    relatosFormatacaoDoUsuario.delete(questaoId);
+  }else{
+    const {error} = await sb.from('relatos_formatacao').insert({questao_id: questaoId, usuario_id: usuarioAtual.id});
+    if(error){ alert('Erro ao reportar: '+error.message); if(btn) btn.disabled = false; return; }
+    relatosFormatacaoDoUsuario.add(questaoId);
   }
+
   if(btn){
-    btn.classList.add('ativo');
+    btn.classList.toggle('ativo', !jaReportada);
     const span = btn.querySelector('span');
-    if(span) span.textContent = 'Reportado!';
-    setTimeout(()=>{
-      btn.classList.remove('ativo');
-      if(span) span.textContent = 'Formatação';
-      btn.disabled = false;
-    }, 2500);
+    if(span) span.textContent = jaReportada ? 'Formatação' : 'Reportado';
+    btn.disabled = false;
   }
 }
 
@@ -2933,12 +2944,19 @@ function renderizarQuestaoAtual(){
   if(questoesExcluidasAtual.has(q.id)){
     const todasRespondidasOuExcluidas = questoesCaderno.length > 0 && questoesCaderno.every(qq => !!respostasPorQuestao[qq.id] || questoesExcluidasAtual.has(qq.id));
     const nomeCadernoEscapado = escapeHtml(cadernoAtual.nome || 'Caderno sem nome');
+    // usa a altura medida no momento da exclusão, se tiver (caso comum);
+    // sem isso (por exemplo, ao retomar um caderno de uma sessão anterior,
+    // quando nunca chegamos a medir nessa aba), cai num tamanho razoável
+    const alturaMedida = alturasQuestoesExcluidas[q.id];
     document.getElementById('questao-atual').innerHTML = `
-      <div class="section-title" style="margin:0 0 8px 0">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length}</div>
-      <div style="display:flex;align-items:center;justify-content:center;min-height:340px;background:#F5F5F4;border-radius:14px;padding:20px;text-align:center">
-        <div style="color:#888">
-          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#aaa" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-          <div style="font-size:var(--fs-e)">Questão excluída</div>
+      <div style="${alturaMedida ? `min-height:${alturaMedida}px;` : ''}display:flex;flex-direction:column">
+        <div class="section-title" style="margin:0 0 8px 0">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length}</div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;${alturaMedida ? '' : 'min-height:280px;'}background:#F5F5F4;border-radius:14px;padding:20px;text-align:center">
+          <div style="color:#888">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#aaa" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            <div style="font-size:var(--fs-e);margin-bottom:14px">Questão excluída</div>
+            <button class="btn-secundario" style="width:auto;padding:8px 18px" onclick="reverterExclusaoQuestao('${q.id}')">Reverter</button>
+          </div>
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
@@ -2981,6 +2999,7 @@ function renderizarQuestaoAtual(){
   const foiCorrigidaAntesDeResponder = !jaRespondida && q.atualizado_em && cadernoAtual.criado_em && q.atualizado_em > cadernoAtual.criado_em;
 
   const html = `
+    <div id="conteudo-questao-medida">
     <div class="card-questao" data-questao-id="${q.id}">
       <div class="section-title" style="margin:0 0 8px 0;display:flex;justify-content:space-between;align-items:center;gap:8px">
         <span style="display:flex;align-items:center;gap:6px">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length} <button class="btn-icone-pequeno" onclick="abrirInfoQuestao('${q.id}')" title="Sobre essa questão"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
@@ -2991,6 +3010,7 @@ function renderizarQuestaoAtual(){
     <div class="banco-alternativas">${htmlAlternativas}</div>
     ${(!jaRespondida && alternativas.length) ? `<button class="btn-primario" style="margin-top:14px;height:44px;box-sizing:border-box" ${!alternativaSelecionadaAtual?'disabled':''} onclick="confirmarRespostaCaderno()">Confirmar resposta</button>` : ''}
     <div id="resultado-questao">${jaRespondida?renderizarResultado(q,resposta):''}</div>
+    </div>
     <div style="display:flex;gap:8px;margin-top:12px">
       ${indiceQuestaoAtual>0?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual-1})">← Anterior</button>`:''}
       ${indiceQuestaoAtual<questoesCaderno.length-1?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual+1})">Próxima →</button>`:''}
@@ -3019,9 +3039,9 @@ function renderizarQuestaoAtual(){
         <span>Notas</span>
         ${notasDoUsuario.has(q.id)?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
-      <button class="banco-acao-btn" onclick="reportarProblemaFormatacao('${q.id}')" id="btn-reportar-formatacao-${q.id}">
+      <button class="banco-acao-btn ${relatosFormatacaoDoUsuario.has(q.id)?'ativo':''}" onclick="reportarProblemaFormatacao('${q.id}')" id="btn-reportar-formatacao-${q.id}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
-        <span>Formatação</span>
+        <span>${relatosFormatacaoDoUsuario.has(q.id)?'Reportado':'Formatação'}</span>
       </button>
       ${usuarioAtual?.is_admin ? `
       <button class="banco-acao-btn" onclick="abrirEdicaoDiretaAdmin('${q.id}')">
@@ -3101,7 +3121,20 @@ async function confirmarExclusaoQuestao(){
   fecharModal('modal-confirmar-exclusao-questao');
 }
 
+async function reverterExclusaoQuestao(questaoId){
+  await sb.from('exclusoes').delete().eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId);
+  questoesExcluidasAtual.delete(questaoId);
+  delete alturasQuestoesExcluidas[questaoId];
+  renderizarQuestaoAtual();
+}
+
 async function excluirQuestao(questaoId){
+  // mede a altura de verdade que a questão está ocupando na tela, ANTES de
+  // trocar pelo aviso — é isso que garante que o "Questão excluída" ocupe
+  // exatamente o mesmo espaço, nem mais nem menos
+  const elConteudo = document.getElementById('conteudo-questao-medida');
+  if(elConteudo) alturasQuestoesExcluidas[questaoId] = elConteudo.offsetHeight;
+
   await sb.from('exclusoes').insert({usuario_id: usuarioAtual.id, questao_id: questaoId});
   delete respostasPorQuestao[questaoId];
   questoesExcluidasAtual.add(questaoId);
@@ -3116,6 +3149,7 @@ async function finalizarCaderno(){
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
   questoesExcluidasAtual = new Set();
+  alturasQuestoesExcluidas = {};
   document.getElementById('quests-resolucao').classList.add('hidden');
   document.getElementById('quests-filtros').classList.remove('hidden');
   await carregarCadernosExistentes();
