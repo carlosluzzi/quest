@@ -966,7 +966,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-08';
+const VERSAO_APP = '2026-07-25-09';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2008,14 +2008,39 @@ function marcarCorrigidasVistas(cadernoId){
 /* 4. Novidades no Fórum – tópicos ativos (abertos, ou resolvidos que você
    ainda não votou/concordou) */
 async function coletarNotificacaoForum(){
-  const [{data: todosTopicos}, {data: meusVotos}] = await Promise.all([
+  const [{data: todosTopicos}, {data: meusVotos}, {data: minhasVisualizacoes}] = await Promise.all([
     sb.from('topicos').select('id, status, criado_em'),
-    sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id)
+    sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id),
+    sb.from('topicos_vistos').select('topico_id, visto_em').eq('usuario_id', usuarioAtual.id)
   ]);
   const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
+  const mapaVisto = {};
+  (minhasVisualizacoes||[]).forEach(v=>{ mapaVisto[v.topico_id] = v.visto_em; });
 
+  // "ativos" é a mesma definição de sempre (usada só pra saber quais tópicos
+  // contam pra essa notificação e aparecem na lista do Fórum) – o que muda é
+  // que a BOLINHA agora conta só quem ainda não foi visualizado, não o total
   const ativos = (todosTopicos||[]).filter(t => t.status==='aberto' || !idsVotados.has(t.id));
-  const totalBadge = ativos.length;
+
+  if(!ativos.length){
+    document.getElementById('badge-forum').classList.add('hidden');
+    return [];
+  }
+
+  const idsAtivos = ativos.map(t=>t.id);
+  const {data: comentariosAtivos} = await sb.from('comentarios').select('topico_id, criado_em').in('topico_id', idsAtivos);
+  const ultimaAtividadePorTopico = {};
+  ativos.forEach(t=>{ ultimaAtividadePorTopico[t.id] = t.criado_em; });
+  (comentariosAtivos||[]).forEach(c=>{
+    if(!ultimaAtividadePorTopico[c.topico_id] || c.criado_em > ultimaAtividadePorTopico[c.topico_id]){
+      ultimaAtividadePorTopico[c.topico_id] = c.criado_em;
+    }
+  });
+
+  // não visualizado = nunca abriu esse tópico, ou abriu mas teve atividade
+  // nova depois disso (novo comentário, por exemplo)
+  const naoVistos = ativos.filter(t => !mapaVisto[t.id] || ultimaAtividadePorTopico[t.id] > mapaVisto[t.id]);
+  const totalBadge = naoVistos.length;
 
   const badgeEl = document.getElementById('badge-forum');
   if(totalBadge > 0){
@@ -2027,12 +2052,10 @@ async function coletarNotificacaoForum(){
 
   if(!totalBadge) return [];
 
-  const idsAtivos = ativos.map(t=>t.id);
-  const {data: comentariosAtivos} = await sb.from('comentarios').select('topico_id, criado_em').in('topico_id', idsAtivos);
-  let timestamp = ativos.reduce((max,t)=> t.criado_em > max ? t.criado_em : max, ativos[0].criado_em);
-  (comentariosAtivos||[]).forEach(c=>{ if(c.criado_em > timestamp) timestamp = c.criado_em; });
+  let timestamp = ultimaAtividadePorTopico[naoVistos[0].id];
+  naoVistos.forEach(t=>{ if(ultimaAtividadePorTopico[t.id] > timestamp) timestamp = ultimaAtividadePorTopico[t.id]; });
 
-  const texto = `${totalBadge} ${totalBadge===1?'discussão ativa':'discussões ativas'}`;
+  const texto = `${totalBadge} ${totalBadge===1?'discussão nova':'discussões novas'}`;
   const html = `
     <div>
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="trocarAba('forum')">
@@ -3106,10 +3129,12 @@ async function carregarForum(){
 
   const idsTopicos = ativos.map(t=>t.id);
   const infoComentarios = {};
+  const mapaVisto = {};
   if(idsTopicos.length){
-    const [{data: comentariosTodos}, {data: propostasTodas}] = await Promise.all([
+    const [{data: comentariosTodos}, {data: propostasTodas}, {data: minhasVisualizacoes}] = await Promise.all([
       sb.from('comentarios').select('topico_id, criado_em').in('topico_id', idsTopicos).order('criado_em',{ascending:false}),
-      sb.from('propostas_edicao').select('topico_id, criado_em').in('topico_id', idsTopicos).order('criado_em',{ascending:false})
+      sb.from('propostas_edicao').select('topico_id, criado_em').in('topico_id', idsTopicos).order('criado_em',{ascending:false}),
+      sb.from('topicos_vistos').select('topico_id, visto_em').eq('usuario_id', usuarioAtual.id).in('topico_id', idsTopicos)
     ]);
     (comentariosTodos||[]).forEach(c=>{
       if(!infoComentarios[c.topico_id]) infoComentarios[c.topico_id] = {total:0, ultima:c.criado_em};
@@ -3121,13 +3146,18 @@ async function carregarForum(){
       if(!infoComentarios[p.topico_id]) infoComentarios[p.topico_id] = {total:0, ultima:p.criado_em};
       else if(p.criado_em > infoComentarios[p.topico_id].ultima) infoComentarios[p.topico_id].ultima = p.criado_em;
     });
+    (minhasVisualizacoes||[]).forEach(v=>{ mapaVisto[v.topico_id] = v.visto_em; });
   }
 
-  forumCache = ativos.map(t=>({
-    ...t,
-    totalComentarios: infoComentarios[t.id]?.total || 0,
-    ultimaAtividade: infoComentarios[t.id]?.ultima || t.criado_em
-  })).sort((a,b)=>(b.ultimaAtividade||'').localeCompare(a.ultimaAtividade||''));
+  forumCache = ativos.map(t=>{
+    const ultimaAtividade = infoComentarios[t.id]?.ultima || t.criado_em;
+    return {
+      ...t,
+      totalComentarios: infoComentarios[t.id]?.total || 0,
+      ultimaAtividade,
+      naoVisto: !mapaVisto[t.id] || ultimaAtividade > mapaVisto[t.id] // sem registro de visualização, ou teve atividade nova depois da última vez que viu
+    };
+  }).sort((a,b)=>(b.ultimaAtividade||'').localeCompare(a.ultimaAtividade||''));
 
   renderizarListaForum();
 }
@@ -3147,7 +3177,7 @@ function renderizarListaForum(){
       <div style="margin-bottom:6px">
         ${badgeTipoTopico(f.tipo)}
       </div>
-      <div style="font-size:var(--fs-e);font-weight:600;color:#111;text-transform:uppercase">${escapeHtml(f.titulo)}</div>
+      <div style="font-size:var(--fs-e);font-weight:600;color:#111;text-transform:uppercase;display:flex;align-items:center;gap:6px">${f.naoVisto?'<span style="width:8px;height:8px;border-radius:50%;background:#E24B4A;flex-shrink:0"></span>':''}${escapeHtml(f.titulo)}</div>
       <p style="font-size:var(--fs-d);color:#888;margin-top:4px">${escapeHtml((f.questoes?.enunciado||'').slice(0,90))}...</p>
       <div style="display:flex;justify-content:space-between;color:#888;font-size:var(--fs-b);margin-top:8px">
         <span>${f.totalComentarios} ${f.totalComentarios===1?'comentário':'comentários'}</span>
@@ -3349,9 +3379,18 @@ async function renderizarTopico(topicoId){
   if(topico.criado_por === usuarioAtual.id){
     // marca como visto pelo criador, sem travar a tela – e reavalia a notificação
     sb.from('topicos').update({criador_visto_em: new Date().toISOString()}).eq('id', topicoId).then(()=>{
-      verificarNotificacaoRespostaDiscussao();
+      atualizarNotificacoesOrdenadas();
     });
   }
+  // marca como visto por QUALQUER pessoa que abrir a discussão (não só o
+  // criador) – isso é o que faz a bolinha de "não visualizado" sumir, tanto
+  // no menu de baixo quanto na lista do Fórum, sem travar a tela
+  sb.from('topicos_vistos').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id, visto_em: new Date().toISOString()}, {onConflict:'usuario_id,topico_id'}).then(()=>{
+    atualizarNotificacoesOrdenadas();
+    if(document.getElementById('aba-forum') && !document.getElementById('aba-forum').classList.contains('hidden')){
+      renderizarListaForum();
+    }
+  });
   const [{data: comentarios}, {data: votos}, {data: ultimaProposta}] = await Promise.all([
     sb.from('comentarios').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).order('criado_em', {ascending:true}),
     sb.from('votos_resolucao').select('*, usuarios(nome)').eq('topico_id', topicoId),
