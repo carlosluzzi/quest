@@ -967,7 +967,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-20';
+const VERSAO_APP = '2026-07-25-21';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4202,7 +4202,9 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Meteorologia e Oceanografia", autorBusca:["lobo", "soares"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["valgas"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["normam-701", "normam 701"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-701/DHN", capitulos:null},
-  {modulo:"Meteorologia e Oceanografia", autorBusca:["miguens", "ciência e a arte", "45"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["ciência e a arte", "45"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["miguens", "45"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["noções de meteorologia para navegantes"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["pianc 117"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["hydro/meteo"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:null},
