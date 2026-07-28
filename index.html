@@ -980,7 +980,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-25';
+const VERSAO_APP = '2026-07-25-26';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5874,6 +5874,11 @@ async function buscarCadernoAdmin(){
     const delta=e.touches[0].clientY-yInicial;
     if(delta<=0){ resetVisual(); return; }
     if(contentEl.scrollTop>0){ arrastando=false; return; }
+    // a partir daqui é puxar-pra-baixo de verdade, com o scroll já no topo —
+    // impede o navegador de fazer QUALQUER coisa por conta própria (incluindo
+    // o elástico nativo dele, que aparecia sem limite quando o conteúdo da
+    // aba era mais curto que a tela)
+    e.preventDefault();
     const distancia=Math.min(delta*0.5,MAX_ARRASTO);
     indicador.classList.add('ativo');
     indicador.style.height=distancia+'px';
@@ -5884,7 +5889,7 @@ async function buscarCadernoAdmin(){
       passouLimiar=cruzouAgora;
       seta.classList.toggle('pronta',passouLimiar);
     }
-  },{passive:true});
+  },{passive:false});
 
   contentEl.addEventListener('touchend',async()=>{
     if(!arrastando||yInicial===null){ yInicial=null; return; }
