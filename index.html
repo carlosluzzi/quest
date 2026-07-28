@@ -967,7 +967,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-17';
+const VERSAO_APP = '2026-07-25-19';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3433,7 +3433,7 @@ function abrirTopico(topicoId){
 }
 
 async function renderizarTopico(topicoId){
-  const {data: topico} = await sb.from('topicos').select('*, questoes(id, enunciado, modulo_pscpp)').eq('id', topicoId).single();
+  const {data: topico} = await sb.from('topicos').select('*, questoes(id, enunciado, alternativas, gabarito)').eq('id', topicoId).single();
   if(!topico){ document.getElementById(containerTopicoAtual()).innerHTML = '<p>Tópico não encontrado.</p>'; return; }
   if(topico.criado_por === usuarioAtual.id){
     // marca como visto pelo criador, sem travar a tela – e reavalia a notificação
@@ -3553,9 +3553,11 @@ async function renderizarTopico(topicoId){
     ${badgeTipoTopico(topico.tipo)}
     <h3 class="config-title" style="margin-top:8px;text-transform:uppercase;font-size:var(--fs-e)">${escapeHtml(topico.titulo)}</h3>
     ${topico.questoes ? `
-    <div class="card-questao" style="margin-bottom:16px">
-      ${topico.questoes.modulo_pscpp ? tagModulo(topico.questoes.modulo_pscpp) : ''}
-      <p style="font-size:var(--fs-d);color:#444;margin:8px 0 0;line-height:1.5">${escapeHtml((topico.questoes.enunciado||'').slice(0,160))}${(topico.questoes.enunciado||'').length>160?'...':''}</p>
+    <div style="background:#F7F7F5;border-left:3px solid #ccc;border-radius:8px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:var(--fs-b);color:#999;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;font-weight:600">Questão desta discussão</div>
+      <p style="font-size:var(--fs-d);color:#444;margin:0;line-height:1.6">${formatarEnunciado(topico.questoes.enunciado)}</p>
+      ${topico.questoes.alternativas ? `<div style="font-size:var(--fs-d);color:#444;margin-top:12px">${extrairAlternativas(topico.questoes.alternativas).map(alt=>`<div class="linha-numerada"><span class="linha-marcador">${alt.letra})</span><span class="linha-texto">${alt.texto}</span></div>`).join('')}</div>` : ''}
+      ${topico.questoes.gabarito ? `<div style="font-size:var(--fs-d);margin-top:12px;font-weight:600;color:#444">Gabarito: ${escapeHtml(topico.questoes.gabarito.toUpperCase())}</div>` : ''}
     </div>` : ''}
     <div>${renderizarListaComentarios(comentarios||[])}</div>
     <div id="indicador-resposta" class="hidden" style="display:flex;align-items:center;justify-content:space-between;background:#F5F5F4;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:var(--fs-b);color:#666">
