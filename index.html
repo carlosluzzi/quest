@@ -966,7 +966,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-07';
+const VERSAO_APP = '2026-07-25-08';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2866,7 +2866,19 @@ async function abrirInfoQuestao(questaoId){
   const {data: autor} = await sb.from('usuarios').select('nome').eq('id', q.autor_id).single();
   const dataFormatada = q.criado_em ? new Date(q.criado_em).toLocaleDateString('pt-BR') : 'data desconhecida';
   let texto = `Adicionada por ${autor?.nome || 'alguém'}, em ${dataFormatada}.`;
-  if(usuarioAtual?.is_admin && q.lote_upload_id) texto += `\nCódigo do lote: ${q.lote_upload_id}`;
+
+  const mapaBibliografiaTitulo = {};
+  bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
+  const partes = [];
+  if(q.modulo_pscpp) partes.push(q.modulo_pscpp);
+  if(q.bibliografia_id && mapaBibliografiaTitulo[q.bibliografia_id]) partes.push(mapaBibliografiaTitulo[q.bibliografia_id]);
+  if(q.capitulo){
+    const rotulo = rotuloCapituloDoLivro(q.bibliografia_id ? mapaBibliografiaTitulo[q.bibliografia_id] : null);
+    partes.push(`${rotulo} ${q.capitulo}`);
+  }
+  if(partes.length) texto += `\n${partes.join(' · ')}`;
+
+  if(usuarioAtual?.is_admin && q.lote_upload_id) texto += `\n\nLote: ${q.lote_upload_id}`;
   document.getElementById('texto-info-questao').innerHTML = escapeHtml(texto).replace(/\n/g, '<br>');
 }
 function renderizarQuestaoAtual(){
