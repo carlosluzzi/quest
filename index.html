@@ -967,7 +967,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-13';
+const VERSAO_APP = '2026-07-25-14';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2384,7 +2384,6 @@ async function gerarSuperQuest(){
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
   questoesExcluidasAtual = new Set();
-  alturasQuestoesExcluidas = {};
   await carregarFavoritosENotas(pool.map(q=>q.id));
 
   document.getElementById('quests-filtros').classList.add('hidden');
@@ -2444,7 +2443,6 @@ async function montarCaderno(){
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
   questoesExcluidasAtual = new Set();
-  alturasQuestoesExcluidas = {};
   await carregarFavoritosENotas(questoesFiltradas.map(q=>q.id));
 
   document.getElementById('quests-filtros').classList.add('hidden');
@@ -2616,7 +2614,6 @@ async function retomarCadernoEspecifico(cadernoId){
   // certo, em vez de esquecer e mostrar a questão de novo
   const idsQuestoesCaderno = questoesCaderno.map(q=>q.id);
   questoesExcluidasAtual = new Set();
-  alturasQuestoesExcluidas = {};
   if(idsQuestoesCaderno.length){
     const {data: exclusoesDoCaderno} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoesCaderno);
     (exclusoesDoCaderno||[]).forEach(e=>{ questoesExcluidasAtual.add(e.questao_id); });
@@ -2658,8 +2655,7 @@ async function confirmarExclusaoCaderno(){
 
 let alternativaSelecionadaAtual = null; // marcada mas ainda não confirmada – reseta a cada troca de questão
 let alternativasRiscadasAtual = new Set(); // "eliminadas" visualmente (pressionar e segurar) – reseta a cada troca de questão
-let questoesExcluidasAtual = new Set(); // ids das questões excluídas nesse caderno – fica na MESMA posição, só troca o conteúdo mostrado por um aviso
-let alturasQuestoesExcluidas = {}; // altura em px que cada questão ocupava no momento exato de ser excluída — pro aviso ocupar o mesmo espaço, nem mais nem menos
+let questoesExcluidasAtual = new Set(); // ids das questões excluídas nesse caderno – fica na MESMA posição, só troca o visual por uma versão apagada com aviso por cima
 
 // Pressionar e segurar risca uma alternativa (elimina ela visualmente, sem
 // contar como resposta); toque/clique rápido continua selecionando como
@@ -2937,41 +2933,7 @@ function renderizarQuestaoAtual(){
   const q = questoesCaderno[indiceQuestaoAtual];
   if(!q){ document.getElementById('questao-atual').innerHTML = '<p>Fim do caderno.</p>'; return; }
 
-  // questão excluída por você: fica na mesma posição do caderno (não
-  // encolhe a lista, não desloca as outras), só troca o conteúdo por um
-  // aviso — do jeito que ocupa um espaço parecido com o de uma questão de
-  // verdade, pra não virar uma faixinha minúscula na tela
-  if(questoesExcluidasAtual.has(q.id)){
-    const todasRespondidasOuExcluidas = questoesCaderno.length > 0 && questoesCaderno.every(qq => !!respostasPorQuestao[qq.id] || questoesExcluidasAtual.has(qq.id));
-    const nomeCadernoEscapado = escapeHtml(cadernoAtual.nome || 'Caderno sem nome');
-    // usa a altura medida no momento da exclusão, se tiver (caso comum);
-    // sem isso (por exemplo, ao retomar um caderno de uma sessão anterior,
-    // quando nunca chegamos a medir nessa aba), cai num tamanho razoável
-    const alturaMedida = alturasQuestoesExcluidas[q.id];
-    document.getElementById('questao-atual').innerHTML = `
-      <div style="${alturaMedida ? `min-height:${alturaMedida}px;` : ''}display:flex;flex-direction:column">
-        <div class="section-title" style="margin:0 0 8px 0">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length}</div>
-        <div style="flex:1;display:flex;align-items:center;justify-content:center;${alturaMedida ? '' : 'min-height:280px;'}background:#F5F5F4;border-radius:14px;padding:20px;text-align:center">
-          <div style="color:#888">
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#aaa" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-            <div style="font-size:var(--fs-e);margin-bottom:14px">Questão excluída</div>
-            <button class="btn-secundario" style="width:auto;padding:8px 18px" onclick="reverterExclusaoQuestao('${q.id}')">Reverter</button>
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px">
-        ${indiceQuestaoAtual>0?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual-1})">← Anterior</button>`:''}
-        ${indiceQuestaoAtual<questoesCaderno.length-1?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual+1})">Próxima →</button>`:''}
-      </div>
-      ${todasRespondidasOuExcluidas ? `
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button style="flex:1;padding:10px;font-size:var(--fs-e);border-radius:8px;background:#fff;color:#A32D2D;border:0.5px solid #F7C1C1;font-family:inherit;cursor:pointer" data-id="${cadernoAtual.id}" data-nome="${nomeCadernoEscapado}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">Excluir caderno</button>
-        <button class="btn-primario" style="flex:1" onclick="finalizarCaderno()">Finalizar caderno</button>
-      </div>` : ''}
-    `;
-    return;
-  }
-
+  const excluida = questoesExcluidasAtual.has(q.id);
   const alternativas = extrairAlternativas(q.alternativas);
   const jaRespondida = !!respostasPorQuestao[q.id];
   const resposta = respostasPorQuestao[q.id];
@@ -2991,15 +2953,20 @@ function renderizarQuestaoAtual(){
         }else if(alt.letra === alternativaSelecionadaAtual){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
-        const handlers = jaRespondida ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}', false)" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="iniciarPressionarAlternativa('${alt.letra}')" ontouchend="finalizarPressionarAlternativa('${alt.letra}', true)" ontouchmove="moverDurantePressionar()" ontouchcancel="cancelarPressionarAlternativa()"`;
-        return `<button class="banco-alt-btn" style="${estilo}" ${jaRespondida?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
+        const handlers = (jaRespondida || excluida) ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}', false)" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="iniciarPressionarAlternativa('${alt.letra}')" ontouchend="finalizarPressionarAlternativa('${alt.letra}', true)" ontouchmove="moverDurantePressionar()" ontouchcancel="cancelarPressionarAlternativa()"`;
+        return `<button class="banco-alt-btn" style="${estilo}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
       }).join('')
     : '<p style="color:#B00020;font-size:var(--fs-d)">Alternativas não identificadas nessa questão (pode estar malformada) – considere excluir pra você.</p>';
 
   const foiCorrigidaAntesDeResponder = !jaRespondida && q.atualizado_em && cadernoAtual.criado_em && q.atualizado_em > cadernoAtual.criado_em;
 
+  // questão excluída por você: continua sendo desenhada normalmente (então
+  // ocupa exatamente o mesmo espaço que ocuparia de qualquer forma), só que
+  // apagada/sem interação por baixo, com um aviso flutuando por cima —
+  // mais sutil do que sumir com o conteúdo de vez
   const html = `
-    <div id="conteudo-questao-medida">
+    <div style="position:relative">
+    <div${excluida ? ' style="opacity:0.28;filter:grayscale(0.5);pointer-events:none;user-select:none"' : ''}>
     <div class="card-questao" data-questao-id="${q.id}">
       <div class="section-title" style="margin:0 0 8px 0;display:flex;justify-content:space-between;align-items:center;gap:8px">
         <span style="display:flex;align-items:center;gap:6px">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length} <button class="btn-icone-pequeno" onclick="abrirInfoQuestao('${q.id}')" title="Sobre essa questão"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
@@ -3008,8 +2975,17 @@ function renderizarQuestaoAtual(){
       <div class="enunciado">${formatarEnunciado(q.enunciado)}</div>
     </div>
     <div class="banco-alternativas">${htmlAlternativas}</div>
-    ${(!jaRespondida && alternativas.length) ? `<button class="btn-primario" style="margin-top:14px;height:44px;box-sizing:border-box" ${!alternativaSelecionadaAtual?'disabled':''} onclick="confirmarRespostaCaderno()">Confirmar resposta</button>` : ''}
+    ${(!jaRespondida && !excluida && alternativas.length) ? `<button class="btn-primario" style="margin-top:14px;height:44px;box-sizing:border-box" ${!alternativaSelecionadaAtual?'disabled':''} onclick="confirmarRespostaCaderno()">Confirmar resposta</button>` : ''}
     <div id="resultado-questao">${jaRespondida?renderizarResultado(q,resposta):''}</div>
+    </div>
+    ${excluida ? `
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px">
+      <div style="background:#fff;padding:18px 26px;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,0.14);border:0.5px solid #eee;text-align:center">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#B23A34" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 8px"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        <div style="font-size:var(--fs-e);font-weight:600;color:#333;margin-bottom:12px">Questão excluída</div>
+        <button class="btn-secundario" style="width:auto;padding:8px 18px" onclick="reverterExclusaoQuestao('${q.id}')">Reverter</button>
+      </div>
+    </div>` : ''}
     </div>
     <div style="display:flex;gap:8px;margin-top:12px">
       ${indiceQuestaoAtual>0?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual-1})">← Anterior</button>`:''}
@@ -3020,7 +2996,7 @@ function renderizarQuestaoAtual(){
       <button style="flex:1;padding:10px;font-size:var(--fs-e);border-radius:8px;background:#fff;color:#A32D2D;border:0.5px solid #F7C1C1;font-family:inherit;cursor:pointer" data-id="${cadernoAtual.id}" data-nome="${nomeCadernoEscapado}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">Excluir caderno</button>
       <button class="btn-primario" style="flex:1" onclick="finalizarCaderno()">Finalizar caderno</button>
     </div>` : ''}
-    <div class="banco-acoes">
+    ${!excluida ? `<div class="banco-acoes">
       <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoQuestao('${q.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         <span>Excluir</span>
@@ -3048,7 +3024,7 @@ function renderizarQuestaoAtual(){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
         <span>Editar</span>
       </button>` : ''}
-    </div>`;
+    </div>` : ''}`;
   document.getElementById('questao-atual').innerHTML = html;
 }
 
@@ -3124,17 +3100,10 @@ async function confirmarExclusaoQuestao(){
 async function reverterExclusaoQuestao(questaoId){
   await sb.from('exclusoes').delete().eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId);
   questoesExcluidasAtual.delete(questaoId);
-  delete alturasQuestoesExcluidas[questaoId];
   renderizarQuestaoAtual();
 }
 
 async function excluirQuestao(questaoId){
-  // mede a altura de verdade que a questão está ocupando na tela, ANTES de
-  // trocar pelo aviso — é isso que garante que o "Questão excluída" ocupe
-  // exatamente o mesmo espaço, nem mais nem menos
-  const elConteudo = document.getElementById('conteudo-questao-medida');
-  if(elConteudo) alturasQuestoesExcluidas[questaoId] = elConteudo.offsetHeight;
-
   await sb.from('exclusoes').insert({usuario_id: usuarioAtual.id, questao_id: questaoId});
   delete respostasPorQuestao[questaoId];
   questoesExcluidasAtual.add(questaoId);
@@ -3149,7 +3118,6 @@ async function finalizarCaderno(){
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
   questoesExcluidasAtual = new Set();
-  alturasQuestoesExcluidas = {};
   document.getElementById('quests-resolucao').classList.add('hidden');
   document.getElementById('quests-filtros').classList.remove('hidden');
   await carregarCadernosExistentes();
