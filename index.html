@@ -967,7 +967,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-15';
+const VERSAO_APP = '2026-07-25-16';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2056,7 +2056,18 @@ async function coletarNotificacaoForum(){
   let timestamp = ultimaAtividadePorTopico[naoVistos[0].id];
   naoVistos.forEach(t=>{ if(ultimaAtividadePorTopico[t.id] > timestamp) timestamp = ultimaAtividadePorTopico[t.id]; });
 
-  const texto = `${totalBadge} ${totalBadge===1?'discussão nova':'discussões novas'}`;
+  // distingue "você nunca abriu isso" de "você já viu, mas tem resposta
+  // nova depois" — são situações diferentes, o texto precisa refletir isso
+  const nuncaVistos = naoVistos.filter(t => !mapaVisto[t.id]);
+  const comAtividadeNova = naoVistos.filter(t => mapaVisto[t.id]);
+  let texto;
+  if(nuncaVistos.length && comAtividadeNova.length){
+    texto = `${totalBadge} discussões com novidade (${nuncaVistos.length} que você ainda não viu, ${comAtividadeNova.length} com resposta nova)`;
+  }else if(nuncaVistos.length){
+    texto = nuncaVistos.length===1 ? '1 discussão que você ainda não viu' : `${nuncaVistos.length} discussões que você ainda não viu`;
+  }else{
+    texto = comAtividadeNova.length===1 ? '1 discussão com resposta nova' : `${comAtividadeNova.length} discussões com resposta nova`;
+  }
   const html = `
     <div>
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="trocarAba('forum')">
