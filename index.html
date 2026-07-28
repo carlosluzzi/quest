@@ -112,7 +112,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;flex-shrink:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:#B23A34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0;border:none;padding:0;margin:0;-webkit-appearance:none;appearance:none;cursor:pointer;overflow:hidden}
 
-.content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
+.content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
 #ptr-indicator{display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height 0.2s ease;flex-shrink:0;position:relative}
 #ptr-indicator.ativo{transition:none}
 #ptr-seta{width:20px;height:20px;color:#999;transition:transform 0.25s ease,opacity 0.15s ease;transform:rotate(0deg);position:absolute}
@@ -980,7 +980,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-24';
+const VERSAO_APP = '2026-07-25-25';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
