@@ -259,6 +259,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .pill-questao.atual{background:#111;color:#fff;border-color:#111}
 .pill-questao.acertou{background:#EAF3DE;color:#3B6D11;border-color:#C0DD97}
 .pill-questao.errou{background:#FCEBEB;color:#A32D2D;border-color:#F7C1C1}
+.pill-questao.excluida{background:#F0F0EE;color:#aaa;border-color:#e5e5e3}
 .loading-spinner{width:28px;height:28px;display:block;margin:20px auto}
 /* Barrinha de carregamento — usada só na tela de splash inicial */
 .loading-bar{width:120px;height:4px;border-radius:2px;background:#EEE;overflow:hidden;margin:20px auto}
@@ -966,7 +967,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-09';
+const VERSAO_APP = '2026-07-25-10';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2382,6 +2383,7 @@ async function gerarSuperQuest(){
   respostasPorQuestao = {};
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
+  questoesExcluidasAtual = new Set();
   await carregarFavoritosENotas(pool.map(q=>q.id));
 
   document.getElementById('quests-filtros').classList.add('hidden');
@@ -2440,6 +2442,7 @@ async function montarCaderno(){
   respostasPorQuestao = {};
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
+  questoesExcluidasAtual = new Set();
   await carregarFavoritosENotas(questoesFiltradas.map(q=>q.id));
 
   document.getElementById('quests-filtros').classList.add('hidden');
@@ -2605,8 +2608,19 @@ async function retomarCadernoEspecifico(cadernoId){
   (respostasDoCaderno||[]).forEach(r=>{ respostasPorQuestao[r.questao_id] = {letra:r.resposta_dada, correta:r.correta}; });
 
   questoesCaderno = questoes || [];
+
+  // recupera exclusões que já tinham sido feitas numa sessão anterior desse
+  // mesmo caderno – pra continuar mostrando "Questão excluída" no lugar
+  // certo, em vez de esquecer e mostrar a questão de novo
+  const idsQuestoesCaderno = questoesCaderno.map(q=>q.id);
+  questoesExcluidasAtual = new Set();
+  if(idsQuestoesCaderno.length){
+    const {data: exclusoesDoCaderno} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoesCaderno);
+    (exclusoesDoCaderno||[]).forEach(e=>{ questoesExcluidasAtual.add(e.questao_id); });
+  }
+
   await carregarFavoritosENotas(questoesCaderno.map(q=>q.id));
-  const primeiraNaoRespondida = questoesCaderno.findIndex(q => !respostasPorQuestao[q.id]);
+  const primeiraNaoRespondida = questoesCaderno.findIndex(q => !respostasPorQuestao[q.id] && !questoesExcluidasAtual.has(q.id));
   indiceQuestaoAtual = primeiraNaoRespondida !== -1 ? primeiraNaoRespondida : 0;
   trocarAba('quests');
   document.getElementById('quests-filtros').classList.add('hidden');
@@ -2641,6 +2655,7 @@ async function confirmarExclusaoCaderno(){
 
 let alternativaSelecionadaAtual = null; // marcada mas ainda não confirmada – reseta a cada troca de questão
 let alternativasRiscadasAtual = new Set(); // "eliminadas" visualmente (pressionar e segurar) – reseta a cada troca de questão
+let questoesExcluidasAtual = new Set(); // ids das questões excluídas nesse caderno – fica na MESMA posição, só troca o conteúdo mostrado por um aviso
 
 // Pressionar e segurar risca uma alternativa (elimina ela visualmente, sem
 // contar como resposta); toque/clique rápido continua selecionando como
@@ -2854,10 +2869,12 @@ function renderizarPillsCaderno(){
   const el = document.getElementById('pills-nav-caderno');
   el.innerHTML = questoesCaderno.map((q,i)=>{
     const r = respostasPorQuestao[q.id];
+    const excluida = questoesExcluidasAtual.has(q.id);
     let cls = 'pill-questao';
     if(i===indiceQuestaoAtual) cls += ' atual';
-    if(r) cls += r.correta ? ' acertou' : ' errou';
-    return `<button class="${cls}" onclick="irParaQuestao(${i})">${i+1}</button>`;
+    if(excluida) cls += ' excluida';
+    else if(r) cls += r.correta ? ' acertou' : ' errou';
+    return `<button class="${cls}" onclick="irParaQuestao(${i})">${excluida?'×':i+1}</button>`;
   }).join('');
 }
 
@@ -2908,11 +2925,40 @@ function renderizarQuestaoAtual(){
   renderizarPillsCaderno();
   const q = questoesCaderno[indiceQuestaoAtual];
   if(!q){ document.getElementById('questao-atual').innerHTML = '<p>Fim do caderno.</p>'; return; }
+
+  // questão excluída por você: fica na mesma posição do caderno (não
+  // encolhe a lista, não desloca as outras), só troca o conteúdo por um
+  // aviso — do jeito que ocupa um espaço parecido com o de uma questão de
+  // verdade, pra não virar uma faixinha minúscula na tela
+  if(questoesExcluidasAtual.has(q.id)){
+    const todasRespondidasOuExcluidas = questoesCaderno.length > 0 && questoesCaderno.every(qq => !!respostasPorQuestao[qq.id] || questoesExcluidasAtual.has(qq.id));
+    const nomeCadernoEscapado = escapeHtml(cadernoAtual.nome || 'Caderno sem nome');
+    document.getElementById('questao-atual').innerHTML = `
+      <div class="section-title" style="margin:0 0 8px 0">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length}</div>
+      <div style="display:flex;align-items:center;justify-content:center;min-height:340px;background:#F5F5F4;border-radius:14px;padding:20px;text-align:center">
+        <div style="color:#888">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#aaa" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          <div style="font-size:var(--fs-e)">Questão excluída</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        ${indiceQuestaoAtual>0?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual-1})">← Anterior</button>`:''}
+        ${indiceQuestaoAtual<questoesCaderno.length-1?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual+1})">Próxima →</button>`:''}
+      </div>
+      ${todasRespondidasOuExcluidas ? `
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button style="flex:1;padding:10px;font-size:var(--fs-e);border-radius:8px;background:#fff;color:#A32D2D;border:0.5px solid #F7C1C1;font-family:inherit;cursor:pointer" data-id="${cadernoAtual.id}" data-nome="${nomeCadernoEscapado}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">Excluir caderno</button>
+        <button class="btn-primario" style="flex:1" onclick="finalizarCaderno()">Finalizar caderno</button>
+      </div>` : ''}
+    `;
+    return;
+  }
+
   const alternativas = extrairAlternativas(q.alternativas);
   const jaRespondida = !!respostasPorQuestao[q.id];
   const resposta = respostasPorQuestao[q.id];
   const gabarito = (q.gabarito||'').toLowerCase().trim();
-  const todasRespondidas = questoesCaderno.length > 0 && questoesCaderno.every(qq => !!respostasPorQuestao[qq.id]);
+  const todasRespondidas = questoesCaderno.length > 0 && questoesCaderno.every(qq => !!respostasPorQuestao[qq.id] || questoesExcluidasAtual.has(qq.id));
   const nomeCadernoEscapado = escapeHtml(cadernoAtual.nome || 'Caderno sem nome');
 
   const htmlAlternativas = alternativas.length
@@ -3058,8 +3104,7 @@ async function confirmarExclusaoQuestao(){
 async function excluirQuestao(questaoId){
   await sb.from('exclusoes').insert({usuario_id: usuarioAtual.id, questao_id: questaoId});
   delete respostasPorQuestao[questaoId];
-  questoesCaderno = questoesCaderno.filter(q=>q.id!==questaoId);
-  if(indiceQuestaoAtual >= questoesCaderno.length) indiceQuestaoAtual = Math.max(0, questoesCaderno.length-1);
+  questoesExcluidasAtual.add(questaoId);
   renderizarQuestaoAtual();
 }
 
@@ -3070,6 +3115,7 @@ async function finalizarCaderno(){
   respostasPorQuestao = {};
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
+  questoesExcluidasAtual = new Set();
   document.getElementById('quests-resolucao').classList.add('hidden');
   document.getElementById('quests-filtros').classList.remove('hidden');
   await carregarCadernosExistentes();
