@@ -967,7 +967,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-19';
+const VERSAO_APP = '2026-07-25-20';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2228,12 +2228,28 @@ function retomarCaderno(){
 /* ============================================================
    GERAR QUESTS – filtros em cascata
    ============================================================ */
+let modulosComQuestao = new Set();
+let publicacoesComQuestao = new Set();
+
 async function carregarBibliografia(){
-  const {data} = await sb.from('bibliografia').select('*');
+  const [{data}, {data: dadosQuestoes}] = await Promise.all([
+    sb.from('bibliografia').select('*'),
+    sb.from('questoes').select('modulo_pscpp, bibliografia_id').eq('anulada', false)
+  ]);
   bibliografiaCache = data || [];
   modulosPscpp = [...new Set(bibliografiaCache.map(b=>b.modulo_pscpp))].sort((a,b)=>a.localeCompare(b,'pt'));
+
+  // pra saber quais módulos/publicações realmente têm pelo menos 1 questão
+  // — usado pra escurecer/desabilitar as opções vazias nos filtros, e a
+  // pessoa não ficar tentando selecionar algo que não tem nada
+  modulosComQuestao = new Set((dadosQuestoes||[]).map(q=>q.modulo_pscpp));
+  publicacoesComQuestao = new Set((dadosQuestoes||[]).map(q=>q.bibliografia_id));
+
   const el = document.getElementById('filtro-modulo');
-  el.innerHTML = '<option value="">Todos os módulos</option>' + modulosPscpp.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+  el.innerHTML = '<option value="">Todos os módulos</option>' + modulosPscpp.map(m=>{
+    const vazio = !modulosComQuestao.has(m);
+    return `<option value="${escapeHtml(m)}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(m)}</option>`;
+  }).join('');
   // independentes entre si (tabelas diferentes) – rodar em paralelo
   await Promise.all([carregarFiltroUsuarioAdmin(), carregarCadernosExistentes()]);
   atualizarContadorDisponiveis(); // mostra o total desde o início, sem esperar filtro nenhum
@@ -2280,7 +2296,10 @@ function selecionarFiltroSelect(nivel, valor){
     elCap.disabled = true;
     if(valor){
       const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===valor).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
-      elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>`<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`).join('');
+      elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>{
+        const vazio = !publicacoesComQuestao.has(p.id);
+        return `<option value="${p.id}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(p.nome_exibicao || p.titulo)}</option>`;
+      }).join('');
       elPub.disabled = false;
     }else{
       elPub.innerHTML = '<option value="">Todas as publicações</option>';
