@@ -983,7 +983,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-29';
+const VERSAO_APP = '2026-07-25-30';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5088,7 +5088,7 @@ function renderizarFavoritosMetricas(elFavoritos, infoPorQuestao){
   if(metricasFavoritosCache.length){
     const mapaBibliografiaTitulo = {};
     bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
-    elFavoritos.innerHTML = metricasFavoritosCache.map(f=>{
+    const itens = metricasFavoritosCache.map(f=>{
       const info = infoPorQuestao[f.questao_id];
       const partes = [];
       if(info?.modulo_pscpp){
@@ -5103,7 +5103,9 @@ function renderizarFavoritosMetricas(elFavoritos, infoPorQuestao){
         <div style="font-size:var(--fs-d);color:#888;margin-right:24px">${partes.length ? partes.join(' · ') : 'Questão'}</div>
         <div style="color:#888;font-size:var(--fs-b);margin-top:6px">Favoritada em ${new Date(f.criado_em).toLocaleDateString('pt-BR')}</div>
       </div>`;
-    }).join('');
+    });
+    elFavoritos.innerHTML = montarCarrosselCadernos(itens, 'carrossel-favoritos');
+    if(itens.length > ITENS_POR_PAGINA_CADERNO) initCarrosselCaderno('carrossel-favoritos', Math.ceil(itens.length/ITENS_POR_PAGINA_CADERNO));
   }else{
     elFavoritos.innerHTML = '<p style="color:#888;font-size:var(--fs-d)">Você ainda não favoritou nenhuma questão.</p>';
   }
@@ -5119,7 +5121,7 @@ function renderizarNotasMetricas(elNotas, infoPorQuestao){
   if(metricasNotasCache.length){
     const mapaBibliografiaTitulo = {};
     bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
-    elNotas.innerHTML = metricasNotasCache.map(n=>{
+    const itens = metricasNotasCache.map(n=>{
       const info = infoPorQuestao[n.questao_id];
       const partes = [];
       if(info?.modulo_pscpp) partes.push(escapeHtml(info.modulo_pscpp));
@@ -5131,7 +5133,9 @@ function renderizarNotasMetricas(elNotas, infoPorQuestao){
         <p style="font-size:var(--fs-d);color:#111;margin:0 24px 8px 0">${formatarEnunciado(n.texto)}</p>
         <div style="font-size:var(--fs-b);color:#888">${partes.join(' · ')}</div>
       </div>`;
-    }).join('');
+    });
+    elNotas.innerHTML = montarCarrosselCadernos(itens, 'carrossel-notas');
+    if(itens.length > ITENS_POR_PAGINA_CADERNO) initCarrosselCaderno('carrossel-notas', Math.ceil(itens.length/ITENS_POR_PAGINA_CADERNO));
   }else{
     elNotas.innerHTML = '<p style="color:#888;font-size:var(--fs-d)">Você ainda não escreveu nenhuma nota.</p>';
   }
