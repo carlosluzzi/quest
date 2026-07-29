@@ -983,7 +983,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-30';
+const VERSAO_APP = '2026-07-25-31';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1750,14 +1750,23 @@ function medirAlturaNav(){
   const alturaReal = window.innerWidth >= 1100 ? 0 : nav.offsetHeight;
   document.documentElement.style.setProperty('--nav-height', alturaReal + 'px');
 }
-window.addEventListener('resize', medirAlturaNav);
-
 function medirAlturaTopbar(){
   const topbar = document.querySelector('#app-shell .topbar');
   if(!topbar) return;
   document.documentElement.style.setProperty('--topbar-height', topbar.offsetHeight + 'px');
 }
-window.addEventListener('resize', medirAlturaTopbar);
+// nav e topbar só mudam de altura de verdade quando a LARGURA muda (o
+// ponto de quebra de 1100px) — reagir a resize sem essa trava faria essas
+// 2 funções rodarem à toa toda vez que a barra de endereço do Safari
+// expande/recolhe durante o scroll no celular (isso não muda a largura,
+// só a altura visível), forçando reflow sem necessidade nenhuma
+let larguraAnteriorNavTopbar = window.innerWidth;
+window.addEventListener('resize', ()=>{
+  if(window.innerWidth === larguraAnteriorNavTopbar) return;
+  larguraAnteriorNavTopbar = window.innerWidth;
+  medirAlturaNav();
+  medirAlturaTopbar();
+});
 
 // Some navegadores mobile "flutuam" a barra fixa em cima do teclado quando um
 // campo de texto ganha foco. Solução: esconder a barra enquanto o teclado
