@@ -983,7 +983,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-27';
+const VERSAO_APP = '2026-07-25-28';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5091,13 +5091,17 @@ function renderizarFavoritosMetricas(elFavoritos, infoPorQuestao){
     elFavoritos.innerHTML = metricasFavoritosCache.map(f=>{
       const info = infoPorQuestao[f.questao_id];
       const partes = [];
-      if(info?.modulo_pscpp) partes.push(escapeHtml(info.modulo_pscpp));
+      if(info?.modulo_pscpp){
+        const svg = modIconesCustomSvg[info.modulo_pscpp] ? modIconesCustomSvg[info.modulo_pscpp]('#111') : '';
+        partes.push(`<span style="display:inline-flex;align-items:center;gap:5px">${svg?`<span class="icone-modulo-mini">${svg}</span>`:''}${escapeHtml(info.modulo_pscpp)}</span>`);
+      }
       if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
       if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
-      return `<div style="cursor:pointer;position:relative;padding:12px 0;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${f.questao_id}')">
+      if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
+      return `<div style="cursor:pointer;position:relative;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${f.questao_id}')">
         <button onclick="event.stopPropagation();desfavoritarDaListaMetricas('${f.id}','${f.questao_id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px" title="Desfavoritar">✕</button>
-        <p style="font-size:var(--fs-d);color:#111;margin:0 24px 8px 0">${escapeHtml((info?.enunciado||'').slice(0,140))}${(info?.enunciado||'').length>140?'...':''}</p>
-        <div style="font-size:var(--fs-b);color:#888">${partes.join(' · ')}</div>
+        <div style="font-size:var(--fs-d);color:#888;margin-right:24px">${partes.length ? partes.join(' · ') : 'Questão'}</div>
+        <div style="color:#888;font-size:var(--fs-b);margin-top:6px">Favoritada em ${new Date(f.criado_em).toLocaleDateString('pt-BR')}</div>
       </div>`;
     }).join('');
   }else{
