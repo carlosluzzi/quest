@@ -985,7 +985,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-37';
+const VERSAO_APP = '2026-07-25-39';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2085,9 +2085,16 @@ async function coletarNotificacaoForum(){
     }
   });
 
-  // não visualizado = nunca abriu esse tópico, ou abriu mas teve atividade
-  // nova depois disso (novo comentário, por exemplo)
-  const naoVistos = ativos.filter(t => !mapaVisto[t.id] || ultimaAtividadePorTopico[t.id] > mapaVisto[t.id]);
+  // 3 motivos possíveis pra uma discussão precisar de atenção (nessa ordem
+  // de prioridade, cada tópico só entra em UM deles, sem contar em dobro):
+  // nunca viu / viu mas tem resposta nova / já viu e não tem nada novo, mas
+  // ainda não votou e a discussão continua aberta — esse último é o que
+  // faz a notificação persistir mesmo depois de "vista", sem precisar de
+  // ação manual nenhuma, até a pessoa realmente votar
+  const nuncaVistos = ativos.filter(t => !mapaVisto[t.id]);
+  const comAtividadeNova = ativos.filter(t => mapaVisto[t.id] && ultimaAtividadePorTopico[t.id] > mapaVisto[t.id]);
+  const aguardandoVoto = ativos.filter(t => mapaVisto[t.id] && ultimaAtividadePorTopico[t.id] <= mapaVisto[t.id] && t.status==='aberto' && !idsVotados.has(t.id));
+  const naoVistos = [...nuncaVistos, ...comAtividadeNova, ...aguardandoVoto];
   const totalBadge = naoVistos.length;
 
   const badgeEl = document.getElementById('badge-forum');
@@ -2103,17 +2110,20 @@ async function coletarNotificacaoForum(){
   let timestamp = ultimaAtividadePorTopico[naoVistos[0].id];
   naoVistos.forEach(t=>{ if(ultimaAtividadePorTopico[t.id] > timestamp) timestamp = ultimaAtividadePorTopico[t.id]; });
 
-  // distingue "você nunca abriu isso" de "você já viu, mas tem resposta
-  // nova depois" — são situações diferentes, o texto precisa refletir isso
-  const nuncaVistos = naoVistos.filter(t => !mapaVisto[t.id]);
-  const comAtividadeNova = naoVistos.filter(t => mapaVisto[t.id]);
+  // já tenho as 3 categorias calculadas ali em cima (nuncaVistos,
+  // comAtividadeNova, aguardandoVoto) — só monto o texto certo pra cada
+  // combinação que aparecer
+  const partesTexto = [];
+  if(nuncaVistos.length) partesTexto.push(`${nuncaVistos.length} que você ainda não viu`);
+  if(comAtividadeNova.length) partesTexto.push(`${comAtividadeNova.length} com resposta nova`);
+  if(aguardandoVoto.length) partesTexto.push(`${aguardandoVoto.length} aguardando seu voto`);
   let texto;
-  if(nuncaVistos.length && comAtividadeNova.length){
-    texto = `${totalBadge} discussões com novidade (${nuncaVistos.length} que você ainda não viu, ${comAtividadeNova.length} com resposta nova)`;
-  }else if(nuncaVistos.length){
-    texto = nuncaVistos.length===1 ? '1 discussão que você ainda não viu' : `${nuncaVistos.length} discussões que você ainda não viu`;
+  if(partesTexto.length === 1){
+    if(nuncaVistos.length) texto = nuncaVistos.length===1 ? '1 discussão que você ainda não viu' : `${nuncaVistos.length} discussões que você ainda não viu`;
+    else if(comAtividadeNova.length) texto = comAtividadeNova.length===1 ? '1 discussão com resposta nova' : `${comAtividadeNova.length} discussões com resposta nova`;
+    else texto = aguardandoVoto.length===1 ? '1 discussão aguardando seu voto' : `${aguardandoVoto.length} discussões aguardando seu voto`;
   }else{
-    texto = comAtividadeNova.length===1 ? '1 discussão com resposta nova' : `${comAtividadeNova.length} discussões com resposta nova`;
+    texto = `${totalBadge} discussões (${partesTexto.join(', ')})`;
   }
   const html = `
     <div>
@@ -3295,7 +3305,7 @@ async function carregarForum(){
       ...t,
       totalComentarios: infoComentarios[t.id]?.total || 0,
       ultimaAtividade,
-      naoVisto: !mapaVisto[t.id] || ultimaAtividade > mapaVisto[t.id] // sem registro de visualização, ou teve atividade nova depois da última vez que viu
+      naoVisto: !mapaVisto[t.id] || ultimaAtividade > mapaVisto[t.id] || (t.status==='aberto' && !idsVotados.has(t.id)) // nunca viu, ou viu mas tem novidade, ou já viu e não tem novidade mas ainda precisa do seu voto
     };
   }).sort((a,b)=>(b.ultimaAtividade||'').localeCompare(a.ultimaAtividade||''));
 
@@ -3526,20 +3536,23 @@ async function renderizarTopico(topicoId){
   const {data: topico} = await sb.from('topicos').select('*, questoes(id, enunciado, alternativas, gabarito)').eq('id', topicoId).single();
   if(!topico){ document.getElementById(containerTopicoAtual()).innerHTML = '<p>Tópico não encontrado.</p>'; return; }
   if(topico.criado_por === usuarioAtual.id){
-    // marca como visto pelo criador, sem travar a tela – e reavalia a notificação
-    sb.from('topicos').update({criador_visto_em: new Date().toISOString()}).eq('id', topicoId).then(()=>{
-      atualizarNotificacoesOrdenadas();
-    });
+    // marca como visto pelo criador – esperado de verdade, mesmo motivo do
+    // registro logo abaixo (evitar corrida de tempo com navegação rápida)
+    await sb.from('topicos').update({criador_visto_em: new Date().toISOString()}).eq('id', topicoId);
+    atualizarNotificacoesOrdenadas();
   }
   // marca como visto por QUALQUER pessoa que abrir a discussão (não só o
   // criador) – isso é o que faz a bolinha de "não visualizado" sumir, tanto
-  // no menu de baixo quanto na lista do Fórum, sem travar a tela
-  sb.from('topicos_vistos').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id, visto_em: new Date().toISOString()}, {onConflict:'usuario_id,topico_id'}).then(()=>{
-    atualizarNotificacoesOrdenadas();
-    if(document.getElementById('aba-forum') && !document.getElementById('aba-forum').classList.contains('hidden')){
-      renderizarListaForum();
-    }
-  });
+  // no menu de baixo quanto na lista do Fórum. Precisa ser ESPERADO de
+  // verdade (não só disparado) — senão, se a pessoa voltar rápido demais
+  // pra lista logo depois de comentar/abrir, a busca seguinte pode rodar
+  // antes desse registro terminar de gravar, e a bolinha volta a aparecer
+  // por engano (ela ainda vai ver o valor antigo)
+  await sb.from('topicos_vistos').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id, visto_em: new Date().toISOString()}, {onConflict:'usuario_id,topico_id'});
+  atualizarNotificacoesOrdenadas();
+  if(document.getElementById('aba-forum') && !document.getElementById('aba-forum').classList.contains('hidden')){
+    renderizarListaForum();
+  }
   const [{data: comentarios}, {data: votos}, {data: ultimaProposta}] = await Promise.all([
     sb.from('comentarios').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).order('criado_em', {ascending:true}),
     sb.from('votos_resolucao').select('*, usuarios(nome)').eq('topico_id', topicoId),
