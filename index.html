@@ -155,9 +155,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
   }
   body{display:flex;background:#f5f5f3}
   #app-shell{max-width:100%}
-  #app-shell.ativo{display:grid;grid-template-columns:250px 1fr;grid-template-rows:auto 1fr;width:100%;padding-bottom:0}
+  #app-shell.ativo{display:grid;grid-template-columns:250px 1fr;grid-template-rows:auto auto 1fr;width:100%;padding-bottom:0}
   .topbar{grid-column:1/-1;grid-row:1;max-width:100%;padding:16px 32px;z-index:20}
-  #bottom-nav{grid-column:1;grid-row:2;position:sticky;left:auto;bottom:auto;transform:none;width:100%;max-width:none;border-top:none;border-right:0.5px solid #e0e0e0;flex-direction:column;padding:20px 14px;gap:6px;align-self:start;top:0;height:100%}
+  #bottom-nav{grid-column:1;grid-row:2/-1;position:sticky;left:auto;bottom:auto;transform:none;width:100%;max-width:none;border-top:none;border-right:0.5px solid #e0e0e0;flex-direction:column;padding:20px 14px;gap:6px;align-self:start;top:0;height:100%}
+  #ptr-indicator{grid-column:2;grid-row:2}
   .nav-item{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;border-radius:9px;width:100%}
   #nav-item-adicionar{display:flex;gap:8px;padding-left:10px;padding-right:10px}
   #nav-item-adicionar .nav-label{white-space:nowrap}
@@ -166,7 +167,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   .nav-icon{width:24px;height:24px}
   .nav-label{font-size:var(--fs-e)}
   .badge-notificacao{top:3px;left:30px;right:auto}
-  .content{grid-column:2;grid-row:2;padding:32px 48px;max-width:1320px;width:100%}
+  .content{grid-column:2;grid-row:3;padding:32px 48px;max-width:1320px;width:100%}
   .section-title{margin-top:28px}
   .section-title:first-child{margin-top:0}
 }
@@ -984,7 +985,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-34';
+const VERSAO_APP = '2026-07-25-35';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
