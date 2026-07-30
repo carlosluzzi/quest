@@ -985,7 +985,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-36';
+const VERSAO_APP = '2026-07-25-37';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2128,45 +2128,57 @@ async function coletarNotificacaoForum(){
 /* 7. PDF novo no banco – questões de outras pessoas desde a última vez
    que você viu esse aviso, agrupadas por módulo */
 async function coletarNotificacaoPdfNovo(){
-  const marco = usuarioAtual.pdf_novo_visto_em || '1970-01-01T00:00:00Z';
-  const {data} = await sb.from('questoes').select('id, criado_em, modulo_pscpp, autor_id').neq('autor_id', usuarioAtual.id).gt('criado_em', marco);
+  const {data} = await sb.from('questoes').select('id, criado_em, modulo_pscpp, autor_id').neq('autor_id', usuarioAtual.id);
   const total = (data||[]).length;
   if(!total) return [];
-  const timestamp = data.reduce((max,q)=> q.criado_em > max ? q.criado_em : max, data[0].criado_em);
 
   // busca o nome só dos autores que realmente aparecem aqui (geralmente
   // pouquíssimos), em vez de fazer join linha a linha — evita que essa
   // consulta fique pesada só porque o total de questões novas cresceu
   const idsAutores = [...new Set(data.map(q=>q.autor_id).filter(Boolean))];
-  const {data: autoresInfo} = idsAutores.length
-    ? await sb.from('usuarios').select('id, nome').in('id', idsAutores)
-    : {data: []};
+  const [{data: autoresInfo}, {data: vistosPorModulo}] = await Promise.all([
+    idsAutores.length ? sb.from('usuarios').select('id, nome').in('id', idsAutores) : Promise.resolve({data: []}),
+    sb.from('modulos_novidade_vista').select('modulo, visto_em').eq('usuario_id', usuarioAtual.id)
+  ]);
   const mapaNomes = {};
   (autoresInfo||[]).forEach(a => { mapaNomes[a.id] = a.nome; });
+  const mapaVisto = {};
+  (vistosPorModulo||[]).forEach(v => { mapaVisto[v.modulo] = v.visto_em; });
 
-  // agrupa primeiro por módulo, depois por autor dentro de cada módulo
+  // agrupa por módulo (rastreando também a atividade mais recente de cada
+  // um, pra comparar com a última vez que esse módulo específico foi visto)
   const porModulo = {};
   data.forEach(q=>{
     const modulo = q.modulo_pscpp || 'Sem módulo';
     const nome = mapaNomes[q.autor_id] || 'Alguém';
-    if(!porModulo[modulo]) porModulo[modulo] = {};
-    porModulo[modulo][nome] = (porModulo[modulo][nome]||0) + 1;
+    if(!porModulo[modulo]) porModulo[modulo] = {autores:{}, ultimaAtividade: q.criado_em};
+    porModulo[modulo].autores[nome] = (porModulo[modulo].autores[nome]||0) + 1;
+    if(q.criado_em > porModulo[modulo].ultimaAtividade) porModulo[modulo].ultimaAtividade = q.criado_em;
   });
 
-  const cards = Object.entries(porModulo).map(([modulo, porAutor])=>{
-    const linhas = Object.entries(porAutor).map(([nome, qtd])=>{
+  // cada módulo vira um card independente, só se ainda não foi visto (ou
+  // teve questão nova depois da última vez que foi visto) — clicar num não
+  // afeta mais os outros, porque cada um tem seu próprio registro de "visto"
+  const itens = [];
+  Object.entries(porModulo).forEach(([modulo, info])=>{
+    const ultimoVisto = mapaVisto[modulo];
+    if(ultimoVisto && info.ultimaAtividade <= ultimoVisto) return;
+    const linhas = Object.entries(info.autores).map(([nome, qtd])=>{
       const qtdTexto = qtd===1 ? '1 questão adicionada' : `${qtd} questões adicionadas`;
       return `<div>${qtdTexto} por ${escapeHtml(nome)}</div>`;
     }).join('');
-    return `
-    <div>
-      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarPdfNovoVisto()">
+    const idCard = 'notif-pdf-modulo-' + modulo.replace(/[^a-zA-Z0-9]/g, '');
+    const moduloEscapadoJs = modulo.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const html = `
+    <div id="${idCard}">
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarModuloNovidadeVisto('${moduloEscapadoJs}', this)">
         <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Questões de ${escapeHtml(modulo)} novas no banco</div>
         <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">${linhas}</div>
       </button>
     </div>`;
-  }).join('');
-  return [{timestamp, html: cards}];
+    itens.push({timestamp: info.ultimaAtividade, html});
+  });
+  return itens;
 }
 
 /* 8. Proposta nova (edição ou anulação) que alguém abriu numa discussão –
@@ -2193,11 +2205,14 @@ async function coletarNotificacaoPropostaNova(){
     return {timestamp: p.criado_em, html};
   });
 }
-async function marcarPdfNovoVisto(){
-  const agora = new Date().toISOString();
-  await sb.from('usuarios').update({pdf_novo_visto_em: agora}).eq('id', usuarioAtual.id);
-  usuarioAtual.pdf_novo_visto_em = agora;
-  await atualizarNotificacoesOrdenadas();
+// remove o cartão da tela IMEDIATAMENTE ao clicar (sem esperar o banco
+// responder) — a gravação em si acontece depois, por trás, sem travar a
+// sensação de "clicou, sumiu na hora". Cada módulo tem seu próprio registro
+// de "visto", então clicar num não afeta os outros
+async function marcarModuloNovidadeVisto(modulo, btnEl){
+  const card = btnEl?.closest('[id^="notif-pdf-modulo-"]');
+  if(card) card.remove();
+  await sb.from('modulos_novidade_vista').upsert({usuario_id: usuarioAtual.id, modulo, visto_em: new Date().toISOString()}, {onConflict:'usuario_id,modulo'});
 }
 
 /* 9. Rascunhos pendentes de revisão (bibliografia não identificada num
