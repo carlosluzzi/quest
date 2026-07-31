@@ -985,7 +985,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-39';
+const VERSAO_APP = '2026-07-25-40';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3506,7 +3506,8 @@ async function confirmarNovoTopico(){
     return;
   }
   // a mensagem escrita no popup já entra como o primeiro comentário do tópico
-  await sb.from('comentarios').insert({topico_id: data.id, usuario_id: usuarioAtual.id, texto: mensagem});
+  const {error: erroComentario} = await sb.from('comentarios').insert({topico_id: data.id, usuario_id: usuarioAtual.id, texto: mensagem});
+  if(erroComentario) console.error('Discussão criada, mas não consegui salvar a primeira mensagem:', erroComentario.message);
 
   fecharModal('modal-novo-topico');
   await atualizarNotificacoesForum();
@@ -3714,23 +3715,42 @@ async function verificarMaioriaTopico(topicoId){
 
   if(resolvido){
     // se tinha uma proposta pendente pra esse tópico (edição ou anulação), a
-    // maioria que acabou de bater É a aprovação dela – aplica agora, de uma vez
+    // maioria que acabou de bater É a aprovação dela – aplica agora, de uma vez.
+    // Se qualquer etapa falhar no meio do caminho, desfaz o "resolvido" que
+    // acabou de marcar ali em cima — senão o tópico ficaria mostrando
+    // resolvido com a mudança de verdade nunca aplicada na questão
     const {data: proposta} = await sb.from('propostas_edicao').select('*').eq('topico_id', topicoId).eq('status','pendente').maybeSingle();
     if(proposta){
+      let erroAplicacao = null;
       if(proposta.tipo==='anulacao'){
-        await Promise.all([
+        const [{error: e1}, {error: e2}] = await Promise.all([
           sb.from('questoes').update({anulada:true, atualizado_em: new Date().toISOString()}).eq('id', proposta.questao_id),
           sb.from('respostas').update({correta:true, foi_anulada:true, anulacao_vista:false}).eq('questao_id', proposta.questao_id)
         ]);
+        erroAplicacao = e1 || e2;
       }else{
-        await sb.from('questoes').update({
+        const {error} = await sb.from('questoes').update({
           enunciado: proposta.enunciado,
           alternativas: proposta.alternativas,
           gabarito: proposta.gabarito,
           atualizado_em: new Date().toISOString()
         }).eq('id', proposta.questao_id);
+        erroAplicacao = error;
       }
-      await sb.from('propostas_edicao').update({status:'aplicada'}).eq('id', proposta.id);
+      if(erroAplicacao){
+        // não conseguiu aplicar a mudança de verdade — desfaz o "resolvido"
+        // pra não ficar num estado inconsistente, e avisa
+        await sb.from('topicos').update({status:'aberto'}).eq('id', topicoId);
+        alert('A votação bateu maioria, mas não consegui aplicar a mudança na questão: ' + erroAplicacao.message + '\n\nA discussão foi mantida aberta — tenta votar de novo depois.');
+        return;
+      }
+      const {error: erroProposta} = await sb.from('propostas_edicao').update({status:'aplicada'}).eq('id', proposta.id);
+      if(erroProposta){
+        // a mudança JÁ foi aplicada na questão com sucesso – isso aqui é só
+        // a etiqueta da proposta não tendo sido atualizada, não desfaz nada
+        // (desfazer a questão de novo criaria mais inconsistência, não menos)
+        console.error('Proposta aplicada na questão, mas não consegui marcar como aplicada:', erroProposta.message);
+      }
     }
   }
 }
@@ -3778,8 +3798,11 @@ async function enviarPropostaEdicao(questaoId, topicoId){
     alert('Erro ao enviar proposta: '+error.message);
     return;
   }
-  // quem propôs já entra automaticamente como o primeiro voto a favor
-  await sb.from('votos_resolucao').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id}, {onConflict:'topico_id,usuario_id'});
+  // quem propôs já entra automaticamente como o primeiro voto a favor —
+  // se isso falhar, não trava o fluxo (a proposta já foi criada com
+  // sucesso), só fica faltando 1 voto que a pessoa pode dar manualmente
+  const {error: erroVoto} = await sb.from('votos_resolucao').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id}, {onConflict:'topico_id,usuario_id'});
+  if(erroVoto) console.error('Não consegui registrar o voto automático do proponente:', erroVoto.message);
   await verificarMaioriaTopico(topicoId);
   await renderizarTopico(topicoId);
   await atualizarNotificacoesForum();
@@ -3810,8 +3833,11 @@ async function executarAnulacaoQuestao(){
     alert('Erro ao propor anulação: '+error.message);
     return;
   }
-  // quem propôs já entra automaticamente como o primeiro voto a favor
-  await sb.from('votos_resolucao').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id}, {onConflict:'topico_id,usuario_id'});
+  // quem propôs já entra automaticamente como o primeiro voto a favor —
+  // se isso falhar, não trava o fluxo, só fica faltando 1 voto que a
+  // pessoa pode dar manualmente
+  const {error: erroVotoAnulacao} = await sb.from('votos_resolucao').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id}, {onConflict:'topico_id,usuario_id'});
+  if(erroVotoAnulacao) console.error('Não consegui registrar o voto automático do proponente:', erroVotoAnulacao.message);
   await verificarMaioriaTopico(topicoId);
   await renderizarTopico(topicoId);
   await atualizarNotificacoesForum();
@@ -5702,8 +5728,12 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
   const {data: itens} = await query;
   if(!itens || !itens.length) return;
 
+  // só apaga o rascunho DEPOIS de confirmar que o insert deu certo — se o
+  // insert falhar, o item continua no rascunho (nada se perde, só fica
+  // pendente de tentar de novo) em vez de sumir sem nunca ter sido salvo
+  const falhas = [];
   await Promise.all(itens.map(async q => {
-    await sb.from('questoes').insert({
+    const {error: erroInsert} = await sb.from('questoes').insert({
       enunciado: q.enunciado,
       alternativas: q.alternativas,
       gabarito: q.gabarito,
@@ -5715,8 +5745,22 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
       explicacao: q.explicacao,
       explicacao_origem: q.explicacao_origem
     });
-    await sb.from('questoes_rascunho').delete().eq('id', q.id);
+    if(erroInsert){
+      falhas.push(erroInsert.message);
+      return; // não apaga o rascunho — fica lá pra tentar de novo
+    }
+    const {error: erroDelete} = await sb.from('questoes_rascunho').delete().eq('id', q.id);
+    if(erroDelete){
+      // a questão já foi salva com sucesso — isso aqui não é perda de
+      // dado, só uma sobra no rascunho que vai aparecer duplicada da
+      // próxima vez. Avisa mesmo assim, pra saber que precisa limpar
+      falhas.push(`Questão cadastrada, mas não consegui remover do rascunho: ${erroDelete.message}`);
+    }
   }));
+
+  if(falhas.length){
+    alert(`${itens.length - falhas.length} de ${itens.length} questões cadastradas. ${falhas.length} tiveram problema:\n\n${falhas.slice(0,5).join('\n')}${falhas.length>5?'\n...':''}`);
+  }
 
   await abrirRevisaoRascunho(); // recarrega a lista
   await atualizarNotificacoesOrdenadas();
