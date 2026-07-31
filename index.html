@@ -546,7 +546,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
         <div id="contador-disponiveis" style="text-align:center;color:#888;font-size:var(--fs-b);margin-bottom:14px;min-height:18px"></div>
 
-        <input type="number" min="1" inputmode="numeric" pattern="[0-9]*" id="quantidade-customizada" class="filter-select" placeholder="Quantidade de questões" oninput="if(this.value)selecionarQuantidade(null,parseInt(this.value,10))">
+        <input type="number" min="1" inputmode="numeric" pattern="[0-9]*" id="quantidade-customizada" class="filter-select" placeholder="Quantidade de questões" oninput="const v=parseInt(this.value,10); if(v>0) selecionarQuantidade(null,v)">
 
         <button class="btn-primario" onclick="montarCaderno()">Gerar caderno ↗</button>
         <div style="text-align:center;margin-top:8px">
@@ -985,7 +985,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-40';
+const VERSAO_APP = '2026-07-25-41';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1898,20 +1898,33 @@ async function verificarCadernoEmAndamento(){
 // Todas as notificações "de verdade" (não o Cadernos em andamento, que fica
 // sempre fixo em primeiro) se reordenam juntas por data – a mais recente
 // sempre vai pro topo, não importa o tipo dela
+// se já tem uma atualização rodando, uma chamada nova não dispara outra
+// leva de 8 consultas em paralelo — só espera a que já está em andamento
+// terminar, e reaproveita o mesmo resultado. Evita tela piscando ou uma
+// resposta mais lenta sobrescrever uma mais rápida com dado desatualizado
+let atualizacaoNotificacoesEmAndamento = null;
 async function atualizarNotificacoesOrdenadas(){
-  const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum, itensPropostaNova, itensRascunho, itensFormatacao] = await Promise.all([
-    coletarNotificacaoAnulacao(),
-    coletarNotificacaoRespostaDiscussao(),
-    coletarNotificacaoQuestaoCorrigida(),
-    coletarNotificacaoPdfNovo(),
-    coletarNotificacaoForum(),
-    coletarNotificacaoPropostaNova(),
-    coletarNotificacaoRascunhoPendente(),
-    coletarNotificacaoRelatoFormatacao()
-  ]);
-  const todos = [...itensAnulacao, ...itensDiscussao, ...itensCorrigida, ...itensPdfNovo, ...itensForum, ...itensPropostaNova, ...itensRascunho, ...itensFormatacao];
-  todos.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-  document.getElementById('container-notificacoes-ordenadas').innerHTML = todos.map(item=>item.html).join('');
+  if(atualizacaoNotificacoesEmAndamento) return atualizacaoNotificacoesEmAndamento;
+  atualizacaoNotificacoesEmAndamento = (async () => {
+    const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum, itensPropostaNova, itensRascunho, itensFormatacao] = await Promise.all([
+      coletarNotificacaoAnulacao(),
+      coletarNotificacaoRespostaDiscussao(),
+      coletarNotificacaoQuestaoCorrigida(),
+      coletarNotificacaoPdfNovo(),
+      coletarNotificacaoForum(),
+      coletarNotificacaoPropostaNova(),
+      coletarNotificacaoRascunhoPendente(),
+      coletarNotificacaoRelatoFormatacao()
+    ]);
+    const todos = [...itensAnulacao, ...itensDiscussao, ...itensCorrigida, ...itensPdfNovo, ...itensForum, ...itensPropostaNova, ...itensRascunho, ...itensFormatacao];
+    todos.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+    document.getElementById('container-notificacoes-ordenadas').innerHTML = todos.map(item=>item.html).join('');
+  })();
+  try{
+    await atualizacaoNotificacoesEmAndamento;
+  }finally{
+    atualizacaoNotificacoesEmAndamento = null;
+  }
 }
 
 /* 1. Anulação te afetou – respostas suas que foram tocadas por uma anulação
@@ -3142,25 +3155,35 @@ function renderizarResultado(q,resposta){
   </div>`;
 }
 
+// trava simples — evita que um toque duplo rápido no "Confirmar resposta"
+// grave a mesma resposta 2 vezes (a tabela não tem proteção de duplicata
+// no banco pra isso)
+let respondendoQuestaoEmAndamento = false;
 async function responderQuestao(questaoId, letraEscolhida){
-  const q = questoesCaderno.find(x=>x.id===questaoId);
-  const gabarito = (q.gabarito||'').toLowerCase().trim();
-  const correta = letraEscolhida === gabarito;
+  if(respondendoQuestaoEmAndamento) return;
+  respondendoQuestaoEmAndamento = true;
+  try{
+    const q = questoesCaderno.find(x=>x.id===questaoId);
+    const gabarito = (q.gabarito||'').toLowerCase().trim();
+    const correta = letraEscolhida === gabarito;
 
-  respostasPorQuestao[questaoId] = {letra: letraEscolhida, correta};
+    respostasPorQuestao[questaoId] = {letra: letraEscolhida, correta};
 
-  // salva direto no banco – a view "respostas_finalizadas" já garante que isso
-  // só conta pras estatísticas depois que o caderno for finalizado, então não
-  // precisa mais bufferizar em memória até o fim
-  await sb.from('respostas').insert({
-    caderno_id: cadernoAtual.id,
-    questao_id: questaoId,
-    usuario_id: usuarioAtual.id,
-    resposta_dada: letraEscolhida,
-    correta
-  });
+    // salva direto no banco – a view "respostas_finalizadas" já garante que isso
+    // só conta pras estatísticas depois que o caderno for finalizado, então não
+    // precisa mais bufferizar em memória até o fim
+    await sb.from('respostas').insert({
+      caderno_id: cadernoAtual.id,
+      questao_id: questaoId,
+      usuario_id: usuarioAtual.id,
+      resposta_dada: letraEscolhida,
+      correta
+    });
 
-  renderizarQuestaoAtual();
+    renderizarQuestaoAtual();
+  }finally{
+    respondendoQuestaoEmAndamento = false;
+  }
 }
 
 function gerarExplicacao(questaoId){
@@ -5715,8 +5738,15 @@ function atualizarPublicacoesRevisao(idGrupo){
   elPublicacao.disabled = false;
 }
 
+// trava por chave (nomeArquivo+idGrupo) — evita que um clique duplo rápido
+// dispare 2 levas paralelas tentando cadastrar as mesmas questões duas vezes
+let gruposRascunhoEmProcessamento = new Set();
 async function resolverGrupoRascunho(nomeArquivo, idGrupo){
-  const modulo = document.getElementById(idGrupo+'-modulo').value;
+  const chave = nomeArquivo + '|' + idGrupo;
+  if(gruposRascunhoEmProcessamento.has(chave)) return;
+  gruposRascunhoEmProcessamento.add(chave);
+  try{
+    const modulo = document.getElementById(idGrupo+'-modulo').value;
   const bibliografiaId = document.getElementById(idGrupo+'-publicacao').value;
   if(!modulo || !bibliografiaId){
     alert('Escolhe o módulo e a publicação antes de cadastrar.');
@@ -5764,6 +5794,9 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
 
   await abrirRevisaoRascunho(); // recarrega a lista
   await atualizarNotificacoesOrdenadas();
+  }finally{
+    gruposRascunhoEmProcessamento.delete(chave);
+  }
 }
 
 async function descartarGrupoRascunho(nomeArquivo){
