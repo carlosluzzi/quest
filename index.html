@@ -1037,7 +1037,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-47';
+const VERSAO_APP = '2026-07-25-50';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2209,7 +2209,7 @@ async function coletarNotificacaoForum(){
 /* 7. PDF novo no banco – questões de outras pessoas desde a última vez
    que você viu esse aviso, agrupadas por módulo */
 async function coletarNotificacaoPdfNovo(){
-  const {data} = await sb.from('questoes').select('id, criado_em, modulo_pscpp, capitulo, autor_id').neq('autor_id', usuarioAtual.id);
+  const {data} = await sb.from('questoes').select('id, criado_em, modulo_pscpp, capitulo, bibliografia_id, autor_id').neq('autor_id', usuarioAtual.id);
   const total = (data||[]).length;
   if(!total) return [];
 
@@ -2225,20 +2225,24 @@ async function coletarNotificacaoPdfNovo(){
   (autoresInfo||[]).forEach(a => { mapaNomes[a.id] = a.nome; });
   const mapaVisto = {};
   (vistosPorModulo||[]).forEach(v => { mapaVisto[v.modulo] = v.visto_em; });
+  const mapaBibliografiaTitulo = {};
+  bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
 
   // agrupa por módulo (rastreando também a atividade mais recente de cada
   // um, pra comparar com a última vez que esse módulo específico foi visto)
-  // — dentro de cada módulo, agrupa por capítulo+autor (não só autor),
-  // porque a mesma pessoa pode ter mandado capítulos diferentes no mesmo
-  // módulo, e isso merece linhas separadas
+  // — dentro de cada módulo, agrupa por publicação+capítulo+autor (não só
+  // autor), porque um módulo pode ter mais de uma publicação, e "capítulo
+  // 1" sozinho não diz de qual livro — além disso, a mesma pessoa pode ter
+  // mandado capítulos diferentes, e isso merece linhas separadas
   const porModulo = {};
   data.forEach(q=>{
     const modulo = q.modulo_pscpp || 'Sem módulo';
     const nome = mapaNomes[q.autor_id] || 'Alguém';
     const capitulo = q.capitulo ? String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '') : null;
-    const chaveGrupo = capitulo + '|' + nome;
+    const publicacao = q.bibliografia_id ? (mapaBibliografiaTitulo[q.bibliografia_id] || null) : null;
+    const chaveGrupo = publicacao + '|' + capitulo + '|' + nome;
     if(!porModulo[modulo]) porModulo[modulo] = {grupos:{}, ultimaAtividade: q.criado_em};
-    if(!porModulo[modulo].grupos[chaveGrupo]) porModulo[modulo].grupos[chaveGrupo] = {capitulo, nome, qtd:0};
+    if(!porModulo[modulo].grupos[chaveGrupo]) porModulo[modulo].grupos[chaveGrupo] = {capitulo, publicacao, nome, qtd:0};
     porModulo[modulo].grupos[chaveGrupo].qtd++;
     if(q.criado_em > porModulo[modulo].ultimaAtividade) porModulo[modulo].ultimaAtividade = q.criado_em;
   });
@@ -2250,10 +2254,13 @@ async function coletarNotificacaoPdfNovo(){
   Object.entries(porModulo).forEach(([modulo, info])=>{
     const ultimoVisto = mapaVisto[modulo];
     if(ultimoVisto && info.ultimaAtividade <= ultimoVisto) return;
-    // ordena por número do capítulo (não por texto) — capítulo 10 vem
-    // depois do 8, não entre o 1 e o 4 como ordenação alfabética faria.
-    // sem capítulo identificado vai pro final
+    // ordena por publicação primeiro (agrupa visualmente o mesmo livro),
+    // depois por número do capítulo dentro dela — capítulo 10 vem depois
+    // do 8, não entre o 1 e o 4 como ordenação alfabética faria. sem
+    // capítulo identificado vai pro final de cada publicação
     const gruposOrdenados = Object.values(info.grupos).sort((a,b)=>{
+      const pubCompare = (a.publicacao||'').localeCompare(b.publicacao||'', 'pt');
+      if(pubCompare !== 0) return pubCompare;
       const na = parseInt(a.capitulo, 10), nb = parseInt(b.capitulo, 10);
       if(isNaN(na) && isNaN(nb)) return 0;
       if(isNaN(na)) return 1;
@@ -2261,9 +2268,13 @@ async function coletarNotificacaoPdfNovo(){
       return na - nb;
     });
     const linhas = gruposOrdenados.map(g=>{
-      const qtdTexto = g.qtd===1 ? '1 questão' : `${g.qtd} questões`;
-      const capTexto = g.capitulo ? ` de capítulo ${escapeHtml(g.capitulo)}` : '';
-      return `<div>${qtdTexto}${capTexto} adicionadas por ${escapeHtml(g.nome)}</div>`;
+      const qtdFormatada = String(g.qtd).padStart(2, '0');
+      const qtdTexto = g.qtd===1 ? `${qtdFormatada} questão` : `${qtdFormatada} questões`;
+      const partes = [];
+      if(g.publicacao) partes.push(escapeHtml(g.publicacao));
+      if(g.capitulo) partes.push(`Capítulo ${escapeHtml(g.capitulo)}`);
+      const origemTexto = partes.length ? ` de ${partes.join(' · ')}` : '';
+      return `<div>${qtdTexto}${origemTexto} adicionadas por ${escapeHtml(g.nome)}</div>`;
     }).join('');
     const idCard = 'notif-pdf-modulo-' + modulo.replace(/[^a-zA-Z0-9]/g, '');
     const moduloEscapadoJs = modulo.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
