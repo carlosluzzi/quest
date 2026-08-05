@@ -510,6 +510,21 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
         <input type="text" id="nome-caderno" class="filter-select" placeholder="Nome do caderno (opcional)">
 
+        <select class="filter-select" id="filtro-origem" onchange="mudarOrigemFiltro(this.value)">
+          <option value="usuarios">Questões dos usuários</option>
+          <option value="marinha">Questões da Marinha</option>
+          <option value="todas">Todas as questões</option>
+        </select>
+
+        <div id="bloco-filtro-marinha" class="hidden">
+          <select class="filter-select" id="filtro-concurso" onchange="atualizarAnosDoConcurso()">
+            <option value="">Todos os concursos</option>
+          </select>
+          <select class="filter-select" id="filtro-ano-prova" onchange="selecionarAnoProva(this.value)" disabled>
+            <option value="">Escolhe o concurso primeiro</option>
+          </select>
+        </div>
+
         <select class="filter-select hidden" id="filtro-usuario-admin" onchange="selecionarFiltroSelect('usuario', this.value)">
           <option value="">Todos os usuários</option>
         </select>
@@ -540,8 +555,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
           Priorizar questões que mais erro
           <span class="info-icone" onclick="abrirModal('modal-info-wilson')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
         </label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:16px;color:#111;padding:6px 2px 14px;cursor:pointer">
+        <label style="display:flex;align-items:center;gap:8px;font-size:16px;color:#111;padding:6px 2px;cursor:pointer">
           <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões inéditas
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:16px;color:#111;padding:6px 2px 14px;cursor:pointer">
+          <input type="checkbox" id="toggle-prova-real" onchange="atualizarContadorDisponiveis()"> Apenas questões MB (prova real)
         </label>
 
         <div id="contador-disponiveis" style="text-align:center;color:#888;font-size:var(--fs-b);margin-bottom:14px;min-height:18px"></div>
@@ -698,6 +716,18 @@ input,select,textarea{font-family:inherit;font-size:16px}
         <div class="filter-btn" id="toggle-upload-planilha" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="alternarTipoUpload('planilha')">Planilha</div>
       </div>
 
+      <div id="bloco-upload-marinha" class="hidden">
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#444;margin-bottom:10px;cursor:pointer">
+          <input type="checkbox" id="upload-eh-marinha" style="width:16px;height:16px;flex-shrink:0" onchange="document.getElementById('upload-campos-concurso').classList.toggle('hidden', !this.checked)">
+          Questões de prova real (Marinha)
+        </label>
+        <div id="upload-campos-concurso" class="hidden" style="margin-bottom:14px">
+          <input type="text" id="upload-concurso" class="filter-select" placeholder="Concurso (ex: PSCPP, EFOMM)" list="lista-concursos-existentes">
+          <datalist id="lista-concursos-existentes"></datalist>
+          <input type="number" id="upload-ano" class="filter-select" placeholder="Ano da prova">
+        </div>
+      </div>
+
       <div id="secao-upload-pdf">
         <p style="color:#666;font-size:var(--fs-d)">Selecione o PDF com as questões que você deseja adicionar ao banco.</p>
         <input type="file" id="upload-arquivo" accept="application/pdf" class="hidden" onchange="atualizarNomeArquivoSelecionado()">
@@ -838,6 +868,24 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-envio-tracker">
+  <div class="modal-conteudo">
+    <div id="confirmacao-envio-tracker">
+      <h3 class="config-title">Enviar para o PSCPP Tracker?</h3>
+      <p>Isso registra esse caderno (tempo, acertos e as questões) no seu Tracker pessoal, junto com o resto do que você estuda no dia.</p>
+      <div style="display:flex;gap:8px">
+        <button class="btn-secundario" style="flex:1" onclick="naoEnviarTracker()">Não enviar</button>
+        <button class="btn-primario" style="flex:1" id="btn-confirmar-envio-tracker" onclick="confirmarEnvioTracker()">Enviar</button>
+      </div>
+    </div>
+    <div id="resultado-envio-tracker" class="hidden">
+      <h3 class="config-title">PSCPP Tracker</h3>
+      <p id="texto-resultado-envio-tracker"></p>
+      <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-envio-tracker')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-confirmar-exclusao-caderno">
   <div class="modal-conteudo">
     <h3 class="config-title">Excluir caderno</h3>
@@ -883,6 +931,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <input type="text" id="admin-edicao-gabarito" class="filter-select" maxlength="1">
       <label style="font-size:var(--fs-b);color:#888">Explicação</label>
       <textarea id="admin-edicao-explicacao" class="filter-select" style="min-height:120px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Concurso de origem (deixa vazio se não for prova real)</label>
+      <input type="text" id="admin-edicao-concurso" class="filter-select" placeholder="Ex: PSCPP, EFOMM" list="lista-concursos-existentes">
+      <label style="font-size:var(--fs-b);color:#888">Ano da prova</label>
+      <input type="number" id="admin-edicao-ano" class="filter-select">
     </div>
     <div style="display:flex;gap:8px;margin-top:12px;flex-shrink:0">
       <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-editar-questao-admin')">Cancelar</button>
@@ -985,7 +1037,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-41';
+const VERSAO_APP = '2026-07-25-47';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1715,6 +1767,12 @@ async function mostrarAppShell(){
   if(usuarioAtual.is_admin){
     document.getElementById('btn-abrir-admin').classList.remove('hidden');
   }
+  if(souCarlos()){
+    document.getElementById('bloco-upload-marinha').classList.remove('hidden');
+    sb.rpc('concursos_disponiveis').then(({data})=>{
+      document.getElementById('lista-concursos-existentes').innerHTML = (data||[]).map(c=>`<option value="${escapeHtml(c.concurso)}">`).join('');
+    });
+  }
   // todos esses carregamentos são independentes entre si – rodar em paralelo
   // em vez de um atrás do outro é o que faz a tela abrir rápido, mesmo com
   // várias notificações pra checar
@@ -1987,7 +2045,7 @@ async function coletarNotificacaoRespostaDiscussao(){
     const comentariosDesseTopico = relevantes.filter(c=>c.topico_id===topicoId);
     const nomes = [...new Set(comentariosDesseTopico.map(c=>c.usuarios?.nome).filter(Boolean))];
     const verbo = nomes.length===1 ? 'respondeu' : 'responderam';
-    const texto = `${formatarListaNomes(nomes)} ${verbo} "${mapaTopico[topicoId].titulo}"`;
+    const texto = `${formatarListaNomes(nomes)} ${verbo} "${escapeHtml(mapaTopico[topicoId].titulo)}"`;
     const timestamp = comentariosDesseTopico.reduce((max,c)=> c.criado_em > max ? c.criado_em : max, comentariosDesseTopico[0].criado_em);
     const html = `
     <div>
@@ -2151,7 +2209,7 @@ async function coletarNotificacaoForum(){
 /* 7. PDF novo no banco – questões de outras pessoas desde a última vez
    que você viu esse aviso, agrupadas por módulo */
 async function coletarNotificacaoPdfNovo(){
-  const {data} = await sb.from('questoes').select('id, criado_em, modulo_pscpp, autor_id').neq('autor_id', usuarioAtual.id);
+  const {data} = await sb.from('questoes').select('id, criado_em, modulo_pscpp, capitulo, autor_id').neq('autor_id', usuarioAtual.id);
   const total = (data||[]).length;
   if(!total) return [];
 
@@ -2170,12 +2228,18 @@ async function coletarNotificacaoPdfNovo(){
 
   // agrupa por módulo (rastreando também a atividade mais recente de cada
   // um, pra comparar com a última vez que esse módulo específico foi visto)
+  // — dentro de cada módulo, agrupa por capítulo+autor (não só autor),
+  // porque a mesma pessoa pode ter mandado capítulos diferentes no mesmo
+  // módulo, e isso merece linhas separadas
   const porModulo = {};
   data.forEach(q=>{
     const modulo = q.modulo_pscpp || 'Sem módulo';
     const nome = mapaNomes[q.autor_id] || 'Alguém';
-    if(!porModulo[modulo]) porModulo[modulo] = {autores:{}, ultimaAtividade: q.criado_em};
-    porModulo[modulo].autores[nome] = (porModulo[modulo].autores[nome]||0) + 1;
+    const capitulo = q.capitulo ? String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '') : null;
+    const chaveGrupo = capitulo + '|' + nome;
+    if(!porModulo[modulo]) porModulo[modulo] = {grupos:{}, ultimaAtividade: q.criado_em};
+    if(!porModulo[modulo].grupos[chaveGrupo]) porModulo[modulo].grupos[chaveGrupo] = {capitulo, nome, qtd:0};
+    porModulo[modulo].grupos[chaveGrupo].qtd++;
     if(q.criado_em > porModulo[modulo].ultimaAtividade) porModulo[modulo].ultimaAtividade = q.criado_em;
   });
 
@@ -2186,9 +2250,20 @@ async function coletarNotificacaoPdfNovo(){
   Object.entries(porModulo).forEach(([modulo, info])=>{
     const ultimoVisto = mapaVisto[modulo];
     if(ultimoVisto && info.ultimaAtividade <= ultimoVisto) return;
-    const linhas = Object.entries(info.autores).map(([nome, qtd])=>{
-      const qtdTexto = qtd===1 ? '1 questão adicionada' : `${qtd} questões adicionadas`;
-      return `<div>${qtdTexto} por ${escapeHtml(nome)}</div>`;
+    // ordena por número do capítulo (não por texto) — capítulo 10 vem
+    // depois do 8, não entre o 1 e o 4 como ordenação alfabética faria.
+    // sem capítulo identificado vai pro final
+    const gruposOrdenados = Object.values(info.grupos).sort((a,b)=>{
+      const na = parseInt(a.capitulo, 10), nb = parseInt(b.capitulo, 10);
+      if(isNaN(na) && isNaN(nb)) return 0;
+      if(isNaN(na)) return 1;
+      if(isNaN(nb)) return -1;
+      return na - nb;
+    });
+    const linhas = gruposOrdenados.map(g=>{
+      const qtdTexto = g.qtd===1 ? '1 questão' : `${g.qtd} questões`;
+      const capTexto = g.capitulo ? ` de capítulo ${escapeHtml(g.capitulo)}` : '';
+      return `<div>${qtdTexto}${capTexto} adicionadas por ${escapeHtml(g.nome)}</div>`;
     }).join('');
     const idCard = 'notif-pdf-modulo-' + modulo.replace(/[^a-zA-Z0-9]/g, '');
     const moduloEscapadoJs = modulo.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -2358,7 +2433,7 @@ async function carregarFiltroUsuarioAdmin(){
   elFiltro.classList.remove('hidden');
 }
 
-let filtroSelecionado = {usuario:null, modulo:null, publicacao:null, capitulo:null, tipoQuestao:null};
+let filtroSelecionado = {usuario:null, origem:'usuarios', concurso:null, ano:null, modulo:null, publicacao:null, capitulo:null, tipoQuestao:null};
 let quantidadeSelecionada = 15;
 
 // decide se o livro cita capítulos em português ou inglês, baseado no
@@ -2367,6 +2442,45 @@ let quantidadeSelecionada = 15;
 function rotuloCapituloDoLivro(titulo){
   const palavrasInglesas = /\b(the|of|and|for|in|on|ship|guide|practice|practices|principles|design|resistance|flow|hydrodynamics|dimensions|data|infrastructure|channels|approach)\b/i;
   return palavrasInglesas.test(titulo || '') ? 'Chapter' : 'Capítulo';
+}
+
+// filtro de origem — fica no início da cadeia, visível pra todo mundo.
+// "usuarios" (padrão) exclui as questões de Marinha; "marinha" mostra só
+// elas (com os 2 dropdowns extras de concurso/ano); "todas" mistura tudo
+async function mudarOrigemFiltro(valor){
+  filtroSelecionado.origem = valor;
+  filtroSelecionado.concurso = null;
+  filtroSelecionado.ano = null;
+  const bloco = document.getElementById('bloco-filtro-marinha');
+  if(valor === 'marinha'){
+    bloco.classList.remove('hidden');
+    const {data} = await sb.rpc('concursos_disponiveis');
+    const el = document.getElementById('filtro-concurso');
+    el.innerHTML = '<option value="">Todos os concursos</option>' + (data||[]).map(c=>`<option value="${escapeHtml(c.concurso)}">${escapeHtml(c.concurso)}</option>`).join('');
+    document.getElementById('filtro-ano-prova').innerHTML = '<option value="">Todos os anos</option>';
+    document.getElementById('filtro-ano-prova').disabled = false;
+  }else{
+    bloco.classList.add('hidden');
+  }
+  atualizarContadorDisponiveis();
+}
+
+async function atualizarAnosDoConcurso(){
+  const concurso = document.getElementById('filtro-concurso').value;
+  filtroSelecionado.concurso = concurso || null;
+  filtroSelecionado.ano = null;
+  const elAno = document.getElementById('filtro-ano-prova');
+  if(!concurso){
+    elAno.innerHTML = '<option value="">Todos os anos</option>';
+  }else{
+    const {data} = await sb.rpc('anos_disponiveis_do_concurso', {p_concurso: concurso});
+    elAno.innerHTML = '<option value="">Todos os anos</option>' + (data||[]).map(a=>`<option value="${a.ano}">${a.ano}</option>`).join('');
+  }
+  atualizarContadorDisponiveis();
+}
+function selecionarAnoProva(valor){
+  filtroSelecionado.ano = valor || null;
+  atualizarContadorDisponiveis();
 }
 
 function selecionarFiltroSelect(nivel, valor){
@@ -2427,6 +2541,13 @@ function selecionarQuantidade(botao, valor){
 async function buscarQuestoesFiltradas(apenasContagem = false){
   let query = sb.from('questoes').select(apenasContagem ? 'id' : '*').eq('anulada', false);
   if(filtroSelecionado.usuario) query = query.eq('autor_id', filtroSelecionado.usuario);
+  if(filtroSelecionado.origem === 'usuarios') query = query.is('concurso_origem', null);
+  else if(filtroSelecionado.origem === 'marinha'){
+    query = query.not('concurso_origem', 'is', null);
+    if(filtroSelecionado.concurso) query = query.eq('concurso_origem', filtroSelecionado.concurso);
+    if(filtroSelecionado.ano) query = query.eq('ano_prova', filtroSelecionado.ano);
+  }
+  // 'todas' não filtra por origem nenhuma – mistura tudo de propósito
   if(filtroSelecionado.modulo) query = query.eq('modulo_pscpp', filtroSelecionado.modulo);
   if(filtroSelecionado.publicacao) query = query.eq('bibliografia_id', filtroSelecionado.publicacao);
   if(filtroSelecionado.capitulo) query = query.eq('capitulo', filtroSelecionado.capitulo);
@@ -2951,6 +3072,8 @@ async function abrirEdicaoDiretaAdmin(questaoId){
   document.getElementById('admin-edicao-alternativas').value = removerMarcadoresSubscrito(q.alternativas);
   document.getElementById('admin-edicao-gabarito').value = (q.gabarito||'').toUpperCase();
   document.getElementById('admin-edicao-explicacao').value = removerMarcadoresSubscrito(q.explicacao || '');
+  document.getElementById('admin-edicao-concurso').value = q.concurso_origem || '';
+  document.getElementById('admin-edicao-ano').value = q.ano_prova || '';
   abrirModal('modal-editar-questao-admin');
 }
 async function salvarEdicaoDiretaAdmin(){
@@ -2959,10 +3082,14 @@ async function salvarEdicaoDiretaAdmin(){
   const alternativas = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-alternativas').value.trim());
   const gabarito = document.getElementById('admin-edicao-gabarito').value.trim().toLowerCase();
   const explicacao = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-explicacao').value.trim());
+  const concursoOrigem = document.getElementById('admin-edicao-concurso').value.trim() || null;
+  const anoProva = parseInt(document.getElementById('admin-edicao-ano').value, 10) || null;
   const {error} = await sb.from('questoes').update({
     enunciado, alternativas, gabarito,
     explicacao: explicacao || null,
     explicacao_origem: explicacao ? 'fonte_original' : 'nunca_gerada',
+    concurso_origem: concursoOrigem,
+    ano_prova: anoProva,
     atualizado_em: new Date().toISOString()
   }).eq('id', questaoEdicaoAdminAtual);
   if(error){ alert('Erro ao salvar: '+error.message); return; }
@@ -3085,7 +3212,10 @@ function renderizarQuestaoAtual(){
     <div class="card-questao" data-questao-id="${q.id}">
       <div class="section-title" style="margin:0 0 8px 0;display:flex;justify-content:space-between;align-items:center;gap:8px">
         <span style="display:flex;align-items:center;gap:6px">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length} <button class="btn-icone-pequeno" onclick="abrirInfoQuestao('${q.id}')" title="Sobre essa questão"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        ${q.concurso_origem ? `<span style="background:#202A45;color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="${escapeHtml(q.concurso_origem)}${q.ano_prova?' '+q.ano_prova:''}">MB</span>` : ''}
         ${foiCorrigidaAntesDeResponder ? '<span class="selo-correcao" style="display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;text-transform:none;letter-spacing:normal;padding:2px 6px;flex-shrink:0;white-space:nowrap"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Corrigida recentemente</span>' : ''}
+        </span>
       </div>
       <div class="enunciado">${formatarEnunciado(q.enunciado)}</div>
     </div>
@@ -3235,7 +3365,30 @@ async function excluirQuestao(questaoId){
   renderizarQuestaoAtual();
 }
 
+function podeUsarIntegracaoTracker(){
+  return usuarioAtual?.email === 'luzzipratico@gmail.com';
+}
+// mesma checagem, nome mais genérico – usada em outras funcionalidades
+// exclusivas do Carlos além da integração com o Tracker (tipo cadastrar
+// questões de Marinha)
+function souCarlos(){
+  return usuarioAtual?.email === 'luzzipratico@gmail.com';
+}
+
 async function finalizarCaderno(){
+  // se for o Carlos, guarda um retrato do caderno ANTES de limpar da
+  // memória — vai precisar disso pra montar o envio pro Tracker depois
+  // que ele confirmar no popup, já que tudo abaixo é apagado na hora
+  let retratoParaTracker = null;
+  if(podeUsarIntegracaoTracker() && cadernoAtual){
+    retratoParaTracker = {
+      criadoEm: cadernoAtual.criado_em,
+      questoes: questoesCaderno.map(q=>({...q})),
+      respostas: {...respostasPorQuestao},
+      excluidas: new Set(questoesExcluidasAtual)
+    };
+  }
+
   await sb.from('cadernos').update({status:'finalizado', finalizado_em:new Date().toISOString()}).eq('id', cadernoAtual.id);
   cadernoAtual = null;
   questoesCaderno = [];
@@ -3247,6 +3400,111 @@ async function finalizarCaderno(){
   document.getElementById('quests-filtros').classList.remove('hidden');
   await carregarCadernosExistentes();
   await verificarCadernoEmAndamento(); // recalcula a contagem certa, pode ainda sobrar outros em andamento
+
+  if(retratoParaTracker){
+    abrirConfirmacaoEnvioTracker(retratoParaTracker);
+  }
+}
+
+/* ============================================================
+   Integração com o PSCPP Tracker — só pro Carlos (usuarioAtual.email),
+   via Edge Function do lado do Tracker (a chave sensível do banco dele
+   nunca fica no código do Pilotquest, só um segredo compartilhado com
+   escopo bem restrito, específico dessa função)
+   ============================================================ */
+const TRACKER_URL = 'https://sdqhwsmuldsmyvwqlsuh.supabase.co/functions/v1/pilotquest-caderno';
+const TRACKER_SEGREDO = 'pq_aexlNkl5FjQoyty6cZIafBXLW9Db3WZlwsSDC0GK';
+
+let retratoTrackerAtual = null;
+
+function abrirConfirmacaoEnvioTracker(retrato){
+  retratoTrackerAtual = retrato;
+  document.getElementById('resultado-envio-tracker').classList.add('hidden');
+  document.getElementById('confirmacao-envio-tracker').classList.remove('hidden');
+  const btn = document.getElementById('btn-confirmar-envio-tracker');
+  btn.disabled = false;
+  btn.textContent = 'Enviar';
+  abrirModal('modal-envio-tracker');
+}
+
+async function confirmarEnvioTracker(){
+  if(!retratoTrackerAtual) return;
+  const retrato = retratoTrackerAtual;
+  const btn = document.getElementById('btn-confirmar-envio-tracker');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  const tempoMinutos = Math.max(1, Math.round((new Date() - new Date(retrato.criadoEm)) / 60000));
+
+  const questoesValidas = retrato.questoes.filter(q => !retrato.excluidas.has(q.id));
+
+  const modulos = new Set(questoesValidas.map(q=>q.modulo_pscpp).filter(Boolean));
+  const moduloUnico = modulos.size === 1 ? [...modulos][0] : null;
+
+  const mapaBibliografiaTitulo = {};
+  bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
+  const publicacoes = new Set(questoesValidas.map(q=>q.bibliografia_id ? mapaBibliografiaTitulo[q.bibliografia_id] : null).filter(Boolean));
+  const publicacaoUnica = publicacoes.size === 1 ? [...publicacoes][0] : null;
+
+  let acertos = 0, erros = 0, anuladas = 0;
+  const questoesPayload = [];
+  questoesValidas.forEach(q=>{
+    const resp = retrato.respostas[q.id];
+    if(!resp) return; // não respondida — não deveria acontecer num caderno finalizado, mas por segurança não manda
+    let status;
+    if(q.anulada){ status = 'Anulada'; anuladas++; }
+    else if(resp.correta){ status = 'Acertei'; acertos++; }
+    else { status = 'Errei'; erros++; }
+    questoesPayload.push({
+      numero_questao: String(questoesPayload.length + 1),
+      status,
+      modulo_pscpp: q.modulo_pscpp || null,
+      publicacao: q.bibliografia_id ? (mapaBibliografiaTitulo[q.bibliografia_id] || null) : null,
+      capitulo: q.capitulo ? String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '') : null,
+      gabarito: (q.gabarito||'').toLowerCase(),
+      sua_resposta: resp.letra
+    });
+  });
+
+  const payload = {
+    tempo_gasto_minutos: tempoMinutos,
+    modulo: moduloUnico,
+    publicacao: publicacaoUnica,
+    total_questoes: questoesPayload.length,
+    acertos_efetivos: acertos,
+    erros_efetivos: erros,
+    anuladas,
+    questoes: questoesPayload
+  };
+
+  const elResultado = document.getElementById('texto-resultado-envio-tracker');
+  try{
+    const resp = await fetch(TRACKER_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'x-pilotquest-secret': TRACKER_SEGREDO},
+      body: JSON.stringify(payload)
+    });
+    const resultado = await resp.json();
+    if(resultado.ok){
+      elResultado.textContent = `Enviado como ${resultado.id_atividade} — ${resultado.questoes_gravadas} questões registradas no Tracker.`;
+      elResultado.style.color = '#27500A';
+    }else{
+      elResultado.textContent = `Não consegui enviar: ${resultado.erro || 'erro desconhecido'}`;
+      elResultado.style.color = '#A32D2D';
+    }
+  }catch(e){
+    elResultado.textContent = 'Não consegui conectar ao Tracker agora. Pode tentar de novo mais tarde direto lá.';
+    elResultado.style.color = '#A32D2D';
+  }
+
+  retratoTrackerAtual = null;
+  document.getElementById('confirmacao-envio-tracker').classList.add('hidden');
+  document.getElementById('resultado-envio-tracker').classList.remove('hidden');
+}
+
+function naoEnviarTracker(){
+  retratoTrackerAtual = null;
+  fecharModal('modal-envio-tracker');
 }
 
 /* ============================================================
@@ -3294,8 +3552,10 @@ function iniciarRealtimeForum(){
 let forumCache = [];
 
 async function carregarForum(){
-  const {data: todosTopicos} = await sb.from('topicos').select('*, questoes(enunciado, modulo_pscpp, bibliografia_id, capitulo)').order('criado_em', {ascending:false});
-  const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id);
+  const [{data: todosTopicos}, {data: meusVotos}] = await Promise.all([
+    sb.from('topicos').select('*, questoes(enunciado, modulo_pscpp, bibliografia_id, capitulo)').order('criado_em', {ascending:false}),
+    sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id)
+  ]);
   const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
 
   const ativos = (todosTopicos||[]).filter(t => t.status==='aberto' || !idsVotados.has(t.id));
@@ -3438,10 +3698,12 @@ function cancelarResposta(){
    Lista de tópicos de UMA questão (abre a partir do botão "Discutir")
    ============================================================ */
 async function renderizarDetalheQuestao(questaoId){
-  const {data: questao} = await sb.from('questoes').select('enunciado, alternativas').eq('id', questaoId).maybeSingle();
-  const {data: minhasNotasDaQuestao} = await sb.from('notas').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId).order('criado_em', {ascending:false});
-  const {data: topicosDaQuestao} = await sb.from('topicos').select('*').eq('questao_id', questaoId).order('criado_em', {ascending:false});
-  const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id);
+  const [{data: questao}, {data: minhasNotasDaQuestao}, {data: topicosDaQuestao}, {data: meusVotos}] = await Promise.all([
+    sb.from('questoes').select('enunciado, alternativas').eq('id', questaoId).maybeSingle(),
+    sb.from('notas').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId).order('criado_em', {ascending:false}),
+    sb.from('topicos').select('*').eq('questao_id', questaoId).order('criado_em', {ascending:false}),
+    sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id)
+  ]);
   const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
 
   const idsTopicos = (topicosDaQuestao||[]).map(t=>t.id);
@@ -4998,11 +5260,14 @@ function renderizarMetricasPessoais(){
   elPiores.innerHTML = '';
   elNotas.innerHTML = '';
 
-  // a caixinha de escolher módulo/publicação tem que aparecer sempre, mesmo
-  // sem nenhuma resposta registrada ainda — antes ficava vazia nesse caso,
-  // porque só era preenchida mais adiante, depois de um retorno antecipado
-  if(!document.getElementById('metricas-modulos-disponiveis').innerHTML) renderizarListasFiltroModulo();
-  if(!document.getElementById('metricas-materias-disponiveis').innerHTML) renderizarListasFiltroMateria();
+  // a caixinha de escolher módulo/publicação precisa ficar sempre
+  // atualizada — antes só populava se estivesse vazia, o que parecia
+  // funcionar na primeira visita, mas travava o conteúdo depois da primeira
+  // vez (nunca mais recarregava, inclusive gerando conteúdo desatualizado
+  // depois de um pull-to-refresh, que nunca limpa o conteúdo entre uma
+  // chamada e outra)
+  renderizarListasFiltroModulo();
+  renderizarListasFiltroMateria();
 
   const respostasBrutas = metricasRespostasCache.filter(r => passaNoFiltroPeriodo(r.respondido_em));
 
@@ -5250,8 +5515,10 @@ async function abrirDetalheCadernoConcluido(cadernoId){
   document.getElementById('modal-detalhe-caderno-conteudo').innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>';
   abrirModal('modal-detalhe-caderno');
 
-  const {data: caderno} = await sb.from('cadernos').select('*').eq('id', cadernoId).single();
-  const {data: respostas} = await sb.from('respostas').select('questao_id, correta').eq('caderno_id', cadernoId);
+  const [{data: caderno}, {data: respostas}] = await Promise.all([
+    sb.from('cadernos').select('*').eq('id', cadernoId).single(),
+    sb.from('respostas').select('questao_id, correta').eq('caderno_id', cadernoId)
+  ]);
   const el = document.getElementById('modal-detalhe-caderno-conteudo');
 
   if(!respostas || !respostas.length){
@@ -5445,6 +5712,9 @@ async function enviarUpload(){
   const input = document.getElementById('upload-arquivo');
   const status = document.getElementById('upload-status');
   if(!input.files.length){ status.innerHTML = '<p style="color:#B00020">Escolha um PDF primeiro.</p>'; return; }
+  const marcadoComoMarinha = souCarlos() && document.getElementById('upload-eh-marinha').checked;
+  const concursoOrigemUpload = marcadoComoMarinha ? (document.getElementById('upload-concurso').value.trim() || null) : null;
+  const anoProvaUpload = marcadoComoMarinha ? (parseInt(document.getElementById('upload-ano').value, 10) || null) : null;
 
   extracaoEmAndamento = true;
   mostrarBarraProgresso(status, 0, 'Lendo o arquivo...');
@@ -5552,7 +5822,9 @@ async function enviarUpload(){
           bibliografia_id: mapaBibliografiaId[bib.modulo+'|'+bib.titulo],
           explicacao: q.explicacao || null,
           explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada',
-          lote_upload_id: loteUploadId
+          lote_upload_id: loteUploadId,
+          concurso_origem: concursoOrigemUpload,
+          ano_prova: anoProvaUpload
         });
         if(erroInsertQuestao) throw new Error('Não consegui cadastrar uma questão: ' + erroInsertQuestao.message);
         return {pulada: false};
@@ -5572,7 +5844,9 @@ async function enviarUpload(){
         capitulo: q.capituloDetectado || extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null,
         autor_id: usuarioAtual.id,
         nome_arquivo_origem: nomeArquivoAtual || null,
-        lote_upload_id: loteUploadId
+        lote_upload_id: loteUploadId,
+        concurso_origem: concursoOrigemUpload,
+          ano_prova: anoProvaUpload
       })));
       quantasRascunho = paraRascunho.length;
     }
@@ -5717,6 +5991,15 @@ async function abrirRevisaoRascunho(){
       <select id="${idGrupo}-publicacao" class="filter-select" style="margin-bottom:8px" disabled>
         <option value="">Escolhe o módulo primeiro</option>
       </select>
+      ${souCarlos() ? `
+      <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#444;margin-bottom:10px;cursor:pointer">
+        <input type="checkbox" id="${idGrupo}-prova-real" style="width:16px;height:16px;flex-shrink:0" onchange="document.getElementById('${idGrupo}-campos-concurso').classList.toggle('hidden', !this.checked)">
+        Questões de prova real (não geradas por IA)
+      </label>
+      <div id="${idGrupo}-campos-concurso" class="hidden" style="margin-bottom:10px">
+        <input type="text" id="${idGrupo}-concurso" class="filter-select" placeholder="Concurso (ex: PSCPP, EFOMM)" list="lista-concursos-existentes">
+        <input type="number" id="${idGrupo}-ano" class="filter-select" placeholder="Ano da prova">
+      </div>` : ''}
       <div style="display:flex;gap:8px">
         <button class="btn-secundario" style="flex:1" onclick="descartarGrupoRascunho('${nomeArquivo.replace(/'/g,"\\'")}')">Descartar</button>
         <button class="btn-primario" style="flex:1" onclick="resolverGrupoRascunho('${nomeArquivo.replace(/'/g,"\\'")}', '${idGrupo}')">Cadastrar</button>
@@ -5748,6 +6031,10 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
   try{
     const modulo = document.getElementById(idGrupo+'-modulo').value;
   const bibliografiaId = document.getElementById(idGrupo+'-publicacao').value;
+  const checkboxMarinha = document.getElementById(idGrupo+'-prova-real');
+  const marcadoComoMarinha = checkboxMarinha ? checkboxMarinha.checked : false;
+  const concursoOrigem = marcadoComoMarinha ? (document.getElementById(idGrupo+'-concurso').value.trim() || null) : null;
+  const anoProva = marcadoComoMarinha ? (parseInt(document.getElementById(idGrupo+'-ano').value, 10) || null) : null;
   if(!modulo || !bibliografiaId){
     alert('Escolhe o módulo e a publicação antes de cadastrar.');
     return;
@@ -5773,7 +6060,9 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
       modulo_pscpp: modulo,
       bibliografia_id: bibliografiaId,
       explicacao: q.explicacao,
-      explicacao_origem: q.explicacao_origem
+      explicacao_origem: q.explicacao_origem,
+      concurso_origem: concursoOrigem,
+      ano_prova: anoProva
     });
     if(erroInsert){
       falhas.push(erroInsert.message);
@@ -5845,6 +6134,9 @@ async function enviarPlanilha(){
   const input = document.getElementById('upload-planilha');
   const status = document.getElementById('upload-planilha-status');
   if(!input.files.length){ status.innerHTML = '<p style="color:#B00020">Escolha uma planilha primeiro.</p>'; return; }
+  const marcadoComoMarinha = souCarlos() && document.getElementById('upload-eh-marinha').checked;
+  const concursoOrigemUpload = marcadoComoMarinha ? (document.getElementById('upload-concurso').value.trim() || null) : null;
+  const anoProvaUpload = marcadoComoMarinha ? (parseInt(document.getElementById('upload-ano').value, 10) || null) : null;
 
   extracaoEmAndamento = true;
   status.innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg><p style="text-align:center">Lendo planilha...</p>';
@@ -5902,7 +6194,9 @@ async function enviarPlanilha(){
       capitulo: capitulo || null,
       tipo_questao: tipoQuestao || null,
       autor_id: usuarioAtual.id,
-      explicacao_origem: 'nunca_gerada'
+      explicacao_origem: 'nunca_gerada',
+      concurso_origem: concursoOrigemUpload,
+          ano_prova: anoProvaUpload
     });
   });
 
