@@ -1037,7 +1037,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-52';
+const VERSAO_APP = '2026-07-25-53';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4613,8 +4613,8 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Manobrabilidade", autorBusca:["lewis", "controllability"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Controllability", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["santos", "manobrabilidade", "seculo"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["mesquita", "manobrabilidade"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
-  {modulo:"Manobrabilidade", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-4)", capitulos:[3, 4]},
-  {modulo:"Manobrabilidade", autorBusca:["mesquita", "hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-4)", capitulos:[3, 4]},
+  {modulo:"Manobrabilidade", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-6)", capitulos:[3, 4, 5, 6]},
+  {modulo:"Manobrabilidade", autorBusca:["mesquita", "hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-6)", capitulos:[3, 4, 5, 6]},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["lobo", "soares"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["valgas"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["normam-701", "normam 701"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-701/DHN", capitulos:null},
@@ -5154,6 +5154,16 @@ function identificarBibliografia(explicacao, enunciado){
         if(comCapCerto.length > 1){
           const preferida = comCapCerto.find(c => c.modulo === 'Arte Naval');
           if(preferida) return preferida;
+        }
+        if(comCapCerto.length === 0){
+          // nenhuma candidata tem esse capítulo especificamente listado —
+          // se só uma das candidatas cobre o livro inteiro sem restrição
+          // de capítulo (capitulos:null), ela é "o resto do livro" por
+          // eliminação, e vira a resposta (em vez de nunca poder ser
+          // escolhida, que era o bug: uma entrada tipo "livro completo"
+          // ficava definitivamente inalcançável mesmo com capítulo certo)
+          const semRestricao = candidatos.filter(c => !c.capitulos);
+          if(semRestricao.length === 1) return semRestricao[0];
         }
       }
       return null; // achou o autor, mas ambíguo entre módulos — trata como não achado
