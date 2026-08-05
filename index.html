@@ -555,11 +555,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
           Priorizar questões que mais erro
           <span class="info-icone" onclick="abrirModal('modal-info-wilson')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
         </label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:16px;color:#111;padding:6px 2px;cursor:pointer">
-          <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões inéditas
-        </label>
         <label style="display:flex;align-items:center;gap:8px;font-size:16px;color:#111;padding:6px 2px 14px;cursor:pointer">
-          <input type="checkbox" id="toggle-prova-real" onchange="atualizarContadorDisponiveis()"> Apenas questões MB (prova real)
+          <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões inéditas
         </label>
 
         <div id="contador-disponiveis" style="text-align:center;color:#888;font-size:var(--fs-b);margin-bottom:14px;min-height:18px"></div>
@@ -1037,7 +1034,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-53';
+const VERSAO_APP = '2026-07-25-55';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4613,8 +4610,8 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Manobrabilidade", autorBusca:["lewis", "controllability"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Controllability", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["santos", "manobrabilidade", "seculo"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["mesquita", "manobrabilidade"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
-  {modulo:"Manobrabilidade", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-6)", capitulos:[3, 4, 5, 6]},
-  {modulo:"Manobrabilidade", autorBusca:["mesquita", "hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-6)", capitulos:[3, 4, 5, 6]},
+  {modulo:"Manobrabilidade", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (exceto caps. 1-2)", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["mesquita", "hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (exceto caps. 1-2)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["lobo", "soares"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["valgas"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["normam-701", "normam 701"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-701/DHN", capitulos:null},
@@ -4623,8 +4620,8 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Meteorologia e Oceanografia", autorBusca:["noções de meteorologia para navegantes"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["pianc 117"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["hydro/meteo"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
-  {modulo:"Meteorologia e Oceanografia", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:null},
-  {modulo:"Meteorologia e Oceanografia", autorBusca:["mesquita", "ondas"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 1-2)", capitulos:[1, 2]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["mesquita", "ondas"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 1-2)", capitulos:[1, 2]},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["ynoue"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["meteorologia", "nocoes basicas"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["bento"], autor:"BENTO, C. N. S.", titulo:"Navegação Integrada", capitulos:null},
