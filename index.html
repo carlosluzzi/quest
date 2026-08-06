@@ -1034,7 +1034,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-55';
+const VERSAO_APP = '2026-07-25-56';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2966,18 +2966,23 @@ let favoritosDoUsuario = new Set();
 let notasDoUsuario = new Set();
 let topicosPendentesDoUsuario = new Set();
 let relatosFormatacaoDoUsuario = new Set();
+let alternativasSalvasAtual = new Set(); // chave "questaoId|letra" — só usada pelo Carlos
 
 async function carregarFavoritosENotas(idsQuestoes){
-  if(!idsQuestoes.length){ favoritosDoUsuario = new Set(); notasDoUsuario = new Set(); topicosPendentesDoUsuario = new Set(); relatosFormatacaoDoUsuario = new Set(); return; }
-  const [{data: favs}, {data: nts}, {data: topicosDasQuestoes}, {data: relatos}] = await Promise.all([
+  if(!idsQuestoes.length){ favoritosDoUsuario = new Set(); notasDoUsuario = new Set(); topicosPendentesDoUsuario = new Set(); relatosFormatacaoDoUsuario = new Set(); alternativasSalvasAtual = new Set(); return; }
+  const [{data: favs}, {data: nts}, {data: topicosDasQuestoes}, {data: relatos}, {data: altsSalvas}] = await Promise.all([
     sb.from('favoritos').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
     sb.from('notas').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
     sb.from('topicos').select('id, questao_id, status').in('questao_id', idsQuestoes),
-    sb.from('relatos_formatacao').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes)
+    sb.from('relatos_formatacao').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
+    souCarlos() ? sb.from('alternativas_salvas').select('questao_id, letra').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes) : Promise.resolve({data: []})
   ]);
   favoritosDoUsuario = new Set((favs||[]).map(f=>f.questao_id));
   notasDoUsuario = new Set((nts||[]).map(n=>n.questao_id));
   relatosFormatacaoDoUsuario = new Set((relatos||[]).map(r=>r.questao_id));
+  // chave combinada questão+letra, já que dá pra salvar mais de uma
+  // alternativa da mesma questão, cada uma independente
+  alternativasSalvasAtual = new Set((altsSalvas||[]).map(a=>a.questao_id+'|'+a.letra));
 
   // uma questão tem "bolinha" de Discutir se tiver algum tópico ainda ativo
   // pra esse usuário: aberto, ou resolvido mas que ele ainda não votou/concordou
@@ -2990,6 +2995,18 @@ async function carregarFavoritosENotas(idsQuestoes){
   topicosPendentesDoUsuario = new Set(
     (topicosDasQuestoes||[]).filter(t => t.status==='aberto' || !idsVotados.has(t.id)).map(t=>t.questao_id)
   );
+}
+
+async function toggleAlternativaSalva(questaoId, letra, btnEl){
+  const chave = questaoId + '|' + letra;
+  if(alternativasSalvasAtual.has(chave)){
+    await sb.from('alternativas_salvas').delete().eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId).eq('letra', letra);
+    alternativasSalvasAtual.delete(chave);
+  }else{
+    await sb.from('alternativas_salvas').insert({usuario_id: usuarioAtual.id, questao_id: questaoId, letra});
+    alternativasSalvasAtual.add(chave);
+  }
+  if(btnEl) btnEl.style.color = alternativasSalvasAtual.has(chave) ? '#B23A34' : '#ccc';
 }
 
 async function toggleFavorito(questaoId){
@@ -3195,6 +3212,7 @@ function renderizarQuestaoAtual(){
   const todasRespondidas = questoesCaderno.length > 0 && questoesCaderno.every(qq => !!respostasPorQuestao[qq.id] || questoesExcluidasAtual.has(qq.id));
   const nomeCadernoEscapado = escapeHtml(cadernoAtual.nome || 'Caderno sem nome');
 
+  const mostrarBotaoSalvarAlt = jaRespondida && souCarlos();
   const htmlAlternativas = alternativas.length
     ? alternativas.map(alt=>{
         const riscada = alternativasRiscadasAtual.has(alt.letra);
@@ -3208,7 +3226,14 @@ function renderizarQuestaoAtual(){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
         const handlers = (jaRespondida || excluida) ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}', false)" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="iniciarPressionarAlternativa('${alt.letra}')" ontouchend="finalizarPressionarAlternativa('${alt.letra}', true)" ontouchmove="moverDurantePressionar()" ontouchcancel="cancelarPressionarAlternativa()"`;
-        return `<button class="banco-alt-btn" style="${estilo}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
+        const botaoBtn = `<button class="banco-alt-btn" style="${estilo}${mostrarBotaoSalvarAlt?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
+        // botão de salvar fica FORA do <button> da alternativa de propósito —
+        // um botão nativo desabilitado bloqueia clique em qualquer coisa
+        // dentro dele, mesmo em elementos filhos com seu próprio onclick
+        if(!mostrarBotaoSalvarAlt) return `<div style="position:relative">${botaoBtn}</div>`;
+        const chaveAlt = q.id + '|' + alt.letra;
+        const salva = alternativasSalvasAtual.has(chaveAlt);
+        return `<div style="position:relative">${botaoBtn}<button onclick="toggleAlternativaSalva('${q.id}','${alt.letra}',this)" style="position:absolute;top:6px;right:6px;background:none;border:none;padding:4px;cursor:pointer;color:${salva?'#B23A34':'#ccc'};display:flex" title="Salvar essa alternativa"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button></div>`;
       }).join('')
     : '<p style="color:#B00020;font-size:var(--fs-d)">Alternativas não identificadas nessa questão (pode estar malformada) – considere excluir pra você.</p>';
 
