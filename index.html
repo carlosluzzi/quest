@@ -1034,7 +1034,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-58';
+const VERSAO_APP = '2026-07-25-61';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3423,6 +3423,7 @@ async function finalizarCaderno(){
   let retratoParaTracker = null;
   if(podeUsarIntegracaoTracker() && cadernoAtual){
     retratoParaTracker = {
+      cadernoId: cadernoAtual.id,
       criadoEm: cadernoAtual.criado_em,
       finalizadoEm: new Date().toISOString(),
       questoes: questoesCaderno.map(q=>({...q})),
@@ -3530,6 +3531,9 @@ async function confirmarEnvioTracker(){
     if(resultado.ok){
       elResultado.textContent = `Enviado como ${resultado.id_atividade} — ${resultado.questoes_gravadas} questões registradas no Tracker.`;
       elResultado.style.color = '#27500A';
+      if(retrato.cadernoId){
+        await sb.from('cadernos').update({enviado_tracker_em: new Date().toISOString()}).eq('id', retrato.cadernoId);
+      }
     }else{
       elResultado.textContent = `Não consegui enviar: ${resultado.erro || 'erro desconhecido'}`;
       elResultado.style.color = '#A32D2D';
@@ -5617,7 +5621,11 @@ async function abrirDetalheCadernoConcluido(cadernoId){
         <div style="color:#888;font-size:var(--fs-b)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
       </div>`;
     }).join('')}
-    ${podeUsarIntegracaoTracker() ? `<button class="btn-secundario" style="width:100%;margin-top:8px" onclick="enviarCadernoAntigoParaTracker('${cadernoId}')">Enviar para o PSCPP Tracker</button>` : ''}
+    ${podeUsarIntegracaoTracker() ? (
+      caderno.enviado_tracker_em
+        ? `<button class="btn-secundario" style="width:100%;margin-top:8px;opacity:0.4;cursor:not-allowed" disabled title="Já enviado em ${new Date(caderno.enviado_tracker_em).toLocaleDateString('pt-BR')}">Já enviado para o PSCPP Tracker</button>`
+        : `<button class="btn-primario" style="width:100%;margin-top:8px" onclick="enviarCadernoAntigoParaTracker('${cadernoId}')">Enviar para o PSCPP Tracker</button>`
+    ) : ''}
     <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="fecharModal('modal-detalhe-caderno')">Fechar</button>
   `;
 
@@ -5637,12 +5645,17 @@ function enviarCadernoAntigoParaTracker(cadernoId){
     alert('Não consegui montar os dados desse caderno pra enviar.');
     return;
   }
+  if(dados.caderno.enviado_tracker_em){
+    alert('Esse caderno já foi enviado antes.');
+    return;
+  }
   const mapaQuestoes = {};
   (dados.questoes||[]).forEach(q => { mapaQuestoes[q.id] = q; });
   const respostasPorQuestaoRetroativo = {};
   (dados.respostas||[]).forEach(r => { respostasPorQuestaoRetroativo[r.questao_id] = {letra: r.resposta_dada, correta: r.correta}; });
 
   const retrato = {
+    cadernoId,
     criadoEm: dados.caderno.criado_em,
     finalizadoEm: dados.caderno.finalizado_em,
     questoes: Object.values(mapaQuestoes),
