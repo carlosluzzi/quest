@@ -229,7 +229,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   #titulo-adicionar-questoes{font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 14px 0;text-align:center}
   #card-adicionar-questoes{max-width:520px}
 }
-.modal-conteudo-fluxo-topico{height:420px;box-sizing:border-box}
+.modal-conteudo-fluxo-topico{max-height:420px;box-sizing:border-box}
 /* Popup grande — usado em qualquer lugar onde a pessoa escreve ou lê texto
    mais longo (discutir dentro do caderno, notas). Pequeno no celular (tela
    já é pequena mesmo), bem maior no iPad (retrato e paisagem) e desktop. */
@@ -1034,7 +1034,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-61';
+const VERSAO_APP = '2026-07-25-62';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
