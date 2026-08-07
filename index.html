@@ -233,7 +233,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* Popup grande — usado em qualquer lugar onde a pessoa escreve ou lê texto
    mais longo (discutir dentro do caderno, notas). Pequeno no celular (tela
    já é pequena mesmo), bem maior no iPad (retrato e paisagem) e desktop. */
-.popup-texto-longo{height:640px;max-width:400px;padding-top:24px}
+.popup-texto-longo{max-height:640px;max-width:400px;padding-top:24px}
 @media(min-width:768px) and (max-width:1099px){
   .popup-texto-longo{height:85vh;max-width:680px}
 }
@@ -941,10 +941,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-explicacao-questao" onclick="if(event.target===this) fecharModal('modal-explicacao-questao')">
-  <div class="modal-conteudo" style="max-width:700px">
-    <h3 class="config-title">Explicação</h3>
-    <div id="conteudo-explicacao-questao"></div>
-    <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-explicacao-questao')">Fechar</button>
+  <div class="modal-conteudo" style="max-width:700px;display:flex;flex-direction:column">
+    <h3 class="config-title" style="flex-shrink:0">Explicação</h3>
+    <div id="conteudo-explicacao-questao" style="flex:1;min-height:0;overflow-y:auto"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:14px;flex-shrink:0" onclick="fecharModal('modal-explicacao-questao')">Fechar</button>
   </div>
 </div>
 
@@ -968,11 +968,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-revisao-rascunho" onclick="if(event.target===this) fecharModal('modal-revisao-rascunho')">
-  <div class="modal-conteudo" style="max-width:600px;max-height:85vh;overflow-y:auto">
-    <h3 class="config-title">Revisar questões pendentes</h3>
-    <p style="color:#666;font-size:var(--fs-d);margin-bottom:14px">Essas questões foram extraídas, mas o app não conseguiu identificar a bibliografia sozinho. Escolhe entre o que já existe – nada de digitar um livro novo.</p>
-    <div id="lista-rascunhos-pendentes"></div>
-    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-revisao-rascunho')">Fechar</button>
+  <div class="modal-conteudo" style="max-width:600px;display:flex;flex-direction:column">
+    <h3 class="config-title" style="flex-shrink:0">Revisar questões pendentes</h3>
+    <p style="color:#666;font-size:var(--fs-d);margin-bottom:14px;flex-shrink:0">Essas questões foram extraídas, mas o app não conseguiu identificar a bibliografia sozinho. Escolhe entre o que já existe – nada de digitar um livro novo.</p>
+    <div id="lista-rascunhos-pendentes" style="flex:1;min-height:0;overflow-y:auto"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:10px;flex-shrink:0" onclick="fecharModal('modal-revisao-rascunho')">Fechar</button>
   </div>
 </div>
 
@@ -1034,7 +1034,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-63';
+const VERSAO_APP = '2026-07-25-67';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
