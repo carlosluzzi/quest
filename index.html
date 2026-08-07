@@ -161,6 +161,12 @@ body.timer-fullscreen-ativo .bottom-nav,body.timer-fullscreen-ativo .topbar{disp
   #timer-flutuante{bottom:24px}
 }
 #timer-flutuante.hidden{display:none}
+/* Cronômetro pausado: opacidade menor e um rótulo, para não parecer que travou */
+#timer-flutuante.pausado{opacity:.82}
+#timer-flutuante.pausado #timer-flutuante-tempo{color:#9BA3B7}
+#timer-flutuante.pausado::after{content:'PAUSADO';position:absolute;left:14px;bottom:6px;
+  font-size:9px;letter-spacing:.08em;color:#EF9F27;font-weight:700}
+#timer-flutuante.pausado{padding-bottom:20px}
 #timer-flutuante-fechar{position:absolute;top:2px;right:6px;font-size:13px;color:#9BA3B7;padding:6px;cursor:pointer}
 #timer-flutuante-nome{font-size:11px;color:#9BA3B7;text-transform:uppercase;letter-spacing:0.03em;padding-right:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
 #timer-flutuante-subtitulo{font-size:12px;color:#fff;font-weight:600;padding-right:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
@@ -203,6 +209,10 @@ body.timer-fullscreen-ativo .bottom-nav,body.timer-fullscreen-ativo .topbar{disp
 .tf-btns{display:flex;gap:10px;justify-content:center}
 .tf-btn{padding:12px 28px;border-radius:10px;border:none;font-size:var(--fs-e);font-weight:600;cursor:pointer;font-family:inherit;position:relative}
 .tf-btn-toggle{min-width:150px}
+/* Cancelar fica separado e discreto: é destrutivo, não deve competir com Pausar e Finalizar */
+.tf-cancelar{display:block;margin:22px auto 0;background:none;border:none;color:#6B7280;
+  font-size:var(--fs-c);font-family:inherit;cursor:pointer;padding:8px 14px}
+@media(hover:hover){.tf-cancelar:hover{color:#9BA3B7}}
 .tf-fechar{position:absolute;top:calc(env(safe-area-inset-top, 0px) + 20px);right:20px;color:#6B7280;background:none;border:none;font-size:24px;cursor:pointer;padding:8px}
 #splash-screen{position:fixed;inset:0;z-index:9999;background:#F9F9F7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;transition:opacity 0.4s ease;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 86px) 24px;box-sizing:border-box}
 #splash-screen.hidden{display:none}
@@ -1013,6 +1023,20 @@ body.timer-fullscreen-ativo .bottom-nav,body.timer-fullscreen-ativo .topbar{disp
       <button class="modal-btn modal-btn-nao" onclick="sonecaAlarmeAnki(30)">+30 min</button>
     </div>
     <button class="modal-btn modal-btn-sim" style="width:100%" onclick="dispensarAlarmeAnki()">Dispensar</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="cancelar-timer-modal" style="display:none;z-index:1000001"
+  onclick="if(event.target===this)fecharCancelarTimerModal()">
+  <div class="modal-box">
+    <div class="config-title">Cancelar cronômetro?</div>
+    <p style="margin:0 0 20px;line-height:1.5;font-size:var(--fs-c);color:#5F5E5A">
+      O tempo contado até agora será descartado e nenhuma sessão de estudo vai ser registrada.
+    </p>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-nao" onclick="fecharCancelarTimerModal()">Voltar</button>
+      <button class="modal-btn modal-btn-sim" onclick="confirmarCancelarTimer()">Cancelar cronômetro</button>
+    </div>
   </div>
 </div>
 
@@ -3558,7 +3582,7 @@ function renderTimerFullscreenConteudo(){
   const cabecalhoCaderno = cadernoTimer ? `
       ${logosCursos[cadernoTimer.curso]?`<img src="${logosCursos[cadernoTimer.curso]}" alt="${cadernoTimer.curso}"
         style="height:${(cadernoTimer.curso==='Catavento'||cadernoTimer.curso==='Curso Prático')?20:18}px;
-        aspect-ratio:${proporcaoLogosCursos[cadernoTimer.curso]};display:block;margin:0 auto 10px;filter:brightness(0) invert(1);opacity:.9">`
+        aspect-ratio:${proporcaoLogosCursos[cadernoTimer.curso]};display:block;margin:0 auto 10px;opacity:.95">`
         :`<div class="tf-modulo">${cadernoTimer.curso}</div>`}
       <div class="tf-ref-wrap">
         <div class="tf-ref">${(tipoLabelCurso[cadernoTimer.curso]||(cadernoTimer.tipo==='Simulado'?'SIMULADO':'CADERNO'))} ${cadernoTimer.nome}</div>
@@ -3582,6 +3606,7 @@ function renderTimerFullscreenConteudo(){
           :`<button class="tf-btn tf-btn-toggle" style="background:#2A3141;color:#fff" onclick="pausarTimer()">Pausar</button>`}
         <button class="tf-btn" style="background:#fff;color:#202A45" onclick="pararESalvarTimer()">Finalizar</button>
       </div>
+      <button class="tf-cancelar" onclick="abrirCancelarTimer()">Cancelar sem salvar</button>
     </div>
   `;
 }
@@ -3706,15 +3731,40 @@ function abrirTimerFullscreen(pulandoValidacao,naoRetomarSePausado){
   aplicarThemeColor(COR_FUNDO_FULLSCREEN);
 }
 
+// Cancelar é ação explícita: descarta o tempo sem gravar sessão. Antes, a única forma de
+// abandonar um cronômetro era fechar a tela e ignorá-lo, o que deixava o widget rodando
+// indefinidamente ou — pior — dava a impressão de ter cancelado quando não tinha.
+function abrirCancelarTimer(){
+  document.getElementById('cancelar-timer-modal').style.display='flex';
+}
+function fecharCancelarTimerModal(){
+  document.getElementById('cancelar-timer-modal').style.display='none';
+}
+function confirmarCancelarTimer(){
+  fecharCancelarTimerModal();
+  if(timerIntervalId){ clearInterval(timerIntervalId); timerIntervalId=null; }
+  timerRodando=false;
+  timerInicio=null;
+  timerAcumuladoSeg=0;
+  timerModulo=''; timerPublicacao=''; timerCapitulo=''; timerOrigem='';
+  esconderTimerFlutuante();
+  fecharTimerFullscreen();
+}
+
 function fecharTimerFullscreen(){
   timerFullscreenAberto=false;
   document.getElementById('timer-fullscreen').classList.add('hidden');
   document.body.classList.remove('timer-fullscreen-ativo');
   liberarWakeLock();
   aplicarThemeColor(null);
-  if(timerRodando){
+  // O widget aparece também com o cronômetro PAUSADO: sem isso, pausar e fechar fazia o timer
+  // sumir da tela, dando a impressão de ter sido cancelado — quando na verdade o tempo continua
+  // guardado. Cancelar é uma ação explícita, não um efeito colateral de fechar a tela.
+  if(timerRodando||timerAcumuladoSeg>0){
     timerFlutuanteFechadoManualmente=false; // toda vez que fecha de novo, dá outra chance de mostrar
-    const segAtual=timerAcumuladoSeg+Math.floor((Date.now()-timerInicio)/1000);
+    const segAtual=timerRodando
+      ? timerAcumuladoSeg+Math.floor((Date.now()-timerInicio)/1000)
+      : timerAcumuladoSeg;
     mostrarTimerFlutuante(timerModulo||timerTipo,formatarTempoTimer(segAtual),timerPublicacao||'');
   }
   renderTab(tabAtual,true);
@@ -3795,7 +3845,11 @@ function renderCadernoTimerFullscreenConteudo(){
   return `
     <button class="tf-fechar" onclick="fecharCadernoTimerFullscreen()">✕</button>
     <div>
-      <div class="tf-modulo" style="opacity:0.6;font-size:var(--fs-b)">${ap?ap.curso:''}</div>
+      ${ap&&logosCursos[ap.curso]?`<img src="${logosCursos[ap.curso]}" alt="${ap.curso}"
+        style="height:${(ap.curso==='Catavento'||ap.curso==='Curso Prático')?20:18}px;
+        aspect-ratio:${proporcaoLogosCursos[ap.curso]};display:block;margin:0 auto 10px;
+        opacity:.95">`
+        :`<div class="tf-modulo" style="opacity:0.6;font-size:var(--fs-b)">${ap?ap.curso:''}</div>`}
       <div class="tf-modulo">${tipoAbrev}${ap&&ap.nome?' '+ap.nome:''}</div>
       <div class="tf-ref-wrap"></div>
       <div class="tf-tempo" style="${restante===0?'color:#A32D2D':''}">${formatarTempoTimer(restante)}</div>
@@ -3877,6 +3931,8 @@ function mostrarTimerFlutuante(nome,tempoTexto,subtitulo){
   document.getElementById('timer-flutuante-subtitulo').textContent=subtitulo||'';
   document.getElementById('timer-flutuante-tempo').textContent=tempoTexto;
   const el=document.getElementById('timer-flutuante');
+  // Pausado fica visualmente distinto: sem isso, um número parado pode passar por travado.
+  el.classList.toggle('pausado', !timerRodando);
   if(el.classList.contains('hidden')){
     // Posição inicial: canto inferior direito, definida de forma 100% explícita aqui (não confia
     // em "limpar" propriedades inline e deixar o CSS assumir sozinho — isso já causou o widget
@@ -3903,6 +3959,8 @@ function mostrarTimerFlutuante(nome,tempoTexto,subtitulo){
 function atualizarTextoTimerFlutuante(tempoTexto){
   if(document.getElementById('timer-flutuante').classList.contains('hidden')) return;
   document.getElementById('timer-flutuante-tempo').textContent=tempoTexto;
+  const elAt=document.getElementById('timer-flutuante');
+  if(elAt) elAt.classList.toggle('pausado', !timerRodando);
 }
 function esconderTimerFlutuante(){
   document.getElementById('timer-flutuante').classList.add('hidden');
