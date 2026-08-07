@@ -1034,7 +1034,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-56';
+const VERSAO_APP = '2026-07-25-58';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1621,7 +1621,11 @@ async function posLogin(nomeInformado, nomeCompletoInformado, usuarioAuthForneci
     }
     perfil = novo;
   }
-  usuarioAtual = perfil;
+  // a tabela usuarios não tem coluna de email — quem guarda isso é o
+  // sistema de autenticação (user.email), não o perfil customizado. Sem
+  // isso, souCarlos() e podeUsarIntegracaoTracker() nunca bateriam com
+  // ninguém, já que dependem desse campo pra identificar o Carlos
+  usuarioAtual = {...perfil, email: user.email};
 
   document.getElementById('view-login').classList.add('hidden');
 
