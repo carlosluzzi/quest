@@ -3424,6 +3424,7 @@ async function finalizarCaderno(){
   if(podeUsarIntegracaoTracker() && cadernoAtual){
     retratoParaTracker = {
       criadoEm: cadernoAtual.criado_em,
+      finalizadoEm: new Date().toISOString(),
       questoes: questoesCaderno.map(q=>({...q})),
       respostas: {...respostasPorQuestao},
       excluidas: new Set(questoesExcluidasAtual)
@@ -3475,7 +3476,7 @@ async function confirmarEnvioTracker(){
   btn.disabled = true;
   btn.textContent = 'Enviando...';
 
-  const tempoMinutos = Math.max(1, Math.round((new Date() - new Date(retrato.criadoEm)) / 60000));
+  const tempoMinutos = Math.max(1, Math.round((new Date(retrato.finalizadoEm) - new Date(retrato.criadoEm)) / 60000));
 
   const questoesValidas = retrato.questoes.filter(q => !retrato.excluidas.has(q.id));
 
@@ -5568,7 +5569,7 @@ async function abrirDetalheCadernoConcluido(cadernoId){
 
   const [{data: caderno}, {data: respostas}] = await Promise.all([
     sb.from('cadernos').select('*').eq('id', cadernoId).single(),
-    sb.from('respostas').select('questao_id, correta').eq('caderno_id', cadernoId)
+    sb.from('respostas').select('questao_id, correta, resposta_dada').eq('caderno_id', cadernoId)
   ]);
   const el = document.getElementById('modal-detalhe-caderno-conteudo');
 
@@ -5578,7 +5579,7 @@ async function abrirDetalheCadernoConcluido(cadernoId){
   }
 
   const idsQuestoes = [...new Set(respostas.map(r=>r.questao_id))];
-  const {data: questoes} = await sb.from('questoes').select('id, modulo_pscpp').in('id', idsQuestoes);
+  const {data: questoes} = await sb.from('questoes').select('id, modulo_pscpp, capitulo, bibliografia_id, gabarito, anulada').in('id', idsQuestoes);
   const moduloPorQuestao = {};
   (questoes||[]).forEach(q=>{ moduloPorQuestao[q.id] = q.modulo_pscpp || 'Sem módulo'; });
 
@@ -5616,8 +5617,40 @@ async function abrirDetalheCadernoConcluido(cadernoId){
         <div style="color:#888;font-size:var(--fs-b)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
       </div>`;
     }).join('')}
-    <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-detalhe-caderno')">Fechar</button>
+    ${podeUsarIntegracaoTracker() ? `<button class="btn-secundario" style="width:100%;margin-top:8px" onclick="enviarCadernoAntigoParaTracker('${cadernoId}')">Enviar para o PSCPP Tracker</button>` : ''}
+    <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="fecharModal('modal-detalhe-caderno')">Fechar</button>
   `;
+
+  // guarda os dados já buscados nessa função pra reaproveitar no envio
+  // retroativo, sem precisar buscar tudo de novo
+  detalheCadernoConcluidoCache[cadernoId] = {caderno, respostas, questoes};
+}
+
+let detalheCadernoConcluidoCache = {};
+
+// monta o mesmo formato de "retrato" que o envio ao vivo usa, só que a
+// partir de dados buscados do banco em vez de estado em memória — permite
+// mandar pro Tracker um caderno finalizado antes dessa integração existir
+function enviarCadernoAntigoParaTracker(cadernoId){
+  const dados = detalheCadernoConcluidoCache[cadernoId];
+  if(!dados || !dados.caderno.finalizado_em){
+    alert('Não consegui montar os dados desse caderno pra enviar.');
+    return;
+  }
+  const mapaQuestoes = {};
+  (dados.questoes||[]).forEach(q => { mapaQuestoes[q.id] = q; });
+  const respostasPorQuestaoRetroativo = {};
+  (dados.respostas||[]).forEach(r => { respostasPorQuestaoRetroativo[r.questao_id] = {letra: r.resposta_dada, correta: r.correta}; });
+
+  const retrato = {
+    criadoEm: dados.caderno.criado_em,
+    finalizadoEm: dados.caderno.finalizado_em,
+    questoes: Object.values(mapaQuestoes),
+    respostas: respostasPorQuestaoRetroativo,
+    excluidas: new Set() // questões excluídas não entram nem em respostas, então não afetam aqui
+  };
+  fecharModal('modal-detalhe-caderno');
+  abrirConfirmacaoEnvioTracker(retrato);
 }
 
 /* ============================================================
