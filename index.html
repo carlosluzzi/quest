@@ -1034,7 +1034,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-62';
+const VERSAO_APP = '2026-07-25-63';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2892,6 +2892,34 @@ function abrirConfirmacaoExclusaoCaderno(el){
 
 async function confirmarExclusaoCaderno(){
   if(!cadernoParaExcluir) return;
+
+  // se esse caderno já tinha sido enviado pro Tracker, precisa apagar lá
+  // também — senão fica dado órfão contando pontos de um caderno que não
+  // existe mais aqui. Isso roda ANTES de apagar localmente de propósito:
+  // se a exclusão no Tracker falhar, avisa e deixa o Carlos decidir se
+  // quer prosseguir mesmo assim, em vez de apagar aqui e esquecer lá
+  const {data: cadernoInfo} = await sb.from('cadernos').select('id_atividade_tracker').eq('id', cadernoParaExcluir).maybeSingle();
+  if(cadernoInfo?.id_atividade_tracker){
+    try{
+      const resp = await fetch(`${TRACKER_URL}?id_atividade=${encodeURIComponent(cadernoInfo.id_atividade_tracker)}`, {
+        method: 'DELETE',
+        headers: {'x-pilotquest-secret': TRACKER_SEGREDO}
+      });
+      const resultado = await resp.json().catch(()=>({ok:false, erro:'resposta inválida'}));
+      if(!resultado.ok && resp.status !== 404){
+        // 404 (já não existe lá) não é motivo pra travar — qualquer outro
+        // erro, sim, porque apagar aqui sem avisar deixaria lixo lá
+        if(!confirm(`Não consegui apagar esse caderno no PSCPP Tracker (${resultado.erro||'erro desconhecido'}). Apagar mesmo assim só aqui no Pilotquest?`)){
+          return;
+        }
+      }
+    }catch(e){
+      if(!confirm('Não consegui conectar ao PSCPP Tracker pra apagar esse caderno lá. Apagar mesmo assim só aqui no Pilotquest?')){
+        return;
+      }
+    }
+  }
+
   await sb.from('cadernos').delete().eq('id', cadernoParaExcluir);
   const estavaResolvendo = cadernoAtual && cadernoAtual.id === cadernoParaExcluir;
   cadernoParaExcluir = null;
@@ -3532,7 +3560,7 @@ async function confirmarEnvioTracker(){
       elResultado.textContent = `Enviado como ${resultado.id_atividade} — ${resultado.questoes_gravadas} questões registradas no Tracker.`;
       elResultado.style.color = '#27500A';
       if(retrato.cadernoId){
-        await sb.from('cadernos').update({enviado_tracker_em: new Date().toISOString()}).eq('id', retrato.cadernoId);
+        await sb.from('cadernos').update({enviado_tracker_em: new Date().toISOString(), id_atividade_tracker: resultado.id_atividade}).eq('id', retrato.cadernoId);
       }
     }else{
       elResultado.textContent = `Não consegui enviar: ${resultado.erro || 'erro desconhecido'}`;
