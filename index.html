@@ -3226,7 +3226,7 @@ function renderizarQuestaoAtual(){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
         const handlers = (jaRespondida || excluida) ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}', false)" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="iniciarPressionarAlternativa('${alt.letra}')" ontouchend="finalizarPressionarAlternativa('${alt.letra}', true)" ontouchmove="moverDurantePressionar()" ontouchcancel="cancelarPressionarAlternativa()"`;
-        const botaoBtn = `<button class="banco-alt-btn" style="${estilo}${mostrarBotaoSalvarAlt?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
+        const botaoBtn = `<button class="banco-alt-btn" style="width:100%;${estilo}${mostrarBotaoSalvarAlt?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
         // botão de salvar fica FORA do <button> da alternativa de propósito —
         // um botão nativo desabilitado bloqueia clique em qualquer coisa
         // dentro dele, mesmo em elementos filhos com seu próprio onclick
