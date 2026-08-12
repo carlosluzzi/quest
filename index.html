@@ -1034,7 +1034,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-69';
+const VERSAO_APP = '2026-07-25-71';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1232,6 +1232,26 @@ function formatarEnunciado(texto){
   }
 
   return escaped;
+}
+
+// detecta questões no formato "I. ... II. ... III. ..." dentro do
+// enunciado — usado pra permitir salvar cada item individualmente, já que
+// salvar só "alternativa b) Apenas I e III corretas" sozinho não diz nada
+// sem saber o que I e III realmente afirmavam
+function extrairItensNumerados(enunciado){
+  if(!enunciado) return null;
+  const regex = /(?:^|\n)\s*(I{1,3}|IV|V|VI{1,3}|IX|X)\.\s+/g;
+  const matches = [...enunciado.matchAll(regex)];
+  if(matches.length < 2) return null; // precisa de pelo menos 2 itens pra fazer sentido
+  const intro = enunciado.slice(0, matches[0].index).trim();
+  const itens = [];
+  for(let i=0; i<matches.length; i++){
+    const numeral = matches[i][1];
+    const inicioTexto = matches[i].index + matches[i][0].length;
+    const fimTexto = i+1 < matches.length ? matches[i+1].index : enunciado.length;
+    itens.push({numeral, texto: enunciado.slice(inicioTexto, fimTexto).trim()});
+  }
+  return {intro, itens};
 }
 
 function extrairAlternativas(alternativasTexto){
@@ -3297,7 +3317,27 @@ function renderizarQuestaoAtual(){
         ${foiCorrigidaAntesDeResponder ? '<span class="selo-correcao" style="display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;text-transform:none;letter-spacing:normal;padding:2px 6px;flex-shrink:0;white-space:nowrap"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Corrigida recentemente</span>' : ''}
         </span>
       </div>
-      <div class="enunciado">${formatarEnunciado(q.enunciado)}</div>
+      <div class="enunciado">${(() => {
+        if(!mostrarBotaoSalvarAlt) return formatarEnunciado(q.enunciado);
+        const parseado = extrairItensNumerados(q.enunciado);
+        if(!parseado) return formatarEnunciado(q.enunciado);
+        // formato "I. ... II. ... III. ..." detectado — cada item vira uma
+        // linha com ícone de salvar próprio, já que salvar só a letra da
+        // alternativa ("b) Apenas I e III") não diz nada sem o conteúdo
+        // de I e III junto
+        const linhasItens = parseado.itens.map(item=>{
+          const chaveItem = q.id+'|'+item.numeral;
+          const salvo = alternativasSalvasAtual.has(chaveItem);
+          return `<div style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;position:relative;padding-right:32px">
+            <span style="flex-shrink:0;font-weight:600">${escapeHtml(item.numeral)}.</span>
+            <span style="flex:1;min-width:0">${formatarEnunciado(item.texto)}</span>
+            <button onclick="toggleAlternativaSalva('${q.id}','${item.numeral}',this)" style="position:absolute;top:0;right:0;background:none;border:none;padding:4px;cursor:pointer;color:${salvo?'#B23A34':'#ccc'};display:flex" title="Salvar esse item">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            </button>
+          </div>`;
+        }).join('');
+        return `${formatarEnunciado(parseado.intro)}${linhasItens}`;
+      })()}</div>
     </div>
     <div class="banco-alternativas">${htmlAlternativas}</div>
     ${alternativas.length ? `<div style="margin-top:14px;height:44px;box-sizing:border-box${(jaRespondida || excluida) ? ';visibility:hidden' : ''}"><button class="btn-primario" style="width:100%;height:100%;box-sizing:border-box" ${!alternativaSelecionadaAtual?'disabled':''} onclick="confirmarRespostaCaderno()">Confirmar resposta</button></div>` : ''}
@@ -3340,15 +3380,6 @@ function renderizarQuestaoAtual(){
         <span>Notas</span>
         ${notasDoUsuario.has(q.id)?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
-      <button class="banco-acao-btn ${relatosFormatacaoDoUsuario.has(q.id)?'ativo':''}" onclick="reportarProblemaFormatacao('${q.id}')" id="btn-reportar-formatacao-${q.id}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
-        <span>${relatosFormatacaoDoUsuario.has(q.id)?'Reportado':'Formatação'}</span>
-      </button>
-      ${usuarioAtual?.is_admin ? `
-      <button class="banco-acao-btn" onclick="abrirEdicaoDiretaAdmin('${q.id}')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
-        <span>Editar</span>
-      </button>` : ''}
     </div>` : ''}`;
   document.getElementById('questao-atual').innerHTML = html;
 }
