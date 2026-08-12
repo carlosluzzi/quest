@@ -1034,7 +1034,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-73';
+const VERSAO_APP = '2026-07-25-74';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3294,7 +3294,7 @@ function renderizarQuestaoAtual(){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
         const handlers = (jaRespondida || excluida) ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}', false)" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="iniciarPressionarAlternativa('${alt.letra}')" ontouchend="finalizarPressionarAlternativa('${alt.letra}', true)" ontouchmove="moverDurantePressionar()" ontouchcancel="cancelarPressionarAlternativa()"`;
-        const botaoBtn = `<button class="banco-alt-btn" style="width:100%;${estilo}${mostrarBotaoSalvarNaAlternativa?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
+        const botaoBtn = `<button class="banco-alt-btn" style="width:100%;${estilo}${mostrarBotaoSalvarNaAlternativa?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0;text-decoration:none">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
         // botão de salvar fica FORA do <button> da alternativa de propósito —
         // um botão nativo desabilitado bloqueia clique em qualquer coisa
         // dentro dele, mesmo em elementos filhos com seu próprio onclick
@@ -3333,7 +3333,7 @@ function renderizarQuestaoAtual(){
           const chaveItem = q.id+'|'+item.numeral;
           const salvo = alternativasSalvasAtual.has(chaveItem);
           return `<div style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;position:relative;padding-right:32px">
-            <span style="flex-shrink:0;font-weight:600">${escapeHtml(item.numeral)}.</span>
+            <span style="flex-shrink:0">${escapeHtml(item.numeral)}.</span>
             <span style="flex:1;min-width:0">${formatarEnunciado(item.texto)}</span>
             <button onclick="toggleAlternativaSalva('${q.id}','${item.numeral}',this)" style="position:absolute;top:0;right:0;background:none;border:none;padding:4px;cursor:pointer;color:${salvo?'#B23A34':'#ccc'};display:flex" title="Salvar esse item">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
