@@ -1034,7 +1034,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-71';
+const VERSAO_APP = '2026-07-25-72';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3276,6 +3276,11 @@ function renderizarQuestaoAtual(){
   const nomeCadernoEscapado = escapeHtml(cadernoAtual.nome || 'Caderno sem nome');
 
   const mostrarBotaoSalvarAlt = jaRespondida && souCarlos();
+  // se a questão tem formato I./II./III., só os itens fazem sentido salvar
+  // (a alternativa em si é só "apenas I e III", sem conteúdo próprio) — as
+  // alternativas não mostram marcador nesse caso específico
+  const itensNumeradosDaQuestao = mostrarBotaoSalvarAlt ? extrairItensNumerados(q.enunciado) : null;
+  const mostrarBotaoSalvarNaAlternativa = mostrarBotaoSalvarAlt && !itensNumeradosDaQuestao;
   const htmlAlternativas = alternativas.length
     ? alternativas.map(alt=>{
         const riscada = alternativasRiscadasAtual.has(alt.letra);
@@ -3289,11 +3294,11 @@ function renderizarQuestaoAtual(){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
         const handlers = (jaRespondida || excluida) ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}', false)" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="iniciarPressionarAlternativa('${alt.letra}')" ontouchend="finalizarPressionarAlternativa('${alt.letra}', true)" ontouchmove="moverDurantePressionar()" ontouchcancel="cancelarPressionarAlternativa()"`;
-        const botaoBtn = `<button class="banco-alt-btn" style="width:100%;${estilo}${mostrarBotaoSalvarAlt?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
+        const botaoBtn = `<button class="banco-alt-btn" style="width:100%;${estilo}${mostrarBotaoSalvarNaAlternativa?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
         // botão de salvar fica FORA do <button> da alternativa de propósito —
         // um botão nativo desabilitado bloqueia clique em qualquer coisa
         // dentro dele, mesmo em elementos filhos com seu próprio onclick
-        if(!mostrarBotaoSalvarAlt) return `<div style="position:relative">${botaoBtn}</div>`;
+        if(!mostrarBotaoSalvarNaAlternativa) return `<div style="position:relative">${botaoBtn}</div>`;
         const chaveAlt = q.id + '|' + alt.letra;
         const salva = alternativasSalvasAtual.has(chaveAlt);
         return `<div style="position:relative">${botaoBtn}<button onclick="toggleAlternativaSalva('${q.id}','${alt.letra}',this)" style="position:absolute;top:6px;right:6px;background:none;border:none;padding:4px;cursor:pointer;color:${salva?'#B23A34':'#ccc'};display:flex" title="Salvar essa alternativa"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button></div>`;
@@ -3318,9 +3323,8 @@ function renderizarQuestaoAtual(){
         </span>
       </div>
       <div class="enunciado">${(() => {
-        if(!mostrarBotaoSalvarAlt) return formatarEnunciado(q.enunciado);
-        const parseado = extrairItensNumerados(q.enunciado);
-        if(!parseado) return formatarEnunciado(q.enunciado);
+        if(!itensNumeradosDaQuestao) return formatarEnunciado(q.enunciado);
+        const parseado = itensNumeradosDaQuestao;
         // formato "I. ... II. ... III. ..." detectado — cada item vira uma
         // linha com ícone de salvar próprio, já que salvar só a letra da
         // alternativa ("b) Apenas I e III") não diz nada sem o conteúdo
