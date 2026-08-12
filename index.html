@@ -869,7 +869,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="modal-conteudo">
     <div id="confirmacao-envio-tracker">
       <h3 class="config-title">Enviar para o PSCPP Tracker?</h3>
-      <p>Isso registra esse caderno (tempo, acertos e as questões) no seu Tracker pessoal, junto com o resto do que você estuda no dia.</p>
       <div style="display:flex;gap:8px">
         <button class="btn-secundario" style="flex:1" onclick="naoEnviarTracker()">Não enviar</button>
         <button class="btn-primario" style="flex:1" id="btn-confirmar-envio-tracker" onclick="confirmarEnvioTracker()">Enviar</button>
@@ -1034,7 +1033,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-76';
+const VERSAO_APP = '2026-07-25-78';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3572,6 +3571,7 @@ async function confirmarEnvioTracker(){
     if(q.anulada){ status = 'Anulada'; anuladas++; }
     else if(resp.correta){ status = 'Acertei'; acertos++; }
     else { status = 'Errei'; erros++; }
+    const altsFormatadas = extrairAlternativas(q.alternativas).map(a=>`${a.letra}) ${a.texto}`).join('\n');
     questoesPayload.push({
       numero_questao: String(questoesPayload.length + 1),
       status,
@@ -3579,7 +3579,8 @@ async function confirmarEnvioTracker(){
       publicacao: q.bibliografia_id ? (mapaBibliografiaTitulo[q.bibliografia_id] || null) : null,
       capitulo: q.capitulo ? String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '') : null,
       gabarito: (q.gabarito||'').toLowerCase(),
-      sua_resposta: resp.letra
+      sua_resposta: resp.letra,
+      questao_completa: `${q.enunciado||''}\n\n${altsFormatadas}`.trim()
     });
   });
 
