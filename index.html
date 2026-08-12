@@ -1034,7 +1034,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-74';
+const VERSAO_APP = '2026-07-25-76';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2972,7 +2972,7 @@ let questoesExcluidasAtual = new Set(); // ids das questões excluídas nesse ca
 // contar como resposta); toque/clique rápido continua selecionando como
 // resposta, igual sempre foi. Uma alternativa riscada não pode ser
 // selecionada – só desriscada com outro pressionar e segurar.
-const DURACAO_PRESSIONAR_LONGO_MS = 350;
+const DURACAO_PRESSIONAR_LONGO_MS = 250;
 let pressTimerAlternativa = null;
 let pressLetraAtual = null;
 let pressFoiLongo = false;
@@ -3289,12 +3289,12 @@ function renderizarQuestaoAtual(){
           if(alt.letra === gabarito) estilo = 'background:#EAF3DE;border-color:#639922;color:#27500A';
           else if(alt.letra === resposta.letra) estilo = 'background:#FCEBEB;border-color:#E24B4A;color:#A32D2D';
         }else if(riscada){
-          estilo = 'opacity:0.4;text-decoration:line-through;background:#F5F5F4;border-color:#ddd';
+          estilo = 'opacity:0.4;background:#F5F5F4;border-color:#ddd';
         }else if(alt.letra === alternativaSelecionadaAtual){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
         const handlers = (jaRespondida || excluida) ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}', false)" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="iniciarPressionarAlternativa('${alt.letra}')" ontouchend="finalizarPressionarAlternativa('${alt.letra}', true)" ontouchmove="moverDurantePressionar()" ontouchcancel="cancelarPressionarAlternativa()"`;
-        const botaoBtn = `<button class="banco-alt-btn" style="width:100%;${estilo}${mostrarBotaoSalvarNaAlternativa?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0;text-decoration:none">${alt.letra})</span> <span style="flex:1;min-width:0">${alt.texto}</span></span></button>`;
+        const botaoBtn = `<button class="banco-alt-btn" style="width:100%;${estilo}${mostrarBotaoSalvarNaAlternativa?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0${riscada?';text-decoration:line-through':''}">${alt.texto}</span></span></button>`;
         // botão de salvar fica FORA do <button> da alternativa de propósito —
         // um botão nativo desabilitado bloqueia clique em qualquer coisa
         // dentro dele, mesmo em elementos filhos com seu próprio onclick
