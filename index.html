@@ -1035,7 +1035,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-84';
+const VERSAO_APP = '2026-07-25-89';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1188,11 +1188,21 @@ function formatarEnunciado(texto){
     // texto vira redundância. Testado contra 85 variações reais do banco
     // (traço comum, en-dash, em-dash, com/sem ponto final, com/sem traço
     // nenhum) — checa INCORRETA primeiro, já que "CORRETA" é substring dela
+    // mesma lógica pro par VERDADEIRA/FALSA, usado no formato de assertivas
+    // I./II./III. — ancorado no INÍCIO do texto (logo após o marcador) de
+    // propósito, já que "verdadeiro/verdadeira" também aparece como termo
+    // técnico náutico normal no MEIO do texto (Norte Verdadeiro, vetor
+    // verdadeiro, derrota verdadeira) — a âncora no início evita confundir
     let corMarcador = '';
-    const matchIncorreta = resto.match(/^[\s\n\-–—]*INCORRETA\b[\s.\-–—]*/i);
-    const matchCorreta = !matchIncorreta && resto.match(/^[\s\n\-–—]*CORRETA\b[\s.\-–—]*/i);
-    if(matchIncorreta){ corMarcador = ' style="color:#A32D2D"'; resto = resto.slice(matchIncorreta[0].length); }
-    else if(matchCorreta){ corMarcador = ' style="color:#3B6D11"'; resto = resto.slice(matchCorreta[0].length); }
+    const matchIncorreta = resto.match(/^[\s\n\-–—]*(?:INCORRETA|FALSA)\b[\s.\-–—]*/i);
+    const matchCorreta = !matchIncorreta && resto.match(/^[\s\n\-–—]*(?:CORRETA|VERDADEIRA)\b[\s.\-–—]*/i);
+    // badge quadradinho arredondado, mesmo padrão visual do ícone de
+    // informação que já existe no app — largura mínima (não fixa) pra
+    // acomodar tanto marcadores curtos ("a)") quanto mais longos ("III.")
+    // sem espremer o texto
+    const estiloBadge = 'display:inline-block;min-width:24px;height:24px;line-height:24px;padding:0 4px;border-radius:8px;font-weight:700;text-align:center;box-sizing:border-box';
+    if(matchIncorreta){ corMarcador = ` style="${estiloBadge};background:#FCEBEB;color:#A32D2D"`; resto = resto.slice(matchIncorreta[0].length); }
+    else if(matchCorreta){ corMarcador = ` style="${estiloBadge};background:#EAF3DE;color:#3B6D11"`; resto = resto.slice(matchCorreta[0].length); }
     return `<div class="linha-numerada"><span class="linha-marcador"${corMarcador}>${marcador}</span><span class="linha-texto">${resto}</span></div>${secoesSeparadas}`;
   }
 
@@ -1279,14 +1289,26 @@ function extrairItensNumerados(enunciado){
   const matches = [...enunciado.matchAll(regex)];
   if(matches.length < 2) return null; // precisa de pelo menos 2 itens pra fazer sentido
   const intro = enunciado.slice(0, matches[0].index).trim();
+  // uma frase de conclusão (tipo "Assinale a opção que apresenta...") às
+  // vezes vem GRUDADA no texto do último item, sem nenhum marcador
+  // separando os dois — detecta esse padrão e separa, pra não virar parte
+  // do conteúdo do item por engano
+  const regexConclusao = /\n\s*((?:Assinale|Marque|Indique)\s+a\s+(?:op[çc][ãa]o|alternativa)[^]*|Est[ãa]o\s+(?:CORRETAS|INCORRETAS)[^]*|S[ãa]o\s+(?:CORRETAS|INCORRETAS)[^]*)$/i;
   const itens = [];
+  let conclusao = '';
   for(let i=0; i<matches.length; i++){
     const numeral = matches[i][1];
     const inicioTexto = matches[i].index + matches[i][0].length;
     const fimTexto = i+1 < matches.length ? matches[i+1].index : enunciado.length;
-    itens.push({numeral, texto: enunciado.slice(inicioTexto, fimTexto).trim()});
+    let texto = enunciado.slice(inicioTexto, fimTexto).trim();
+    const matchConclusao = texto.match(regexConclusao);
+    if(matchConclusao){
+      conclusao = matchConclusao[1].trim();
+      texto = texto.slice(0, matchConclusao.index).trim();
+    }
+    itens.push({numeral, texto});
   }
-  return {intro, itens};
+  return {intro, itens, conclusao};
 }
 
 function extrairAlternativas(alternativasTexto){
@@ -2886,6 +2908,7 @@ function toggleCadernosLista(tipo){
 }
 
 async function retomarCadernoEspecifico(cadernoId){
+  modoRevisaoCaderno = false; // fluxo normal de retomar em andamento — nunca é revisão
   // caderno e respostas não dependem um do outro — só precisam do cadernoId,
   // que já temos de cara. Rodar em paralelo evita 1 ida-e-volta desnecessária
   const [{data}, {data: respostasDoCaderno}] = await Promise.all([
@@ -2947,6 +2970,24 @@ async function retomarCadernoEspecifico(cadernoId){
 }
 
 let cadernoParaExcluir = null;
+
+// reaproveita toda a lógica de carregar questões/respostas/exclusões/
+// favoritos que já existe pra retomar um caderno em andamento — a única
+// diferença é o modo revisão ligado depois, que esconde os botões de
+// excluir/finalizar (não fazem sentido pra um caderno já concluído)
+async function revisarCadernoConcluido(cadernoId){
+  await retomarCadernoEspecifico(cadernoId);
+  modoRevisaoCaderno = true;
+}
+
+function voltarDaRevisaoCaderno(){
+  modoRevisaoCaderno = false;
+  cadernoAtual = null;
+  questoesCaderno = [];
+  document.getElementById('quests-resolucao').classList.add('hidden');
+  document.getElementById('quests-filtros').classList.remove('hidden');
+  carregarCadernosExistentes();
+}
 
 function abrirConfirmacaoExclusaoCaderno(el){
   cadernoParaExcluir = el.dataset.id;
@@ -3065,6 +3106,7 @@ let notasDoUsuario = new Set();
 let topicosPendentesDoUsuario = new Set();
 let relatosFormatacaoDoUsuario = new Set();
 let alternativasSalvasAtual = new Set(); // chave "questaoId|letra" — só usada pelo Carlos
+let modoRevisaoCaderno = false; // true quando visualizando um caderno JÁ concluído (somente leitura, sem excluir/finalizar)
 
 async function carregarFavoritosENotas(idsQuestoes){
   if(!idsQuestoes.length){ favoritosDoUsuario = new Set(); notasDoUsuario = new Set(); topicosPendentesDoUsuario = new Set(); relatosFormatacaoDoUsuario = new Set(); alternativasSalvasAtual = new Set(); return; }
@@ -3375,7 +3417,8 @@ function renderizarQuestaoAtual(){
             </button>
           </div>`;
         }).join('');
-        return `${formatarEnunciado(parseado.intro)}${linhasItens}`;
+        const linhaConclusao = parseado.conclusao ? `<div class="enunciado-linha">${formatarEnunciado(parseado.conclusao)}</div>` : '';
+        return `${formatarEnunciado(parseado.intro)}${linhasItens}${linhaConclusao}`;
       })()}</div>
     </div>
     <div class="banco-alternativas">${htmlAlternativas}</div>
@@ -3395,11 +3438,12 @@ function renderizarQuestaoAtual(){
       ${indiceQuestaoAtual>0?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual-1})">← Anterior</button>`:''}
       ${indiceQuestaoAtual<questoesCaderno.length-1?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual+1})">Próxima →</button>`:''}
     </div>
-    ${todasRespondidas ? `
+    ${(todasRespondidas && !modoRevisaoCaderno) ? `
     <div style="display:flex;gap:8px;margin-top:12px">
       <button style="flex:1;padding:10px;font-size:var(--fs-e);border-radius:8px;background:#fff;color:#A32D2D;border:0.5px solid #F7C1C1;font-family:inherit;cursor:pointer" data-id="${cadernoAtual.id}" data-nome="${nomeCadernoEscapado}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">Excluir caderno</button>
       <button class="btn-primario" style="flex:1" onclick="finalizarCaderno()">Finalizar caderno</button>
     </div>` : ''}
+    ${modoRevisaoCaderno ? `<button class="btn-secundario" style="width:100%;margin-top:12px" onclick="voltarDaRevisaoCaderno()">← Voltar aos cadernos</button>` : ''}
     ${!excluida ? `<div class="banco-acoes">
       <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoQuestao('${q.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
@@ -5731,10 +5775,11 @@ async function abrirDetalheCadernoConcluido(cadernoId){
         <div style="color:#888;font-size:var(--fs-b)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
       </div>`;
     }).join('')}
+    <button class="btn-primario" style="width:100%;margin-top:8px" onclick="fecharModal('modal-detalhe-caderno');revisarCadernoConcluido('${cadernoId}')">Ver questões</button>
     ${podeUsarIntegracaoTracker() ? (
       caderno.enviado_tracker_em
         ? `<button class="btn-secundario" style="width:100%;margin-top:8px;opacity:0.4;cursor:not-allowed" disabled title="Já enviado em ${new Date(caderno.enviado_tracker_em).toLocaleDateString('pt-BR')}">Já enviado para o PSCPP Tracker</button>`
-        : `<button class="btn-primario" style="width:100%;margin-top:8px" onclick="enviarCadernoAntigoParaTracker('${cadernoId}')">Enviar para o PSCPP Tracker</button>`
+        : `<button class="btn-secundario" style="width:100%;margin-top:8px" onclick="enviarCadernoAntigoParaTracker('${cadernoId}')">Enviar para o PSCPP Tracker</button>`
     ) : ''}
     <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="fecharModal('modal-detalhe-caderno')">Fechar</button>
   `;
