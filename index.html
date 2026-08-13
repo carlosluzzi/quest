@@ -1035,7 +1035,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-81';
+const VERSAO_APP = '2026-07-25-82';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1136,10 +1136,19 @@ function formatarEnunciado(texto){
   // originais do PDF (que quebravam numa largura de página estreita),
   // fazendo o parágrafo parecer cortado antes da borda da tela, em vez de
   // fluir naturalmente até o final e quebrar só onde o navegador decidir
-  const escaped = escapeHtml(texto).replace(/\s+/g, ' ').trim()
+  const escapedCompleto = escapeHtml(texto).replace(/\s+/g, ' ').trim()
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞,]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito, o resto fica solto (ex: "N'_vv" → só o 1º v é subscrito)
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
+
+  // isola a seção "TRECHOS DA FONTE" ANTES de qualquer divisão em
+  // alternativas (a, b, c...) — sem isso, menções tipo "Alternativas a) e
+  // c) — Página 7..." dentro dessa seção são incorretamente tratadas como
+  // se fossem uma alternativa nova começando, quebrando a formatação. Essa
+  // seção volta a ser anexada no final, sem passar pelas regras de divisão
+  const marcadorFonte = escapedCompleto.match(/\s?TRECHOS DA FONTE\b/i);
+  const escaped = marcadorFonte ? escapedCompleto.slice(0, marcadorFonte.index).trim() : escapedCompleto;
+  const textoFonte = marcadorFonte ? `<div class="enunciado-linha" style="margin-top:12px">${escapedCompleto.slice(marcadorFonte.index).trim()}</div>` : '';
 
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
   // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
@@ -1177,7 +1186,7 @@ function formatarEnunciado(texto){
     const antes = escaped.slice(0, idx).trim();
     const zonaLista = escaped.slice(idx);
     const partesLista = zonaLista.split(/(?=\b[A-F][).]\s)/).map(p=>p.trim()).filter(Boolean);
-    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[A-F][).]/))].join('');
+    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[A-F][).]/))].join('') + textoFonte;
   }
 
   // 2. Assertivas romanas — aceita "I)", "I.", ou "I —"/"I -"/"I –" (traço,
@@ -1191,13 +1200,13 @@ function formatarEnunciado(texto){
   if(/\bI\s?[).\-–—‒]\s?/.test(escaped) && /\s\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/.test(escaped)){
     const partes = escaped.split(/(?<!\se)(?<!,)(?<![Aa]penas)(?<![Ss]omente)(?<!\sSó)(?<![Gg]abarito:)(?<![Gg]abarito: )(?=\s\(?[IVXLCDM]{1,6}\s?[).\-–—‒])/).map(p=>p.trim()).filter(Boolean);
     const normalizarMarcadorRomano = t => t.replace(/^(\(?[IVXLCDM]{1,6})\s?[-–—‒]\s*/, '$1. ');
-    return [normalizarMarcadorRomano(partes[0]||''), ...partes.slice(1).map(p=>linhaMarcada(p, /^\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/))].join('');
+    return [normalizarMarcadorRomano(partes[0]||''), ...partes.slice(1).map(p=>linhaMarcada(p, /^\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/))].join('') + textoFonte;
   }
 
   // 3. Parênteses vazios (Certo/Errado, ordenação)
   if(/\(\s*\)/.test(escaped)){
     const partes = escaped.split(/(?=\s\(\s*\))/).map(p=>p.trim()).filter(Boolean);
-    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(\s*\)/))].join('');
+    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(\s*\)/))].join('') + textoFonte;
   }
 
   // 4. Letras minúsculas com parêntese ("a) ... b) ... c) ...") — formato
@@ -1209,7 +1218,7 @@ function formatarEnunciado(texto){
     const antes = escaped.slice(0, idx).trim();
     const zonaLista = escaped.slice(idx);
     const partesLista = zonaLista.split(/(?=\b[a-f]\)\s)/).map(p=>p.trim()).filter(Boolean);
-    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[a-f]\)/))].join('');
+    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[a-f]\)/))].join('') + textoFonte;
   }
 
   // 5. Números arábicos soltos com ponto ou parêntese ("1. ... 2. ..." ou
@@ -1222,17 +1231,17 @@ function formatarEnunciado(texto){
     const antes = escaped.slice(0, idx).trim();
     const zonaLista = escaped.slice(idx);
     const partesLista = zonaLista.split(/(?=\b\d{1,2}[).]\s)/).map(p=>p.trim()).filter(Boolean);
-    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^\d{1,2}[).]/))].join('');
+    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^\d{1,2}[).]/))].join('') + textoFonte;
   }
 
   // 6. Marcador de bullet ("•") — qualquer ocorrência já é sinal suficiente,
   // símbolo bem específico, sem risco de confundir com texto normal
   if(/•/.test(escaped)){
     const partes = escaped.split(/(?=•)/).map(p=>p.trim()).filter(Boolean);
-    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^•/))].join('');
+    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^•/))].join('') + textoFonte;
   }
 
-  return escaped;
+  return escaped + textoFonte;
 }
 
 // detecta questões no formato "I. ... II. ... III. ..." dentro do
