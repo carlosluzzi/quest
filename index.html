@@ -1035,7 +1035,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-82';
+const VERSAO_APP = '2026-07-25-84';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1147,7 +1147,15 @@ function formatarEnunciado(texto){
   // se fossem uma alternativa nova começando, quebrando a formatação. Essa
   // seção volta a ser anexada no final, sem passar pelas regras de divisão
   const marcadorFonte = escapedCompleto.match(/\s?TRECHOS DA FONTE\b/i);
-  const escaped = marcadorFonte ? escapedCompleto.slice(0, marcadorFonte.index).trim() : escapedCompleto;
+  const escaped0 = marcadorFonte ? escapedCompleto.slice(0, marcadorFonte.index).trim() : escapedCompleto;
+  // normaliza "Alternativa (a) —" e "(a) —" pro formato simples "a) —",
+  // que é o único formato que a lógica de divisão abaixo reconhece —
+  // fazer isso ANTES de qualquer divisão evita sobra de "Alternativa" ou
+  // "(" soltos no meio do texto
+  const escaped = escaped0
+    .replace(/\bAlternativas?\s+\(([a-f]\))/gi, '$1') // "Alternativa (a)" -> "a)"
+    .replace(/\bAlternativas?\s+([a-f]\))/gi, '$1')   // "Alternativa a)" -> "a)"
+    .replace(/\(([a-f]\))/g, '$1');                    // "(a)" solto -> "a)"
   const textoFonte = marcadorFonte ? `<div class="enunciado-linha" style="margin-top:12px">${escapedCompleto.slice(marcadorFonte.index).trim()}</div>` : '';
 
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
@@ -1170,7 +1178,14 @@ function formatarEnunciado(texto){
       secoesSeparadas = secoes.map(s => `<div class="enunciado-linha">${s}</div>`).join('');
       resto = resto.slice(0, pontos[0]).trim();
     }
-    return `<div class="linha-numerada"><span class="linha-marcador">${marcador}</span><span class="linha-texto">${resto}</span></div>${secoesSeparadas}`;
+    // se o texto da alternativa começa dizendo se ela é CORRETA ou
+    // INCORRETA, colore só a letra do marcador (verde/vermelho) — sem
+    // adicionar nenhum elemento novo, só usa a cor pra dar esse sinal. Checa
+    // "INCORRETA" primeiro, já que "CORRETA" é uma substring dela
+    let corMarcador = '';
+    if(/^[-–—]?\s*INCORRETA\b/i.test(resto)) corMarcador = ' style="color:#A32D2D"';
+    else if(/^[-–—]?\s*CORRETA\b/i.test(resto)) corMarcador = ' style="color:#3B6D11"';
+    return `<div class="linha-numerada"><span class="linha-marcador"${corMarcador}>${marcador}</span><span class="linha-texto">${resto}</span></div>${secoesSeparadas}`;
   }
 
   // 1. Maiúsculas com ponto ou parêntese (correlação) – ancorado no "A." ou
@@ -1209,16 +1224,18 @@ function formatarEnunciado(texto){
     return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(\s*\)/))].join('') + textoFonte;
   }
 
-  // 4. Letras minúsculas com parêntese ("a) ... b) ... c) ...") — formato
-  // usado na análise de cada alternativa dentro da explicação, ancorado no
-  // "a)" literal pra não confundir com parênteses soltos no meio do texto
-  const anchorMinuscula = escaped.match(/\ba\)\s/);
+  // 4. Letras minúsculas com parêntese ("a) ... b) ... c) ..." ou "Alternativa
+  // (a) — ... Alternativa (b) — ...") — formato usado na análise de cada
+  // alternativa dentro da explicação. Ancorado no "a)" literal (com ou sem
+  // parêntese de abertura, com ou sem a palavra "Alternativa" na frente) pra
+  // não confundir com parênteses soltos no meio do texto
+  const anchorMinuscula = escaped.match(/\b[a-f]\)\s/i);
   if(anchorMinuscula){
     const idx = anchorMinuscula.index;
     const antes = escaped.slice(0, idx).trim();
     const zonaLista = escaped.slice(idx);
-    const partesLista = zonaLista.split(/(?=\b[a-f]\)\s)/).map(p=>p.trim()).filter(Boolean);
-    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[a-f]\)/))].join('') + textoFonte;
+    const partesLista = zonaLista.split(/(?=\b[a-f]\)\s)/i).map(p=>p.trim()).filter(Boolean);
+    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[a-f]\)/i))].join('') + textoFonte;
   }
 
   // 5. Números arábicos soltos com ponto ou parêntese ("1. ... 2. ..." ou
