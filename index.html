@@ -1035,7 +1035,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-94';
+const VERSAO_APP = '2026-07-25-95';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1181,14 +1181,17 @@ function formatarEnunciado(texto){
     if(pontos.length){
       const secoes = pontos.map((p, i) => resto.slice(p, pontos[i+1] ?? resto.length).trim());
       // "Correto: ..." explica qual é a resposta certa quando a alternativa
-      // é a errada — só a palavra "Correto:" fica em negrito, como um
-      // marcador (igual "a)", "b)"), com o resto do texto alinhado do lado,
-      // peso normal — não a frase inteira em negrito
+      // é a errada — não é um item novo da lista (não tem bullet próprio),
+      // é continuação do texto da alternativa. Por isso usa a MESMA
+      // estrutura de coluna (marcador+texto) que as alternativas, só com o
+      // marcador vazio — assim o texto fica alinhado onde o texto da
+      // alternativa começa, não onde a letra (a, b, c...) começa. Só a
+      // palavra "Correto:" fica em negrito, o resto do texto normal
       secoesSeparadas = secoes.map(s => {
         const matchCorreto = s.match(/^(Correto\s*:)\s*/i);
         if(matchCorreto){
           const textoCorreto = s.slice(matchCorreto[0].length).trim();
-          return `<div class="linha-numerada"><span class="linha-marcador" style="font-weight:700">${matchCorreto[1]}</span><span class="linha-texto">${textoCorreto}</span></div>`;
+          return `<div class="linha-numerada"><span class="linha-marcador"></span><span class="linha-texto"><strong>${matchCorreto[1]}</strong> ${textoCorreto}</span></div>`;
         }
         return `<div class="enunciado-linha">${s}</div>`;
       }).join('');
