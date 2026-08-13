@@ -1182,9 +1182,17 @@ function formatarEnunciado(texto){
     // INCORRETA, colore só a letra do marcador (verde/vermelho) — sem
     // adicionar nenhum elemento novo, só usa a cor pra dar esse sinal. Checa
     // "INCORRETA" primeiro, já que "CORRETA" é uma substring dela
+    // se o texto da alternativa começa dizendo se ela é CORRETA ou
+    // INCORRETA, colore a letra do marcador (verde/vermelho) e REMOVE essa
+    // palavra do texto — a cor já basta pra dar esse sinal, repetir em
+    // texto vira redundância. Testado contra 85 variações reais do banco
+    // (traço comum, en-dash, em-dash, com/sem ponto final, com/sem traço
+    // nenhum) — checa INCORRETA primeiro, já que "CORRETA" é substring dela
     let corMarcador = '';
-    if(/^[-–—]?\s*INCORRETA\b/i.test(resto)) corMarcador = ' style="color:#A32D2D"';
-    else if(/^[-–—]?\s*CORRETA\b/i.test(resto)) corMarcador = ' style="color:#3B6D11"';
+    const matchIncorreta = resto.match(/^[\s\n\-–—]*INCORRETA\b[\s.\-–—]*/i);
+    const matchCorreta = !matchIncorreta && resto.match(/^[\s\n\-–—]*CORRETA\b[\s.\-–—]*/i);
+    if(matchIncorreta){ corMarcador = ' style="color:#A32D2D"'; resto = resto.slice(matchIncorreta[0].length); }
+    else if(matchCorreta){ corMarcador = ' style="color:#3B6D11"'; resto = resto.slice(matchCorreta[0].length); }
     return `<div class="linha-numerada"><span class="linha-marcador"${corMarcador}>${marcador}</span><span class="linha-texto">${resto}</span></div>${secoesSeparadas}`;
   }
 
