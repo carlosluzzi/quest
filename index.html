@@ -1035,7 +1035,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-93';
+const VERSAO_APP = '2026-07-25-94';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1181,10 +1181,16 @@ function formatarEnunciado(texto){
     if(pontos.length){
       const secoes = pontos.map((p, i) => resto.slice(p, pontos[i+1] ?? resto.length).trim());
       // "Correto: ..." explica qual é a resposta certa quando a alternativa
-      // é a errada — fica em negrito, separado do resto, pra chamar atenção
+      // é a errada — só a palavra "Correto:" fica em negrito, como um
+      // marcador (igual "a)", "b)"), com o resto do texto alinhado do lado,
+      // peso normal — não a frase inteira em negrito
       secoesSeparadas = secoes.map(s => {
-        const ehCorreto = /^Correto\s*:/i.test(s);
-        return `<div class="enunciado-linha"${ehCorreto ? ' style="font-weight:700"' : ''}>${s}</div>`;
+        const matchCorreto = s.match(/^(Correto\s*:)\s*/i);
+        if(matchCorreto){
+          const textoCorreto = s.slice(matchCorreto[0].length).trim();
+          return `<div class="linha-numerada"><span class="linha-marcador" style="font-weight:700">${matchCorreto[1]}</span><span class="linha-texto">${textoCorreto}</span></div>`;
+        }
+        return `<div class="enunciado-linha">${s}</div>`;
       }).join('');
       resto = resto.slice(0, pontos[0]).trim();
     }
