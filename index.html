@@ -256,7 +256,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .banco-alt-btn{text-align:left;font-size:var(--fs-d);padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#111;line-height:1.5;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .banco-alt-btn:disabled:active{transform:none}
 .banco-alt-btn:disabled{cursor:default;opacity:0.9}
-.banco-resultado{font-size:var(--fs-e);font-weight:600;margin-top:14px;padding:10px 0;text-align:center;height:44px;box-sizing:border-box}
+.banco-resultado{font-size:var(--fs-e);font-weight:600;padding:10px 0;text-align:center;height:44px;box-sizing:border-box}
 .btn-icone-pequeno{width:24px;height:24px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#888;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
 .banco-acoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:8px;margin-top:20px}
 .banco-acao-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:12px;border:0.5px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#666;position:relative}
@@ -1035,7 +1035,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-92';
+const VERSAO_APP = '2026-07-25-93';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2837,7 +2837,7 @@ async function carregarCadernosExistentes(){
     const stats = respostasPorCaderno[c.id] || {total:0, acertos:0};
     const progresso = totalQuestoes ? `${stats.total} de ${totalQuestoes} respondidas` : `${stats.total} respondidas`;
     return `
-    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;cursor:pointer" onclick="retomarCadernoEspecifico('${c.id}')">
+    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;cursor:pointer" onclick="modoRevisaoCaderno=false;retomarCadernoEspecifico('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
         <span class="tx" style="font-size:16px;padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
@@ -2918,7 +2918,6 @@ function toggleCadernosLista(tipo){
 }
 
 async function retomarCadernoEspecifico(cadernoId){
-  modoRevisaoCaderno = false; // fluxo normal de retomar em andamento — nunca é revisão
   // caderno e respostas não dependem um do outro — só precisam do cadernoId,
   // que já temos de cara. Rodar em paralelo evita 1 ida-e-volta desnecessária
   const [{data}, {data: respostasDoCaderno}] = await Promise.all([
@@ -2986,17 +2985,12 @@ let cadernoParaExcluir = null;
 // diferença é o modo revisão ligado depois, que esconde os botões de
 // excluir/finalizar (não fazem sentido pra um caderno já concluído)
 async function revisarCadernoConcluido(cadernoId){
-  await retomarCadernoEspecifico(cadernoId);
+  // liga o modo revisão ANTES de carregar/renderizar — se ligasse depois,
+  // a primeira questão já teria renderizado com o modo errado (mostrando
+  // excluir/finalizar em vez do botão certo), só a segunda em diante
+  // ficaria certa
   modoRevisaoCaderno = true;
-}
-
-function voltarDaRevisaoCaderno(){
-  modoRevisaoCaderno = false;
-  cadernoAtual = null;
-  questoesCaderno = [];
-  document.getElementById('quests-resolucao').classList.add('hidden');
-  document.getElementById('quests-filtros').classList.remove('hidden');
-  carregarCadernosExistentes();
+  await retomarCadernoEspecifico(cadernoId);
 }
 
 function abrirConfirmacaoExclusaoCaderno(el){
@@ -3448,12 +3442,11 @@ function renderizarQuestaoAtual(){
       ${indiceQuestaoAtual>0?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual-1})">← Anterior</button>`:''}
       ${indiceQuestaoAtual<questoesCaderno.length-1?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual+1})">Próxima →</button>`:''}
     </div>
-    ${(todasRespondidas && !modoRevisaoCaderno) ? `
+    ${todasRespondidas ? `
     <div style="display:flex;gap:8px;margin-top:12px">
       <button style="flex:1;padding:10px;font-size:var(--fs-e);border-radius:8px;background:#fff;color:#A32D2D;border:0.5px solid #F7C1C1;font-family:inherit;cursor:pointer" data-id="${cadernoAtual.id}" data-nome="${nomeCadernoEscapado}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">Excluir caderno</button>
-      <button class="btn-primario" style="flex:1" onclick="finalizarCaderno()">Finalizar caderno</button>
+      ${!modoRevisaoCaderno ? `<button class="btn-primario" style="flex:1" onclick="finalizarCaderno()">Finalizar caderno</button>` : ''}
     </div>` : ''}
-    ${modoRevisaoCaderno ? `<button class="btn-secundario" style="width:100%;margin-top:12px" onclick="voltarDaRevisaoCaderno()">← Voltar aos cadernos</button>` : ''}
     ${!excluida ? `<div class="banco-acoes">
       <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoQuestao('${q.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
