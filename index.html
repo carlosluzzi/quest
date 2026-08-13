@@ -950,7 +950,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-detalhe-caderno" onclick="if(event.target===this) fecharModal('modal-detalhe-caderno')">
-  <div class="modal-conteudo modal-conteudo-fluxo-topico" id="modal-detalhe-caderno-conteudo"></div>
+  <div class="modal-conteudo" id="modal-detalhe-caderno-conteudo"></div>
 </div>
 
 <div class="modal-overlay hidden" id="modal-questao-detalhe" onclick="if(event.target===this) fecharModal('modal-questao-detalhe')">
@@ -1035,7 +1035,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-89';
+const VERSAO_APP = '2026-07-25-91';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1156,7 +1156,12 @@ function formatarEnunciado(texto){
     .replace(/\bAlternativas?\s+\(([a-f]\))/gi, '$1') // "Alternativa (a)" -> "a)"
     .replace(/\bAlternativas?\s+([a-f]\))/gi, '$1')   // "Alternativa a)" -> "a)"
     .replace(/\(([a-f]\))/g, '$1');                    // "(a)" solto -> "a)"
-  const textoFonte = marcadorFonte ? `<div class="enunciado-linha" style="margin-top:12px">${escapedCompleto.slice(marcadorFonte.index).trim()}</div>` : '';
+  // dentro de "TRECHOS DA FONTE" pode ter várias citações diferentes
+  // (Alternativa(s)/Afirmativa(s)/Assertiva(s)/Item(ns) X — Página Y...) —
+  // cada uma vira seu próprio parágrafo, não fica tudo grudado num bloco só
+  const textoFonte = marcadorFonte ? escapedCompleto.slice(marcadorFonte.index).trim()
+    .split(/(?=\b(?:Alternativas?|Afirmativas?|Assertivas?|Itens?)\s+[a-zA-Z0-9])/i)
+    .map(p => `<div class="enunciado-linha" style="margin-top:12px">${p.trim()}</div>`).join('') : '';
 
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
   // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
@@ -5769,7 +5774,7 @@ async function abrirDetalheCadernoConcluido(cadernoId){
       const cor = l.pctAcerto >= 70 ? '#3B6D11' : l.pctAcerto >= 50 ? '#854F0B' : '#A32D2D';
       return `<div class="card-questao">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          ${tagModulo(l.modulo)}
+          ${iconeModuloPreto(l.modulo)}
           <span style="font-weight:700;color:${cor}">${l.pctAcerto}%</span>
         </div>
         <div style="color:#888;font-size:var(--fs-b)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
