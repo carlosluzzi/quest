@@ -1035,7 +1035,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-97';
+const VERSAO_APP = '2026-07-25-99';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1166,10 +1166,10 @@ function formatarEnunciado(texto){
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
   // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
   // a segunda linha fica alinhada embaixo do TEXTO, não embaixo do marcador
-  function linhaMarcada(parte, regexMarcador){
+  function linhaMarcada(parte, regexMarcador, marcadorForcado){
     const m = parte.match(regexMarcador);
     if(!m) return `<div class="enunciado-linha">${parte}</div>`;
-    const marcador = m[0].trim().replace(/\s*[-–—‒]\s*$/, '.'); // padroniza traço pro formato ponto (só afeta numerais romanos com traço, tipo "I —")
+    const marcador = marcadorForcado || m[0].trim().replace(/\s*[-–—‒]\s*$/, '.'); // padroniza traço pro formato ponto (só afeta numerais romanos com traço, tipo "I —")
     let resto = parte.slice(m[0].length).trim();
     // várias frases marcam o início de uma seção nova dentro da
     // explicação (fonte, texto original, análise, dica) — quando vêm
@@ -1248,10 +1248,12 @@ function formatarEnunciado(texto){
     return [normalizarMarcadorRomano(partes[0]||''), ...partes.slice(1).map(p=>linhaMarcada(p, /^\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/))].join('') + textoFonte;
   }
 
-  // 3. Parênteses vazios (Certo/Errado, ordenação)
+  // 3. Parênteses vazios (Certo/Errado, ordenação) — o texto de origem
+  // costuma perder o espaço interno na extração do PDF, ficando "()" em vez
+  // de "( )" — força sempre "( )" na exibição, independente da fonte
   if(/\(\s*\)/.test(escaped)){
     const partes = escaped.split(/(?=\s\(\s*\))/).map(p=>p.trim()).filter(Boolean);
-    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(\s*\)/))].join('') + textoFonte;
+    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(\s*\)/, '( )'))].join('') + textoFonte;
   }
 
   // 4. Letras minúsculas com parêntese ("a) ... b) ... c) ..." ou "Alternativa
@@ -3243,10 +3245,16 @@ async function abrirEdicaoDiretaAdmin(questaoId){
   const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
   if(!q){ alert('Não consegui carregar essa questão.'); return; }
   questaoEdicaoAdminAtual = questaoId;
-  document.getElementById('admin-edicao-enunciado').value = removerMarcadoresSubscrito(q.enunciado);
-  document.getElementById('admin-edicao-alternativas').value = removerMarcadoresSubscrito(q.alternativas);
+  // colapsa as quebras de linha originais do PDF (que quebravam numa largura
+  // de coluna estreita, no meio da frase) antes de mostrar no formulário —
+  // sem isso, o texto aparece "picado" em várias linhas curtas, difícil de
+  // ler e editar. Isso já limpa o texto salvo também, já que ao salvar sem
+  // mexer em nada o valor limpo é o que volta pro banco
+  const limpar = t => (t||'').replace(/\s+/g, ' ').trim();
+  document.getElementById('admin-edicao-enunciado').value = limpar(removerMarcadoresSubscrito(q.enunciado));
+  document.getElementById('admin-edicao-alternativas').value = limpar(removerMarcadoresSubscrito(q.alternativas));
   document.getElementById('admin-edicao-gabarito').value = (q.gabarito||'').toUpperCase();
-  document.getElementById('admin-edicao-explicacao').value = removerMarcadoresSubscrito(q.explicacao || '');
+  document.getElementById('admin-edicao-explicacao').value = limpar(removerMarcadoresSubscrito(q.explicacao || ''));
   document.getElementById('admin-edicao-concurso').value = q.concurso_origem || '';
   document.getElementById('admin-edicao-ano').value = q.ano_prova || '';
   abrirModal('modal-editar-questao-admin');
