@@ -728,7 +728,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
       <div id="secao-upload-pdf">
         <p style="color:#666;font-size:var(--fs-d)">Selecione o PDF com as questões que você deseja adicionar ao banco.</p>
-        <input type="file" id="upload-arquivo" accept="application/pdf" class="hidden" onchange="atualizarNomeArquivoSelecionado()">
+        <input type="file" id="upload-arquivo" accept="application/pdf" multiple class="hidden" onchange="atualizarNomeArquivoSelecionado()">
         <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 6px" onclick="document.getElementById('upload-arquivo').click()">Escolher arquivo</button>
         <div id="nome-arquivo-selecionado" style="color:#888;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhum arquivo selecionado</div>
         <div id="upload-status" style="margin:14px 0"></div>
@@ -1035,7 +1035,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-100';
+const VERSAO_APP = '2026-07-25-102';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1253,7 +1253,7 @@ function formatarEnunciado(texto){
   // de "( )" — força sempre "( )" na exibição, independente da fonte
   if(/\(\s*\)/.test(escaped)){
     const partes = escaped.split(/(?=\s\(\s*\))/).map(p=>p.trim()).filter(Boolean);
-    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(\s*\)/, '(&nbsp;&nbsp;&nbsp;&nbsp;)'))].join('') + textoFonte;
+    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(\s*\)/, '(&nbsp;&nbsp;)'))].join('') + textoFonte;
   }
 
   // 4. Letras minúsculas com parêntese ("a) ... b) ... c) ..." ou "Alternativa
@@ -5842,8 +5842,11 @@ function atualizarNomeArquivoSelecionado(manterStatus){
   const input = document.getElementById('upload-arquivo');
   const el = document.getElementById('nome-arquivo-selecionado');
   if(!manterStatus) document.getElementById('upload-status').innerHTML = '';
-  if(input.files.length){
+  if(input.files.length === 1){
     el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${escapeHtml(input.files[0].name)}</span><button type="button" onclick="limparArquivoSelecionado()" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px;flex-shrink:0" title="Remover arquivo">✕</button>`;
+  }else if(input.files.length > 1){
+    const nomes = Array.from(input.files).map(f=>f.name).join(', ');
+    el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${escapeHtml(nomes)}">${input.files.length} arquivos selecionados</span><button type="button" onclick="limparArquivoSelecionado()" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px;flex-shrink:0" title="Remover arquivos">✕</button>`;
   }else{
     el.textContent = 'Nenhum arquivo selecionado';
   }
@@ -5974,49 +5977,37 @@ function mostrarBarraProgresso(elStatus, percentual, texto){
 let extracaoEmAndamento = false; // protege a mensagem de status de ser
 // apagada sem querer se a pessoa trocar de aba enquanto ainda está rodando
 
-async function enviarUpload(){
-  const input = document.getElementById('upload-arquivo');
-  const status = document.getElementById('upload-status');
-  if(!input.files.length){ status.innerHTML = '<p style="color:#B00020">Escolha um PDF primeiro.</p>'; return; }
-  const marcadoComoMarinha = souCarlos() && document.getElementById('upload-eh-marinha').checked;
-  const concursoOrigemUpload = marcadoComoMarinha ? (document.getElementById('upload-concurso').value.trim() || null) : null;
-  const anoProvaUpload = marcadoComoMarinha ? (parseInt(document.getElementById('upload-ano').value, 10) || null) : null;
-
-  extracaoEmAndamento = true;
-  mostrarBarraProgresso(status, 0, 'Lendo o arquivo...');
-
-  const arquivo = input.files[0];
+// processa 1 arquivo do upload — devolve quantas questões foram cadastradas,
+// puladas (duplicata) ou pra rascunho, e um erro se algo travou nesse
+// arquivo específico (sem travar o processamento dos outros arquivos do lote)
+async function processarArquivoUpload(arquivo, prefixoProgresso, status, concursoOrigemUpload, anoProvaUpload){
   const nomeArquivoAtual = arquivo.name;
   let textoBruto;
   try{
     textoBruto = await extrairTextoDoArquivo(arquivo, (paginaAtual, totalPaginas) => {
       const percentual = Math.round((paginaAtual/totalPaginas) * 70); // extração = até 70% da barra
-      mostrarBarraProgresso(status, percentual, `Lendo página ${paginaAtual} de ${totalPaginas}...`);
+      mostrarBarraProgresso(status, percentual, `${prefixoProgresso}Lendo página ${paginaAtual} de ${totalPaginas}...`);
     });
   }catch(e){
-    extracaoEmAndamento = false;
-    status.innerHTML = `<p style="color:#B00020">Não consegui ler o arquivo: ${e.message}</p>`;
-    return;
+    return {erro: `"${nomeArquivoAtual}": não consegui ler o arquivo (${e.message})`, cadastradas:0, puladas:0, rascunho:0};
   }
 
-  mostrarBarraProgresso(status, 75, 'Identificando as questões...');
+  mostrarBarraProgresso(status, 75, `${prefixoProgresso}Identificando as questões...`);
   const questoesParsed = parsearQuestoesDoTexto(textoBruto);
   // 1 código por upload — todas as questões (e rascunhos) dessa leva
   // compartilham o mesmo código, pra dar pra apagar só essa leva depois,
   // sem mexer em questões de outros uploads
   const loteUploadId = crypto.randomUUID();
   if(!questoesParsed.length){
-    extracaoEmAndamento = false;
     const trecho = (textoBruto || '').slice(0, 600);
-    status.innerHTML = `
-      <p style="color:#B00020">Nenhuma questão identificada nesse arquivo.</p>
-      <p style="color:#888;font-size:var(--fs-b);margin-top:8px">Isso é o que o app conseguiu ler do arquivo (primeiros 600 caracteres) – copia esse trecho e manda pro Claude, ajuda a entender o que aconteceu:</p>
-      <textarea readonly style="width:100%;height:140px;font-size:11px;font-family:monospace;margin-top:6px;padding:8px;border:0.5px solid #ddd;border-radius:6px;color:#444" onclick="this.select()">${escapeHtml(trecho) || '(vazio – o app não conseguiu ler nada do arquivo)'}</textarea>
-    `;
-    return;
+    return {
+      erro: `"${nomeArquivoAtual}": nenhuma questão identificada nesse arquivo.`,
+      trecho,
+      cadastradas:0, puladas:0, rascunho:0
+    };
   }
 
-  mostrarBarraProgresso(status, 82, 'Identificando a bibliografia...');
+  mostrarBarraProgresso(status, 82, `${prefixoProgresso}Identificando a bibliografia...`);
   const bibliografias = resolverBibliografiaDoLote(
     questoesParsed.map(q=>({explicacao: q.explicacao, enunciado: q.textoBrutoParaBibliografia}))
   );
@@ -6032,7 +6023,7 @@ async function enviarUpload(){
     else paraRascunho.push(q);
   });
 
-  mostrarBarraProgresso(status, 88, 'Localizando bibliografia...');
+  mostrarBarraProgresso(status, 88, `${prefixoProgresso}Localizando bibliografia...`);
   let mapaBibliografiaId;
   try{
     // só BUSCA a bibliografia entre as que já existem — nunca cria uma
@@ -6047,9 +6038,7 @@ async function enviarUpload(){
     mapaBibliografiaId = {};
     resultadosBibliografia.forEach(r => { mapaBibliografiaId[r.chave] = r.id; });
   }catch(erroBusca){
-    extracaoEmAndamento = false;
-    status.innerHTML = `<p style="color:#B00020">Não consegui consultar a bibliografia no banco: ${escapeHtml(erroBusca.message)}</p>`;
-    return;
+    return {erro: `"${nomeArquivoAtual}": não consegui consultar a bibliografia no banco (${erroBusca.message})`, cadastradas:0, puladas:0, rascunho:0};
   }
 
   // qualquer questão cuja bibliografia identificada não bateu com nada no
@@ -6065,7 +6054,7 @@ async function enviarUpload(){
   let quantasCadastradas = 0, quantasPuladas = 0, quantasRascunho = 0;
   try{
     if(prontasParaQuestoes.length){
-      mostrarBarraProgresso(status, 92, `Cadastrando ${prontasParaQuestoes.length} questões...`);
+      mostrarBarraProgresso(status, 92, `${prefixoProgresso}Cadastrando ${prontasParaQuestoes.length} questões...`);
       const resultadosInsercao = await Promise.all(prontasParaQuestoes.map(async ({questao: q, bib}) => {
         // só considera duplicata de verdade quando enunciado E alternativas
         // batem igual — enunciado sozinho pode repetir por acaso entre
@@ -6100,7 +6089,7 @@ async function enviarUpload(){
     }
 
     if(paraRascunho.length){
-      mostrarBarraProgresso(status, 97, `Salvando ${paraRascunho.length} questão(ões) pendente(s) de revisão...`);
+      mostrarBarraProgresso(status, 97, `${prefixoProgresso}Salvando ${paraRascunho.length} questão(ões) pendente(s) de revisão...`);
       await Promise.all(paraRascunho.map(q => sb.from('questoes_rascunho').insert({
         enunciado: q.enunciado,
         alternativas: q.alternativas,
@@ -6117,32 +6106,70 @@ async function enviarUpload(){
       quantasRascunho = paraRascunho.length;
     }
   }catch(erroCadastro){
-    extracaoEmAndamento = false;
-    status.innerHTML = `<p style="color:#B00020">Travou no meio do cadastro: ${escapeHtml(erroCadastro.message)}</p><p style="color:#888;font-size:var(--fs-b);margin-top:8px">Copia essa mensagem e manda pro Claude – pode ser falta de permissão no banco, não é necessariamente algo errado no arquivo.</p>`;
-    return;
+    return {
+      erro: `"${nomeArquivoAtual}": travou no meio do cadastro (${erroCadastro.message})`,
+      cadastradas: quantasCadastradas, puladas: quantasPuladas, rascunho: quantasRascunho
+    };
   }
 
-  // NOTA: checagem de duplicata via pg_trgm ainda não implementada aqui –
-  // precisa de uma função RPC no Postgres (similaridade de enunciado) que
-  // ainda não foi criada no schema. A adicionar numa próxima passada.
+  return {cadastradas: quantasCadastradas, puladas: quantasPuladas, rascunho: quantasRascunho};
+}
+
+async function enviarUpload(){
+  const input = document.getElementById('upload-arquivo');
+  const status = document.getElementById('upload-status');
+  if(!input.files.length){ status.innerHTML = '<p style="color:#B00020">Escolha ao menos um PDF primeiro.</p>'; return; }
+  const marcadoComoMarinha = souCarlos() && document.getElementById('upload-eh-marinha').checked;
+  const concursoOrigemUpload = marcadoComoMarinha ? (document.getElementById('upload-concurso').value.trim() || null) : null;
+  const anoProvaUpload = marcadoComoMarinha ? (parseInt(document.getElementById('upload-ano').value, 10) || null) : null;
+
+  extracaoEmAndamento = true;
+  const arquivos = Array.from(input.files);
+  const totalArquivos = arquivos.length;
+  const resultados = [];
+
+  // processa um arquivo de cada vez, em sequência — não em paralelo,
+  // porque a barra de progresso mostra o andamento de cada arquivo
+  // individualmente ("Arquivo 2 de 5: lendo página 3..."), e paralelo
+  // bagunçaria essa exibição. Se um arquivo falhar, os outros continuam –
+  // o erro fica guardado e aparece no resumo final, sem travar o lote inteiro
+  for(let i = 0; i < totalArquivos; i++){
+    const prefixoProgresso = totalArquivos > 1 ? `Arquivo ${i+1} de ${totalArquivos}: ` : '';
+    mostrarBarraProgresso(status, 0, `${prefixoProgresso}Lendo o arquivo...`);
+    const resultado = await processarArquivoUpload(arquivos[i], prefixoProgresso, status, concursoOrigemUpload, anoProvaUpload);
+    resultados.push(resultado);
+  }
 
   extracaoEmAndamento = false;
+  const totalCadastradas = resultados.reduce((s,r)=>s+r.cadastradas, 0);
+  const totalPuladas = resultados.reduce((s,r)=>s+r.puladas, 0);
+  const totalRascunho = resultados.reduce((s,r)=>s+r.rascunho, 0);
+  const comErro = resultados.filter(r => r.erro);
+
   mostrarBarraProgresso(status, 100, 'Concluído!');
-  const textoPuladas = quantasPuladas ? ` (${quantasPuladas} já existia${quantasPuladas>1?'m':''} igual e ${quantasPuladas>1?'foram puladas':'foi pulada'})` : '';
-  const textoRascunho = quantasRascunho ? ` <span style="color:#B8860B">${quantasRascunho} precisam de revisão manual (bibliografia não identificada) – veja a notificação no Início.</span>` : '';
-  status.innerHTML += `<p style="color:#1B5E20;text-align:center;margin-top:8px">${quantasCadastradas} questões cadastradas!${textoPuladas}</p>${textoRascunho ? `<p style="text-align:center;margin-top:6px">${textoRascunho}</p>` : ''}`;
+  const textoPuladas = totalPuladas ? ` (${totalPuladas} já existia${totalPuladas>1?'m':''} igual e ${totalPuladas>1?'foram puladas':'foi pulada'})` : '';
+  const textoRascunho = totalRascunho ? ` <span style="color:#B8860B">${totalRascunho} precisam de revisão manual (bibliografia não identificada) – veja a notificação no Início.</span>` : '';
+  let htmlFinal = totalCadastradas || totalPuladas
+    ? `<p style="color:#1B5E20;text-align:center;margin-top:8px">${totalCadastradas} questões cadastradas!${textoPuladas}</p>${textoRascunho ? `<p style="text-align:center;margin-top:6px">${textoRascunho}</p>` : ''}`
+    : '';
+
+  if(comErro.length){
+    htmlFinal += `<div style="margin-top:10px">${comErro.map(r => `<p style="color:#B00020;font-size:var(--fs-c)">${escapeHtml(r.erro)}</p>${r.trecho ? `<textarea readonly style="width:100%;height:100px;font-size:11px;font-family:monospace;margin:4px 0 8px;padding:6px;border:0.5px solid #ddd;border-radius:6px;color:#444" onclick="this.select()">${escapeHtml(r.trecho) || '(vazio)'}</textarea>` : ''}`).join('')}</div>`;
+  }
+
+  status.innerHTML = htmlFinal || '<p style="color:#B00020">Nada foi cadastrado.</p>';
   input.value = '';
   atualizarNomeArquivoSelecionado(true);
   // some sozinha depois de um tempo, com fade suave — só quando não tem
-  // rascunho pendente (isso a pessoa precisa continuar vendo, não some)
-  if(!quantasRascunho){
+  // rascunho pendente nem erro (isso a pessoa precisa continuar vendo, não some)
+  if(!totalRascunho && !comErro.length){
     setTimeout(() => {
       status.style.transition = 'opacity 0.6s';
       status.style.opacity = '0';
       setTimeout(() => { status.innerHTML = ''; status.style.opacity = '1'; }, 600);
     }, 2500);
   }
-  if(quantasRascunho) atualizarNotificacoesOrdenadas();
+  if(totalRascunho) atualizarNotificacoesOrdenadas();
 }
 
 /* ============================================================
