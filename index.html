@@ -1035,7 +1035,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-103';
+const VERSAO_APP = '2026-07-25-104';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6286,6 +6286,7 @@ async function abrirRevisaoRascunho(){
       <select id="${idGrupo}-publicacao" class="filter-select" style="margin-bottom:8px" disabled>
         <option value="">Escolhe o módulo primeiro</option>
       </select>
+      <input type="text" id="${idGrupo}-capitulo" class="filter-select" style="margin-bottom:8px" placeholder="Capítulo (opcional)" value="${escapeHtml(itens[0].capitulo || '')}">
       ${souCarlos() ? `
       <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#444;margin-bottom:10px;cursor:pointer">
         <input type="checkbox" id="${idGrupo}-prova-real" style="width:16px;height:16px;flex-shrink:0" onchange="document.getElementById('${idGrupo}-campos-concurso').classList.toggle('hidden', !this.checked)">
@@ -6326,6 +6327,7 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
   try{
     const modulo = document.getElementById(idGrupo+'-modulo').value;
   const bibliografiaId = document.getElementById(idGrupo+'-publicacao').value;
+  const capituloDigitado = document.getElementById(idGrupo+'-capitulo').value.trim();
   const checkboxMarinha = document.getElementById(idGrupo+'-prova-real');
   const marcadoComoMarinha = checkboxMarinha ? checkboxMarinha.checked : false;
   const concursoOrigem = marcadoComoMarinha ? (document.getElementById(idGrupo+'-concurso').value.trim() || null) : null;
@@ -6344,13 +6346,28 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
   // insert falhar, o item continua no rascunho (nada se perde, só fica
   // pendente de tentar de novo) em vez de sumir sem nunca ter sido salvo
   const falhas = [];
+  let quantasDuplicadas = 0;
   await Promise.all(itens.map(async q => {
+    // mesma checagem de duplicata que o upload direto já faz — sem isso,
+    // resolver o mesmo rascunho duas vezes (ou um rascunho que já tinha
+    // sido cadastrado por outro caminho) duplicava a questão sem avisar
+    const {data: existente} = await sb.from('questoes')
+      .select('id')
+      .eq('enunciado', q.enunciado)
+      .eq('alternativas', q.alternativas)
+      .maybeSingle();
+    if(existente){
+      quantasDuplicadas++;
+      await sb.from('questoes_rascunho').delete().eq('id', q.id);
+      return;
+    }
+
     const {error: erroInsert} = await sb.from('questoes').insert({
       enunciado: q.enunciado,
       alternativas: q.alternativas,
       gabarito: q.gabarito,
       autor_id: q.autor_id,
-      capitulo: q.capitulo,
+      capitulo: capituloDigitado || q.capitulo,
       tipo_questao: null,
       modulo_pscpp: modulo,
       bibliografia_id: bibliografiaId,
@@ -6372,8 +6389,10 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
     }
   }));
 
-  if(falhas.length){
-    alert(`${itens.length - falhas.length} de ${itens.length} questões cadastradas. ${falhas.length} tiveram problema:\n\n${falhas.slice(0,5).join('\n')}${falhas.length>5?'\n...':''}`);
+  if(falhas.length || quantasDuplicadas){
+    const textoDuplicadas = quantasDuplicadas ? `${quantasDuplicadas} já existia${quantasDuplicadas>1?'m':''} igual e ${quantasDuplicadas>1?'foram puladas':'foi pulada'}. ` : '';
+    const textoFalhas = falhas.length ? `${falhas.length} tiveram problema:\n\n${falhas.slice(0,5).join('\n')}${falhas.length>5?'\n...':''}` : '';
+    alert(`${itens.length - falhas.length - quantasDuplicadas} de ${itens.length} questões cadastradas. ${textoDuplicadas}${textoFalhas}`);
   }
 
   await abrirRevisaoRascunho(); // recarrega a lista
