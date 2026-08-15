@@ -1035,7 +1035,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-105';
+const VERSAO_APP = '2026-07-25-106';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2522,12 +2522,11 @@ async function carregarBibliografia(){
   atualizarContadorDisponiveis(); // mostra o total desde o início, sem esperar filtro nenhum
 }
 
-// filtro de usuário na aba Quest — só aparece pro admin, fica antes de
-// todos os outros filtros na cadeia (usuário → módulo → publicação →
-// capítulo → tipo)
+// filtro de usuário na aba Quest — antes só pro admin, agora liberado
+// pra todo mundo. Fica antes de todos os outros filtros na cadeia
+// (usuário → módulo → publicação → capítulo → tipo)
 async function carregarFiltroUsuarioAdmin(){
   const elFiltro = document.getElementById('filtro-usuario-admin');
-  if(!usuarioAtual?.is_admin){ elFiltro.classList.add('hidden'); return; }
   // usa uma função no banco que já devolve só os autores distintos, em vez
   // de buscar toda questão do banco pra filtrar aqui — isso cresceria sem
   // necessidade conforme o banco de questões aumenta (bug real: com 100
