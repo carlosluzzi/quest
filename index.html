@@ -1035,7 +1035,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-104';
+const VERSAO_APP = '2026-07-25-105';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5367,6 +5367,13 @@ function identificarBibliografia(explicacao, enunciado){
           if(semRestricao.length === 1) return semRestricao[0];
         }
       }
+      // IMPORTANTE: quando NENHUM capítulo é extraído (fonte formatada sem
+      // "Cap. X", tipo "Fonte: SANTOS (2020), p. 13-56"), a eliminação por
+      // capitulos:null NÃO é segura aqui — testei e ela chuta errado nesse
+      // caso real (questão do Capítulo 1 caindo em "exceto caps. 1-2", que
+      // é o módulo errado). Sem saber o capítulo de verdade, cai em
+      // rascunho pra revisão manual de propósito — errar categoria
+      // silenciosamente é pior que pedir revisão
       return null; // achou o autor, mas ambíguo entre módulos — trata como não achado
     }
   }
