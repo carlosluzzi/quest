@@ -1041,7 +1041,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-108';
+const VERSAO_APP = '2026-07-25-109';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2388,6 +2388,13 @@ async function coletarNotificacaoPdfNovo(){
       </button>
     </div>`;
     itens.push({timestamp: info.ultimaAtividade, html});
+    // marca como visto automaticamente já na coleta (mesmo princípio do
+    // Fórum: abrir/ver a notificação já conta como visto, não precisa de
+    // um clique específico) — usa o timestamp da ÚLTIMA atividade desse
+    // módulo (não "agora"), pra uma questão nova que chegue LOGO DEPOIS
+    // continuar sendo detectada como não vista da próxima vez. Dispara em
+    // paralelo, sem esperar (não atrasa a tela aparecer)
+    sb.from('modulos_novidade_vista').upsert({usuario_id: usuarioAtual.id, modulo, visto_em: info.ultimaAtividade}, {onConflict:'usuario_id,modulo'});
   });
   return itens;
 }
