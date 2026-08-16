@@ -65,7 +65,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 }
 #metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:32px;min-height:32px;max-height:32px;padding-top:0;padding-bottom:0;box-sizing:border-box}
 #aba-quests .filter-select{height:32px;box-sizing:border-box;padding-top:0;padding-bottom:0}
-.filter-select{font-size:var(--fs-e);padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%}
+.filter-select{font-size:var(--fs-e);padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%;box-sizing:border-box}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
@@ -198,9 +198,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .autor-tag{font-size:var(--fs-b);color:#888}
 .selo-correcao{background:#FFF3CD;color:#856404;font-size:var(--fs-b);padding:3px 8px;border-radius:8px;font-weight:600}
 
-.info-icone{cursor:pointer;font-size:var(--fs-c);color:#888;display:inline-flex;align-items:center;gap:4px}
-.info-icone svg{border:0.5px solid #ddd;border-radius:7px;padding:4px;box-sizing:content-box;flex-shrink:0;background:#fff}
-.info-icone svg{flex-shrink:0}
 
 /* --- Placar --- */
 
@@ -479,7 +476,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="view-aba" id="aba-inicio">
     <div class="card-inicio" style="background:#B23A34;color:#fff">
       <div style="font-size:var(--fs-f);font-weight:600" id="inicio-saudacao">Olá!</div>
-      <div style="font-size:var(--fs-d);opacity:0.85;display:flex;align-items:center;gap:6px" id="inicio-contagem-pscpp"><span id="inicio-contagem-pscpp-texto">Faltam ... dias para o PSCPP</span> <span class="info-icone" onclick="abrirModal('modal-info-contagem-pscpp')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span></div>
+      <div style="font-size:var(--fs-d);opacity:0.85;display:flex;align-items:center;gap:6px" id="inicio-contagem-pscpp"><span id="inicio-contagem-pscpp-texto">Faltam ... dias para o PSCPP</span> <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-contagem-pscpp')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></div>
     </div>
 
     <div id="caderno-em-andamento" class="hidden">
@@ -554,7 +551,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
         <label style="display:flex;align-items:center;gap:8px;font-size:16px;color:#111;padding:6px 2px;cursor:pointer">
           <input type="checkbox" id="toggle-priorizar-erro" onchange="atualizarContadorDisponiveis()">
           Priorizar questões que mais erro
-          <span class="info-icone" onclick="abrirModal('modal-info-wilson')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+          <button class="btn-icone-pequeno" onclick="event.preventDefault();event.stopPropagation();abrirModal('modal-info-wilson')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
         </label>
         <label style="display:flex;align-items:center;gap:8px;font-size:16px;color:#111;padding:6px 2px 14px;cursor:pointer">
           <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões inéditas
@@ -565,8 +562,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
         <input type="number" min="1" inputmode="numeric" pattern="[0-9]*" id="quantidade-customizada" class="filter-select" placeholder="Quantidade de questões" oninput="const v=parseInt(this.value,10); if(v>0) selecionarQuantidade(null,v)">
 
         <button class="btn-primario" onclick="montarCaderno()">Gerar caderno ↗</button>
-        <div style="text-align:center;margin-top:8px">
-          <span class="info-icone" onclick="abrirModal('modal-info-fisher-yates')" style="font-size:var(--fs-b)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Como a ordem das questões é sorteada?</span>
+        <div style="text-align:center;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px">
+          <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
+          <span style="font-size:var(--fs-b);color:#888;cursor:pointer" onclick="abrirModal('modal-info-fisher-yates')">Como a ordem das questões é sorteada?</span>
         </div>
         <div id="quests-sem-resultado" class="hidden" style="text-align:center;color:#888;margin-top:16px">
           Poucas ou nenhuma questão com esses filtros ainda –
@@ -692,7 +690,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div class="section-title"><span style="width:28px;height:28px;border-radius:9px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>Por publicação</div>
     <div id="lista-metricas-publicacao"></div>
 
-    <div class="section-title"><span style="width:28px;height:28px;border-radius:9px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>Suas questões mais difíceis <span class="info-icone" onclick="abrirModal('modal-info-wilson')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span></div>
+    <div class="section-title"><span style="width:28px;height:28px;border-radius:9px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>Suas questões mais difíceis <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-wilson')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></div>
     <div id="lista-metricas-piores"></div>
 
     <div class="section-title"><span style="width:28px;height:28px;border-radius:9px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg></span>Seus favoritos</div>
@@ -920,15 +918,23 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="modal-conteudo popup-texto-longo" style="display:flex;flex-direction:column">
     <h3 class="config-title">Editar questão (admin)</h3>
     <p style="color:#888;font-size:var(--fs-b);margin-top:-14px;margin-bottom:16px">Isso aplica direto, sem passar por votação da comunidade.</p>
-    <div style="flex:1;overflow-y:auto;padding-right:4px">
+    <div style="flex:1;overflow-y:auto;padding-right:8px">
       <label style="font-size:var(--fs-b);color:#888">Enunciado</label>
-      <textarea id="admin-edicao-enunciado" class="filter-select" style="min-height:100px"></textarea>
-      <label style="font-size:var(--fs-b);color:#888">Alternativas</label>
-      <textarea id="admin-edicao-alternativas" class="filter-select" style="min-height:100px"></textarea>
+      <textarea id="admin-edicao-enunciado" class="filter-select" style="min-height:160px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Alternativa A</label>
+      <textarea id="admin-edicao-alt-a" class="filter-select" style="min-height:60px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Alternativa B</label>
+      <textarea id="admin-edicao-alt-b" class="filter-select" style="min-height:60px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Alternativa C</label>
+      <textarea id="admin-edicao-alt-c" class="filter-select" style="min-height:60px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Alternativa D</label>
+      <textarea id="admin-edicao-alt-d" class="filter-select" style="min-height:60px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Alternativa E</label>
+      <textarea id="admin-edicao-alt-e" class="filter-select" style="min-height:60px"></textarea>
       <label style="font-size:var(--fs-b);color:#888">Gabarito (uma letra, a-e)</label>
       <input type="text" id="admin-edicao-gabarito" class="filter-select" maxlength="1">
       <label style="font-size:var(--fs-b);color:#888">Explicação</label>
-      <textarea id="admin-edicao-explicacao" class="filter-select" style="min-height:120px"></textarea>
+      <textarea id="admin-edicao-explicacao" class="filter-select" style="min-height:160px"></textarea>
       <label style="font-size:var(--fs-b);color:#888">Concurso de origem (deixa vazio se não for prova real)</label>
       <input type="text" id="admin-edicao-concurso" class="filter-select" placeholder="Ex: PSCPP, EFOMM" list="lista-concursos-existentes">
       <label style="font-size:var(--fs-b);color:#888">Ano da prova</label>
@@ -1035,7 +1041,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-106';
+const VERSAO_APP = '2026-07-25-107';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3251,7 +3257,14 @@ async function abrirEdicaoDiretaAdmin(questaoId){
   // mexer em nada o valor limpo é o que volta pro banco
   const limpar = t => (t||'').replace(/\s+/g, ' ').trim();
   document.getElementById('admin-edicao-enunciado').value = limpar(removerMarcadoresSubscrito(q.enunciado));
-  document.getElementById('admin-edicao-alternativas').value = limpar(removerMarcadoresSubscrito(q.alternativas));
+  // separa as alternativas nos 5 campos individuais, reaproveitando o
+  // mesmo parser que já divide "a) texto b) texto..." pra exibição normal
+  const altsExtraidas = extrairAlternativas(q.alternativas);
+  const mapaAlts = {};
+  altsExtraidas.forEach(a => { mapaAlts[a.letra] = a.texto; });
+  ['a','b','c','d','e'].forEach(letra => {
+    document.getElementById('admin-edicao-alt-'+letra).value = limpar(removerMarcadoresSubscrito(mapaAlts[letra] || ''));
+  });
   document.getElementById('admin-edicao-gabarito').value = (q.gabarito||'').toUpperCase();
   document.getElementById('admin-edicao-explicacao').value = limpar(removerMarcadoresSubscrito(q.explicacao || ''));
   document.getElementById('admin-edicao-concurso').value = q.concurso_origem || '';
@@ -3261,7 +3274,16 @@ async function abrirEdicaoDiretaAdmin(questaoId){
 async function salvarEdicaoDiretaAdmin(){
   if(!questaoEdicaoAdminAtual) return;
   const enunciado = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-enunciado').value.trim());
-  const alternativas = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-alternativas').value.trim());
+  // junta os 5 campos individuais de volta no formato "a) texto\nb) texto..."
+  // que o banco espera — pula letras deixadas em branco (questão com menos
+  // de 5 alternativas, caso raro mas existe)
+  const alternativas = ['a','b','c','d','e']
+    .map(letra => {
+      const texto = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-alt-'+letra).value.trim());
+      return texto ? `(${letra}) ${texto}` : null;
+    })
+    .filter(Boolean)
+    .join('\n');
   const gabarito = document.getElementById('admin-edicao-gabarito').value.trim().toLowerCase();
   const explicacao = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-explicacao').value.trim());
   const concursoOrigem = document.getElementById('admin-edicao-concurso').value.trim() || null;
@@ -4111,7 +4133,7 @@ async function renderizarTopico(topicoId){
       iconeStatus = '';
       linhaBotoes = `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px">
         <button class="btn-secundario" style="border:1px solid #ccc" onclick="votarResolvido('${topicoId}')">${textoBotaoResolver}</button>
-        <span class="info-icone" onclick="abrirModalInfoResolucao()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+        <button class="btn-icone-pequeno" onclick="abrirModalInfoResolucao()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
       </div>`;
     }
     blocoVotacao = `
@@ -4147,7 +4169,7 @@ async function renderizarTopico(topicoId){
   const acoesPropor = (topico.status==='aberto' && !propostaPendente) ? `
     <div style="display:flex;align-items:center;gap:6px;margin-top:14px">
       <button class="btn-secundario" style="flex:1;color:#A32D2D;border:1px solid #F7C1C1" onclick="confirmarAnularQuestao('${topico.questoes.id}','${topicoId}')">Propor anulação</button>
-      <span class="info-icone" onclick="abrirModal('modal-info-anulacao-topico')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+      <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-anulacao-topico')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
       <button class="btn-primario" style="flex:1" onclick="abrirFormularioEdicao('${topico.questoes.id}','${topicoId}')">Propor edição</button>
     </div>` : '';
 
