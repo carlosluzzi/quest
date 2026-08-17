@@ -6462,6 +6462,28 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
   const {data: itens} = await query;
   if(!itens || !itens.length) return;
 
+  // confirmação dupla: a publicação escolhida À MÃO no dropdown bate de
+  // verdade com o texto? Evita o erro de clicar na opção errada — já
+  // aconteceu de verdade (questão do Nayak marcada manualmente como
+  // "International Code of Signals", livro que nem é citado no texto).
+  // Usa as mesmas palavras-chave da identificação automática: se NENHUMA
+  // questão do grupo tem NENHUMA delas, para e pede confirmação explícita
+  // antes de cadastrar
+  if(bibEscolhida){
+    const entradasDessaPublicacao = BIBLIOGRAFIA_FECHADA.filter(e => e.modulo === modulo && e.titulo === bibEscolhida.titulo);
+    if(entradasDessaPublicacao.length){
+      const termosValidos = [...new Set(entradasDessaPublicacao.flatMap(e => e.autorBusca))];
+      const bateComAlgum = itens.some(q => {
+        const textoNorm = normalizarBusca([q.explicacao, q.enunciado].filter(Boolean).join(' '));
+        return termosValidos.some(termo => textoContemTermo(textoNorm, normalizarBusca(termo)));
+      });
+      if(!bateComAlgum){
+        const confirmar = confirm(`Nenhuma questão desse grupo menciona termos esperados de "${bibEscolhida.titulo}" (ex: ${termosValidos.slice(0,3).join(', ')}). Confirma que essa é a publicação certa mesmo assim?`);
+        if(!confirmar) return;
+      }
+    }
+  }
+
   // detecta se o grupo parece ter questões de LIVROS DIFERENTES entre si —
   // roda a mesma identificação automática usada no upload, item por item
   // (não em lote), e se aparecer mais de um título diferente sendo
