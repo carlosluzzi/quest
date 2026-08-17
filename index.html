@@ -1041,7 +1041,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-113';
+const VERSAO_APP = '2026-07-25-121';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2520,13 +2520,16 @@ function retomarCaderno(){
    ============================================================ */
 let modulosComQuestao = new Set();
 let publicacoesComQuestao = new Set();
+let temasCache = [];
 
 async function carregarBibliografia(){
-  const [{data}, {data: dadosQuestoes}] = await Promise.all([
+  const [{data}, {data: dadosQuestoes}, {data: dadosTemas}] = await Promise.all([
     sb.from('bibliografia').select('*'),
-    sb.from('questoes').select('modulo_pscpp, bibliografia_id').eq('anulada', false)
+    sb.from('questoes').select('modulo_pscpp, bibliografia_id').eq('anulada', false),
+    sb.from('temas').select('*, tema_bibliografia(bibliografia_id)')
   ]);
   bibliografiaCache = data || [];
+  temasCache = (dadosTemas || []).map(t => ({...t, bibliografiaIds: (t.tema_bibliografia||[]).map(tb=>tb.bibliografia_id)}));
   modulosPscpp = [...new Set(bibliografiaCache.map(b=>b.modulo_pscpp))].sort((a,b)=>a.localeCompare(b,'pt'));
 
   // pra saber quais módulos/publicações realmente têm pelo menos 1 questão
@@ -2624,7 +2627,11 @@ function selecionarFiltroSelect(nivel, valor){
     elCap.disabled = true;
     if(valor){
       const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===valor).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
-      elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>{
+      const temasDoModulo = temasCache.filter(t=>t.modulo_pscpp===valor);
+      const opcoesTemas = temasDoModulo.length
+        ? temasDoModulo.map(t=>`<option value="tema:${t.id}">🔵 ${escapeHtml(t.nome)} (junta ${t.bibliografiaIds.length} publicações)</option>`).join('') + '<option disabled>──────────</option>'
+        : '';
+      elPub.innerHTML = '<option value="">Todas as publicações</option>' + opcoesTemas + pubs.map(p=>{
         const vazio = !publicacoesComQuestao.has(p.id);
         return `<option value="${p.id}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(p.nome_exibicao || p.titulo)}</option>`;
       }).join('');
@@ -2639,7 +2646,18 @@ function selecionarFiltroSelect(nivel, valor){
   if(nivel==='publicacao'){
     filtroSelecionado.capitulo = null;
     const elCap = document.getElementById('filtro-capitulo');
-    if(valor){
+    if(valor && valor.startsWith('tema:')){
+      // tema junta várias publicações — busca capítulo em todas elas juntas
+      const temaId = valor.slice(5);
+      const tema = temasCache.find(t=>t.id===temaId);
+      const idsPublicacoes = tema?.bibliografiaIds || [];
+      sb.from('questoes').select('capitulo').in('bibliografia_id', idsPublicacoes).then(({data})=>{
+        const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
+        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+        elCap.disabled = false;
+        atualizarContadorDisponiveis();
+      });
+    }else if(valor){
       // capítulos vêm das próprias questões já cadastradas com essa bibliografia (campo livre por questão)
       sb.from('questoes').select('capitulo').eq('bibliografia_id', valor).then(({data})=>{
         const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a-b);
@@ -2678,7 +2696,14 @@ async function buscarQuestoesFiltradas(apenasContagem = false){
   }
   // 'todas' não filtra por origem nenhuma – mistura tudo de propósito
   if(filtroSelecionado.modulo) query = query.eq('modulo_pscpp', filtroSelecionado.modulo);
-  if(filtroSelecionado.publicacao) query = query.eq('bibliografia_id', filtroSelecionado.publicacao);
+  if(filtroSelecionado.publicacao){
+    if(filtroSelecionado.publicacao.startsWith('tema:')){
+      const tema = temasCache.find(t=>t.id===filtroSelecionado.publicacao.slice(5));
+      query = query.in('bibliografia_id', tema?.bibliografiaIds || []);
+    }else{
+      query = query.eq('bibliografia_id', filtroSelecionado.publicacao);
+    }
+  }
   if(filtroSelecionado.capitulo) query = query.eq('capitulo', filtroSelecionado.capitulo);
   if(filtroSelecionado.tipoQuestao) query = query.eq('tipo_questao', filtroSelecionado.tipoQuestao);
 
@@ -4861,10 +4886,10 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Manobrabilidade", autorBusca:["santos", "manobrabilidade", "seculo"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["mesquita", "manobrabilidade"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["manobrabilidade do navio no século 21"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
-  {modulo:"Manobrabilidade", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (exceto caps. 1-2)", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-6)", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["ship resistance and flow"], autor:null, titulo:"Ship Resistance and Flow", capitulos:null},
   {modulo:"Manobrabilidade", autorBusca:["practical ship hydrodynamics"], autor:null, titulo:"Practical Ship Hydrodynamics", capitulos:null},
-  {modulo:"Manobrabilidade", autorBusca:["mesquita", "hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (exceto caps. 1-2)", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["mesquita", "hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-6)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["lobo", "soares"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["valgas"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["normam-701", "normam 701"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-701/DHN", capitulos:null},
@@ -4873,8 +4898,8 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Meteorologia e Oceanografia", autorBusca:["noções de meteorologia para navegantes"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["pianc 117"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["hydro/meteo"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
-  {modulo:"Meteorologia e Oceanografia", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 1-2)", capitulos:[1, 2]},
-  {modulo:"Meteorologia e Oceanografia", autorBusca:["mesquita", "ondas"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 1-2)", capitulos:[1, 2]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:[1, 2]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["mesquita", "ondas"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:[1, 2]},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["ynoue"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["meteorologia", "nocoes basicas"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["bento"], autor:"BENTO, C. N. S.", titulo:"Navegação Integrada", capitulos:null},
@@ -5354,6 +5379,16 @@ function textoContemTermo(textoNorm, termoNorm){
   }
   return textoNorm.includes(termoNorm);
 }
+// leis, decretos e resoluções/circulares da IMO são sempre tratadas como
+// capítulo único no Pilotquest, mesmo quando o documento em si tem
+// subdivisões internas (Capítulo I, IV, VIII, etc.) — decisão explícita
+// do Carlos, pra não fragmentar por engano uma fonte que o app sempre
+// trata como bloco só. Força "Único" independente do que o texto da
+// questão mencione internamente
+function ehFonteCapituloUnico(titulo){
+  if(!titulo) return false;
+  return /^(Lei|Decreto)\s|MSC\.|MSC\/Circ|Resolution\s+A\.\d|SOLAS.*Regra/i.test(titulo);
+}
 function extrairCapituloDoTexto(texto){
   const t = texto || '';
   // 1º: procura padrão "seção/section/item N.M" ou "p. X | N.M" — o
@@ -5361,7 +5396,11 @@ function extrairCapituloDoTexto(texto){
   // convenção acadêmica de numeração (Capítulo.Seção.Subseção) — pega
   // citações que nunca dizem "capítulo" explicitamente, tipo "item 3.1"
   // ou "section 2.1" (inglês)
-  let m = t.match(/\b(?:se[çc][ãa]o|section|item|fig(?:ure|ura)?)\s*(\d{1,2})\.\d/i);
+  // aceita bastante variação de grafia depois de "seç"/"sec" (acentos
+  // trocados ou duplicados, erro comum de IA gerando texto) — "se" + ç/c +
+  // até 4 caracteres do conjunto de vogais/acentos/s, cobre seção, seções,
+  // e variações tipo "seçãões"/"seçaões" que às vezes aparecem
+  let m = t.match(/\b(?:se[çc][aãoões]{1,4}|secs?\.?|sections?|item|itens|figuras?|figures?)\.?\s*(\d{1,2})\.\d/i);
   if(m) return parseInt(m[1],10);
   m = t.match(/\|\s*(\d{1,2})\.\d/);
   if(m) return parseInt(m[1],10);
@@ -5370,28 +5409,26 @@ function extrairCapituloDoTexto(texto){
   return m ? parseInt(m[1],10) : null;
 }
 function identificarBibliografia(explicacao, enunciado){
-  // checa explicação e enunciado separados primeiro (mais preciso quando
-  // dá certo) — e por último os dois juntos, pra pegar o caso em que as
-  // palavras-chave estão espalhadas entre os 2 campos (ex: "santos" só
-  // aparece na citação da explicação, mas "manobrabilidade"+"seculo" só
-  // aparecem no enunciado — nenhum dos 2 sozinho bate, mas juntos sim)
-  const combinado = [explicacao, enunciado].filter(Boolean).join(' ');
-  const textos = [explicacao, enunciado, combinado].filter(Boolean);
-  for(const texto of textos){
-    const textoNorm = normalizarBusca(texto);
-    const candidatosBrutos = BIBLIOGRAFIA_FECHADA.filter(entrada =>
-      entrada.autorBusca.every(termo => textoContemTermo(textoNorm, normalizarBusca(termo)))
-    );
-    // dedup por módulo+título — 2 entradas do mesmo livro (com termos de
-    // busca diferentes, tipo "miguens" e o título por extenso) não contam
-    // como ambiguidade de verdade, são a mesma bibliografia
-    const candidatos = [...new Map(candidatosBrutos.map(c => [c.modulo+'|'+c.titulo, c])).values()];
-    if(candidatos.length === 1) return candidatos[0];
-    if(candidatos.length > 1){
-      // o capítulo que desempata pode estar em qualquer um dos 2 textos —
-      // às vezes o livro aparece no enunciado mas o capítulo só na
-      // explicação (ex: "Fonte: ..., Cap. 10"), ou vice-versa
-      const capExtraido = extrairCapituloDoTexto(texto) ?? extrairCapituloDoTexto(textos.find(t=>t!==texto));
+  // usa sempre o texto combinado (explicação + enunciado juntos) — nunca é
+  // pior que checar separado, já que contém tudo dos dois. Checar separado
+  // primeiro (versão antiga) tinha um bug real: quando a palavra que
+  // desempata (tipo "45" de "Cap. 45") só aparece num dos dois campos, o
+  // outro campo sozinho podia achar só a candidata genérica e retornar
+  // ela na hora, sem nunca chegar a testar o texto combinado que teria
+  // achado a candidata certa
+  const texto = [explicacao, enunciado].filter(Boolean).join(' ');
+  if(!texto) return null;
+  const textoNorm = normalizarBusca(texto);
+  const candidatosBrutos = BIBLIOGRAFIA_FECHADA.filter(entrada =>
+    entrada.autorBusca.every(termo => textoContemTermo(textoNorm, normalizarBusca(termo)))
+  );
+  // dedup por módulo+título — 2 entradas do mesmo livro (com termos de
+  // busca diferentes, tipo "miguens" e o título por extenso) não contam
+  // como ambiguidade de verdade, são a mesma bibliografia
+  const candidatos = [...new Map(candidatosBrutos.map(c => [c.modulo+'|'+c.titulo, c])).values()];
+  if(candidatos.length === 1) return candidatos[0];
+  if(candidatos.length > 1){
+      const capExtraido = extrairCapituloDoTexto(texto);
       if(capExtraido){
         // alguns capítulos aparecem nas 2 listas do mesmo autor (ex: Nayak
         // cap. 13 está em Arte Naval E Águas Restritas) — quando o
@@ -5424,7 +5461,6 @@ function identificarBibliografia(explicacao, enunciado){
       // rascunho pra revisão manual de propósito — errar categoria
       // silenciosamente é pior que pedir revisão
       return null; // achou o autor, mas ambíguo entre módulos — trata como não achado
-    }
   }
   return null;
 }
@@ -6129,7 +6165,7 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
           alternativas: q.alternativas,
           gabarito: q.gabarito,
           autor_id: usuarioAtual.id,
-          capitulo: q.capituloDetectado || extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null,
+          capitulo: ehFonteCapituloUnico(bib.titulo) ? 'Único' : (q.capituloDetectado || extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null),
           tipo_questao: null,
           modulo_pscpp: bib.modulo,
           bibliografia_id: mapaBibliografiaId[bib.modulo+'|'+bib.titulo],
@@ -6139,7 +6175,15 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
           concurso_origem: concursoOrigemUpload,
           ano_prova: anoProvaUpload
         });
-        if(erroInsertQuestao) throw new Error('Não consegui cadastrar uma questão: ' + erroInsertQuestao.message);
+        if(erroInsertQuestao){
+          // a trava UNIQUE do banco pegou uma duplicata que a checagem
+          // anterior não viu a tempo (janela de corrida entre checar e
+          // inserir, quando múltiplas questões do mesmo lote rodam em
+          // paralelo) — trata como duplicata normal (pulada), não como
+          // falha que travaria o upload inteiro
+          if(erroInsertQuestao.code === '23505') return {pulada: true};
+          throw new Error('Não consegui cadastrar uma questão: ' + erroInsertQuestao.message);
+        }
         return {pulada: false};
       }));
       quantasPuladas = resultadosInsercao.filter(r => r.pulada).length;
@@ -6339,7 +6383,7 @@ async function abrirRevisaoRascunho(){
         <option value="">Escolhe o módulo...</option>
         ${opcoesModulo}
       </select>
-      <select id="${idGrupo}-publicacao" class="filter-select" style="margin-bottom:8px" disabled>
+      <select id="${idGrupo}-publicacao" class="filter-select" style="margin-bottom:8px" disabled onchange="preencherCapituloUnicoSeAplicavel('${idGrupo}')">
         <option value="">Escolhe o módulo primeiro</option>
       </select>
       <input type="text" id="${idGrupo}-capitulo" class="filter-select" style="margin-bottom:8px" placeholder="Capítulo (opcional)" value="${escapeHtml(itens[0].capitulo || '')}">
@@ -6358,6 +6402,24 @@ async function abrirRevisaoRascunho(){
       </div>
     </div>`;
   }).join('');
+}
+
+// publicações tratadas como capítulo único — sempre a fonte inteira, nunca
+// subdividida, mesmo que o documento em si tenha capítulos/itens internos
+// por dentro (ex: Lei dos Portos tem capítulos I, IV, VIII, mas é tratada
+// como um bloco só). Leis e decretos SEMPRE entram aqui (regra geral);
+// documentos da IMO entram um por um numa lista fixa — nem todo documento
+// da IMO é único (ex: MSC/Circ.1053 tem capítulos reais e NÃO deve entrar
+// aqui, foi um erro que corrigimos depois de aplicar sem checar direito)
+function preencherCapituloUnicoSeAplicavel(idGrupo){
+  const bibliografiaId = document.getElementById(idGrupo+'-publicacao').value;
+  const elCapitulo = document.getElementById(idGrupo+'-capitulo');
+  const bib = bibliografiaCache.find(b => b.id === bibliografiaId);
+  // só preenche se o campo ainda estiver vazio — nunca sobrescreve algo
+  // que a pessoa já tenha digitado à mão
+  if(bib && ehFonteCapituloUnico(bib.titulo) && !elCapitulo.value.trim()){
+    elCapitulo.value = 'Único';
+  }
 }
 
 function atualizarPublicacoesRevisao(idGrupo){
@@ -6384,12 +6446,14 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
     const modulo = document.getElementById(idGrupo+'-modulo').value;
   const bibliografiaId = document.getElementById(idGrupo+'-publicacao').value;
   const capituloDigitado = document.getElementById(idGrupo+'-capitulo').value.trim();
+  const bibEscolhida = bibliografiaId ? bibliografiaCache.find(b => b.id === bibliografiaId) : null;
+  const capituloEhAutomatico = ehFonteCapituloUnico(bibEscolhida?.titulo);
   const checkboxMarinha = document.getElementById(idGrupo+'-prova-real');
   const marcadoComoMarinha = checkboxMarinha ? checkboxMarinha.checked : false;
   const concursoOrigem = marcadoComoMarinha ? (document.getElementById(idGrupo+'-concurso').value.trim() || null) : null;
   const anoProva = marcadoComoMarinha ? (parseInt(document.getElementById(idGrupo+'-ano').value, 10) || null) : null;
-  if(!modulo || !bibliografiaId){
-    alert('Escolhe o módulo e a publicação antes de cadastrar.');
+  if(!modulo || !bibliografiaId || (!capituloDigitado && !capituloEhAutomatico)){
+    alert('Escolhe o módulo, a publicação e o capítulo antes de cadastrar — capítulo é obrigatório.');
     return;
   }
 
@@ -6398,15 +6462,61 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
   const {data: itens} = await query;
   if(!itens || !itens.length) return;
 
+  // detecta se o grupo parece ter questões de LIVROS DIFERENTES entre si —
+  // roda a mesma identificação automática usada no upload, item por item
+  // (não em lote), e se aparecer mais de um título diferente sendo
+  // reconhecido, bloqueia o cadastro em grupo. Isso existe porque um
+  // arquivo com assuntos bem diferentes (prova de concurso inteira) já foi
+  // cadastrado inteiro numa publicação só, sem capítulo, corrompendo os
+  // dados — 34 questões de MARPOL/PNA/comunicações carimbadas como se
+  // fossem de Miguens, só porque saiu mais rápido resolver assim
+  const identificacoesPorItem = itens.map(q => identificarBibliografia(q.explicacao, q.enunciado));
+  const identificadas = identificacoesPorItem.filter(Boolean);
+  const titulosDistintos = new Set(identificadas.map(r => r.titulo));
+  // 2 sinais de grupo misturado: (1) mais de 1 livro diferente identificado
+  // — pega quando os 2 livros já estão cadastrados no reconhecimento; (2)
+  // só PARTE do grupo identifica algo, não todas nem nenhuma — pega
+  // quando um dos assuntos ainda não tem reconhecimento cadastrado (ex:
+  // MARPOL), mas ainda assim os outros itens do grupo destoam. Prefere
+  // bloquear demais a deixar passar um cadastro errado
+  const misturaSuspeita = titulosDistintos.size > 1 || (identificadas.length > 0 && identificadas.length < itens.length);
+  if(misturaSuspeita){
+    const mensagemTitulos = titulosDistintos.size ? ` (encontrei: ${[...titulosDistintos].join(' | ')})` : '';
+    alert(`Esse grupo parece ter questões de assuntos diferentes entre si${mensagemTitulos}. Pra evitar cadastro errado, resolve cada questão separadamente em vez de tudo em lote — abre uma de cada vez pela tela de revisão.`);
+    return;
+  }
+
+  // de-duplica DENTRO do mesmo lote antes de processar — sem isso, várias
+  // cópias idênticas da mesma questão (ex: de tentativas repetidas de
+  // upload) rodavam a checagem de duplicata em paralelo, todas ao mesmo
+  // tempo, então nenhuma via a outra ainda inserindo (checar-depois-inserir
+  // não é atômico quando roda em paralelo — bug real que já duplicou
+  // questão 5x). Mantém só a mais antiga de cada grupo, descarta o
+  // rascunho das outras direto, sem nem tentar inserir
+  const vistos = new Map();
+  const itensUnicos = [];
+  const idsDuplicadosNoLote = [];
+  itens.forEach(q => {
+    const chaveItem = q.enunciado + '|' + q.alternativas;
+    if(vistos.has(chaveItem)) idsDuplicadosNoLote.push(q.id);
+    else { vistos.set(chaveItem, true); itensUnicos.push(q); }
+  });
+  if(idsDuplicadosNoLote.length){
+    await Promise.all(idsDuplicadosNoLote.map(id => sb.from('questoes_rascunho').delete().eq('id', id)));
+  }
+
   // só apaga o rascunho DEPOIS de confirmar que o insert deu certo — se o
   // insert falhar, o item continua no rascunho (nada se perde, só fica
   // pendente de tentar de novo) em vez de sumir sem nunca ter sido salvo
   const falhas = [];
-  let quantasDuplicadas = 0;
-  await Promise.all(itens.map(async q => {
+  let quantasDuplicadas = idsDuplicadosNoLote.length;
+  await Promise.all(itensUnicos.map(async q => {
     // mesma checagem de duplicata que o upload direto já faz — sem isso,
     // resolver o mesmo rascunho duas vezes (ou um rascunho que já tinha
-    // sido cadastrado por outro caminho) duplicava a questão sem avisar
+    // sido cadastrado por outro caminho) duplicava a questão sem avisar.
+    // NOTA: essa checagem sozinha ainda tem uma janela de corrida entre
+    // checar e inserir — a trava de verdade é a constraint UNIQUE no banco,
+    // tratada mais abaixo (código 23505) como uma segunda camada
     const {data: existente} = await sb.from('questoes')
       .select('id')
       .eq('enunciado', q.enunciado)
@@ -6423,7 +6533,7 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
       alternativas: q.alternativas,
       gabarito: q.gabarito,
       autor_id: q.autor_id,
-      capitulo: capituloDigitado || q.capitulo,
+      capitulo: capituloEhAutomatico ? 'Único' : (capituloDigitado || q.capitulo),
       tipo_questao: null,
       modulo_pscpp: modulo,
       bibliografia_id: bibliografiaId,
@@ -6433,6 +6543,14 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
       ano_prova: anoProva
     });
     if(erroInsert){
+      if(erroInsert.code === '23505'){
+        // a trava UNIQUE do banco pegou uma duplicata que a checagem
+        // anterior não viu a tempo (janela de corrida entre checar e
+        // inserir) — trata como duplicata normal, não como falha
+        quantasDuplicadas++;
+        await sb.from('questoes_rascunho').delete().eq('id', q.id);
+        return;
+      }
       falhas.push(erroInsert.message);
       return; // não apaga o rascunho — fica lá pra tentar de novo
     }
