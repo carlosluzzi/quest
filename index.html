@@ -126,6 +126,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
 .nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative}
 #nav-item-adicionar{display:none}
+#nav-item-vf{display:none}
 .badge-notificacao{position:absolute;top:10px;right:calc(50% - 24px);background:#E24B4A;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
 .nav-item.active{background:#f0f0ee}
 .nav-icon{width:24px;height:24px;color:#888;display:flex;align-items:center;justify-content:center}
@@ -161,6 +162,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   #ptr-indicator{grid-column:2;grid-row:2}
   .nav-item{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;border-radius:9px;width:100%}
   #nav-item-adicionar{display:flex;gap:8px;padding-left:10px;padding-right:10px}
+  #nav-item-vf{display:flex;gap:8px;padding-left:10px;padding-right:10px}
   #nav-item-adicionar .nav-label{white-space:nowrap}
   #wrapper-barra-adicionar{display:none}
   #view-topico-detalhe{left:250px !important;width:calc(100% - 250px) !important}
@@ -701,6 +703,13 @@ input,select,textarea{font-family:inherit;font-size:16px}
     </div>
   </div>
 
+  <!-- ===== V/F (beta, só Carlos por enquanto) ===== -->
+  <div class="view-aba hidden" id="aba-vf">
+    <div id="vf-conteudo">
+      <div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>
+    </div>
+  </div>
+
   <!-- ===== ADICIONAR QUESTÕES (popup no mobile/tablet, página no desktop) ===== -->
   <div class="view-aba hidden" id="aba-adicionar">
     <div class="modal-conteudo">
@@ -766,6 +775,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
     </div>
     <div class="nav-item" id="nav-item-adicionar" data-aba="adicionar" onclick="trocarAba('adicionar')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span><span class="nav-label">Adicionar questões</span>
+    </div>
+    <div class="nav-item hidden" id="nav-item-vf" data-aba="vf" onclick="trocarAba('vf')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg></span><span class="nav-label">V/F (beta)</span>
     </div>
   </div>
 </div>
@@ -861,6 +873,14 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <h3 class="config-title">Fisher-Yates</h3>
     <p>É o algoritmo usado pra embaralhar a ordem das questões do seu caderno. Diferente de um embaralhamento "ingênuo" (tipo ordenar por número aleatório), o Fisher-Yates garante que cada ordem possível tem exatamente a mesma chance de acontecer – sem viés escondido favorecendo certas posições.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-fisher-yates')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-fisher-yates-vf">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Fisher-Yates</h3>
+    <p>É o algoritmo usado pra embaralhar a ordem dos itens de Verdadeiro/Falso antes de cada rodada. Diferente de um embaralhamento "ingênuo", o Fisher-Yates garante que cada ordem possível tem exatamente a mesma chance de acontecer – sem viés escondido repetindo sempre os mesmos itens no início.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-fisher-yates-vf')">Fechar</button>
   </div>
 </div>
 
@@ -1041,7 +1061,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-123';
+const VERSAO_APP = '2026-07-25-126';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1143,9 +1163,9 @@ function formatarEnunciado(texto){
   // fazendo o parágrafo parecer cortado antes da borda da tela, em vez de
   // fluir naturalmente até o final e quebrar só onde o navegador decidir
   const escapedCompleto = escapeHtml(texto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞,]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito, o resto fica solto (ex: "N'_vv" → só o 1º v é subscrito)
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // isola a seção "TRECHOS DA FONTE" ANTES de qualquer divisão em
   // alternativas (a, b, c...) — sem isso, menções tipo "Alternativas a) e
@@ -1344,9 +1364,9 @@ function extrairItensNumerados(enunciado){
 function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞,]{1,6})/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])/g, '$1<sub>$2</sub>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})/g, '$1<sub>$2</sub>');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
     const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
@@ -1877,6 +1897,7 @@ async function mostrarAppShell(){
   }
   if(souCarlos()){
     document.getElementById('bloco-upload-marinha').classList.remove('hidden');
+    document.getElementById('nav-item-vf').classList.remove('hidden');
     sb.rpc('concursos_disponiveis').then(({data})=>{
       document.getElementById('lista-concursos-existentes').innerHTML = (data||[]).map(c=>`<option value="${escapeHtml(c.concurso)}">`).join('');
     });
@@ -1991,6 +2012,7 @@ function trocarAba(nome){
   if(nome==='forum'){ carregarForum(); }
   if(nome==='placar') carregarMetricasPessoais();
   if(nome==='quests') contarDisponiveisAgora();
+  if(nome==='vf') iniciarModoVF();
   if(nome==='adicionar' && !extracaoEmAndamento){
     document.getElementById('upload-status').innerHTML = '';
     document.getElementById('upload-planilha-status').innerHTML = '';
@@ -2538,14 +2560,22 @@ async function carregarBibliografia(){
   modulosComQuestao = new Set((dadosQuestoes||[]).map(q=>q.modulo_pscpp));
   publicacoesComQuestao = new Set((dadosQuestoes||[]).map(q=>q.bibliografia_id));
 
+  renderizarFiltroModulo();
+  // independentes entre si (tabelas diferentes) – rodar em paralelo
+  await Promise.all([carregarFiltroUsuarioAdmin(), carregarCadernosExistentes()]);
+  atualizarContadorDisponiveis(); // mostra o total desde o início, sem esperar filtro nenhum
+}
+
+// desenha o dropdown de módulo com o estado atual de modulosComQuestao —
+// função à parte porque precisa ser chamada de novo quando o filtro de
+// usuário muda (módulos vazios pra ESSA pessoa ficam desabilitados,
+// não só módulos vazios pro banco inteiro)
+function renderizarFiltroModulo(){
   const el = document.getElementById('filtro-modulo');
   el.innerHTML = '<option value="">Todos os módulos</option>' + modulosPscpp.map(m=>{
     const vazio = !modulosComQuestao.has(m);
     return `<option value="${escapeHtml(m)}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(m)}</option>`;
   }).join('');
-  // independentes entre si (tabelas diferentes) – rodar em paralelo
-  await Promise.all([carregarFiltroUsuarioAdmin(), carregarCadernosExistentes()]);
-  atualizarContadorDisponiveis(); // mostra o total desde o início, sem esperar filtro nenhum
 }
 
 // filtro de usuário na aba Quest — antes só pro admin, agora liberado
@@ -2615,8 +2645,31 @@ function selecionarAnoProva(valor){
   atualizarContadorDisponiveis();
 }
 
-function selecionarFiltroSelect(nivel, valor){
+async function selecionarFiltroSelect(nivel, valor){
   filtroSelecionado[nivel] = (valor && valor!=='todos') ? valor : null;
+
+  if(nivel==='usuario'){
+    // módulo/publicação/capítulo dependiam de modulosComQuestao/
+    // publicacoesComQuestao calculados uma vez só, com TODO o banco — sem
+    // reescopar aqui, trocar de usuário nunca mudava quais módulos
+    // apareciam habilitados no dropdown seguinte (bug real: filtrar por
+    // Altair mostrava módulo de todo mundo, não só dele)
+    filtroSelecionado.modulo = null;
+    filtroSelecionado.publicacao = null;
+    filtroSelecionado.capitulo = null;
+    document.getElementById('filtro-publicacao').innerHTML = '<option value="">Todas as publicações</option>';
+    document.getElementById('filtro-publicacao').disabled = true;
+    document.getElementById('filtro-capitulo').innerHTML = '<option value="">Todos os capítulos</option>';
+    document.getElementById('filtro-capitulo').disabled = true;
+    document.getElementById('filtro-modulo').value = '';
+
+    let query = sb.from('questoes').select('modulo_pscpp, bibliografia_id');
+    if(filtroSelecionado.usuario) query = query.eq('autor_id', filtroSelecionado.usuario);
+    const {data} = await query;
+    modulosComQuestao = new Set((data||[]).map(q=>q.modulo_pscpp));
+    publicacoesComQuestao = new Set((data||[]).map(q=>q.bibliografia_id));
+    renderizarFiltroModulo();
+  }
 
   if(nivel==='modulo'){
     filtroSelecionado.publicacao = null;
@@ -2738,6 +2791,159 @@ async function contarDisponiveisAgora(){
 function atualizarContadorDisponiveis(){
   clearTimeout(contadorDebounce);
   contadorDebounce = setTimeout(contarDisponiveisAgora, 300);
+}
+
+// ============================================================
+// MODO V/F — beta, só visível pro Carlos por enquanto (ver
+// nav-item-vf e o gate em mostrarAppShell). Pega um bloco de
+// itens_vf, embaralha (Fisher-Yates) e apresenta um por vez,
+// pedindo Verdadeiro/Falso — igual explicado no botão ℹ️ abaixo.
+// ============================================================
+// ============================================================
+// EXTRAÇÃO AUTOMÁTICA DE ITENS V/F — roda em todo cadastro novo
+// de questão (ver uso logo abaixo, no insert principal), pra
+// popular itens_vf sem precisar de trabalho manual depois. Duas
+// funções, uma pra cada formato de questão que existe no banco:
+// alternativas simples (a-e) e assertivas em romano (I-V com
+// combinação). Texto puro, sem HTML — formata só na hora de
+// exibir, igual enunciado/alternativas já fazem hoje.
+// ============================================================
+function extrairAlternativasParaVF(alternativasTexto, gabarito){
+  if(!alternativasTexto) return null;
+  const partes = alternativasTexto.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
+  const itens = partes.map(p=>{
+    const m = p.match(/^\(([a-e])\)\s*([\s\S]*)$/);
+    return m ? {letra:m[1], texto:m[2].trim()} : null;
+  }).filter(Boolean);
+  if(itens.length !== 5) return null; // fora do padrão de 5 alternativas — não arrisca, fica de fora
+  const gabaritoNorm = (gabarito||'').toLowerCase().trim();
+  if(!itens.some(i => i.letra === gabaritoNorm)) return null; // gabarito não bate com nenhuma — não arrisca
+  return itens.map(i => ({ordem: i.letra, texto: i.texto, correto: i.letra === gabaritoNorm, tipo_origem: 'alternativa'}));
+}
+
+function extrairAssertivasRomanasParaVF(enunciado, alternativas, gabarito){
+  if(!enunciado || !alternativas) return null;
+  const m = enunciado.match(/(?:^|\n|[.,]\s+)(I)\s*[.\-–]\s*/);
+  if(!m) return null;
+
+  const inicioI = enunciado.indexOf('I', m.index);
+  const listaTexto = '\n' + enunciado.slice(inicioI);
+  const partes = listaTexto.split(/\n(?=(?:I{1,3}|IV|V)\s*[.\-–]\s)/).filter(Boolean);
+  const assertivas = [];
+  for(const parte of partes){
+    const pm = parte.match(/^(I{1,3}|IV|V)\s*[.\-–]\s*([\s\S]*)$/);
+    if(!pm) continue;
+    let texto = pm[2].trim();
+    texto = texto.replace(/\n?(Estão|Assinale|Marque|É correto)[\s\S]*$/i, '').trim();
+    if(texto) assertivas.push({numeral: pm[1], texto});
+  }
+  if(!assertivas.length) return null;
+
+  const altsMatch = [...alternativas.matchAll(/\(([a-e])\)\s*([\s\S]*?)(?=\([a-e]\)|$)/g)];
+  const altGabarito = altsMatch.find(a => a[1].toLowerCase() === (gabarito||'').toLowerCase());
+  if(!altGabarito) return null; // gabarito não bate — não arrisca
+
+  const combinacao = altGabarito[2].trim();
+  let romanosVerdadeiros;
+  if(/\btodas\b/i.test(combinacao)) romanosVerdadeiros = new Set(assertivas.map(a=>a.numeral));
+  else if(/\bnenhuma\b/i.test(combinacao)) romanosVerdadeiros = new Set();
+  else romanosVerdadeiros = new Set(combinacao.match(/\b(I{1,3}|IV|V)\b/g) || []);
+
+  return assertivas.map(a => ({ordem: a.numeral, texto: a.texto, correto: romanosVerdadeiros.has(a.numeral), tipo_origem: 'assertiva'}));
+}
+
+// tenta os dois formatos, na ordem: assertivas romanas primeiro (mais
+// específico, exige "I." no enunciado), senão tenta alternativas simples.
+// Se nenhum bater com segurança, retorna null — melhor não gravar nada do
+// que gravar errado, essa questão fica só sem entrada em itens_vf por
+// enquanto (não afeta o cadastro normal da questão, que segue intacto)
+function extrairItensVF(enunciado, alternativas, gabarito){
+  return extrairAssertivasRomanasParaVF(enunciado, alternativas, gabarito)
+      || extrairAlternativasParaVF(alternativas, gabarito);
+}
+
+let estadoVF = null;
+const QUANTIDADE_VF_POR_RODADA = 20;
+
+async function iniciarModoVF(){
+  const el = document.getElementById('vf-conteudo');
+  el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
+
+  const {data, error} = await sb.from('itens_vf').select('id, texto, correto, questao_id, tipo_origem');
+  if(error || !data || !data.length){
+    el.innerHTML = `<p style="padding:24px 4px;color:#888">Ainda não tem nenhum item pronto pra praticar — o banco de V/F está sendo preparado aos poucos.</p>`;
+    return;
+  }
+
+  // embaralha (Fisher-Yates) pra não repetir sempre a mesma ordem/começo
+  const embaralhado = [...data];
+  for(let i = embaralhado.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [embaralhado[i], embaralhado[j]] = [embaralhado[j], embaralhado[i]];
+  }
+
+  estadoVF = {
+    itens: embaralhado.slice(0, QUANTIDADE_VF_POR_RODADA),
+    totalDisponivel: data.length,
+    indice: 0,
+    acertos: 0,
+    respondida: false
+  };
+  renderizarItemVF();
+}
+
+function renderizarItemVF(){
+  const el = document.getElementById('vf-conteudo');
+  if(!estadoVF) return;
+
+  if(estadoVF.indice >= estadoVF.itens.length){
+    el.innerHTML = `
+      <div style="padding:32px 4px;text-align:center">
+        <p style="font-size:var(--fs-h);font-weight:600;margin:0 0 4px">${estadoVF.acertos} de ${estadoVF.itens.length}</p>
+        <p style="color:#888;margin:0 0 24px">acertos nessa rodada</p>
+        <button class="btn-primario" onclick="iniciarModoVF()">Nova rodada</button>
+      </div>`;
+    return;
+  }
+
+  const item = estadoVF.itens[estadoVF.indice];
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:2px 2px 14px;color:#888;font-size:var(--fs-c)">
+      <span style="display:flex;align-items:center;gap:6px">Item ${estadoVF.indice+1} de ${estadoVF.itens.length} <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
+      <span>${estadoVF.acertos} certas até aqui</span>
+    </div>
+    <div class="card-questao">
+      <div class="enunciado">${formatarEnunciado(item.texto)}</div>
+    </div>
+    <div id="vf-botoes" style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn-secundario" style="flex:1" onclick="responderVF(true)">Verdadeiro</button>
+      <button class="btn-secundario" style="flex:1" onclick="responderVF(false)">Falso</button>
+    </div>
+    <div id="vf-feedback"></div>
+  `;
+}
+
+function responderVF(resposta){
+  if(!estadoVF || estadoVF.respondida) return;
+  estadoVF.respondida = true;
+  const item = estadoVF.itens[estadoVF.indice];
+  const acertou = resposta === item.correto;
+  if(acertou) estadoVF.acertos++;
+
+  document.getElementById('vf-botoes').innerHTML = '';
+  document.getElementById('vf-feedback').innerHTML = `
+    <div style="margin-top:14px;padding:14px;border-radius:10px;background:${acertou?'#E8F2E2':'#FCEBEB'};color:${acertou?'#3A6B2E':'#A32D2D'};font-weight:500">
+      ${acertou ? '✓ Certo' : '✗ Errado'} — essa afirmação é <b>${item.correto?'Verdadeira':'Falsa'}</b>.
+    </div>
+    <button class="btn-primario" style="margin-top:14px" onclick="proximoVF()">Próxima</button>
+  `;
+}
+
+function proximoVF(){
+  if(!estadoVF) return;
+  estadoVF.indice++;
+  estadoVF.respondida = false;
+  renderizarItemVF();
 }
 
 // SuperQuest: simulado fixo de 70 questões variadas, sem filtro nenhum – regras
@@ -4340,8 +4546,8 @@ async function verificarMaioriaTopico(topicoId){
 // roda de novo e recoloca os marcadores certos automaticamente
 function removerMarcadoresSubscrito(texto){
   return (texto||'')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})/g, '$1$2')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})/g, '$1$2');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
 }
 async function abrirFormularioEdicao(questaoId, topicoId){
   const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
@@ -5004,7 +5210,7 @@ function mesclarSubscritosQuebrados(texto){
       .replace(/\s+$/, '');
     return fn + '(' + limpo + ')';
   });
-  const comQuebraDeLinha = comExpressoesLimpa.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψω]['′]{0,2}|\d+)\n\s*(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞,]{1,6})\s*\n/g, (m, principal, candidato) => {
+  const comQuebraDeLinha = comExpressoesLimpa.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψω]['′]{0,2}|\d+)\n\s*(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})\s*\n/g, (m, principal, candidato) => {
     if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
     // sobrescrito (expoente), não subscrito: número negativo (notação
     // científica, ex: "10^-6"), base numérica (mesmo caso), ou letra de
@@ -6160,7 +6366,7 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
           .maybeSingle();
         if(existente) return {pulada: true};
 
-        const {error: erroInsertQuestao} = await sb.from('questoes').insert({
+        const {data: questaoInserida, error: erroInsertQuestao} = await sb.from('questoes').insert({
           enunciado: q.enunciado,
           alternativas: q.alternativas,
           gabarito: q.gabarito,
@@ -6174,7 +6380,7 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
           lote_upload_id: loteUploadId,
           concurso_origem: concursoOrigemUpload,
           ano_prova: anoProvaUpload
-        });
+        }).select('id').single();
         if(erroInsertQuestao){
           // a trava UNIQUE do banco pegou uma duplicata que a checagem
           // anterior não viu a tempo (janela de corrida entre checar e
@@ -6183,6 +6389,17 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
           // falha que travaria o upload inteiro
           if(erroInsertQuestao.code === '23505') return {pulada: true};
           throw new Error('Não consegui cadastrar uma questão: ' + erroInsertQuestao.message);
+        }
+        // extração de itens V/F é best-effort — se der algo errado ou não
+        // bater com nenhum formato conhecido, a questão já está cadastrada
+        // normalmente de qualquer forma, só fica sem entrada em itens_vf
+        try{
+          const itensVF = extrairItensVF(q.enunciado, q.alternativas, q.gabarito);
+          if(itensVF && itensVF.length){
+            await sb.from('itens_vf').insert(itensVF.map(i => ({...i, questao_id: questaoInserida.id})));
+          }
+        }catch(erroVF){
+          console.warn('extração de itens V/F falhou pra uma questão (não afeta o cadastro dela):', erroVF);
         }
         return {pulada: false};
       }));
@@ -6550,7 +6767,7 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
       return;
     }
 
-    const {error: erroInsert} = await sb.from('questoes').insert({
+    const {data: questaoInserida, error: erroInsert} = await sb.from('questoes').insert({
       enunciado: q.enunciado,
       alternativas: q.alternativas,
       gabarito: q.gabarito,
@@ -6563,7 +6780,7 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
       explicacao_origem: q.explicacao_origem,
       concurso_origem: concursoOrigem,
       ano_prova: anoProva
-    });
+    }).select('id').single();
     if(erroInsert){
       if(erroInsert.code === '23505'){
         // a trava UNIQUE do banco pegou uma duplicata que a checagem
@@ -6575,6 +6792,16 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
       }
       falhas.push(erroInsert.message);
       return; // não apaga o rascunho — fica lá pra tentar de novo
+    }
+    // extração de itens V/F é best-effort — mesma lógica do outro caminho
+    // de cadastro, não trava nada se der errado
+    try{
+      const itensVF = extrairItensVF(q.enunciado, q.alternativas, q.gabarito);
+      if(itensVF && itensVF.length){
+        await sb.from('itens_vf').insert(itensVF.map(i => ({...i, questao_id: questaoInserida.id})));
+      }
+    }catch(erroVF){
+      console.warn('extração de itens V/F falhou pra uma questão (não afeta o cadastro dela):', erroVF);
     }
     const {error: erroDelete} = await sb.from('questoes_rascunho').delete().eq('id', q.id);
     if(erroDelete){
