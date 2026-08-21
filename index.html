@@ -1061,7 +1061,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-129';
+const VERSAO_APP = '2026-07-25-131';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6350,6 +6350,63 @@ function parsearArquivoVF(textoCompleto){
   return {questoes, erros};
 }
 
+// resolve bibliografia de questão V/F direto na tela de upload — pedido
+// explícito do Carlos, pra não precisar ir até o Início como o rascunho
+// normal exige. Cada linha tem seu próprio par de selects (módulo →
+// publicação em cascata) e um botão de salvar, tudo isolado pelo id da
+// questão nos elementos, então resolver uma não mexe nas outras
+function renderizarResolucaoVF(pendente){
+  const trecho = escapeHtml(pendente.texto.slice(0, 140)) + (pendente.texto.length > 140 ? '…' : '');
+  return `<div id="vf-resolver-${pendente.id}" style="border:0.5px solid #eee;border-radius:10px;padding:12px;margin-bottom:10px">
+    <p style="font-size:var(--fs-c);color:#555;margin-bottom:10px">${trecho}</p>
+    <select id="vf-resolver-modulo-${pendente.id}" class="filter-select" style="margin-bottom:8px" onchange="popularPublicacaoResolucaoVF('${pendente.id}')">
+      <option value="">Escolha o módulo</option>
+    </select>
+    <select id="vf-resolver-publicacao-${pendente.id}" class="filter-select" style="margin-bottom:8px" disabled>
+      <option value="">Escolha a publicação</option>
+    </select>
+    <button class="btn-primario" style="width:100%" onclick="salvarResolucaoVF('${pendente.id}')">Salvar</button>
+    <p id="vf-resolver-status-${pendente.id}" style="font-size:var(--fs-c);margin-top:6px"></p>
+  </div>`;
+}
+
+function popularModuloResolucaoVF(pendenteId){
+  const el = document.getElementById('vf-resolver-modulo-'+pendenteId);
+  if(!el) return;
+  el.innerHTML = '<option value="">Escolha o módulo</option>' + modulosPscpp.map(m=>
+    `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`
+  ).join('');
+}
+
+function popularPublicacaoResolucaoVF(pendenteId){
+  const modulo = document.getElementById('vf-resolver-modulo-'+pendenteId).value;
+  const elPub = document.getElementById('vf-resolver-publicacao-'+pendenteId);
+  if(!modulo){ elPub.innerHTML = '<option value="">Escolha a publicação</option>'; elPub.disabled = true; return; }
+  const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+  elPub.innerHTML = '<option value="">Escolha a publicação</option>' + pubs.map(p=>
+    `<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`
+  ).join('');
+  elPub.disabled = false;
+}
+
+async function salvarResolucaoVF(pendenteId){
+  const bibliografiaId = document.getElementById('vf-resolver-publicacao-'+pendenteId).value;
+  const statusEl = document.getElementById('vf-resolver-status-'+pendenteId);
+  if(!bibliografiaId){
+    statusEl.innerHTML = '<span style="color:#B00020">Escolhe módulo e publicação antes.</span>';
+    return;
+  }
+  const {error} = await sb.from('questoes_vf').update({bibliografia_id: bibliografiaId}).eq('id', pendenteId);
+  if(error){
+    statusEl.innerHTML = '<span style="color:#B00020">Não consegui salvar. Tenta de novo.</span>';
+    return;
+  }
+  const bloco = document.getElementById('vf-resolver-'+pendenteId);
+  bloco.style.transition = 'opacity 0.4s';
+  bloco.style.opacity = '0';
+  setTimeout(() => bloco.remove(), 400);
+}
+
 async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
   const {questoes, erros} = parsearArquivoVF(textoBruto);
   if(!questoes.length){
@@ -6357,27 +6414,39 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
   }
 
   // identifica a bibliografia de cada questão pela mesma lógica já usada
-  // no upload normal — tenta pelo cabeçalho "BIBLIOGRAFIA:" de cada bloco
+  // no upload normal — tenta pelo cabeçalho "BIBLIOGRAFIA:" de cada bloco.
+  // Busca o id direto no banco (não reaproveita mapaBibliografiaId, que é
+  // uma variável local só de dentro do fluxo normal de upload — usar ela
+  // aqui é a causa exata do travamento em 75% que aconteceu de verdade)
   const resultados = await Promise.all(questoes.map(async q => {
     const bibEncontrada = identificarBibliografia(q.bibliografiaTextoOriginal, q.bibliografiaTextoOriginal);
-    const {error} = await sb.from('questoes_vf').insert({
+    let bibliografiaId = null;
+    if(bibEncontrada){
+      const {data: bibRow} = await sb.from('bibliografia')
+        .select('id')
+        .eq('modulo_pscpp', bibEncontrada.modulo)
+        .eq('titulo', bibEncontrada.titulo)
+        .maybeSingle();
+      bibliografiaId = bibRow?.id || null;
+    }
+    const {data: inserida, error} = await sb.from('questoes_vf').insert({
       texto: q.texto,
       resposta: q.resposta,
       explicacao: q.explicacao,
       correcao: q.correcao,
       trechos_fonte: q.trechos_fonte,
       fonte: q.fonte,
-      bibliografia_id: bibEncontrada ? mapaBibliografiaId[bibEncontrada.modulo+'|'+bibEncontrada.titulo] : null,
+      bibliografia_id: bibliografiaId,
       dificuldade: q.dificuldade,
       autor_id: usuarioAtual.id,
       lote_upload_id: loteUploadId,
       nome_arquivo_origem: nomeArquivoAtual
-    });
-    return {ok: !error, erro: error?.message, semBibliografia: !bibEncontrada};
+    }).select('id').single();
+    return {ok: !error, erro: error?.message, semBibliografia: !bibliografiaId, id: inserida?.id, texto: q.texto};
   }));
 
   const cadastradas = resultados.filter(r => r.ok).length;
-  const semBibliografia = resultados.filter(r => r.ok && r.semBibliografia).length;
+  const pendentesVF = resultados.filter(r => r.ok && r.semBibliografia).map(r => ({id: r.id, texto: r.texto}));
   const falhas = resultados.filter(r => !r.ok);
 
   return {
@@ -6385,7 +6454,7 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     puladas: 0,
     rascunho: 0,
     erro: falhas.length ? `"${nomeArquivoAtual}": ${falhas.length} questão(ões) V/F falharam ao cadastrar (${falhas[0].erro}).` : null,
-    avisoVF: semBibliografia ? `${semBibliografia} questão(ões) V/F cadastradas sem bibliografia identificada.` : null
+    pendentesVF
   };
 }
 
@@ -6406,7 +6475,13 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
   if(ehArquivoVF(textoBruto)){
     mostrarBarraProgresso(status, 75, `${prefixoProgresso}Identificando as afirmações V/F...`);
     const loteUploadIdVF = crypto.randomUUID();
-    return await processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadIdVF);
+    try{
+      return await processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadIdVF);
+    }catch(e){
+      // nunca mais deixa travar silenciosamente em algum %: se algo
+      // inesperado quebrar aqui, aparece como erro de verdade na tela
+      return {erro: `"${nomeArquivoAtual}": falha ao processar arquivo V/F (${e.message})`, cadastradas:0, puladas:0, rascunho:0};
+    }
   }
 
   mostrarBarraProgresso(status, 75, `${prefixoProgresso}Identificando as questões...`);
@@ -6570,6 +6645,7 @@ async function enviarUpload(){
   const totalPuladas = resultados.reduce((s,r)=>s+r.puladas, 0);
   const totalRascunho = resultados.reduce((s,r)=>s+r.rascunho, 0);
   const comErro = resultados.filter(r => r.erro);
+  const pendentesVF = resultados.flatMap(r => r.pendentesVF || []);
 
   mostrarBarraProgresso(status, 100, 'Concluído!');
   const textoPuladas = totalPuladas ? ` (${totalPuladas} já existia${totalPuladas>1?'m':''} igual e ${totalPuladas>1?'foram puladas':'foi pulada'})` : '';
@@ -6582,7 +6658,18 @@ async function enviarUpload(){
     htmlFinal += `<div style="margin-top:10px">${comErro.map(r => `<p style="color:#B00020;font-size:var(--fs-c)">${escapeHtml(r.erro)}</p>${r.trecho ? `<textarea readonly style="width:100%;height:100px;font-size:11px;font-family:monospace;margin:4px 0 8px;padding:6px;border:0.5px solid #ddd;border-radius:6px;color:#444" onclick="this.select()">${escapeHtml(r.trecho) || '(vazio)'}</textarea>` : ''}`).join('')}</div>`;
   }
 
+  // pendentes V/F: resolve ali mesmo, na tela de upload — não manda pra
+  // notificação do Início como o fluxo normal faz. Pedido explícito do
+  // Carlos, já que o V/F ainda não tem as travas extras do upload normal
+  if(pendentesVF.length){
+    htmlFinal += `<div style="margin-top:14px;border-top:1px solid #eee;padding-top:14px">
+      <p style="font-weight:600;color:#B8860B;margin-bottom:10px">${pendentesVF.length} questão(ões) V/F sem publicação identificada — escolhe abaixo:</p>
+      ${pendentesVF.map(p => renderizarResolucaoVF(p)).join('')}
+    </div>`;
+  }
+
   status.innerHTML = htmlFinal || '<p style="color:#B00020">Nada foi cadastrado.</p>';
+  if(pendentesVF.length) pendentesVF.forEach(p => popularModuloResolucaoVF(p.id));
   input.value = '';
   atualizarNomeArquivoSelecionado(true);
   // some sozinha depois de um tempo, com fade suave — só quando não tem
