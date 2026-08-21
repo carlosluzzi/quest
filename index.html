@@ -124,6 +124,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 /* --- Bottom nav --- */
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
+.vf-barra-fixa{position:fixed;bottom:var(--nav-height, 76px);left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#FBFBFA;padding:10px 16px;display:flex;gap:10px;z-index:9;box-sizing:border-box}
+@media(min-width:1100px){.vf-barra-fixa{max-width:none;left:250px;right:0;transform:none;width:auto}}
 .nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative}
 #nav-item-adicionar{display:none}
 #nav-item-vf{display:none}
@@ -717,9 +719,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
         <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="flex:1;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">📋 Lista</button>
       </div>
     </div>
-    <div id="vf-conteudo">
+    <div id="vf-conteudo" style="padding-bottom:70px">
       <div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>
     </div>
+    <div id="vf-barra-fixa" class="vf-barra-fixa hidden"></div>
   </div>
 
   <!-- ===== ADICIONAR QUESTÕES (popup no mobile/tablet, página no desktop) ===== -->
@@ -968,6 +971,16 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-nota-vf" onclick="if(event.target===this) fecharModal('modal-nota-vf')">
+  <div class="modal-conteudo popup-formulario">
+    <h3 class="config-title">Suas notas nessa questão</h3>
+    <div id="lista-notas-vf"></div>
+    <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:80px"></textarea>
+    <button class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
+    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-nota-vf')">Fechar</button>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-editar-questao-admin" onclick="if(event.target===this) fecharModal('modal-editar-questao-admin')">
   <div class="modal-conteudo popup-texto-longo" style="display:flex;flex-direction:column">
     <h3 class="config-title">Editar questão (admin)</h3>
@@ -1095,7 +1108,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-137';
+const VERSAO_APP = '2026-07-25-138';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2849,16 +2862,19 @@ function formatarTextoItemVF(texto){
 let estadoVF = null;
 let filtroVF = {modulo: null, publicacao: null, numero: false, lista: false};
 let sessaoVfParaRetomar = null;
+let favoritosVF = new Set();
+let notasVF = new Set();
 const QUANTIDADE_VF_POR_RODADA = 20;
 
 // entrada da aba V/F — busca a sessão salva NO BANCO (não em memória
-// local, senão trocar de aparelho sempre começa do zero, que era
-// exatamente o bug que o Carlos relatou). Se existe sessão com item ainda
-// não respondido, pergunta se quer continuar
+// local, senão trocar de aparelho sempre começa do zero, bug real já
+// corrigido). Se existe sessão com item ainda não respondido, pergunta
+// se quer continuar
 async function entrarNoModoVF(){
   popularFiltroModuloVF();
   const el = document.getElementById('vf-conteudo');
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
+  document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
 
   const {data: sessaoSalva} = await sb.from('sessao_vf').select('*').eq('usuario_id', usuarioAtual.id).maybeSingle();
   if(sessaoSalva && sessaoSalva.itens_ids && sessaoSalva.indice_atual < sessaoSalva.itens_ids.length){
@@ -2877,9 +2893,14 @@ async function retomarSessaoVF(){
   filtroVF = {modulo: s.filtro_modulo, publicacao: s.filtro_publicacao, numero: s.filtro_numero, lista: s.filtro_lista};
   await aplicarFiltroVFNaTela();
 
-  const {data} = await sb.from('questoes_vf')
-    .select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, bibliografia(titulo)')
-    .in('id', s.itens_ids);
+  const [{data}, {data: favData}, {data: notaData}] = await Promise.all([
+    sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, bibliografia(titulo)').in('id', s.itens_ids),
+    sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
+    sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id)
+  ]);
+  favoritosVF = new Set((favData||[]).map(f=>f.questao_vf_id));
+  notasVF = new Set((notaData||[]).map(n=>n.questao_vf_id));
+
   const porId = {};
   (data||[]).forEach(q=>{ porId[q.id] = q; });
   // reconstrói na MESMA ordem embaralhada salva, não na ordem que o banco devolveu
@@ -2987,6 +3008,7 @@ async function salvarSessaoVFNoBanco(){
 async function iniciarModoVF(){
   const el = document.getElementById('vf-conteudo');
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
+  document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
 
   let query = sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, bibliografia(titulo, modulo_pscpp)').eq('anulada', false);
   if(filtroVF.publicacao) query = query.eq('bibliografia_id', filtroVF.publicacao);
@@ -2997,10 +3019,14 @@ async function iniciarModoVF(){
   if(filtroVF.numero) query = query.eq('eh_numero', true);
   if(filtroVF.lista) query = query.eq('eh_lista', true);
 
-  const [{data, error}, {data: excluidasDoUsuario}] = await Promise.all([
+  const [{data, error}, {data: excluidasDoUsuario}, {data: favData}, {data: notaData}] = await Promise.all([
     query,
-    sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id)
+    sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
+    sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
+    sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id)
   ]);
+  favoritosVF = new Set((favData||[]).map(f=>f.questao_vf_id));
+  notasVF = new Set((notaData||[]).map(n=>n.questao_vf_id));
   const idsExcluidos = new Set((excluidasDoUsuario||[]).map(e=>e.questao_vf_id));
   const disponiveis = (data||[]).filter(q => !idsExcluidos.has(q.id) && (!filtroVF.modulo || q.bibliografia?.modulo_pscpp === filtroVF.modulo));
 
@@ -3026,11 +3052,18 @@ async function iniciarModoVF(){
   renderizarItemVF();
 }
 
+// única função de render — cobre os dois estados (respondida ou não) do
+// mesmo card, e delega a barra de baixo (fixa) pra uma função à parte.
+// Antes existiam dois caminhos que podiam ficar dessincronizados entre
+// si (bug real já corrigido); agora só tem UM estado (estadoVF.respondida)
+// controlando tudo, sem exceção
 function renderizarItemVF(){
   const el = document.getElementById('vf-conteudo');
+  const barraFixa = document.getElementById('vf-barra-fixa');
   if(!estadoVF) return;
 
   if(estadoVF.indice >= estadoVF.itens.length){
+    barraFixa.className = 'vf-barra-fixa hidden';
     const acertos = Object.values(estadoVF.respostas).filter(r=>r.acertou).length;
     el.innerHTML = `
       <div style="padding:32px 4px;text-align:center">
@@ -3042,117 +3075,131 @@ function renderizarItemVF(){
   }
 
   const item = estadoVF.itens[estadoVF.indice];
-  const jaRespondida = estadoVF.respondida; // fonte ÚNICA de verdade — antes tinha duas
-  // (essa e "respostaSalva" existir) que podiam ficar dessincronizadas
-  // entre si, e quando isso acontecia travava a tela: botão não desabilitava
-  // mas clicar não fazia nada, e o "Próxima" nunca aparecia
-  const respostaSalva = estadoVF.respostas[item.id]; // só usada pra saber QUAL foi a resposta, quando existir
+  const jaRespondida = estadoVF.respondida; // fonte ÚNICA de verdade
+  const respostaSalva = estadoVF.respostas[item.id];
   const publicacao = item.bibliografia?.titulo || 'Publicação não identificada';
-  const estiloTagAtiva = 'background:#B23A34;color:#fff;border-color:#B23A34';
-  const estiloTagInativa = 'background:#fff;color:#888;border-color:#ddd';
   const acertosAteAqui = Object.values(estadoVF.respostas).filter(r=>r.acertou).length;
+
+  // bloco de resultado (Proposta A: dentro do próprio card, como rodapé,
+  // separado por uma linha) — só existe quando já respondeu
+  let blocoResultado = '';
+  if(jaRespondida){
+    const resp = respostaSalva || {resposta: item.resposta, acertou: true}; // resguardo de segurança
+    const cor = resp.acertou ? '#3B6D11' : '#A32D2D';
+    blocoResultado = `
+      <div style="height:1px;background:#eee;margin:14px 0"></div>
+      <div style="font-weight:700;font-size:16px;text-align:center;color:${cor};letter-spacing:.02em">${item.resposta ? 'VERDADEIRO' : 'FALSO'}</div>
+      ${!item.resposta ? `<div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;color:#111;margin-top:10px;text-align:left;font-weight:400">${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
+    `;
+  }
 
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:2px 2px 14px;color:#888;font-size:var(--fs-c)">
       <span style="display:flex;align-items:center;gap:6px">Item ${estadoVF.indice+1} de ${estadoVF.itens.length} <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
       <span>${acertosAteAqui} certas até aqui</span>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button id="vf-tag-numero" onclick="toggleTagVF('${item.id}','eh_numero')" style="flex:1;border-radius:8px;border:1px solid;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;${item.eh_numero?estiloTagAtiva:estiloTagInativa}">🔢 Número</button>
-      <button id="vf-tag-lista" onclick="toggleTagVF('${item.id}','eh_lista')" style="flex:1;border-radius:8px;border:1px solid;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;${item.eh_lista?estiloTagAtiva:estiloTagInativa}">📋 Lista</button>
-    </div>
     <div class="card-questao">
       <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0 0 10px">${escapeHtml(publicacao)}</p>
       <div class="enunciado" style="margin-top:0">${formatarTextoItemVF(item.texto)}</div>
-    </div>
-    <div id="vf-botoes" style="display:flex;gap:10px;margin-top:16px;height:44px;box-sizing:border-box">
-      <button class="btn-secundario" id="vf-btn-verdadeiro" style="flex:1;height:100%;box-sizing:border-box" ${jaRespondida?'disabled':''} onclick="responderVF(true)">Verdadeiro</button>
-      <button class="btn-secundario" id="vf-btn-falso" style="flex:1;height:100%;box-sizing:border-box" ${jaRespondida?'disabled':''} onclick="responderVF(false)">Falso</button>
-    </div>
-    <div id="vf-feedback" style="display:none"></div>
-    <div style="margin-top:14px;height:44px;box-sizing:border-box" id="vf-wrapper-proxima">
-      <button class="btn-primario" style="width:100%;height:100%;box-sizing:border-box;display:none" id="vf-btn-proxima" onclick="proximoVF()">Próxima</button>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      ${estadoVF.indice>0?`<button class="btn-secundario" style="flex:1" onclick="anteriorVF()">← Anterior</button>`:''}
+      ${blocoResultado}
     </div>
     <div class="banco-acoes" style="margin-top:14px">
       <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         <span>Excluir</span>
       </button>
+      <button class="banco-acao-btn ${favoritosVF.has(item.id)?'favoritada':''}" onclick="toggleFavoritoVF('${item.id}')">
+        <svg viewBox="0 0 24 24" fill="${favoritosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
+        <span>Favoritar</span>
+      </button>
+      <button class="banco-acao-btn" onclick="abrirNotaVF('${item.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M17 4v5h3"/></svg>
+        <span>Notas</span>
+        ${notasVF.has(item.id)?'<span class="badge-dot" style="background:#888"></span>':''}
+      </button>
     </div>
   `;
 
-  // se já tinha resposta salva pra esse item (voltou usando "Anterior"),
-  // já mostra o resultado direto, sem precisar clicar de novo
-  if(jaRespondida){
-    // resguardo: se por algum motivo a resposta específica não foi
-    // encontrada mas o estado diz que já foi respondida, ainda assim
-    // mostra o feedback (com um palpite seguro) em vez de travar a tela
-    // sem botão nenhum pra avançar — nunca mais deixa travado que nem
-    // aconteceu de verdade
-    const resp = respostaSalva || {resposta: item.resposta, acertou: true};
-    mostrarFeedbackVF(item, resp.resposta, resp.acertou, false);
-  }
+  renderizarBarraFixaVF();
 }
 
-function mostrarFeedbackVF(item, resposta, acertou, ehNovaResposta){
-  const btnV = document.getElementById('vf-btn-verdadeiro');
-  const btnF = document.getElementById('vf-btn-falso');
-  btnV.disabled = true; btnF.disabled = true;
-  const btnEscolhido = resposta ? btnV : btnF;
-  btnEscolhido.style.background = acertou ? '#E8F2E2' : '#FCEBEB';
-  btnEscolhido.style.color = acertou ? '#3B6D11' : '#A32D2D';
-
-  const cor = acertou ? '#3B6D11' : '#A32D2D';
-  const fb = document.getElementById('vf-feedback');
-  fb.style.display = 'block';
-  fb.style.height = 'auto';
-  fb.style.textAlign = 'left';
-  fb.style.color = cor;
-  if(item.resposta){
-    fb.innerHTML = `<div style="padding:14px 0;font-weight:600">VERDADEIRO</div>`;
+// barra fixa embaixo da tela — nunca some, só troca de conteúdo: antes
+// de responder são os botões Verdadeiro/Falso; depois, viram Anterior/
+// Próxima no mesmíssimo lugar. É isso que garante que nada "pula" na tela
+function renderizarBarraFixaVF(){
+  const barraFixa = document.getElementById('vf-barra-fixa');
+  barraFixa.className = 'vf-barra-fixa';
+  if(estadoVF.respondida){
+    barraFixa.innerHTML = `
+      <button class="btn-secundario" style="flex:1" ${estadoVF.indice===0?'disabled':''} onclick="anteriorVF()">← Anterior</button>
+      <button class="btn-primario" style="flex:1" onclick="proximoVF()">Próxima →</button>
+    `;
   }else{
-    fb.innerHTML = `
-      <div style="padding:14px 0 6px;font-weight:600">FALSO</div>
-      <div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;color:#111;font-weight:400">${formatarTextoItemVF(item.correcao || item.texto)}</div>
+    barraFixa.innerHTML = `
+      <button class="btn-secundario" style="flex:1" onclick="responderVF(true)">Verdadeiro</button>
+      <button class="btn-secundario" style="flex:1" onclick="responderVF(false)">Falso</button>
     `;
   }
-  document.getElementById('vf-btn-proxima').style.display = 'block';
 }
 
 async function responderVF(resposta){
   if(!estadoVF || estadoVF.respondida) return;
-  estadoVF.respondida = true;
   const item = estadoVF.itens[estadoVF.indice];
   const acertou = resposta === item.resposta;
   estadoVF.respostas[item.id] = {resposta, acertou};
-
-  mostrarFeedbackVF(item, resposta, acertou, true);
+  estadoVF.respondida = true;
+  renderizarItemVF();
   await salvarSessaoVFNoBanco();
 }
 
-async function toggleTagVF(questaoId, campo){
-  const item = estadoVF.itens.find(i => i.id === questaoId);
-  if(!item) return;
-  const novoValor = !item[campo];
-  item[campo] = novoValor;
-
-  const btn = document.getElementById(campo === 'eh_numero' ? 'vf-tag-numero' : 'vf-tag-lista');
-  const aplicarEstilo = (ativo) => {
-    btn.style.background = ativo ? '#B23A34' : '#fff';
-    btn.style.color = ativo ? '#fff' : '#888';
-    btn.style.borderColor = ativo ? '#B23A34' : '#ddd';
-  };
-  aplicarEstilo(novoValor);
-
-  const {error} = await sb.from('questoes_vf').update({[campo]: novoValor}).eq('id', questaoId);
-  if(error){
-    item[campo] = !novoValor;
-    aplicarEstilo(!novoValor);
-    alert('Não consegui salvar essa marcação. Tenta de novo.');
+async function toggleFavoritoVF(questaoVfId){
+  if(favoritosVF.has(questaoVfId)){
+    await sb.from('favoritos_vf').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
+    favoritosVF.delete(questaoVfId);
+  }else{
+    await sb.from('favoritos_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoVfId});
+    favoritosVF.add(questaoVfId);
   }
+  renderizarItemVF();
+}
+
+let questaoNotaVfAtual = null;
+async function abrirNotaVF(questaoVfId){
+  questaoNotaVfAtual = questaoVfId;
+  document.getElementById('texto-nota-vf').value = '';
+  abrirModal('modal-nota-vf');
+  await renderizarListaNotasVF();
+}
+
+async function renderizarListaNotasVF(){
+  const el = document.getElementById('lista-notas-vf');
+  el.innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>';
+  const {data} = await sb.from('notas_vf').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false});
+  if(!data || !data.length){ el.innerHTML = ''; return; }
+  el.innerHTML = `<div style="margin-bottom:14px">` + data.map(n => `
+    <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
+      <p style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${formatarTextoItemVF(n.texto)}</p>
+      <button onclick="excluirNotaVF('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
+    </div>`).join('') + `</div>`;
+}
+
+async function adicionarNotaVF(){
+  const campo = document.getElementById('texto-nota-vf');
+  const texto = campo.value.trim();
+  if(!texto) return;
+  await sb.from('notas_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoNotaVfAtual, texto});
+  campo.value = '';
+  notasVF.add(questaoNotaVfAtual);
+  await renderizarListaNotasVF();
+  renderizarItemVF();
+}
+
+async function excluirNotaVF(notaId){
+  await sb.from('notas_vf').delete().eq('id', notaId);
+  await renderizarListaNotasVF();
+  const {count} = await sb.from('notas_vf').select('id', {count:'exact', head:true}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual);
+  if(!count) notasVF.delete(questaoNotaVfAtual);
+  renderizarItemVF();
 }
 
 let questaoVfParaExcluir = null;
