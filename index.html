@@ -124,7 +124,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 /* --- Bottom nav --- */
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
-.vf-barra-fixa{position:fixed;bottom:var(--nav-height, 76px);left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#FBFBFA;padding:10px 16px;display:flex;gap:10px;z-index:9;box-sizing:border-box}
+.vf-barra-fixa{position:fixed;bottom:var(--nav-height, 76px);left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#FBFBFA;padding:10px 16px;display:flex;flex-direction:column;gap:8px;z-index:9;box-sizing:border-box}
+.vf-barra-fixa-principal{display:flex;gap:10px}
+.vf-barra-fixa-acoes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 @media(min-width:1100px){.vf-barra-fixa{max-width:none;left:250px;right:0;transform:none;width:auto}}
 .nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative}
 #nav-item-adicionar{display:none}
@@ -715,11 +717,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
         <option value="">Todas as publicações</option>
       </select>
       <div style="display:flex;gap:8px">
-        <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="flex:1;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">🔢 Número</button>
-        <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="flex:1;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">📋 Lista</button>
+        <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="flex:1;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">Número</button>
+        <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="flex:1;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">Lista</button>
       </div>
     </div>
-    <div id="vf-conteudo" style="padding-bottom:70px">
+    <div id="vf-conteudo" style="padding-bottom:140px">
       <div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>
     </div>
     <div id="vf-barra-fixa" class="vf-barra-fixa hidden"></div>
@@ -943,6 +945,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="modal-conteudo">
     <h3 class="config-title">Excluir questão</h3>
     <p>Ao excluir essa questão V/F, ela deixa de aparecer só pra você, em qualquer rodada futura.</p>
+    <textarea id="motivo-exclusao-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:70px"></textarea>
     <div style="display:flex;gap:8px">
       <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-exclusao-vf')">Cancelar</button>
       <button class="btn-primario" style="flex:1" onclick="confirmarExclusaoVF()">Excluir</button>
@@ -1108,7 +1111,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-138';
+const VERSAO_APP = '2026-07-25-140';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2894,7 +2897,7 @@ async function retomarSessaoVF(){
   await aplicarFiltroVFNaTela();
 
   const [{data}, {data: favData}, {data: notaData}] = await Promise.all([
-    sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, bibliografia(titulo)').in('id', s.itens_ids),
+    sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, capitulo, bibliografia(titulo, modulo_pscpp)').in('id', s.itens_ids),
     sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id)
   ]);
@@ -3010,7 +3013,7 @@ async function iniciarModoVF(){
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
   document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
 
-  let query = sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, bibliografia(titulo, modulo_pscpp)').eq('anulada', false);
+  let query = sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, capitulo, bibliografia(titulo, modulo_pscpp)').eq('anulada', false);
   if(filtroVF.publicacao) query = query.eq('bibliografia_id', filtroVF.publicacao);
   // filtro de módulo é feito só no lado do cliente, mais abaixo — filtrar
   // direto por coluna de tabela relacionada (bibliografia.modulo_pscpp) no
@@ -3078,6 +3081,9 @@ function renderizarItemVF(){
   const jaRespondida = estadoVF.respondida; // fonte ÚNICA de verdade
   const respostaSalva = estadoVF.respostas[item.id];
   const publicacao = item.bibliografia?.titulo || 'Publicação não identificada';
+  const modulo = item.bibliografia?.modulo_pscpp;
+  const rotuloCap = rotuloCapituloDoLivro(publicacao);
+  const linhaModuloCapitulo = [modulo, item.capitulo ? `${rotuloCap} ${item.capitulo}` : null].filter(Boolean).join(' · ');
   const acertosAteAqui = Object.values(estadoVF.respostas).filter(r=>r.acertou).length;
 
   // bloco de resultado (Proposta A: dentro do próprio card, como rodapé,
@@ -3099,11 +3105,33 @@ function renderizarItemVF(){
       <span>${acertosAteAqui} certas até aqui</span>
     </div>
     <div class="card-questao">
-      <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0 0 10px">${escapeHtml(publicacao)}</p>
-      <div class="enunciado" style="margin-top:0">${formatarTextoItemVF(item.texto)}</div>
+      <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0 0 2px">${escapeHtml(publicacao)}</p>
+      ${linhaModuloCapitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:0 0 10px">${escapeHtml(linhaModuloCapitulo)}</p>` : ''}
+      <div class="enunciado" style="margin-top:${linhaModuloCapitulo?'10px':'0'}">${formatarTextoItemVF(item.texto)}</div>
       ${blocoResultado}
     </div>
-    <div class="banco-acoes" style="margin-top:14px">
+  `;
+
+  renderizarBarraFixaVF(item);
+}
+
+// barra fixa embaixo da tela — nunca some, só troca de conteúdo: antes
+// de responder são os botões Verdadeiro/Falso; depois, viram Anterior/
+// Próxima no mesmíssimo lugar. As ações (Excluir/Favoritar/Notas) ficam
+// numa segunda linha, sempre embaixo dos botões principais, também fixas
+// — é isso que garante que nada "pula" na tela, nem os botões nem as ações
+function renderizarBarraFixaVF(item){
+  const barraFixa = document.getElementById('vf-barra-fixa');
+  barraFixa.className = 'vf-barra-fixa';
+  const linhaPrincipal = estadoVF.respondida
+    ? `<button class="btn-secundario" style="flex:1" ${estadoVF.indice===0?'disabled':''} onclick="anteriorVF()">← Anterior</button>
+       <button class="btn-primario" style="flex:1" onclick="proximoVF()">Próxima →</button>`
+    : `<button class="btn-secundario" style="flex:1" onclick="responderVF(true)">Verdadeiro</button>
+       <button class="btn-secundario" style="flex:1" onclick="responderVF(false)">Falso</button>`;
+
+  barraFixa.innerHTML = `
+    <div class="vf-barra-fixa-principal">${linhaPrincipal}</div>
+    <div class="vf-barra-fixa-acoes">
       <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         <span>Excluir</span>
@@ -3119,27 +3147,6 @@ function renderizarItemVF(){
       </button>
     </div>
   `;
-
-  renderizarBarraFixaVF();
-}
-
-// barra fixa embaixo da tela — nunca some, só troca de conteúdo: antes
-// de responder são os botões Verdadeiro/Falso; depois, viram Anterior/
-// Próxima no mesmíssimo lugar. É isso que garante que nada "pula" na tela
-function renderizarBarraFixaVF(){
-  const barraFixa = document.getElementById('vf-barra-fixa');
-  barraFixa.className = 'vf-barra-fixa';
-  if(estadoVF.respondida){
-    barraFixa.innerHTML = `
-      <button class="btn-secundario" style="flex:1" ${estadoVF.indice===0?'disabled':''} onclick="anteriorVF()">← Anterior</button>
-      <button class="btn-primario" style="flex:1" onclick="proximoVF()">Próxima →</button>
-    `;
-  }else{
-    barraFixa.innerHTML = `
-      <button class="btn-secundario" style="flex:1" onclick="responderVF(true)">Verdadeiro</button>
-      <button class="btn-secundario" style="flex:1" onclick="responderVF(false)">Falso</button>
-    `;
-  }
 }
 
 async function responderVF(resposta){
@@ -3205,12 +3212,14 @@ async function excluirNotaVF(notaId){
 let questaoVfParaExcluir = null;
 function abrirConfirmacaoExclusaoVF(questaoVfId){
   questaoVfParaExcluir = questaoVfId;
+  document.getElementById('motivo-exclusao-vf').value = '';
   abrirModal('modal-confirmar-exclusao-vf');
 }
 
 async function confirmarExclusaoVF(){
   if(!questaoVfParaExcluir) return;
-  await sb.from('exclusoes_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoVfParaExcluir});
+  const motivo = document.getElementById('motivo-exclusao-vf').value.trim() || null;
+  await sb.from('exclusoes_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoVfParaExcluir, motivo});
   estadoVF.itens = estadoVF.itens.filter(i => i.id !== questaoVfParaExcluir);
   delete estadoVF.respostas[questaoVfParaExcluir];
   questaoVfParaExcluir = null;
@@ -6586,6 +6595,12 @@ function ehArquivoVF(textoCompleto){
 
 function parsearArquivoVF(textoCompleto){
   const texto = textoCompleto.replace(/^\s*#VF#\s*/, '');
+  // o capítulo aparece uma vez só, no cabeçalho do arquivo (ex: "PSCPP –
+  // VERDADEIRO OU FALSO · Practical Ship Hydrodynamics, Capítulo 2") —
+  // vale pra todas as questões desse upload, não repete por afirmação
+  const capituloMatch = texto.match(/Cap[ií]tulo\s+(\S+)/i);
+  const capituloDoArquivo = capituloMatch ? capituloMatch[1].replace(/[.,;:]$/, '') : null;
+
   const blocos = texto.split(/GABARITO\s*[–-]\s*AFIRMAÇÃO\s*\d+/).slice(1);
   const questoes = [];
   const erros = [];
@@ -6628,7 +6643,7 @@ function parsearArquivoVF(textoCompleto){
     }
   });
 
-  return {questoes, erros};
+  return {questoes, erros, capituloDoArquivo};
 }
 
 // resolve bibliografia de questão V/F direto na tela de upload — pedido
@@ -6689,7 +6704,7 @@ async function salvarResolucaoVF(pendenteId){
 }
 
 async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
-  const {questoes, erros} = parsearArquivoVF(textoBruto);
+  const {questoes, erros, capituloDoArquivo} = parsearArquivoVF(textoBruto);
   if(!questoes.length){
     return {erro: `"${nomeArquivoAtual}": código #VF# encontrado, mas não consegui extrair nenhuma questão do formato esperado.`, cadastradas:0, puladas:0, rascunho:0};
   }
@@ -6718,6 +6733,7 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
       trechos_fonte: q.trechos_fonte,
       fonte: q.fonte,
       bibliografia_id: bibliografiaId,
+      capitulo: capituloDoArquivo,
       dificuldade: q.dificuldade,
       autor_id: usuarioAtual.id,
       lote_upload_id: loteUploadId,
