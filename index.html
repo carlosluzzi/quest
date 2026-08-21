@@ -1114,7 +1114,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-158';
+const VERSAO_APP = '2026-07-25-161';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3471,8 +3471,8 @@ function renderizarItemVF(){
   }
 
   const tagsPublicacao = [
-    item.eh_numero ? `<span style="border:1px solid #B23A34;color:#B23A34;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.03em;white-space:nowrap">NÚMERO</span>` : '',
-    item.eh_lista ? `<span style="border:1px solid #B23A34;color:#B23A34;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.03em;white-space:nowrap">LISTA</span>` : ''
+    item.eh_numero ? `<span style="background:#B23A34;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.03em;white-space:nowrap">NÚMERO</span>` : '',
+    item.eh_lista ? `<span style="background:#B23A34;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.03em;white-space:nowrap">LISTA</span>` : ''
   ].filter(Boolean).join('');
 
   el.innerHTML = `
