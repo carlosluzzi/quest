@@ -705,6 +705,18 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <!-- ===== V/F (beta, só Carlos por enquanto) ===== -->
   <div class="view-aba hidden" id="aba-vf">
+    <div id="vf-filtros" style="margin-bottom:16px">
+      <select id="vf-filtro-modulo" class="filter-select" style="margin-bottom:8px" onchange="mudarModuloFiltroVF()">
+        <option value="">Todos os módulos</option>
+      </select>
+      <select id="vf-filtro-publicacao" class="filter-select" style="margin-bottom:8px" onchange="mudarFiltroVF()" disabled>
+        <option value="">Todas as publicações</option>
+      </select>
+      <div style="display:flex;gap:8px">
+        <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="flex:1;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">🔢 Número</button>
+        <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="flex:1;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">📋 Lista</button>
+      </div>
+    </div>
     <div id="vf-conteudo">
       <div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>
     </div>
@@ -924,6 +936,28 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-confirmar-exclusao-vf">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Excluir questão</h3>
+    <p>Ao excluir essa questão V/F, ela deixa de aparecer só pra você, em qualquer rodada futura.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-exclusao-vf')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="confirmarExclusaoVF()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-retomar-vf">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Continuar de onde parou?</h3>
+    <p>Você tem uma rodada de V/F em andamento. Quer continuar ela, ou começar uma nova (embaralha de novo, zera o placar)?</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="recomecarSessaoVF()">Começar de novo</button>
+      <button class="btn-primario" style="flex:1" onclick="retomarSessaoVF()">Continuar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-nota-questao" onclick="if(event.target===this) fecharModal('modal-nota-questao')">
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title">Suas notas nessa questão</h3>
@@ -1061,7 +1095,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-131';
+const VERSAO_APP = '2026-07-25-134';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2012,7 +2046,7 @@ function trocarAba(nome){
   if(nome==='forum'){ carregarForum(); }
   if(nome==='placar') carregarMetricasPessoais();
   if(nome==='quests') contarDisponiveisAgora();
-  if(nome==='vf') iniciarModoVF();
+  if(nome==='vf') entrarNoModoVF();
   if(nome==='adicionar' && !extracaoEmAndamento){
     document.getElementById('upload-status').innerHTML = '';
     document.getElementById('upload-planilha-status').innerHTML = '';
@@ -2813,22 +2847,104 @@ function formatarTextoItemVF(texto){
 }
 
 let estadoVF = null;
+let filtroVF = {modulo: null, publicacao: null, numero: false, lista: false};
 const QUANTIDADE_VF_POR_RODADA = 20;
+
+// chamada pelo trocarAba('vf') — se já existe uma sessão em andamento
+// (você saiu da aba e voltou), pergunta antes de descartar o progresso.
+// Só na primeira vez (ou depois de escolher "começar de novo") é que
+// popula os filtros e busca do banco
+function entrarNoModoVF(){
+  if(estadoVF && estadoVF.itens.length && estadoVF.indice < estadoVF.itens.length){
+    abrirModal('modal-retomar-vf');
+  }else{
+    popularFiltroModuloVF();
+    iniciarModoVF();
+  }
+}
+
+function retomarSessaoVF(){
+  fecharModal('modal-retomar-vf');
+  renderizarItemVF();
+}
+
+function recomecarSessaoVF(){
+  fecharModal('modal-retomar-vf');
+  popularFiltroModuloVF();
+  iniciarModoVF();
+}
+
+async function popularFiltroModuloVF(){
+  const el = document.getElementById('vf-filtro-modulo');
+  if(el.dataset.populado) return; // só busca uma vez por sessão de app aberto
+  const {data} = await sb.from('questoes_vf').select('bibliografia(modulo_pscpp)').eq('anulada', false);
+  const modulosComVF = new Set((data||[]).map(q=>q.bibliografia?.modulo_pscpp).filter(Boolean));
+  el.innerHTML = '<option value="">Todos os módulos</option>' + [...modulosComVF].sort((a,b)=>a.localeCompare(b,'pt')).map(m=>
+    `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`
+  ).join('');
+  el.dataset.populado = '1';
+}
+
+function mudarModuloFiltroVF(){
+  const modulo = document.getElementById('vf-filtro-modulo').value;
+  filtroVF.modulo = modulo || null;
+  filtroVF.publicacao = null;
+  const elPub = document.getElementById('vf-filtro-publicacao');
+  if(!modulo){
+    elPub.innerHTML = '<option value="">Todas as publicações</option>';
+    elPub.disabled = true;
+  }else{
+    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+    elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>
+      `<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`
+    ).join('');
+    elPub.disabled = false;
+  }
+  mudarFiltroVF();
+}
+
+function mudarFiltroVF(){
+  filtroVF.publicacao = document.getElementById('vf-filtro-publicacao').value || null;
+  iniciarModoVF(); // mudar filtro sempre reembaralha e recomeça do zero (decisão do Carlos)
+}
+
+function toggleFiltroTagVF(tipo){
+  const campo = tipo === 'numero' ? 'numero' : 'lista';
+  filtroVF[campo] = !filtroVF[campo];
+  const btn = document.getElementById('vf-filtro-'+tipo);
+  btn.style.background = filtroVF[campo] ? '#B23A34' : '#fff';
+  btn.style.color = filtroVF[campo] ? '#fff' : '#888';
+  btn.style.borderColor = filtroVF[campo] ? '#B23A34' : '#ddd';
+  mudarFiltroVF();
+}
 
 async function iniciarModoVF(){
   const el = document.getElementById('vf-conteudo');
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
 
-  const {data, error} = await sb.from('questoes_vf')
-    .select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, bibliografia(titulo)')
-    .eq('anulada', false);
-  if(error || !data || !data.length){
-    el.innerHTML = `<p style="padding:24px 4px;color:#888">Ainda não tem nenhum item pronto pra praticar — o banco de V/F está sendo preparado aos poucos.</p>`;
+  let query = sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, bibliografia(titulo, modulo_pscpp)').eq('anulada', false);
+  if(filtroVF.publicacao) query = query.eq('bibliografia_id', filtroVF.publicacao);
+  // filtro de módulo é feito só no lado do cliente, mais abaixo — filtrar
+  // direto por coluna de tabela relacionada (bibliografia.modulo_pscpp) no
+  // Supabase tem sintaxe própria (precisa de !inner) e não quero arriscar
+  // outro travamento silencioso por sintaxe errada, tipo o que já aconteceu
+  if(filtroVF.numero) query = query.eq('eh_numero', true);
+  if(filtroVF.lista) query = query.eq('eh_lista', true);
+
+  const [{data, error}, {data: excluidasDoUsuario}] = await Promise.all([
+    query,
+    sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id)
+  ]);
+  const idsExcluidos = new Set((excluidasDoUsuario||[]).map(e=>e.questao_vf_id));
+  const disponiveis = (data||[]).filter(q => !idsExcluidos.has(q.id) && (!filtroVF.modulo || q.bibliografia?.modulo_pscpp === filtroVF.modulo));
+
+  if(error || !disponiveis.length){
+    el.innerHTML = `<p style="padding:24px 4px;color:#888">Nenhum item disponível pra praticar com esses filtros.</p>`;
     return;
   }
 
   // embaralha (Fisher-Yates) pra não repetir sempre a mesma ordem/começo
-  const embaralhado = [...data];
+  const embaralhado = [...disponiveis];
   for(let i = embaralhado.length - 1; i > 0; i--){
     const j = Math.floor(Math.random() * (i + 1));
     [embaralhado[i], embaralhado[j]] = [embaralhado[j], embaralhado[i]];
@@ -2836,7 +2952,6 @@ async function iniciarModoVF(){
 
   estadoVF = {
     itens: embaralhado.slice(0, QUANTIDADE_VF_POR_RODADA),
-    totalDisponivel: data.length,
     indice: 0,
     acertos: 0,
     respondida: false
@@ -2879,9 +2994,15 @@ function renderizarItemVF(){
       <button class="btn-secundario" id="vf-btn-verdadeiro" style="flex:1;height:100%;box-sizing:border-box" onclick="responderVF(true)">Verdadeiro</button>
       <button class="btn-secundario" id="vf-btn-falso" style="flex:1;height:100%;box-sizing:border-box" onclick="responderVF(false)">Falso</button>
     </div>
-    <div id="vf-feedback" class="banco-resultado" style="display:none"></div>
+    <div id="vf-feedback" style="display:none"></div>
     <div style="margin-top:14px;height:44px;box-sizing:border-box" id="vf-wrapper-proxima">
       <button class="btn-primario" style="width:100%;height:100%;box-sizing:border-box;display:none" id="vf-btn-proxima" onclick="proximoVF()">Próxima</button>
+    </div>
+    <div class="banco-acoes" style="margin-top:14px">
+      <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoVF('${item.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        <span>Excluir</span>
+      </button>
     </div>
   `;
 }
@@ -2893,8 +3014,6 @@ function responderVF(resposta){
   const acertou = resposta === item.resposta;
   if(acertou) estadoVF.acertos++;
 
-  // não remove os botões — só desativa e destaca qual foi escolhido, pra
-  // não deslocar nada na tela (o botão sempre fica onde estava)
   const btnV = document.getElementById('vf-btn-verdadeiro');
   const btnF = document.getElementById('vf-btn-falso');
   btnV.disabled = true; btnF.disabled = true;
@@ -2908,32 +3027,27 @@ function responderVF(resposta){
   fb.style.height = 'auto';
   fb.style.textAlign = 'left';
   fb.style.color = cor;
-  // acertou: só confirma. Errou: mostra a frase certa e a explicação,
-  // igual pedido — não só "errado", mas o porquê e a versão correta
-  if(acertou){
-    fb.innerHTML = `<div style="padding:14px 0">Certo!</div>`;
+  if(item.resposta){
+    // afirmação é Verdadeira: não existe "correção" nesse caso (o texto já
+    // é o fato certo) — só o veredito
+    fb.innerHTML = `<div style="padding:14px 0;font-weight:600">VERDADEIRO</div>`;
   }else{
-    const fraseCorreta = item.resposta
-      ? item.texto // a afirmação já era Verdadeira do jeito que está
-      : (item.correcao || item.texto); // era Falsa: mostra a versão corrigida, se existir
+    // afirmação é Falsa: veredito + a versão corrigida, sempre — acertando
+    // ou errando, sem explicação (isso é auditoria interna, não pra tela)
     fb.innerHTML = `
-      <div style="padding:14px 0 6px">Errado — essa afirmação é <b>${item.resposta ? 'Verdadeira' : 'Falsa'}</b>.</div>
-      <div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;margin-bottom:10px;color:#111;font-weight:400">${formatarTextoItemVF(fraseCorreta)}</div>
-      <div style="color:#666;font-weight:400;font-size:var(--fs-c);line-height:1.5">${formatarTextoItemVF(item.explicacao)}</div>
+      <div style="padding:14px 0 6px;font-weight:600">FALSO</div>
+      <div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;color:#111;font-weight:400">${formatarTextoItemVF(item.correcao || item.texto)}</div>
     `;
   }
 
   document.getElementById('vf-btn-proxima').style.display = 'block';
 }
 
-// marca/desmarca a tag (número ou lista) na questão V/F atual — grava
-// direto no banco a cada clique, sem precisar de botão de salvar
-// separado; usado pra "treinar" a classificação antes de automatizar
 async function toggleTagVF(questaoId, campo){
   const item = estadoVF.itens.find(i => i.id === questaoId);
   if(!item) return;
   const novoValor = !item[campo];
-  item[campo] = novoValor; // otimista — atualiza local antes de esperar o banco
+  item[campo] = novoValor;
 
   const btn = document.getElementById(campo === 'eh_numero' ? 'vf-tag-numero' : 'vf-tag-lista');
   const aplicarEstilo = (ativo) => {
@@ -2945,11 +3059,26 @@ async function toggleTagVF(questaoId, campo){
 
   const {error} = await sb.from('questoes_vf').update({[campo]: novoValor}).eq('id', questaoId);
   if(error){
-    // reverte se der erro salvando — não deixa o botão mentir sobre o estado real
     item[campo] = !novoValor;
     aplicarEstilo(!novoValor);
     alert('Não consegui salvar essa marcação. Tenta de novo.');
   }
+}
+
+let questaoVfParaExcluir = null;
+function abrirConfirmacaoExclusaoVF(questaoVfId){
+  questaoVfParaExcluir = questaoVfId;
+  abrirModal('modal-confirmar-exclusao-vf');
+}
+
+async function confirmarExclusaoVF(){
+  if(!questaoVfParaExcluir) return;
+  await sb.from('exclusoes_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoVfParaExcluir});
+  estadoVF.itens = estadoVF.itens.filter(i => i.id !== questaoVfParaExcluir);
+  questaoVfParaExcluir = null;
+  fecharModal('modal-confirmar-exclusao-vf');
+  estadoVF.respondida = false;
+  renderizarItemVF();
 }
 
 function proximoVF(){
