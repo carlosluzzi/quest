@@ -714,8 +714,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <select id="vf-filtro-modulo" class="filter-select" style="margin-bottom:8px" onchange="mudarModuloFiltroVF()">
         <option value="">Todos os módulos</option>
       </select>
-      <select id="vf-filtro-publicacao" class="filter-select" style="margin-bottom:8px" onchange="mudarFiltroVF()" disabled>
+      <select id="vf-filtro-publicacao" class="filter-select" style="margin-bottom:8px" onchange="mudarFiltroPublicacaoVF()" disabled>
         <option value="">Todas as publicações</option>
+      </select>
+      <select id="vf-filtro-capitulo" class="filter-select" style="margin-bottom:8px" onchange="mudarFiltroVF()" disabled>
+        <option value="">Todos os capítulos</option>
       </select>
       <div style="display:flex;gap:8px">
         <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="flex:1;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">Número</button>
@@ -935,6 +938,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="modal-conteudo">
     <h3 class="config-title">Excluir questão</h3>
     <p>Ao excluir essa questão, ela deixa de aparecer só pra você. Os outros usuários continuam vendo ela normalmente, sem nenhuma mudança.</p>
+    <textarea id="motivo-exclusao-questao" class="textarea-padrao hidden" placeholder="Motivo (opcional)" style="min-height:140px"></textarea>
     <div style="display:flex;gap:8px">
       <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-exclusao-questao')">Cancelar</button>
       <button class="btn-primario" style="flex:1" onclick="confirmarExclusaoQuestao()">Excluir</button>
@@ -945,7 +949,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 <div class="modal-overlay hidden" id="modal-confirmar-exclusao-vf">
   <div class="modal-conteudo">
     <h3 class="config-title">Excluir questão</h3>
-    <p>Ao excluir essa questão V/F, ela deixa de aparecer só pra você, em qualquer rodada futura.</p>
+    <p>Ao excluir essa questão V/F, ela nunca mais aparece pra você.</p>
     <textarea id="motivo-exclusao-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:140px"></textarea>
     <div style="display:flex;gap:8px">
       <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-exclusao-vf')">Cancelar</button>
@@ -1109,7 +1113,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-146';
+const VERSAO_APP = '2026-07-25-152';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1213,7 +1217,7 @@ function formatarEnunciado(texto){
   const escapedCompleto = escapeHtml(texto).replace(/\s+/g, ' ').trim()
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // isola a seção "TRECHOS DA FONTE" ANTES de qualquer divisão em
   // alternativas (a, b, c...) — sem isso, menções tipo "Alternativas a) e
@@ -1414,7 +1418,7 @@ function extrairAlternativas(alternativasTexto){
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])/g, '$1<sub>$2</sub>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1<sub>$2</sub>');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
     const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
@@ -1946,6 +1950,7 @@ async function mostrarAppShell(){
   if(souCarlos()){
     document.getElementById('bloco-upload-marinha').classList.remove('hidden');
     document.getElementById('nav-item-vf').classList.remove('hidden');
+    document.getElementById('motivo-exclusao-questao').classList.remove('hidden');
     sb.rpc('concursos_disponiveis').then(({data})=>{
       document.getElementById('lista-concursos-existentes').innerHTML = (data||[]).map(c=>`<option value="${escapeHtml(c.concurso)}">`).join('');
     });
@@ -2811,7 +2816,7 @@ async function buscarQuestoesFiltradas(apenasContagem = false){
   const {data: todasQuestoes, error} = await query;
   if(error){ console.error(error); return []; }
 
-  const {data: exclusoes} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id);
+  const {data: exclusoes} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).is('resolvido_em', null);
   const idsExcluidos = new Set((exclusoes||[]).map(e=>e.questao_id));
   let questoesFiltradas = (todasQuestoes||[]).filter(q=>!idsExcluidos.has(q.id));
 
@@ -2858,7 +2863,7 @@ function formatarTextoItemVF(texto){
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1<sub>$2</sub>');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>');
 }
 
 // ============================================================
@@ -3031,8 +3036,9 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
 // TELA DE PRÁTICA — estado, filtro, fila, resposta, ações
 // ============================================================
 let estadoVF = null;
-let filtroVF = {modulo: null, publicacao: null, numero: false, lista: false};
+let filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false};
 let favoritosVF = new Set();
+let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual que o banco, enquanto o upsert está em voo
 let notasVF = new Set();
 
 // busca todas as questões do pool atual (respeitando filtro), já com o
@@ -3041,18 +3047,21 @@ async function carregarPoolVF(){
   const montarQueryQuestoesVF = () => {
     let q = sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, capitulo, n_palavras, bibliografia(titulo, modulo_pscpp)').eq('anulada', false);
     if(filtroVF.publicacao) q = q.eq('bibliografia_id', filtroVF.publicacao);
+    if(filtroVF.capitulo) q = q.eq('capitulo', filtroVF.capitulo);
     // Número + Lista juntos = UNIÃO (ou uma coisa ou outra), não interseção —
     // decisão explícita do Carlos. Só um dos dois ativo continua sendo um
     // filtro direto e sem ambiguidade
     if(filtroVF.numero && filtroVF.lista) q = q.or('eh_numero.eq.true,eh_lista.eq.true');
     else if(filtroVF.numero) q = q.eq('eh_numero', true);
     else if(filtroVF.lista) q = q.eq('eh_lista', true);
-    return q;
+    return q.order('id'); // obrigatório pra paginação com .range() ser estável — sem
+    // ordem definida o Postgres não garante a mesma sequência entre uma
+    // página e outra, podendo pular ou duplicar linha acima de 1000
   };
 
   const [{data: questoes}, {data: estados}, {data: excluidas}, {data: favData}, {data: notaData}] = await Promise.all([
     buscarTudoPaginadoVF(montarQueryQuestoesVF),
-    buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id)),
+    buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id)
@@ -3066,15 +3075,29 @@ async function carregarPoolVF(){
   return (questoes||[])
     .filter(q => !idsExcluidos.has(q.id) && (!filtroVF.modulo || q.bibliografia?.modulo_pscpp === filtroVF.modulo))
     .map(q => {
+      // se essa questão tem uma escrita em voo (respondida agora mesmo, mas
+      // o upsert ainda não confirmou), o estado local já é mais atual que
+      // o que acabou de vir do banco — usa ele em vez do que a query trouxe
+      const pendente = escritasPendentesVF.get(q.id);
+      if(pendente) return {...q, ...pendente};
+
       const e = estadoPorId[q.id];
+      // blindagem contra linha corrompida (migração ou bug antigo): se diz
+      // 'revisao' mas não tem intervalo, ou 'aprendendo' sem total_degraus,
+      // trata como segura em vez de propagar NaN pro cálculo e de volta pro banco
+      let estado = e?.estado || 'nova';
+      let totalDegraus = e?.total_degraus ?? null;
+      if(estado === 'revisao' && !e?.intervalo_horas) estado = 'nova';
+      if(estado === 'aprendendo' && !totalDegraus) totalDegraus = 1;
+
       return {
         ...q,
-        estado: e?.estado || 'nova',
+        estado,
         intervalo_horas: e?.intervalo_horas ?? null,
         fator: e?.fator ?? VF_ALGO.FATOR_INI,
         ultima_resposta_em: e?.ultima_resposta_em ?? null,
         degrau: e?.degrau ?? 0,
-        total_degraus: e?.total_degraus ?? null,
+        total_degraus: totalDegraus,
         intervalo_pendente: e?.intervalo_pendente ?? null,
         marca_contador: e?.marca_contador ?? null,
         total_respostas: e?.total_respostas ?? 0,
@@ -3129,6 +3152,18 @@ async function recarregarPoolEContinuarVF(){
     el.innerHTML = `<p style="padding:24px 4px;color:#888">Nenhum item disponível pra praticar com esses filtros.</p>`;
     return;
   }
+  // se a entrada atual ainda não foi respondida, ela é sempre a última do
+  // histórico — remove antes de empilhar uma nova em cima. Sem isso, ela
+  // fica órfã: aponta pra uma instância de item que não é mais a mesma
+  // que está em estadoVF.pool (carregarPoolVF sempre cria instâncias
+  // novas), então respondê-la depois não atualiza o pool em memória — o
+  // algoritmo podia escolher a mesma questão de novo logo em seguida,
+  // achando que ela nunca foi respondida (bug real, achado pelo Fable)
+  const entradaAtual = estadoVF.historico[estadoVF.posicao];
+  if(entradaAtual && entradaAtual.resposta === null){
+    estadoVF.historico.pop();
+    estadoVF.posicao--;
+  }
   await avancarParaProximaVF();
 }
 
@@ -3141,9 +3176,12 @@ async function avancarParaProximaVF(){
     return;
   }
   estadoVF.anteriorVeioDeAprendizado = pick.veioDeAprendizado;
-  estadoVF.historico.push({item: pick.item, resposta: null, acertou: null});
+  // horaInicioMs vai DENTRO da entrada, não em estadoVF — variável global
+  // compartilhada seria sobrescrita pela próxima questão, corrompendo o
+  // tempo de resposta de uma pendente antiga se ela ainda fosse respondida
+  // depois (também achado pelo Fable, ligado ao bug da entrada órfã)
+  estadoVF.historico.push({item: pick.item, resposta: null, acertou: null, horaInicioMs: agoraMs});
   estadoVF.posicao = estadoVF.historico.length - 1;
-  estadoVF.horaInicioMs = agoraMs; // marca quando a questão apareceu, pra medir tempo de resposta
   // trava de segurança contra toque duplo: clicar "Próxima" e, milissegundos
   // depois, o dedo ainda solto acertar Verdadeiro/Falso da questão nova antes
   // mesmo dela ser lida — ignora clique nesses botões por um instante
@@ -3155,7 +3193,11 @@ function mudarModuloFiltroVF(){
   const modulo = document.getElementById('vf-filtro-modulo').value;
   filtroVF.modulo = modulo || null;
   filtroVF.publicacao = null;
+  filtroVF.capitulo = null;
   const elPub = document.getElementById('vf-filtro-publicacao');
+  const elCap = document.getElementById('vf-filtro-capitulo');
+  elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+  elCap.disabled = true;
   if(!modulo){
     elPub.innerHTML = '<option value="">Todas as publicações</option>';
     elPub.disabled = true;
@@ -3169,8 +3211,32 @@ function mudarModuloFiltroVF(){
   mudarFiltroVF();
 }
 
+// capítulo é específico de cada publicação, então cascata a partir dela —
+// busca os capítulos que realmente existem em questoes_vf pra essa
+// publicação (não uma lista genérica), e ordena numericamente quando dá
+async function mudarFiltroPublicacaoVF(){
+  const publicacao = document.getElementById('vf-filtro-publicacao').value;
+  filtroVF.publicacao = publicacao || null;
+  filtroVF.capitulo = null;
+  const elCap = document.getElementById('vf-filtro-capitulo');
+  if(!publicacao){
+    elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+    elCap.disabled = true;
+  }else{
+    const {data} = await sb.from('questoes_vf').select('capitulo').eq('bibliografia_id', publicacao).eq('anulada', false);
+    const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
+      .sort((a,b) => (parseFloat(a)||0) - (parseFloat(b)||0) || a.localeCompare(b,'pt'));
+    elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
+      `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`
+    ).join('');
+    elCap.disabled = false;
+  }
+  mudarFiltroVF();
+}
+
 function mudarFiltroVF(){
   filtroVF.publicacao = document.getElementById('vf-filtro-publicacao').value || null;
+  filtroVF.capitulo = document.getElementById('vf-filtro-capitulo').value || null;
   recarregarPoolEContinuarVF();
 }
 
@@ -3203,9 +3269,8 @@ function renderizarItemVF(){
   const item = entrada.item;
   const jaRespondida = entrada.resposta !== null;
   const publicacao = item.bibliografia?.titulo || 'Publicação não identificada';
-  const modulo = item.bibliografia?.modulo_pscpp;
   const rotuloCap = rotuloCapituloDoLivro(publicacao);
-  const linhaModuloCapitulo = [modulo, item.capitulo ? `${rotuloCap} ${item.capitulo}` : null].filter(Boolean).join(' · ');
+  const linhaCapitulo = item.capitulo ? `${rotuloCap} ${item.capitulo}` : '';
 
   let blocoResultado = '';
   if(jaRespondida){
@@ -3229,8 +3294,8 @@ function renderizarItemVF(){
     </div>
     <div class="card-questao">
       <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0 0 2px">${escapeHtml(publicacao)}</p>
-      ${linhaModuloCapitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:0 0 10px">${escapeHtml(linhaModuloCapitulo)}</p>` : ''}
-      <div class="enunciado" style="margin-top:${linhaModuloCapitulo?'10px':'0'}">${formatarTextoItemVF(item.texto)}</div>
+      ${linhaCapitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:0 0 10px">${escapeHtml(linhaCapitulo)}</p>` : ''}
+      <div class="enunciado" style="margin-top:${linhaCapitulo?'10px':'0'}">${formatarTextoItemVF(item.texto)}</div>
       ${blocoResultado}
     </div>
   `;
@@ -3275,7 +3340,7 @@ async function responderVF(resposta){
   const agoraMs = agoraCorrigidoVF();
   if(agoraMs < (estadoVF.bloqueadoAteMs||0)) return; // toque duplo acidental logo após a questão aparecer — ignora
   const item = entrada.item;
-  const tempoS = (agoraMs - estadoVF.horaInicioMs) / 1000;
+  const tempoS = (agoraMs - entrada.horaInicioMs) / 1000;
   const acertou = resposta === item.resposta;
 
   entrada.resposta = resposta;
@@ -3289,6 +3354,13 @@ async function responderVF(resposta){
   const novoEstadoItem = registrarRespostaAlgoritmoVF(item, acertou, tempoS, agoraMs, contadorNoMomento);
   Object.assign(item, novoEstadoItem);
   estadoVF.contadorGlobal = contadorNoMomento + 1; // otimista, sincroniza com o servidor abaixo
+
+  // guarda o estado local (já calculado, correto) numa "lista de espera" —
+  // se o filtro mudar antes do upsert terminar, carregarPoolVF usa esse
+  // valor em vez do que ainda está desatualizado no banco. Sem isso, uma
+  // troca de filtro rápida podia buscar essa questão como "nova" de novo,
+  // porque o upsert ainda não tinha chegado no servidor
+  escritasPendentesVF.set(item.id, {...item});
 
   renderizarItemVF(); // mostra o resultado na hora, sem esperar o banco
 
@@ -3307,7 +3379,13 @@ async function responderVF(resposta){
       intervalo_antes: intervaloAntes, intervalo_depois: item.intervalo_horas
     })
   ]);
-  if(rpcResultado?.data != null) estadoVF.contadorGlobal = rpcResultado.data;
+  escritasPendentesVF.delete(item.id); // upsert confirmado — não precisa mais do valor de espera
+  // Math.max, não atribuição direta — em respostas muito rápidas em
+  // sequência, o RPC da primeira pode voltar DEPOIS do incremento otimista
+  // da segunda já ter avançado localmente; sem o Math.max, o contador
+  // regrediria nesse instante e uma terceira resposta pegaria marca_contador
+  // duplicado
+  if(rpcResultado?.data != null) estadoVF.contadorGlobal = Math.max(estadoVF.contadorGlobal, rpcResultado.data);
 }
 
 async function toggleFavoritoVF(questaoVfId){
@@ -3406,6 +3484,16 @@ async function proximoVF(){
   if(!estadoVF) return;
   if(estadoVF.posicao < estadoVF.historico.length - 1){
     estadoVF.posicao++;
+    // se aterrissou numa entrada ainda não respondida (só pode ser a
+    // última — nunca há duas pendentes ao mesmo tempo, garantido pela
+    // correção do bug da órfã), rearma a trava de toque duplo. Antes só
+    // era armada em avancarParaProximaVF, deixando essa navegação
+    // específica (Anterior, depois dois toques rápidos em Próxima) sem
+    // proteção — achado do Fable
+    const entradaNova = estadoVF.historico[estadoVF.posicao];
+    if(entradaNova && entradaNova.resposta === null){
+      estadoVF.bloqueadoAteMs = agoraCorrigidoVF() + 400;
+    }
     renderizarItemVF();
   }else{
     await avancarParaProximaVF();
@@ -3426,7 +3514,7 @@ const QUANTIDADE_SUPERQUEST = 70;
 async function gerarSuperQuest(){
   const [{data: todasQuestoes, error}, {data: exclusoes}] = await Promise.all([
     sb.from('questoes').select('*').eq('anulada', false),
-    sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id)
+    sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).is('resolvido_em', null)
   ]);
   if(error){ alert('Erro ao buscar questões: '+error.message); return; }
 
@@ -3694,7 +3782,7 @@ async function retomarCadernoEspecifico(cadernoId){
   // questões, que já temos nesse ponto. Rodar junto poupa mais 1 ida-e-volta
   const [{data: exclusoesDoCaderno}] = await Promise.all([
     idsQuestoesCaderno.length
-      ? sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoesCaderno)
+      ? sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoesCaderno).is('resolvido_em', null)
       : Promise.resolve({data: []}),
     carregarFavoritosENotas(idsQuestoesCaderno)
   ]);
@@ -4292,12 +4380,17 @@ let questaoParaExcluir = null;
 
 function abrirConfirmacaoExclusaoQuestao(questaoId){
   questaoParaExcluir = questaoId;
+  document.getElementById('motivo-exclusao-questao').value = '';
   abrirModal('modal-confirmar-exclusao-questao');
 }
 
 async function confirmarExclusaoQuestao(){
   if(!questaoParaExcluir) return;
-  await excluirQuestao(questaoParaExcluir);
+  // souCarlos() aqui é redundante com o campo já vir escondido pros outros
+  // usuários (nunca teriam como digitar nada nele), mas é bom ter os dois:
+  // não confia só no CSS pra decidir o que vai pro banco
+  const motivo = souCarlos() ? (document.getElementById('motivo-exclusao-questao').value.trim() || null) : null;
+  await excluirQuestao(questaoParaExcluir, motivo);
   questaoParaExcluir = null;
   fecharModal('modal-confirmar-exclusao-questao');
 }
@@ -4318,8 +4411,8 @@ async function reverterExclusaoQuestao(questaoId){
   renderizarQuestaoAtual();
 }
 
-async function excluirQuestao(questaoId){
-  await sb.from('exclusoes').insert({usuario_id: usuarioAtual.id, questao_id: questaoId});
+async function excluirQuestao(questaoId, motivo){
+  await sb.from('exclusoes').insert({usuario_id: usuarioAtual.id, questao_id: questaoId, motivo: motivo || null});
   delete respostasPorQuestao[questaoId];
   questoesExcluidasAtual.add(questaoId);
   renderizarQuestaoAtual();
@@ -4988,6 +5081,15 @@ async function verificarMaioriaTopico(topicoId){
         }).eq('id', proposta.questao_id);
         erroAplicacao = error;
       }
+      if(!erroAplicacao){
+        // a questão foi corrigida (editada) ou anulada de verdade — marca
+        // TODAS as exclusões pendentes dela como resolvidas, pra todo mundo
+        // que a tinha excluído, não só quem votou. Não existe botão de
+        // reverter manual pra isso — é sempre automático, só quando o
+        // problema é endereçado de verdade (decisão explícita do Carlos:
+        // "se eu apaguei eu apaguei", só volta se for corrigida de fato)
+        await sb.from('exclusoes').update({resolvido_em: new Date().toISOString()}).eq('questao_id', proposta.questao_id).is('resolvido_em', null);
+      }
       if(erroAplicacao){
         // não conseguiu aplicar a mudança de verdade — desfaz o "resolvido"
         // pra não ficar num estado inconsistente, e avisa
@@ -5019,7 +5121,7 @@ async function verificarMaioriaTopico(topicoId){
 // roda de novo e recoloca os marcadores certos automaticamente
 function removerMarcadoresSubscrito(texto){
   return (texto||'')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1$2')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
 }
 async function abrirFormularioEdicao(questaoId, topicoId){
@@ -5419,7 +5521,7 @@ async function carregarMetricasPessoais(viaPullToRefresh){
     sb.from('notas').select('id, questao_id, texto, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
     sb.from('favoritos').select('id, questao_id, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
     sb.from('questoes').select('id, modulo_pscpp, tipo_questao').eq('anulada', false),
-    sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id)
+    sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).is('resolvido_em', null)
   ]);
 
   metricasRespostasCache = respostasBrutas || [];
