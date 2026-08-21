@@ -141,8 +141,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 @media(min-width:768px) and (max-width:1099px){
   :root{
-    --fs-a:12px; --fs-b:13px; --fs-c:14px; --fs-d:15px;
-    --fs-e:18px; --fs-f:20px; --fs-h:26px;
+    --fs-a:13px; --fs-b:14px; --fs-c:16px; --fs-d:17px;
+    --fs-e:19px; --fs-f:22px; --fs-h:29px;
   }
   #app-shell{max-width:100%}
   .topbar{max-width:100%}
@@ -1113,7 +1113,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-154';
+const VERSAO_APP = '2026-07-25-155';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
