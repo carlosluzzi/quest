@@ -1113,7 +1113,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-155';
+const VERSAO_APP = '2026-07-25-156';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2018,19 +2018,37 @@ function vfEstaVisivelAgora(){
   const el = document.getElementById('aba-vf');
   return el && !el.classList.contains('hidden');
 }
+
+// ponto de entrada ÚNICO pra "voltei pra tela" — visibilitychange, pageshow
+// e focus disparam quase juntos (às vezes os três), e cada um chamando
+// retomarOuDescartarPendenteVF+sincronizarPoolVF direto criava execuções
+// em paralelo: no caso de "pendente respondida em outro aparelho", cada
+// execução fazia seu próprio pop+avançar, empilhando uma segunda pendente
+// por cima de uma já respondida (achado real do Fable). A trava garante
+// que só uma execução roda por vez — as outras reaproveitam a mesma promessa
+let voltandoParaVF = null;
+function aoVoltarParaVF(){
+  if(voltandoParaVF) return voltandoParaVF;
+  voltandoParaVF = (async () => {
+    await retomarOuDescartarPendenteVF();
+    await sincronizarPoolVF();
+  })().finally(() => { voltandoParaVF = null; });
+  return voltandoParaVF;
+}
+
 document.addEventListener('visibilitychange', () => {
   if(!vfEstaVisivelAgora()) return;
   if(document.hidden) pausarTimerVF();
-  else{ retomarOuDescartarPendenteVF(); sincronizarPoolVF(); }
+  else aoVoltarParaVF();
 });
 // iOS Safari às vezes não dispara visibilitychange direito — pagehide/
 // pageshow cobrem esse caso específico, como reforço
 window.addEventListener('pagehide', () => { if(vfEstaVisivelAgora()) pausarTimerVF(); });
-window.addEventListener('pageshow', () => { if(vfEstaVisivelAgora()){ retomarOuDescartarPendenteVF(); sincronizarPoolVF(); } });
+window.addEventListener('pageshow', () => { if(vfEstaVisivelAgora()) aoVoltarParaVF(); });
 // desktop: clicar em outra janela sem esconder a aba (a aba continua
 // "visível" pro visibilitychange, mas a pessoa não está olhando pra ela)
 window.addEventListener('blur', () => { if(vfEstaVisivelAgora()) pausarTimerVF(); });
-window.addEventListener('focus', () => { if(vfEstaVisivelAgora()){ retomarOuDescartarPendenteVF(); sincronizarPoolVF(); } });
+window.addEventListener('focus', () => { if(vfEstaVisivelAgora()) aoVoltarParaVF(); });
 
 // Some navegadores mobile "flutuam" a barra fixa em cima do teclado quando um
 // campo de texto ganha foco. Solução: esconder a barra enquanto o teclado
@@ -3116,14 +3134,30 @@ async function retomarOuDescartarPendenteVF(){
 }
 
 // ---- sincronização incremental entre aparelhos ----
-async function marcarSincronizadoVF(){
-  const {data: horarioServidorMs} = await sb.rpc('now_ms');
-  if(typeof horarioServidorMs === 'number') ultimaSincronizacaoVF = new Date(horarioServidorMs).toISOString();
+
+// trava própria da função — protege qualquer chamador (tanto o
+// aoVoltarParaVF quanto a chamada direta em avancarParaProximaVF), não só
+// os listeners de "voltar pra tela". Chamada concorrente reaproveita a
+// mesma promessa em vez de rodar de novo
+let sincronizandoPoolVF = null;
+function sincronizarPoolVF(){
+  if(sincronizandoPoolVF) return sincronizandoPoolVF;
+  sincronizandoPoolVF = sincronizarPoolVFReal().finally(() => { sincronizandoPoolVF = null; });
+  return sincronizandoPoolVF;
 }
 
-async function sincronizarPoolVF(){
+async function sincronizarPoolVFReal(){
   if(!estadoVF || !ultimaSincronizacaoVF) return;
-  const {data: estadosNovos} = await sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id).gt('atualizado_em', ultimaSincronizacaoVF);
+  const marcaAnterior = ultimaSincronizacaoVF;
+  // horário do servidor capturado ANTES da consulta, não depois — uma
+  // escrita de outro aparelho que caísse entre a consulta e a marca (uns
+  // 100-300ms) ficaria com atualizado_em menor que a marca nova e nunca
+  // mais seria buscada até recarregar a página. De quebra, uma chamada
+  // RPC a menos por sincronização (antes eram duas)
+  const {data: horarioServidorMs} = await sb.rpc('now_ms');
+  const novaMarca = typeof horarioServidorMs === 'number' ? new Date(horarioServidorMs).toISOString() : null;
+
+  const {data: estadosNovos} = await sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id).gt('atualizado_em', marcaAnterior);
 
   if(estadosNovos && estadosNovos.length){
     const porId = {};
@@ -3147,12 +3181,16 @@ async function sincronizarPoolVF(){
 
     // a pendente atual foi respondida em outro aparelho nesse meio tempo?
     // "intercambiável a qualquer hora" vale até no meio de uma questão —
-    // descarta e avança, mesma regra da órfã
+    // descarta e avança, mesma regra da órfã. Reconfere ANTES de mexer:
+    // a janela do await acima pode ter deixado outra coisa mudar essa
+    // mesma entrada (ex: a pessoa respondeu ela rapidinho enquanto
+    // sincronizava) — se não for mais a mesma entrada pendente, não mexe
     const entradaAtual = estadoVF.posicao >= 0 ? estadoVF.historico[estadoVF.posicao] : null;
-    if(entradaAtual && entradaAtual.resposta === null && porId[entradaAtual.item.id]){
+    const aindaEhAMesma = entradaAtual && estadoVF.historico[estadoVF.posicao] === entradaAtual && entradaAtual.resposta === null;
+    if(aindaEhAMesma && porId[entradaAtual.item.id]){
       estadoVF.historico.pop();
       estadoVF.posicao--;
-      await marcarSincronizadoVF();
+      if(novaMarca) ultimaSincronizacaoVF = novaMarca;
       await avancarParaProximaVF();
       return;
     }
@@ -3160,7 +3198,7 @@ async function sincronizarPoolVF(){
 
   const {data: userRow} = await sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single();
   if(userRow?.contador_respostas_vf != null) estadoVF.contadorGlobal = Math.max(estadoVF.contadorGlobal, userRow.contador_respostas_vf);
-  await marcarSincronizadoVF();
+  if(novaMarca) ultimaSincronizacaoVF = novaMarca;
 }
 let notasVF = new Set();
 
@@ -3237,9 +3275,10 @@ async function entrarNoModoVF(){
   if(estadoVF && estadoVF.posicao >= 0){
     // não é mais só re-renderizar: pode ter ficado pausada tempo demais
     // (descarta se >30min) e precisa sincronizar com o que mudou em
-    // outro aparelho enquanto essa aba estava em segundo plano
-    await retomarOuDescartarPendenteVF();
-    await sincronizarPoolVF();
+    // outro aparelho enquanto essa aba estava em segundo plano — usa a
+    // mesma trava dos outros pontos de entrada, pra nunca rodar em
+    // paralelo com um visibilitychange/focus disparando ao mesmo tempo
+    await aoVoltarParaVF();
     renderizarItemVF();
     return;
   }
