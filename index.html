@@ -1061,7 +1061,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-126';
+const VERSAO_APP = '2026-07-25-129';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2796,70 +2796,20 @@ function atualizarContadorDisponiveis(){
 // ============================================================
 // MODO V/F — beta, só visível pro Carlos por enquanto (ver
 // nav-item-vf e o gate em mostrarAppShell). Pega um bloco de
-// itens_vf, embaralha (Fisher-Yates) e apresenta um por vez,
+// questoes_vf, embaralha (Fisher-Yates) e apresenta um por vez,
 // pedindo Verdadeiro/Falso — igual explicado no botão ℹ️ abaixo.
 // ============================================================
-// ============================================================
-// EXTRAÇÃO AUTOMÁTICA DE ITENS V/F — roda em todo cadastro novo
-// de questão (ver uso logo abaixo, no insert principal), pra
-// popular itens_vf sem precisar de trabalho manual depois. Duas
-// funções, uma pra cada formato de questão que existe no banco:
-// alternativas simples (a-e) e assertivas em romano (I-V com
-// combinação). Texto puro, sem HTML — formata só na hora de
-// exibir, igual enunciado/alternativas já fazem hoje.
-// ============================================================
-function extrairAlternativasParaVF(alternativasTexto, gabarito){
-  if(!alternativasTexto) return null;
-  const partes = alternativasTexto.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
-  const itens = partes.map(p=>{
-    const m = p.match(/^\(([a-e])\)\s*([\s\S]*)$/);
-    return m ? {letra:m[1], texto:m[2].trim()} : null;
-  }).filter(Boolean);
-  if(itens.length !== 5) return null; // fora do padrão de 5 alternativas — não arrisca, fica de fora
-  const gabaritoNorm = (gabarito||'').toLowerCase().trim();
-  if(!itens.some(i => i.letra === gabaritoNorm)) return null; // gabarito não bate com nenhuma — não arrisca
-  return itens.map(i => ({ordem: i.letra, texto: i.texto, correto: i.letra === gabaritoNorm, tipo_origem: 'alternativa'}));
-}
-
-function extrairAssertivasRomanasParaVF(enunciado, alternativas, gabarito){
-  if(!enunciado || !alternativas) return null;
-  const m = enunciado.match(/(?:^|\n|[.,]\s+)(I)\s*[.\-–]\s*/);
-  if(!m) return null;
-
-  const inicioI = enunciado.indexOf('I', m.index);
-  const listaTexto = '\n' + enunciado.slice(inicioI);
-  const partes = listaTexto.split(/\n(?=(?:I{1,3}|IV|V)\s*[.\-–]\s)/).filter(Boolean);
-  const assertivas = [];
-  for(const parte of partes){
-    const pm = parte.match(/^(I{1,3}|IV|V)\s*[.\-–]\s*([\s\S]*)$/);
-    if(!pm) continue;
-    let texto = pm[2].trim();
-    texto = texto.replace(/\n?(Estão|Assinale|Marque|É correto)[\s\S]*$/i, '').trim();
-    if(texto) assertivas.push({numeral: pm[1], texto});
-  }
-  if(!assertivas.length) return null;
-
-  const altsMatch = [...alternativas.matchAll(/\(([a-e])\)\s*([\s\S]*?)(?=\([a-e]\)|$)/g)];
-  const altGabarito = altsMatch.find(a => a[1].toLowerCase() === (gabarito||'').toLowerCase());
-  if(!altGabarito) return null; // gabarito não bate — não arrisca
-
-  const combinacao = altGabarito[2].trim();
-  let romanosVerdadeiros;
-  if(/\btodas\b/i.test(combinacao)) romanosVerdadeiros = new Set(assertivas.map(a=>a.numeral));
-  else if(/\bnenhuma\b/i.test(combinacao)) romanosVerdadeiros = new Set();
-  else romanosVerdadeiros = new Set(combinacao.match(/\b(I{1,3}|IV|V)\b/g) || []);
-
-  return assertivas.map(a => ({ordem: a.numeral, texto: a.texto, correto: romanosVerdadeiros.has(a.numeral), tipo_origem: 'assertiva'}));
-}
-
-// tenta os dois formatos, na ordem: assertivas romanas primeiro (mais
-// específico, exige "I." no enunciado), senão tenta alternativas simples.
-// Se nenhum bater com segurança, retorna null — melhor não gravar nada do
-// que gravar errado, essa questão fica só sem entrada em itens_vf por
-// enquanto (não afeta o cadastro normal da questão, que segue intacto)
-function extrairItensVF(enunciado, alternativas, gabarito){
-  return extrairAssertivasRomanasParaVF(enunciado, alternativas, gabarito)
-      || extrairAlternativasParaVF(alternativas, gabarito);
+// formatação leve pro texto de um item V/F isolado — diferente de
+// formatarEnunciado (feita pra enunciado completo, com lógica de
+// estrutura/alternativas/trechos da fonte que não se aplica aqui e
+// causava uma linha em branco sobrando no topo). Só escapa e aplica
+// sub/sobrescrito, sem nenhuma estrutura extra
+function formatarTextoItemVF(texto){
+  if(!texto) return '';
+  return escapeHtml(texto)
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1<sub>$2</sub>');
 }
 
 let estadoVF = null;
@@ -2869,7 +2819,9 @@ async function iniciarModoVF(){
   const el = document.getElementById('vf-conteudo');
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
 
-  const {data, error} = await sb.from('itens_vf').select('id, texto, correto, questao_id, tipo_origem');
+  const {data, error} = await sb.from('questoes_vf')
+    .select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, bibliografia(titulo)')
+    .eq('anulada', false);
   if(error || !data || !data.length){
     el.innerHTML = `<p style="padding:24px 4px;color:#888">Ainda não tem nenhum item pronto pra praticar — o banco de V/F está sendo preparado aos poucos.</p>`;
     return;
@@ -2907,19 +2859,30 @@ function renderizarItemVF(){
   }
 
   const item = estadoVF.itens[estadoVF.indice];
+  const publicacao = item.bibliografia?.titulo || 'Publicação não identificada';
+  const estiloTagAtiva = 'background:#B23A34;color:#fff;border-color:#B23A34';
+  const estiloTagInativa = 'background:#fff;color:#888;border-color:#ddd';
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:2px 2px 14px;color:#888;font-size:var(--fs-c)">
       <span style="display:flex;align-items:center;gap:6px">Item ${estadoVF.indice+1} de ${estadoVF.itens.length} <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
       <span>${estadoVF.acertos} certas até aqui</span>
     </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button id="vf-tag-numero" onclick="toggleTagVF('${item.id}','eh_numero')" style="flex:1;border-radius:8px;border:1px solid;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;${item.eh_numero?estiloTagAtiva:estiloTagInativa}">🔢 Número</button>
+      <button id="vf-tag-lista" onclick="toggleTagVF('${item.id}','eh_lista')" style="flex:1;border-radius:8px;border:1px solid;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;${item.eh_lista?estiloTagAtiva:estiloTagInativa}">📋 Lista</button>
+    </div>
     <div class="card-questao">
-      <div class="enunciado">${formatarEnunciado(item.texto)}</div>
+      <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0 0 10px">${escapeHtml(publicacao)}</p>
+      <div class="enunciado" style="margin-top:0">${formatarTextoItemVF(item.texto)}</div>
     </div>
-    <div id="vf-botoes" style="display:flex;gap:10px;margin-top:16px">
-      <button class="btn-secundario" style="flex:1" onclick="responderVF(true)">Verdadeiro</button>
-      <button class="btn-secundario" style="flex:1" onclick="responderVF(false)">Falso</button>
+    <div id="vf-botoes" style="display:flex;gap:10px;margin-top:16px;height:44px;box-sizing:border-box">
+      <button class="btn-secundario" id="vf-btn-verdadeiro" style="flex:1;height:100%;box-sizing:border-box" onclick="responderVF(true)">Verdadeiro</button>
+      <button class="btn-secundario" id="vf-btn-falso" style="flex:1;height:100%;box-sizing:border-box" onclick="responderVF(false)">Falso</button>
     </div>
-    <div id="vf-feedback"></div>
+    <div id="vf-feedback" class="banco-resultado" style="display:none"></div>
+    <div style="margin-top:14px;height:44px;box-sizing:border-box" id="vf-wrapper-proxima">
+      <button class="btn-primario" style="width:100%;height:100%;box-sizing:border-box;display:none" id="vf-btn-proxima" onclick="proximoVF()">Próxima</button>
+    </div>
   `;
 }
 
@@ -2927,16 +2890,66 @@ function responderVF(resposta){
   if(!estadoVF || estadoVF.respondida) return;
   estadoVF.respondida = true;
   const item = estadoVF.itens[estadoVF.indice];
-  const acertou = resposta === item.correto;
+  const acertou = resposta === item.resposta;
   if(acertou) estadoVF.acertos++;
 
-  document.getElementById('vf-botoes').innerHTML = '';
-  document.getElementById('vf-feedback').innerHTML = `
-    <div style="margin-top:14px;padding:14px;border-radius:10px;background:${acertou?'#E8F2E2':'#FCEBEB'};color:${acertou?'#3A6B2E':'#A32D2D'};font-weight:500">
-      ${acertou ? '✓ Certo' : '✗ Errado'} — essa afirmação é <b>${item.correto?'Verdadeira':'Falsa'}</b>.
-    </div>
-    <button class="btn-primario" style="margin-top:14px" onclick="proximoVF()">Próxima</button>
-  `;
+  // não remove os botões — só desativa e destaca qual foi escolhido, pra
+  // não deslocar nada na tela (o botão sempre fica onde estava)
+  const btnV = document.getElementById('vf-btn-verdadeiro');
+  const btnF = document.getElementById('vf-btn-falso');
+  btnV.disabled = true; btnF.disabled = true;
+  const btnEscolhido = resposta ? btnV : btnF;
+  btnEscolhido.style.background = acertou ? '#E8F2E2' : '#FCEBEB';
+  btnEscolhido.style.color = acertou ? '#3B6D11' : '#A32D2D';
+
+  const cor = acertou ? '#3B6D11' : '#A32D2D';
+  const fb = document.getElementById('vf-feedback');
+  fb.style.display = 'block';
+  fb.style.height = 'auto';
+  fb.style.textAlign = 'left';
+  fb.style.color = cor;
+  // acertou: só confirma. Errou: mostra a frase certa e a explicação,
+  // igual pedido — não só "errado", mas o porquê e a versão correta
+  if(acertou){
+    fb.innerHTML = `<div style="padding:14px 0">Certo!</div>`;
+  }else{
+    const fraseCorreta = item.resposta
+      ? item.texto // a afirmação já era Verdadeira do jeito que está
+      : (item.correcao || item.texto); // era Falsa: mostra a versão corrigida, se existir
+    fb.innerHTML = `
+      <div style="padding:14px 0 6px">Errado — essa afirmação é <b>${item.resposta ? 'Verdadeira' : 'Falsa'}</b>.</div>
+      <div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;margin-bottom:10px;color:#111;font-weight:400">${formatarTextoItemVF(fraseCorreta)}</div>
+      <div style="color:#666;font-weight:400;font-size:var(--fs-c);line-height:1.5">${formatarTextoItemVF(item.explicacao)}</div>
+    `;
+  }
+
+  document.getElementById('vf-btn-proxima').style.display = 'block';
+}
+
+// marca/desmarca a tag (número ou lista) na questão V/F atual — grava
+// direto no banco a cada clique, sem precisar de botão de salvar
+// separado; usado pra "treinar" a classificação antes de automatizar
+async function toggleTagVF(questaoId, campo){
+  const item = estadoVF.itens.find(i => i.id === questaoId);
+  if(!item) return;
+  const novoValor = !item[campo];
+  item[campo] = novoValor; // otimista — atualiza local antes de esperar o banco
+
+  const btn = document.getElementById(campo === 'eh_numero' ? 'vf-tag-numero' : 'vf-tag-lista');
+  const aplicarEstilo = (ativo) => {
+    btn.style.background = ativo ? '#B23A34' : '#fff';
+    btn.style.color = ativo ? '#fff' : '#888';
+    btn.style.borderColor = ativo ? '#B23A34' : '#ddd';
+  };
+  aplicarEstilo(novoValor);
+
+  const {error} = await sb.from('questoes_vf').update({[campo]: novoValor}).eq('id', questaoId);
+  if(error){
+    // reverte se der erro salvando — não deixa o botão mentir sobre o estado real
+    item[campo] = !novoValor;
+    aplicarEstilo(!novoValor);
+    alert('Não consegui salvar essa marcação. Tenta de novo.');
+  }
 }
 
 function proximoVF(){
@@ -6280,6 +6293,102 @@ let extracaoEmAndamento = false; // protege a mensagem de status de ser
 // processa 1 arquivo do upload — devolve quantas questões foram cadastradas,
 // puladas (duplicata) ou pra rascunho, e um erro se algo travou nesse
 // arquivo específico (sem travar o processamento dos outros arquivos do lote)
+// ============================================================
+// ARQUIVO V/F — formato separado, com código #VF# no início do
+// texto extraído. Sempre que um arquivo bate com esse código, vai
+// pra tabela questoes_vf (banco à parte), nunca pra questoes do
+// Pilotquest normal. Ver uso em processarArquivoUpload.
+// ============================================================
+function ehArquivoVF(textoCompleto){
+  return /^\s*#VF#/.test(textoCompleto);
+}
+
+function parsearArquivoVF(textoCompleto){
+  const texto = textoCompleto.replace(/^\s*#VF#\s*/, '');
+  const blocos = texto.split(/GABARITO\s*[–-]\s*AFIRMAÇÃO\s*\d+/).slice(1);
+  const questoes = [];
+  const erros = [];
+
+  blocos.forEach((bloco, i) => {
+    try{
+      const bibliografiaMatch = bloco.match(/BIBLIOGRAFIA:\s*([\s\S]*?)(?=\n\s*DIFICULDADE:)/);
+      const dificuldadeMatch = bloco.match(/DIFICULDADE:\s*(\S+)/);
+      const respostaMatch = bloco.match(/RESPOSTA:\s*([VF])\b/);
+      if(!bibliografiaMatch || !dificuldadeMatch || !respostaMatch){
+        erros.push({indice: i, motivo: 'não achou BIBLIOGRAFIA/DIFICULDADE/RESPOSTA'});
+        return;
+      }
+      const bibliografiaTextoOriginal = bibliografiaMatch[1].replace(/\s+/g,' ').trim();
+      const dificuldade = dificuldadeMatch[1];
+      const resposta = respostaMatch[1] === 'V';
+
+      const restoAposResposta = bloco.slice(bloco.indexOf(respostaMatch[0]) + respostaMatch[0].length);
+      const textoMatch = restoAposResposta.match(/^([\s\S]*?)(?=\n\s*(VERDADEIRA|FALSA)\s*[–-])/);
+      if(!textoMatch){ erros.push({indice: i, motivo: 'não achou o texto da afirmação'}); return; }
+      const textoAfirmacao = textoMatch[1].replace(/\s+/g,' ').trim();
+
+      const restoAposTexto = restoAposResposta.slice(textoMatch[0].length);
+      const explicacaoMatch = restoAposTexto.match(/^[\s\S]*?(?=\n\s*Correto:|\n\s*TRECHOS DA FONTE)/);
+      if(!explicacaoMatch){ erros.push({indice: i, motivo: 'não achou explicação'}); return; }
+      const explicacao = explicacaoMatch[0].replace(/\s+/g,' ').trim();
+
+      let correcao = null;
+      const correcaoMatch = restoAposTexto.match(/Correto:\s*([\s\S]*?)(?=\n\s*TRECHOS DA FONTE)/);
+      if(correcaoMatch) correcao = correcaoMatch[1].replace(/\s+/g,' ').trim();
+
+      const trechosMatch = bloco.match(/TRECHOS DA FONTE\s*([\s\S]*?)(?=\n\s*Fonte:)/);
+      const trechosFonte = trechosMatch ? trechosMatch[1].replace(/\s+/g,' ').trim() : null;
+      const fonteMatch = bloco.match(/Fonte:\s*([\s\S]*?)(?=\n\s*\n|\n\s*Página \d+ de|$)/);
+      const fonte = fonteMatch ? fonteMatch[1].replace(/\s+/g,' ').trim() : null;
+
+      questoes.push({texto: textoAfirmacao, resposta, explicacao, correcao, trechos_fonte: trechosFonte, fonte, bibliografiaTextoOriginal, dificuldade});
+    }catch(e){
+      erros.push({indice: i, motivo: 'exceção: ' + e.message});
+    }
+  });
+
+  return {questoes, erros};
+}
+
+async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
+  const {questoes, erros} = parsearArquivoVF(textoBruto);
+  if(!questoes.length){
+    return {erro: `"${nomeArquivoAtual}": código #VF# encontrado, mas não consegui extrair nenhuma questão do formato esperado.`, cadastradas:0, puladas:0, rascunho:0};
+  }
+
+  // identifica a bibliografia de cada questão pela mesma lógica já usada
+  // no upload normal — tenta pelo cabeçalho "BIBLIOGRAFIA:" de cada bloco
+  const resultados = await Promise.all(questoes.map(async q => {
+    const bibEncontrada = identificarBibliografia(q.bibliografiaTextoOriginal, q.bibliografiaTextoOriginal);
+    const {error} = await sb.from('questoes_vf').insert({
+      texto: q.texto,
+      resposta: q.resposta,
+      explicacao: q.explicacao,
+      correcao: q.correcao,
+      trechos_fonte: q.trechos_fonte,
+      fonte: q.fonte,
+      bibliografia_id: bibEncontrada ? mapaBibliografiaId[bibEncontrada.modulo+'|'+bibEncontrada.titulo] : null,
+      dificuldade: q.dificuldade,
+      autor_id: usuarioAtual.id,
+      lote_upload_id: loteUploadId,
+      nome_arquivo_origem: nomeArquivoAtual
+    });
+    return {ok: !error, erro: error?.message, semBibliografia: !bibEncontrada};
+  }));
+
+  const cadastradas = resultados.filter(r => r.ok).length;
+  const semBibliografia = resultados.filter(r => r.ok && r.semBibliografia).length;
+  const falhas = resultados.filter(r => !r.ok);
+
+  return {
+    cadastradas,
+    puladas: 0,
+    rascunho: 0,
+    erro: falhas.length ? `"${nomeArquivoAtual}": ${falhas.length} questão(ões) V/F falharam ao cadastrar (${falhas[0].erro}).` : null,
+    avisoVF: semBibliografia ? `${semBibliografia} questão(ões) V/F cadastradas sem bibliografia identificada.` : null
+  };
+}
+
 async function processarArquivoUpload(arquivo, prefixoProgresso, status, concursoOrigemUpload, anoProvaUpload){
   const nomeArquivoAtual = arquivo.name;
   let textoBruto;
@@ -6290,6 +6399,14 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
     });
   }catch(e){
     return {erro: `"${nomeArquivoAtual}": não consegui ler o arquivo (${e.message})`, cadastradas:0, puladas:0, rascunho:0};
+  }
+
+  // arquivo do formato V/F (código #VF# no início) — desvia completamente
+  // do fluxo normal de questões, vai pra tabela separada questoes_vf
+  if(ehArquivoVF(textoBruto)){
+    mostrarBarraProgresso(status, 75, `${prefixoProgresso}Identificando as afirmações V/F...`);
+    const loteUploadIdVF = crypto.randomUUID();
+    return await processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadIdVF);
   }
 
   mostrarBarraProgresso(status, 75, `${prefixoProgresso}Identificando as questões...`);
@@ -6389,17 +6506,6 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
           // falha que travaria o upload inteiro
           if(erroInsertQuestao.code === '23505') return {pulada: true};
           throw new Error('Não consegui cadastrar uma questão: ' + erroInsertQuestao.message);
-        }
-        // extração de itens V/F é best-effort — se der algo errado ou não
-        // bater com nenhum formato conhecido, a questão já está cadastrada
-        // normalmente de qualquer forma, só fica sem entrada em itens_vf
-        try{
-          const itensVF = extrairItensVF(q.enunciado, q.alternativas, q.gabarito);
-          if(itensVF && itensVF.length){
-            await sb.from('itens_vf').insert(itensVF.map(i => ({...i, questao_id: questaoInserida.id})));
-          }
-        }catch(erroVF){
-          console.warn('extração de itens V/F falhou pra uma questão (não afeta o cadastro dela):', erroVF);
         }
         return {pulada: false};
       }));
@@ -6792,16 +6898,6 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
       }
       falhas.push(erroInsert.message);
       return; // não apaga o rascunho — fica lá pra tentar de novo
-    }
-    // extração de itens V/F é best-effort — mesma lógica do outro caminho
-    // de cadastro, não trava nada se der errado
-    try{
-      const itensVF = extrairItensVF(q.enunciado, q.alternativas, q.gabarito);
-      if(itensVF && itensVF.length){
-        await sb.from('itens_vf').insert(itensVF.map(i => ({...i, questao_id: questaoInserida.id})));
-      }
-    }catch(erroVF){
-      console.warn('extração de itens V/F falhou pra uma questão (não afeta o cadastro dela):', erroVF);
     }
     const {error: erroDelete} = await sb.from('questoes_rascunho').delete().eq('id', q.id);
     if(erroDelete){
