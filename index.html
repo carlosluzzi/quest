@@ -952,7 +952,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <p>Ao excluir essa questão V/F, ela nunca mais aparece pra você.</p>
     <textarea id="motivo-exclusao-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:140px"></textarea>
     <div style="display:flex;gap:8px">
-      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-exclusao-vf')">Cancelar</button>
+      <button class="btn-secundario" style="flex:1" onclick="fecharModalExclusaoVF()">Cancelar</button>
       <button class="btn-primario" style="flex:1" onclick="confirmarExclusaoVF()">Excluir</button>
     </div>
   </div>
@@ -968,13 +968,13 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="modal-nota-vf" onclick="if(event.target===this) fecharModal('modal-nota-vf')">
+<div class="modal-overlay hidden" id="modal-nota-vf" onclick="if(event.target===this) fecharModalNotaVF()">
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title">Suas notas nessa questão</h3>
     <div id="lista-notas-vf"></div>
     <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:140px"></textarea>
     <button class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
-    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-nota-vf')">Fechar</button>
+    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModalNotaVF()">Fechar</button>
   </div>
 </div>
 
@@ -1113,7 +1113,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-152';
+const VERSAO_APP = '2026-07-25-154';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2010,6 +2010,28 @@ window.addEventListener('resize', ()=>{
   medirAlturaTopbar();
 });
 
+// ---- pausar/retomar o cronômetro do V/F conforme a pessoa sai/volta pra
+// tela — cobre trocar de app no celular, bloquear tela, trocar de aba do
+// navegador, minimizar, e (desktop) clicar em outra janela sem esconder
+// a aba. Só age se a aba V/F está realmente visível no momento
+function vfEstaVisivelAgora(){
+  const el = document.getElementById('aba-vf');
+  return el && !el.classList.contains('hidden');
+}
+document.addEventListener('visibilitychange', () => {
+  if(!vfEstaVisivelAgora()) return;
+  if(document.hidden) pausarTimerVF();
+  else{ retomarOuDescartarPendenteVF(); sincronizarPoolVF(); }
+});
+// iOS Safari às vezes não dispara visibilitychange direito — pagehide/
+// pageshow cobrem esse caso específico, como reforço
+window.addEventListener('pagehide', () => { if(vfEstaVisivelAgora()) pausarTimerVF(); });
+window.addEventListener('pageshow', () => { if(vfEstaVisivelAgora()){ retomarOuDescartarPendenteVF(); sincronizarPoolVF(); } });
+// desktop: clicar em outra janela sem esconder a aba (a aba continua
+// "visível" pro visibilitychange, mas a pessoa não está olhando pra ela)
+window.addEventListener('blur', () => { if(vfEstaVisivelAgora()) pausarTimerVF(); });
+window.addEventListener('focus', () => { if(vfEstaVisivelAgora()){ retomarOuDescartarPendenteVF(); sincronizarPoolVF(); } });
+
 // Some navegadores mobile "flutuam" a barra fixa em cima do teclado quando um
 // campo de texto ganha foco. Solução: esconder a barra enquanto o teclado
 // estiver aberto, e mostrar de volta ao fechar. Restrito ao #app-shell (não
@@ -2056,6 +2078,11 @@ async function atualizarAbaAtual(){
 }
 
 function trocarAba(nome){
+  // pausa o cronômetro do V/F se estava nele e está saindo pra outra aba —
+  // "trocar de tela dentro do próprio app" é um dos 5 pontos de pausa
+  const vfEstavaAtiva = !document.getElementById('aba-vf').classList.contains('hidden');
+  if(vfEstavaAtiva && nome !== 'vf') pausarTimerVF();
+
   document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
   document.getElementById('aba-'+nome).classList.remove('hidden');
   document.querySelectorAll('#bottom-nav .nav-item').forEach(item=>item.classList.toggle('active', item.dataset.aba===nome));
@@ -3039,6 +3066,102 @@ let estadoVF = null;
 let filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false};
 let favoritosVF = new Set();
 let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual que o banco, enquanto o upsert está em voo
+let ultimaSincronizacaoVF = null; // ISO string, horário do SERVIDOR da última sincronização bem-sucedida
+const LIMITE_PAUSA_MS_VF = 30 * 60 * 1000; // pausa maior que isso numa pendente = descarta, "não lembra mais o que leu"
+
+// ---- cronômetro por entrada do histórico (pausar/retomar) ----
+// tempoAtivoMs acumula só o tempo com a questão de fato na frente dos
+// olhos; ativoDesdeMs é o instante em que a contagem atual começou (null =
+// pausado agora). apareceuEmMs nunca muda, é só pro tempo bruto do log.
+
+function pausarTimerVF(){
+  if(!estadoVF || estadoVF.posicao < 0) return;
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  if(!entrada || entrada.resposta !== null) return; // nada pendente, nada a pausar
+  if(entrada.ativoDesdeMs != null){
+    const agoraMs = agoraCorrigidoVF();
+    entrada.tempoAtivoMs = (entrada.tempoAtivoMs||0) + (agoraMs - entrada.ativoDesdeMs);
+    entrada.ativoDesdeMs = null;
+    entrada.pausadoEmMs = agoraMs; // guarda quando parou, pra medir a pausa depois
+  }
+}
+
+// arma o cronômetro de novo — só deve ser chamada depois da questão já
+// estar renderizada na tela, nunca antes
+function retomarTimerVF(){
+  if(!estadoVF || estadoVF.posicao < 0) return;
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  if(!entrada || entrada.resposta !== null) return;
+  if(entrada.ativoDesdeMs == null) entrada.ativoDesdeMs = agoraCorrigidoVF();
+}
+
+// decide entre retomar normal ou descartar a pendente, se ela ficou
+// pausada por mais de 30 min — mesma regra da entrada órfã: descarta sem
+// registrar nada (questão não respondida não gerou estado) e avança
+async function retomarOuDescartarPendenteVF(){
+  if(!estadoVF || estadoVF.posicao < 0) return;
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  if(!entrada || entrada.resposta !== null) return;
+  if(entrada.ativoDesdeMs != null) return; // já ativa, nada a fazer
+
+  const agoraMs = agoraCorrigidoVF();
+  const pausadoDesdeMs = entrada.pausadoEmMs != null ? entrada.pausadoEmMs : (entrada.apareceuEmMs != null ? entrada.apareceuEmMs : agoraMs);
+  if(agoraMs - pausadoDesdeMs > LIMITE_PAUSA_MS_VF){
+    estadoVF.historico.pop();
+    estadoVF.posicao--;
+    await avancarParaProximaVF();
+    return;
+  }
+  entrada.ativoDesdeMs = agoraMs;
+}
+
+// ---- sincronização incremental entre aparelhos ----
+async function marcarSincronizadoVF(){
+  const {data: horarioServidorMs} = await sb.rpc('now_ms');
+  if(typeof horarioServidorMs === 'number') ultimaSincronizacaoVF = new Date(horarioServidorMs).toISOString();
+}
+
+async function sincronizarPoolVF(){
+  if(!estadoVF || !ultimaSincronizacaoVF) return;
+  const {data: estadosNovos} = await sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id).gt('atualizado_em', ultimaSincronizacaoVF);
+
+  if(estadosNovos && estadosNovos.length){
+    const porId = {};
+    estadosNovos.forEach(e => { porId[e.questao_vf_id] = e; });
+
+    // sobrescreve os itens do pool com o que mudou em outro aparelho — mas
+    // escrita local em voo (ainda não confirmada) tem prioridade sobre o
+    // que acabou de vir do banco
+    estadoVF.pool.forEach(item => {
+      if(escritasPendentesVF.has(item.id)) return;
+      const novo = porId[item.id];
+      if(novo){
+        Object.assign(item, {
+          estado: novo.estado, intervalo_horas: novo.intervalo_horas, fator: novo.fator,
+          ultima_resposta_em: novo.ultima_resposta_em, degrau: novo.degrau,
+          total_degraus: novo.total_degraus, intervalo_pendente: novo.intervalo_pendente,
+          marca_contador: novo.marca_contador, total_respostas: novo.total_respostas, total_erros: novo.total_erros
+        });
+      }
+    });
+
+    // a pendente atual foi respondida em outro aparelho nesse meio tempo?
+    // "intercambiável a qualquer hora" vale até no meio de uma questão —
+    // descarta e avança, mesma regra da órfã
+    const entradaAtual = estadoVF.posicao >= 0 ? estadoVF.historico[estadoVF.posicao] : null;
+    if(entradaAtual && entradaAtual.resposta === null && porId[entradaAtual.item.id]){
+      estadoVF.historico.pop();
+      estadoVF.posicao--;
+      await marcarSincronizadoVF();
+      await avancarParaProximaVF();
+      return;
+    }
+  }
+
+  const {data: userRow} = await sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single();
+  if(userRow?.contador_respostas_vf != null) estadoVF.contadorGlobal = Math.max(estadoVF.contadorGlobal, userRow.contador_respostas_vf);
+  await marcarSincronizadoVF();
+}
 let notasVF = new Set();
 
 // busca todas as questões do pool atual (respeitando filtro), já com o
@@ -3112,6 +3235,11 @@ async function carregarPoolVF(){
 async function entrarNoModoVF(){
   popularFiltroModuloVF();
   if(estadoVF && estadoVF.posicao >= 0){
+    // não é mais só re-renderizar: pode ter ficado pausada tempo demais
+    // (descarta se >30min) e precisa sincronizar com o que mudou em
+    // outro aparelho enquanto essa aba estava em segundo plano
+    await retomarOuDescartarPendenteVF();
+    await sincronizarPoolVF();
     renderizarItemVF();
     return;
   }
@@ -3123,7 +3251,10 @@ async function entrarNoModoVF(){
     sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single(),
     sb.rpc('now_ms')
   ]);
-  if(typeof horarioServidorMs === 'number') offsetRelogioVF = horarioServidorMs - Date.now();
+  if(typeof horarioServidorMs === 'number'){
+    offsetRelogioVF = horarioServidorMs - Date.now();
+    ultimaSincronizacaoVF = new Date(horarioServidorMs).toISOString(); // marca o início da sessão como o primeiro "já sincronizado até aqui"
+  }
   estadoVF = {
     pool: [],
     contadorGlobal: userRow?.contador_respostas_vf || 0,
@@ -3168,6 +3299,7 @@ async function recarregarPoolEContinuarVF(){
 }
 
 async function avancarParaProximaVF(){
+  await sincronizarPoolVF(); // antes de escolher, traz o que mudou em outro aparelho
   const agoraMs = agoraCorrigidoVF();
   const pick = escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao);
   if(!pick){
@@ -3176,17 +3308,18 @@ async function avancarParaProximaVF(){
     return;
   }
   estadoVF.anteriorVeioDeAprendizado = pick.veioDeAprendizado;
-  // horaInicioMs vai DENTRO da entrada, não em estadoVF — variável global
-  // compartilhada seria sobrescrita pela próxima questão, corrompendo o
-  // tempo de resposta de uma pendente antiga se ela ainda fosse respondida
-  // depois (também achado pelo Fable, ligado ao bug da entrada órfã)
-  estadoVF.historico.push({item: pick.item, resposta: null, acertou: null, horaInicioMs: agoraMs});
+  // cronômetro por entrada — tempoAtivoMs/ativoDesdeMs em vez de um único
+  // horaInicioMs global (bug real corrigido antes: variável compartilhada
+  // ficava desatualizada se uma pendente antiga fosse respondida depois).
+  // ativoDesdeMs começa null de propósito — só arma DEPOIS de renderizar
+  estadoVF.historico.push({item: pick.item, resposta: null, acertou: null, tempoAtivoMs: 0, ativoDesdeMs: null, apareceuEmMs: agoraMs});
   estadoVF.posicao = estadoVF.historico.length - 1;
   // trava de segurança contra toque duplo: clicar "Próxima" e, milissegundos
   // depois, o dedo ainda solto acertar Verdadeiro/Falso da questão nova antes
   // mesmo dela ser lida — ignora clique nesses botões por um instante
   estadoVF.bloqueadoAteMs = agoraMs + 400;
   renderizarItemVF();
+  retomarTimerVF(); // só agora, com a questão já na tela, o cronômetro começa a contar
 }
 
 function mudarModuloFiltroVF(){
@@ -3278,13 +3411,13 @@ function renderizarItemVF(){
     const textoResultado = `${entrada.acertou ? 'Acertou!' : 'Errou!'} É ${item.resposta ? 'VERDADEIRO' : 'FALSO'}`;
     blocoResultado = `
       <div style="height:1px;background:#eee;margin:14px 0"></div>
-      <div style="position:relative;display:flex;align-items:center;justify-content:center">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:34px">
         <span style="font-weight:700;font-size:16px;text-align:center;color:${cor};letter-spacing:.02em">${textoResultado}</span>
         <button class="btn-icone-pequeno" style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="abrirExplicacaoVF('${item.id}')" title="Ver explicação">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
       </div>
-      ${!item.resposta ? `<div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;color:#111;margin-top:10px;text-align:left;font-weight:400">${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
+      ${!item.resposta ? `<div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;color:#111;margin-top:14px;text-align:left;font-weight:400">${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
     `;
   }
 
@@ -3293,7 +3426,7 @@ function renderizarItemVF(){
       <span style="display:flex;align-items:center;gap:6px">${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao} certas nessa sessão <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
     </div>
     <div class="card-questao">
-      <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0 0 2px">${escapeHtml(publicacao)}</p>
+      <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0 0 ${linhaCapitulo?'2px':'10px'}">${escapeHtml(publicacao)}</p>
       ${linhaCapitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:0 0 10px">${escapeHtml(linhaCapitulo)}</p>` : ''}
       <div class="enunciado" style="margin-top:${linhaCapitulo?'10px':'0'}">${formatarTextoItemVF(item.texto)}</div>
       ${blocoResultado}
@@ -3340,7 +3473,15 @@ async function responderVF(resposta){
   const agoraMs = agoraCorrigidoVF();
   if(agoraMs < (estadoVF.bloqueadoAteMs||0)) return; // toque duplo acidental logo após a questão aparecer — ignora
   const item = entrada.item;
-  const tempoS = (agoraMs - entrada.horaInicioMs) / 1000;
+  // tempo ATIVO: o que já foi acumulado em pausas anteriores, mais o
+  // trecho corrente se ainda estiver ativa agora — é isso que alimenta o
+  // algoritmo (não conta tempo fora do app, tela bloqueada, etc)
+  const tempoAtivoMsFinal = (entrada.tempoAtivoMs||0) + (entrada.ativoDesdeMs != null ? (agoraMs - entrada.ativoDesdeMs) : 0);
+  const tempoS = tempoAtivoMsFinal / 1000;
+  // tempo BRUTO: do momento que a questão apareceu até agora, sem
+  // descontar pausa nenhuma — só pro log, pra calibração futura poder
+  // comparar quanto as pausas realmente pesam
+  const tempoBrutoMs = agoraMs - entrada.apareceuEmMs;
   const acertou = resposta === item.resposta;
 
   entrada.resposta = resposta;
@@ -3375,7 +3516,7 @@ async function responderVF(resposta){
     }, {onConflict: 'usuario_id,questao_vf_id'}),
     sb.from('log_respostas_vf').insert({
       questao_vf_id: item.id, usuario_id: usuarioAtual.id, acertou,
-      tempo_ms: Math.round(tempoS*1000), estado_antes: estadoAntes,
+      tempo_ms: Math.round(tempoS*1000), tempo_bruto_ms: tempoBrutoMs, estado_antes: estadoAntes,
       intervalo_antes: intervaloAntes, intervalo_depois: item.intervalo_horas
     })
   ]);
@@ -3400,7 +3541,20 @@ async function toggleFavoritoVF(questaoVfId){
 }
 
 let questaoNotaVfAtual = null;
+// fecha os modais de Notas/Excluir do V/F retomando o cronômetro da
+// pendente (ou descartando, se a pausa foi longa demais) — usadas tanto
+// no botão Fechar/Cancelar quanto no clique fora do modal
+function fecharModalNotaVF(){
+  fecharModal('modal-nota-vf');
+  retomarOuDescartarPendenteVF();
+}
+function fecharModalExclusaoVF(){
+  fecharModal('modal-confirmar-exclusao-vf');
+  retomarOuDescartarPendenteVF();
+}
+
 async function abrirNotaVF(questaoVfId){
+  pausarTimerVF(); // abrir Notas/Excluir com questão pendente conta como sair da tela — você está escrevendo, não lendo a afirmação
   questaoNotaVfAtual = questaoVfId;
   document.getElementById('texto-nota-vf').value = '';
   // busca e monta o conteúdo ANTES de abrir o modal — evita o "spinner
@@ -3458,6 +3612,7 @@ async function excluirNotaVF(notaId){
 
 let questaoVfParaExcluir = null;
 function abrirConfirmacaoExclusaoVF(questaoVfId){
+  pausarTimerVF();
   questaoVfParaExcluir = questaoVfId;
   document.getElementById('motivo-exclusao-vf').value = '';
   abrirModal('modal-confirmar-exclusao-vf');
@@ -3476,7 +3631,11 @@ async function confirmarExclusaoVF(){
   if(entradaAtual && entradaAtual.item.id === idExcluido){
     estadoVF.historico.splice(estadoVF.posicao, 1);
     estadoVF.posicao--;
-    await avancarParaProximaVF();
+    await avancarParaProximaVF(); // já deixa o cronômetro ativo de novo, pra questão nova
+  }else{
+    // não era a pendente atual — ela continua lá, só retoma o cronômetro
+    // dela (estava pausado desde que o modal abriu)
+    await retomarOuDescartarPendenteVF();
   }
 }
 
