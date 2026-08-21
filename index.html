@@ -946,7 +946,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="modal-conteudo">
     <h3 class="config-title">Excluir questão</h3>
     <p>Ao excluir essa questão V/F, ela deixa de aparecer só pra você, em qualquer rodada futura.</p>
-    <textarea id="motivo-exclusao-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:70px"></textarea>
+    <textarea id="motivo-exclusao-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:140px"></textarea>
     <div style="display:flex;gap:8px">
       <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-exclusao-vf')">Cancelar</button>
       <button class="btn-primario" style="flex:1" onclick="confirmarExclusaoVF()">Excluir</button>
@@ -968,9 +968,17 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title">Suas notas nessa questão</h3>
     <div id="lista-notas-vf"></div>
-    <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:80px"></textarea>
+    <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:140px"></textarea>
     <button class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
     <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-nota-vf')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-explicacao-vf" onclick="if(event.target===this) fecharModal('modal-explicacao-vf')">
+  <div class="modal-conteudo" style="max-width:700px;display:flex;flex-direction:column">
+    <h3 class="config-title" style="flex-shrink:0">Explicação</h3>
+    <div id="conteudo-explicacao-vf" style="flex:1;min-height:0;overflow-y:auto"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:14px;flex-shrink:0" onclick="fecharModal('modal-explicacao-vf')">Fechar</button>
   </div>
 </div>
 
@@ -1101,7 +1109,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-143';
+const VERSAO_APP = '2026-07-25-146';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2847,6 +2855,7 @@ function atualizarContadorDisponiveis(){
 function formatarTextoItemVF(texto){
   if(!texto) return '';
   return escapeHtml(texto)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1<sub>$2</sub>');
@@ -2861,6 +2870,34 @@ function formatarTextoItemVF(texto){
 // isso é o que garante que uma errada nunca aparece seguidamente,
 // em qualquer ritmo de uso (maratona ou espalhado).
 // ============================================================
+// busca TODAS as linhas de uma tabela, paginando — o Supabase corta em
+// 1000 por padrão, sem erro nenhum avisando. Sem isso, questões fora das
+// primeiras 1000 simplesmente nunca apareceriam pro algoritmo, quebrando
+// a garantia de "nada é esquecido" quando o banco crescer (apontado pelo
+// Fable na análise do algoritmo)
+async function buscarTudoPaginadoVF(queryBuilder){
+  const TAMANHO_PAGINA = 1000;
+  let todosOsDados = [];
+  let pagina = 0;
+  while(true){
+    const {data, error} = await queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1);
+    if(error) return {data: null, error};
+    todosOsDados = todosOsDados.concat(data || []);
+    if(!data || data.length < TAMANHO_PAGINA) break;
+    pagina++;
+  }
+  return {data: todosOsDados, error: null};
+}
+
+// horário corrigido pelo relógio do SERVIDOR, não do aparelho — um
+// celular com relógio errado bagunçaria as razões do algoritmo (intervalo
+// calculado sobre um "agora" que não é o agora de verdade). Busca o
+// desvio uma vez por sessão (ver entrarNoModoVF) e aplica esse desvio
+// toda vez que precisar do "agora" daqui pra frente, sem precisar de mais
+// idas ao banco a cada resposta
+let offsetRelogioVF = 0;
+function agoraCorrigidoVF(){ return Date.now() + offsetRelogioVF; }
+
 const VF_ALGO = {
   FATOR_INI: 2.2, FATOR_MIN: 1.3, FATOR_MAX: 2.8,
   PRIMEIRO_ACERTO_H: 24,
@@ -3001,14 +3038,21 @@ let notasVF = new Set();
 // busca todas as questões do pool atual (respeitando filtro), já com o
 // estado de repetição de cada uma (ou 'nova' implícito se nunca respondida)
 async function carregarPoolVF(){
-  let query = sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, capitulo, n_palavras, bibliografia(titulo, modulo_pscpp)').eq('anulada', false);
-  if(filtroVF.publicacao) query = query.eq('bibliografia_id', filtroVF.publicacao);
-  if(filtroVF.numero) query = query.eq('eh_numero', true);
-  if(filtroVF.lista) query = query.eq('eh_lista', true);
+  const montarQueryQuestoesVF = () => {
+    let q = sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, capitulo, n_palavras, bibliografia(titulo, modulo_pscpp)').eq('anulada', false);
+    if(filtroVF.publicacao) q = q.eq('bibliografia_id', filtroVF.publicacao);
+    // Número + Lista juntos = UNIÃO (ou uma coisa ou outra), não interseção —
+    // decisão explícita do Carlos. Só um dos dois ativo continua sendo um
+    // filtro direto e sem ambiguidade
+    if(filtroVF.numero && filtroVF.lista) q = q.or('eh_numero.eq.true,eh_lista.eq.true');
+    else if(filtroVF.numero) q = q.eq('eh_numero', true);
+    else if(filtroVF.lista) q = q.eq('eh_lista', true);
+    return q;
+  };
 
   const [{data: questoes}, {data: estados}, {data: excluidas}, {data: favData}, {data: notaData}] = await Promise.all([
-    query,
-    sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id),
+    buscarTudoPaginadoVF(montarQueryQuestoesVF),
+    buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id)),
     sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id)
@@ -3052,7 +3096,11 @@ async function entrarNoModoVF(){
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
   document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
 
-  const {data: userRow} = await sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single();
+  const [{data: userRow}, {data: horarioServidorMs}] = await Promise.all([
+    sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single(),
+    sb.rpc('now_ms')
+  ]);
+  if(typeof horarioServidorMs === 'number') offsetRelogioVF = horarioServidorMs - Date.now();
   estadoVF = {
     pool: [],
     contadorGlobal: userRow?.contador_respostas_vf || 0,
@@ -3085,7 +3133,7 @@ async function recarregarPoolEContinuarVF(){
 }
 
 async function avancarParaProximaVF(){
-  const agoraMs = Date.now();
+  const agoraMs = agoraCorrigidoVF();
   const pick = escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao);
   if(!pick){
     document.getElementById('vf-conteudo').innerHTML = `<p style="padding:24px 4px;color:#888">Nada disponível agora.</p>`;
@@ -3096,6 +3144,10 @@ async function avancarParaProximaVF(){
   estadoVF.historico.push({item: pick.item, resposta: null, acertou: null});
   estadoVF.posicao = estadoVF.historico.length - 1;
   estadoVF.horaInicioMs = agoraMs; // marca quando a questão apareceu, pra medir tempo de resposta
+  // trava de segurança contra toque duplo: clicar "Próxima" e, milissegundos
+  // depois, o dedo ainda solto acertar Verdadeiro/Falso da questão nova antes
+  // mesmo dela ser lida — ignora clique nesses botões por um instante
+  estadoVF.bloqueadoAteMs = agoraMs + 400;
   renderizarItemVF();
 }
 
@@ -3158,9 +3210,15 @@ function renderizarItemVF(){
   let blocoResultado = '';
   if(jaRespondida){
     const cor = entrada.acertou ? '#3B6D11' : '#A32D2D';
+    const textoResultado = `${entrada.acertou ? 'Acertou!' : 'Errou!'} É ${item.resposta ? 'VERDADEIRO' : 'FALSO'}`;
     blocoResultado = `
       <div style="height:1px;background:#eee;margin:14px 0"></div>
-      <div style="font-weight:700;font-size:16px;text-align:center;color:${cor};letter-spacing:.02em">${item.resposta ? 'VERDADEIRO' : 'FALSO'}</div>
+      <div style="position:relative;display:flex;align-items:center;justify-content:center">
+        <span style="font-weight:700;font-size:16px;text-align:center;color:${cor};letter-spacing:.02em">${textoResultado}</span>
+        <button class="btn-icone-pequeno" style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="abrirExplicacaoVF('${item.id}')" title="Ver explicação">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </button>
+      </div>
       ${!item.resposta ? `<div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;color:#111;margin-top:10px;text-align:left;font-weight:400">${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
     `;
   }
@@ -3187,8 +3245,8 @@ function renderizarBarraFixaVF(item, jaRespondida){
   const linhaPrincipal = jaRespondida
     ? `<button class="btn-secundario" style="flex:1" ${podeVoltar?'':'disabled'} onclick="anteriorVF()">← Anterior</button>
        <button class="btn-primario" style="flex:1" onclick="proximoVF()">Próxima →</button>`
-    : `<button class="btn-secundario" style="flex:1" onclick="responderVF(true)">Verdadeiro</button>
-       <button class="btn-secundario" style="flex:1" onclick="responderVF(false)">Falso</button>`;
+    : `<button class="btn-secundario vf-btn-resposta" style="flex:1" onclick="responderVF(false)">Falso</button>
+       <button class="btn-secundario vf-btn-resposta" style="flex:1" onclick="responderVF(true)">Verdadeiro</button>`;
 
   barraFixa.innerHTML = `
     <div class="vf-barra-fixa-principal">${linhaPrincipal}</div>
@@ -3214,8 +3272,9 @@ async function responderVF(resposta){
   if(!estadoVF) return;
   const entrada = estadoVF.historico[estadoVF.posicao];
   if(!entrada || entrada.resposta !== null) return;
+  const agoraMs = agoraCorrigidoVF();
+  if(agoraMs < (estadoVF.bloqueadoAteMs||0)) return; // toque duplo acidental logo após a questão aparecer — ignora
   const item = entrada.item;
-  const agoraMs = Date.now();
   const tempoS = (agoraMs - estadoVF.horaInicioMs) / 1000;
   const acertou = resposta === item.resposta;
 
@@ -3266,13 +3325,16 @@ let questaoNotaVfAtual = null;
 async function abrirNotaVF(questaoVfId){
   questaoNotaVfAtual = questaoVfId;
   document.getElementById('texto-nota-vf').value = '';
-  abrirModal('modal-nota-vf');
+  // busca e monta o conteúdo ANTES de abrir o modal — evita o "spinner
+  // aparece, depois o modal redimensiona de repente" que estava
+  // acontecendo antes (abria vazio, mostrava spinner, só depois o
+  // conteúdo real chegava e mudava a altura)
   await renderizarListaNotasVF();
+  abrirModal('modal-nota-vf');
 }
 
 async function renderizarListaNotasVF(){
   const el = document.getElementById('lista-notas-vf');
-  el.innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>';
   const {data} = await sb.from('notas_vf').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false});
   if(!data || !data.length){ el.innerHTML = ''; return; }
   el.innerHTML = `<div style="margin-bottom:14px">` + data.map(n => `
@@ -3280,6 +3342,21 @@ async function renderizarListaNotasVF(){
       <p style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${formatarTextoItemVF(n.texto)}</p>
       <button onclick="excluirNotaVF('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
     </div>`).join('') + `</div>`;
+}
+
+// mesma lógica do abrirExplicacaoQuestao (Quest normal) — a explicação já
+// vem pronta do PDF (campo "explicacao"), não precisa gerar nada. Só
+// limpa o prefixo "VERDADEIRA –"/"FALSA –" que vem do formato original,
+// já que a tela já mostra o veredito de forma clara, não precisa repetir
+function abrirExplicacaoVF(questaoVfId){
+  const entrada = estadoVF.historico.find(h => h.item.id === questaoVfId);
+  const el = document.getElementById('conteudo-explicacao-vf');
+  if(!entrada){ el.innerHTML = ''; abrirModal('modal-explicacao-vf'); return; }
+  const explicacaoLimpa = (entrada.item.explicacao || '').replace(/^(VERDADEIRA|FALSA|VERDADEIRO|FALSO)\s*[–-]\s*/i, '');
+  el.innerHTML = explicacaoLimpa
+    ? `<div style="margin:0;line-height:1.5;color:#111">${formatarTextoItemVF(explicacaoLimpa)}</div>`
+    : `<p style="margin:0;color:#666">Sem explicação cadastrada pra essa questão.</p>`;
+  abrirModal('modal-explicacao-vf');
 }
 
 async function adicionarNotaVF(){
@@ -4148,7 +4225,7 @@ function renderizarQuestaoAtual(){
 
 function renderizarResultado(q,resposta){
   const cor = resposta.correta ? '#3B6D11' : '#A32D2D';
-  const textoResultado = `${resposta.correta?'Acertou!':'Errou.'} Gabarito: ${(q.gabarito||'–').toUpperCase()}`;
+  const textoResultado = `${resposta.correta?'Acertou!':'Errou!'} Gabarito: ${(q.gabarito||'–').toUpperCase()}`;
 
   return `<div class="banco-resultado" style="color:${cor};position:relative;display:flex;align-items:center;justify-content:center">
     <span>${textoResultado}</span>
