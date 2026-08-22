@@ -792,14 +792,14 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M.75 23.25h22.5M6 16.25H3a.76.76 0 0 0-.75.75v6.25h4.5V17a.76.76 0 0 0-.75-.75m7.5-4h-3a.76.76 0 0 0-.75.75v10.25h4.5V13a.76.76 0 0 0-.75-.75m7.5-4h-3a.76.76 0 0 0-.75.75v14.25h4.5V9a.76.76 0 0 0-.75-.75m-16.82.99l16.07-7.3m-1.19 3.19l1.19-3.19L17.07.75"/></svg></span><span class="nav-label">Desempenho</span>
     </div>
+    <div class="nav-item hidden" id="nav-item-vf" data-aba="vf" onclick="trocarAba('vf')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></span><span class="nav-label">Flash</span>
+    </div>
     <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
     </div>
     <div class="nav-item" id="nav-item-adicionar" data-aba="adicionar" onclick="trocarAba('adicionar')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span><span class="nav-label">Adicionar questões</span>
-    </div>
-    <div class="nav-item hidden" id="nav-item-vf" data-aba="vf" onclick="trocarAba('vf')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg></span><span class="nav-label">V/F (beta)</span>
     </div>
   </div>
 </div>
@@ -1114,7 +1114,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-161';
+const VERSAO_APP = '2026-07-25-165';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3484,7 +3484,7 @@ function renderizarItemVF(){
         <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0">${escapeHtml(publicacao)}</p>
         ${tagsPublicacao ? `<div style="display:flex;gap:6px;flex-shrink:0">${tagsPublicacao}</div>` : ''}
       </div>
-      <div class="enunciado">${formatarTextoItemVF(item.texto)}</div>
+      <div class="enunciado" style="margin-top:10px">${formatarTextoItemVF(item.texto)}</div>
       ${blocoResultado}
     </div>
   `;
@@ -7107,6 +7107,13 @@ function parsearArquivoVF(textoCompleto){
     try{
       const bibliografiaMatch = bloco.match(/BIBLIOGRAFIA:\s*([\s\S]*?)(?=\n\s*DIFICULDADE:)/);
       const dificuldadeMatch = bloco.match(/DIFICULDADE:\s*(\S+)/);
+      // TIPO: é opcional (nem toda questão é número/lista) — aceita as
+      // duas juntas também ("TIPO: Número, Lista"), mesmo que hoje nenhuma
+      // questão real tenha as duas ao mesmo tempo
+      const tipoMatch = bloco.match(/TIPO:\s*([^\r\n]+)/i);
+      const tipoTexto = tipoMatch ? tipoMatch[1] : '';
+      const ehNumero = /n[uú]mero/i.test(tipoTexto);
+      const ehLista = /lista/i.test(tipoTexto);
       const respostaMatch = bloco.match(/RESPOSTA:\s*([VF])\b/);
       if(!bibliografiaMatch || !dificuldadeMatch || !respostaMatch){
         erros.push({indice: i, motivo: 'não achou BIBLIOGRAFIA/DIFICULDADE/RESPOSTA'});
@@ -7140,7 +7147,7 @@ function parsearArquivoVF(textoCompleto){
       const fonteMatch = bloco.match(/Fonte:\s*([\s\S]*?)(?=\n\s*\n|\n\s*Página \d+ de|$)/);
       const fonte = fonteMatch ? fonteMatch[1].replace(/\s+/g,' ').trim() : null;
 
-      questoes.push({texto: textoAfirmacao, resposta, explicacao, correcao, trechos_fonte: trechosFonte, fonte, bibliografiaTextoOriginal, dificuldade});
+      questoes.push({texto: textoAfirmacao, resposta, explicacao, correcao, trechos_fonte: trechosFonte, fonte, bibliografiaTextoOriginal, dificuldade, ehNumero, ehLista});
     }catch(e){
       erros.push({indice: i, motivo: 'exceção: ' + e.message});
     }
@@ -7238,6 +7245,8 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
       bibliografia_id: bibliografiaId,
       capitulo: capituloDoArquivo,
       n_palavras: q.texto.trim().split(/\s+/).filter(Boolean).length,
+      eh_numero: q.ehNumero,
+      eh_lista: q.ehLista,
       dificuldade: q.dificuldade,
       autor_id: usuarioAtual.id,
       lote_upload_id: loteUploadId,
