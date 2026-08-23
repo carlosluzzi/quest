@@ -131,7 +131,6 @@ input,select,textarea{font-family:inherit;font-size:16px}
 @media(min-width:1100px){.vf-barra-fixa{max-width:none;left:250px;right:0;transform:none;width:auto}}
 .nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative}
 #nav-item-adicionar{display:none}
-#nav-item-vf{display:none}
 .badge-notificacao{position:absolute;top:10px;right:calc(50% - 24px);background:#E24B4A;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
 .nav-item.active{background:#f0f0ee}
 .nav-icon{width:24px;height:24px;color:#888;display:flex;align-items:center;justify-content:center}
@@ -168,7 +167,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   #ptr-indicator{grid-column:2;grid-row:2}
   .nav-item{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;border-radius:9px;width:100%}
   #nav-item-adicionar{display:flex;gap:8px;padding-left:10px;padding-right:10px}
-  #nav-item-vf{display:flex;gap:8px;padding-left:10px;padding-right:10px}
+  #nav-item-vf{gap:8px;padding-left:10px;padding-right:10px}
   #nav-item-adicionar .nav-label{white-space:nowrap}
   #wrapper-barra-adicionar{display:none}
   #view-topico-detalhe{left:250px !important;width:calc(100% - 250px) !important}
@@ -1114,7 +1113,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-166';
+const VERSAO_APP = '2026-07-25-168';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2712,6 +2711,7 @@ let quantidadeSelecionada = 15;
 // próprio título — usado só pra rotular o filtro (ex: "Chapter 6" em vez
 // de só "6"), sem mexer no número em si, que já é 100% numérico
 function rotuloCapituloDoLivro(titulo){
+  if(/resistance and flow/i.test(titulo || '')) return 'Section';
   const palavrasInglesas = /\b(the|of|and|for|in|on|ship|guide|practice|practices|principles|design|resistance|flow|hydrodynamics|dimensions|data|infrastructure|channels|approach)\b/i;
   return palavrasInglesas.test(titulo || '') ? 'Chapter' : 'Capítulo';
 }
@@ -3812,7 +3812,23 @@ async function montarCaderno(){
 
   const nomeDigitado = document.getElementById('nome-caderno').value.trim();
   const agora = new Date();
-  const nomeCaderno = nomeDigitado || `Caderno ${agora.toLocaleDateString('pt-BR')} ${String(agora.getHours()).padStart(2,'0')}:${String(agora.getMinutes()).padStart(2,'0')}`;
+
+  // monta o nome: publicação específica > módulo genérico como base;
+  // acrescenta capítulo (palavra completa - Capítulo/Chapter/Section,
+  // nunca abreviado) quando filtrado; e "Reforço" quando é esse o modo
+  let baseNome = filtroSelecionado.modulo || 'Caderno';
+  if(filtroSelecionado.publicacao && !filtroSelecionado.publicacao.startsWith('tema:')){
+    const bibEscolhidaNome = bibliografiaCache.find(b => b.id === filtroSelecionado.publicacao);
+    if(bibEscolhidaNome) baseNome = bibEscolhidaNome.nome_exibicao || bibEscolhidaNome.titulo;
+  }
+  if(filtroSelecionado.capitulo){
+    const rotuloCap = rotuloCapituloDoLivro(baseNome);
+    baseNome += ` – ${rotuloCap} ${filtroSelecionado.capitulo}`; // travessão curto (–), não longo (—)
+  }
+  if(document.getElementById('toggle-priorizar-erro').checked){
+    baseNome += ' · Reforço';
+  }
+  const nomeCaderno = nomeDigitado || `${baseNome} ${agora.toLocaleDateString('pt-BR')}`;
 
   // cria o caderno
   const {data: novoCaderno} = await sb.from('cadernos').insert({
@@ -3895,14 +3911,13 @@ async function carregarCadernosExistentes(){
   const itensConcluidos = concluidos.map(c=>{
     const stats = respostasPorCaderno[c.id] || {total:0, acertos:0};
     const pct = stats.total ? Math.round((stats.acertos/stats.total)*100) : 0;
-    const dataFinal = c.finalizado_em ? new Date(c.finalizado_em).toLocaleDateString('pt-BR') : '';
     return `
     <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;opacity:0.85;cursor:pointer" onclick="abrirDetalheCadernoConcluido('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
         <span class="tx" style="font-size:16px;padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="finalizado" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
       </div>
-      <span style="color:#888;font-size:var(--fs-d)">${stats.total} questões · ${pct}% de acerto · finalizado ${dataFinal}</span>
+      <span style="color:#888;font-size:var(--fs-d)">${stats.total} questões · ${pct}% de acerto</span>
     </div>`;
   });
   const elC = document.getElementById('lista-cadernos-concluidos');
