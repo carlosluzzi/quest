@@ -710,19 +710,25 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
   <!-- ===== V/F (beta, só Carlos por enquanto) ===== -->
   <div class="view-aba hidden" id="aba-vf">
-    <div id="vf-filtros" style="margin-bottom:16px">
-      <select id="vf-filtro-modulo" class="filter-select" style="margin-bottom:8px" onchange="mudarModuloFiltroVF()">
-        <option value="">Todos os módulos</option>
-      </select>
-      <select id="vf-filtro-publicacao" class="filter-select" style="margin-bottom:8px" onchange="mudarFiltroPublicacaoVF()" disabled>
-        <option value="">Todas as publicações</option>
-      </select>
-      <select id="vf-filtro-capitulo" class="filter-select" style="margin-bottom:8px" onchange="mudarFiltroVF()" disabled>
-        <option value="">Todos os capítulos</option>
-      </select>
-      <div style="display:flex;gap:8px">
-        <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="flex:1;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">Número</button>
-        <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="flex:1;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">Lista</button>
+    <div id="vf-filtros" style="margin-bottom:16px;background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:14px 16px">
+      <button onclick="alternarFiltrosVF()" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:4px 2px;cursor:pointer;font-family:inherit;color:#B23A34;font-size:var(--fs-d);font-weight:700">
+        <span>Filtros</span>
+        <svg id="vf-chevron-filtros" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="vf-filtros-conteudo" class="hidden" style="margin-top:10px">
+        <select id="vf-filtro-modulo" class="filter-select" style="margin-bottom:8px" onchange="mudarModuloFiltroVF()">
+          <option value="">Todos os módulos</option>
+        </select>
+        <select id="vf-filtro-publicacao" class="filter-select" style="margin-bottom:8px" onchange="mudarFiltroPublicacaoVF()" disabled>
+          <option value="">Todas as publicações</option>
+        </select>
+        <select id="vf-filtro-capitulo" class="filter-select" style="margin-bottom:8px" onchange="mudarFiltroVF()" disabled>
+          <option value="">Todos os capítulos</option>
+        </select>
+        <div style="display:flex;gap:8px">
+          <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="flex:1;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">Número</button>
+          <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="flex:1;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;padding:8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">Lista</button>
+        </div>
       </div>
     </div>
     <div id="vf-conteudo" style="padding-bottom:170px">
@@ -1128,7 +1134,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-172';
+const VERSAO_APP = '2026-07-25-175';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3577,6 +3583,16 @@ function toggleFiltroTagVF(tipo){
   btn.style.color = filtroVF[campo] ? '#fff' : '#888';
   btn.style.borderColor = filtroVF[campo] ? '#B23A34' : '#ddd';
   recarregarPoolEContinuarVF();
+}
+
+// abre/fecha o bloco de filtros — começa fechado, pra não ocupar espaço
+// da tela à toa quando não está mexendo nele
+function alternarFiltrosVF(){
+  const conteudo = document.getElementById('vf-filtros-conteudo');
+  const chevron = document.getElementById('vf-chevron-filtros');
+  const abrindo = conteudo.classList.contains('hidden');
+  conteudo.classList.toggle('hidden');
+  chevron.style.transform = abrindo ? 'rotate(180deg)' : 'rotate(0deg)';
 }
 
 async function popularFiltroModuloVF(){
