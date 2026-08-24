@@ -1285,7 +1285,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-211';
+const VERSAO_APP = '2026-07-25-212';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3306,6 +3306,7 @@ function vfMarcarSeletorCorAbertoVF(){
   }, 4000);
 }
 function vfDesmarcarSeletorCorAbertoVF(){
+  if(!vfSeletorCorNativoAberto) return; // já estava fechado - nada a fazer, evita recalcular a toa em QUALQUER toque da tela
   vfSeletorCorNativoAberto = false;
   clearTimeout(vfTimerSeletorCorTravado);
   ajustarViewportReal();
@@ -3352,6 +3353,17 @@ function redimensionarCanvasDesenhoVF(){
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   vfCtxDesenho = ctx;
+  // redimensionar SEMPRE limpa os pixels do canvas, mesmo que o tamanho
+  // não tenha mudado de verdade — isso podia apagar silenciosamente um
+  // desenho em andamento (o histórico nunca soube desse apagão, então o
+  // desfazer ficava fora de sincronia com o que estava realmente na
+  // tela). Redesenha o último estado salvo, se existir, pra nunca perder
+  // o que já estava lá por causa de um resize disparado por qualquer motivo
+  if(typeof vfIndiceHistoricoVF !== 'undefined' && vfIndiceHistoricoVF >= 0 && vfHistoricoDesenho[vfIndiceHistoricoVF]){
+    const img = new Image();
+    img.onload = () => { ctx.drawImage(img, 0, 0, rect.width, rect.height); };
+    img.src = vfHistoricoDesenho[vfIndiceHistoricoVF];
+  }
 }
 
 function vfDentroDaAreaDesenho(clientX, clientY){
@@ -4119,7 +4131,7 @@ function limparCanvasDesenhoVF(){
   vfAtualizarEstiloBotaoBorracha();
 }
 
-window.addEventListener('resize', () => { if(vfEstaVisivelAgora()) redimensionarCanvasDesenhoVF(); });
+window.addEventListener('resize', () => { if(vfEstaVisivelAgora() && !vfDesenhandoAgora) redimensionarCanvasDesenhoVF(); });
 let ultimaSincronizacaoVF = null; // ISO string, horário do SERVIDOR da última sincronização bem-sucedida
 const LIMITE_PAUSA_MS_VF = 30 * 60 * 1000; // pausa maior que isso numa pendente = descarta, "não lembra mais o que leu"
 
