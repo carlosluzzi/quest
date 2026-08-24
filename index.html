@@ -114,6 +114,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #app-shell{display:none;max-width:480px;margin:0 auto;position:fixed;top:var(--vv-top, 0px);left:0;right:0;height:var(--vh-real, 100vh);flex-direction:column;overflow:hidden}
 #app-shell.ativo{display:flex}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;flex-shrink:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
+#vf-barra-desenho,#vf-barra-desenho *,#vf-painel-caneta,#vf-painel-caneta *,#vf-painel-borracha,#vf-painel-borracha *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:#B23A34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0;border:none;padding:0;margin:0;-webkit-appearance:none;appearance:none;cursor:pointer;overflow:hidden}
 
 .content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
@@ -1254,7 +1255,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-197';
+const VERSAO_APP = '2026-07-25-198';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3703,15 +3704,24 @@ function corNativaEscolhidaVF(valor){
 // customizadas de uma vez, e tocar fora cancela sem apagar nada
 let vfModoRemoverCores = false;
 let vfTimerTogueLongoCor = null;
+let vfTogueLongoAcabouDeAtivar = false; // trava contra o reforço de clique desfazer o modo no mesmo toque
 function vfArmarTogueLongoCor(botaoCor){
   const iniciar = (e) => {
     vfTimerTogueLongoCor = setTimeout(() => {
       vfTimerTogueLongoCor = null;
+      vfTogueLongoAcabouDeAtivar = true;
       vfEntrarModoRemoverCoresVF();
     }, 500);
   };
-  const cancelar = () => {
+  const cancelar = (e) => {
     if(vfTimerTogueLongoCor){ clearTimeout(vfTimerTogueLongoCor); vfTimerTogueLongoCor = null; }
+    if(vfTogueLongoAcabouDeAtivar){
+      // esse touchend é o de soltar depois do toque longo — impede o
+      // reforço de clique (mais abaixo) de tratar isso como um toque
+      // normal e fechar o modo remover no mesmo instante que ele abriu
+      e.stopPropagation();
+      vfTogueLongoAcabouDeAtivar = false;
+    }
   };
   botaoCor.addEventListener('touchstart', iniciar, {passive: true});
   botaoCor.addEventListener('touchend', cancelar);
