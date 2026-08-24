@@ -303,6 +303,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   // viewport" (que pode ser maior que a área realmente visível, por causa da
   // barra de endereço expandindo/recolhendo). window.visualViewport é a API que
   // sempre reflete a área realmente visível, então usamos ela como fonte de verdade.
+  let vfMaiorAlturaVistaVF = 0; // maior altura já vista - referência de "tela sem teclado nenhum"
   function ajustarViewportReal(){
     // enquanto a caneta está desenhando, qualquer disparo desse evento é
     // ruído (Scribble do sistema, detecção de "hover" da Apple Pencil,
@@ -310,18 +311,24 @@ input,select,textarea{font-family:inherit;font-size:16px}
     // momento, então recalcular aqui só fazia o app-shell inteiro tremer
     // a cada disparo espúrio. Suspende até o traço terminar
     if(typeof vfDesenhandoAgora !== 'undefined' && vfDesenhandoAgora) return;
-    // mesma lógica pro seletor de cor nativo (o "roda-viva" de escolher
-    // qualquer cor) — abrir ele dispara esse mesmo evento como se fosse
-    // teclado aparecendo, e recalcular nesse momento bagunçava a altura
-    // do app inteiro, fazendo o menu lateral e o de baixo sumirem da área
-    // visível enquanto o seletor estava aberto
-    if(typeof vfSeletorCorNativoAberto !== 'undefined' && vfSeletorCorNativoAberto) return;
     const vv = window.visualViewport;
+    const alturaNova = vv ? vv.height : window.innerHeight;
+    const topoNovo = vv ? vv.offsetTop : 0;
+    if(alturaNova > vfMaiorAlturaVistaVF) vfMaiorAlturaVistaVF = alturaNova;
+    // proteção direta no valor, em vez de tentar prever exatamente quando
+    // cada coisa (teclado, seletor de cor nativo, o que for) abre e fecha —
+    // isso já foi tentado de 3 jeitos diferentes e nenhum bloqueava tudo
+    // que podia disparar esse evento de forma espúria. Um teclado de
+    // verdade nunca ocupa mais de uns 40% da tela do iPad, então qualquer
+    // valor abaixo disso é suspeito e é ignorado — não aplica, mantém o
+    // último valor bom que já tinha, e nunca deixa o app-shell encolher a
+    // ponto do menu lateral e a barra de baixo saírem da área visível
+    if(vfMaiorAlturaVistaVF > 0 && alturaNova < vfMaiorAlturaVistaVF * 0.55) return;
     if(vv){
-      document.documentElement.style.setProperty('--vh-real', vv.height + 'px');
-      document.documentElement.style.setProperty('--vv-top', vv.offsetTop + 'px');
+      document.documentElement.style.setProperty('--vh-real', alturaNova + 'px');
+      document.documentElement.style.setProperty('--vv-top', topoNovo + 'px');
     }else{
-      document.documentElement.style.setProperty('--vh-real', window.innerHeight + 'px');
+      document.documentElement.style.setProperty('--vh-real', alturaNova + 'px');
       document.documentElement.style.setProperty('--vv-top', '0px');
     }
   }
