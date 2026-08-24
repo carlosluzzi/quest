@@ -310,6 +310,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
     // momento, então recalcular aqui só fazia o app-shell inteiro tremer
     // a cada disparo espúrio. Suspende até o traço terminar
     if(typeof vfDesenhandoAgora !== 'undefined' && vfDesenhandoAgora) return;
+    // mesma lógica pro seletor de cor nativo (o "roda-viva" de escolher
+    // qualquer cor) — abrir ele dispara esse mesmo evento como se fosse
+    // teclado aparecendo, e recalcular nesse momento bagunçava a altura
+    // do app inteiro, fazendo o menu lateral e o de baixo sumirem da área
+    // visível enquanto o seletor estava aberto
+    if(typeof vfSeletorCorNativoAberto !== 'undefined' && vfSeletorCorNativoAberto) return;
     const vv = window.visualViewport;
     if(vv){
       document.documentElement.style.setProperty('--vh-real', vv.height + 'px');
@@ -815,7 +821,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
           com a caneta que indireção via .click() programático) -->
           <div style="position:relative;width:26px;height:26px;flex-shrink:0">
             <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:2px solid #fff;box-shadow:0 0 0 1px #ddd;pointer-events:none"></div>
-            <input type="color" id="vf-input-cor-nativo" value="#000000" oninput="corNativaEscolhidaVF(this.value)" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none">
+            <input type="color" id="vf-input-cor-nativo" value="#000000" oninput="corNativaEscolhidaVF(this.value)" onfocus="vfSeletorCorNativoAberto=true" onblur="vfSeletorCorNativoAberto=false" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none">
           </div>
         </div>
       </div>
@@ -1271,7 +1277,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-207';
+const VERSAO_APP = '2026-07-25-208';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3276,6 +3282,7 @@ let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual
 // de desenho de verdade.
 let vfCtxDesenho = null;
 let vfDesenhandoAgora = false;
+let vfSeletorCorNativoAberto = false; // true enquanto o seletor de cor nativo (roda-viva) está aberto
 let vfTouchIdAtivo = null;
 let vfCorDesenhoAtual = '#000000';
 let vfEspessuraDesenhoAtual = 2.5;
@@ -3344,6 +3351,7 @@ function vfEhToqueDeCaneta(touch){
 
 document.addEventListener('touchstart', (e) => {
   if(!vfEstaVisivelAgora()) return;
+  if(vfSeletorCorNativoAberto) return; // o roda-viva de cor tá aberto por cima - não deixa desenhar através dele
   const touch = e.changedTouches[0];
   if(!vfEhToqueDeCaneta(touch)) return; // só a caneta desenha
   if(vfTocouNaBarra(e.target)) return; // deixa o toque chegar no botão normalmente
@@ -3859,12 +3867,26 @@ let vfModoRemoverCores = false;
 let vfTimerTogueLongoCor = null;
 let vfTogueLongoAcabouDeAtivar = false; // trava contra o reforço de clique desfazer o modo no mesmo toque
 function vfArmarTogueLongoCor(botaoCor){
+  let inicioX = 0, inicioY = 0;
+  const LIMIAR_MOVIMENTO_PX = 10; // tolera o tremor natural de segurar a caneta parada
   const iniciar = (e) => {
+    const ponto = e.touches ? e.touches[0] : e;
+    inicioX = ponto.clientX;
+    inicioY = ponto.clientY;
     vfTimerTogueLongoCor = setTimeout(() => {
       vfTimerTogueLongoCor = null;
       vfTogueLongoAcabouDeAtivar = true;
       vfEntrarModoRemoverCoresVF();
     }, 500);
+  };
+  const moveu = (e) => {
+    const ponto = e.touches ? e.touches[0] : e;
+    const dx = ponto.clientX - inicioX, dy = ponto.clientY - inicioY;
+    return Math.sqrt(dx*dx + dy*dy) > LIMIAR_MOVIMENTO_PX;
+  };
+  const cancelarSeMoveu = (e) => {
+    if(!vfTimerTogueLongoCor) return; // já disparou ou já foi cancelado, nada a fazer
+    if(moveu(e)){ clearTimeout(vfTimerTogueLongoCor); vfTimerTogueLongoCor = null; }
   };
   const cancelar = (e) => {
     if(vfTimerTogueLongoCor){ clearTimeout(vfTimerTogueLongoCor); vfTimerTogueLongoCor = null; }
@@ -3878,7 +3900,7 @@ function vfArmarTogueLongoCor(botaoCor){
   };
   botaoCor.addEventListener('touchstart', iniciar, {passive: true});
   botaoCor.addEventListener('touchend', cancelar);
-  botaoCor.addEventListener('touchmove', cancelar);
+  botaoCor.addEventListener('touchmove', cancelarSeMoveu, {passive: true});
   botaoCor.addEventListener('mousedown', iniciar);
   botaoCor.addEventListener('mouseup', cancelar);
 }
