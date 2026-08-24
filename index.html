@@ -1078,7 +1078,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 <div class="modal-overlay hidden" id="modal-anotacao-vf">
   <div class="modal-conteudo">
-    <h3 class="config-title">O que você escreveu</h3>
+    <h3 class="config-title">Anotações</h3>
     <img id="vf-img-anotacao-salva" style="width:100%;border-radius:8px;border:0.5px solid #eee;background:#fff" alt="Anotação feita nessa questão">
     <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-anotacao-vf')">Fechar</button>
   </div>
@@ -1126,7 +1126,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </div>
 
 <div class="modal-overlay hidden" id="modal-confirmar-exclusao-vf">
-  <div class="modal-conteudo">
+  <div class="modal-conteudo popup-formulario">
     <h3 class="config-title">Excluir questão</h3>
     <p>Ao excluir essa questão V/F, ela nunca mais aparece pra você.</p>
     <textarea id="motivo-exclusao-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:140px"></textarea>
@@ -1292,7 +1292,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-219';
+const VERSAO_APP = '2026-07-25-220';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3304,6 +3304,13 @@ let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual
 let vfCtxDesenho = null;
 let vfDesenhandoAgora = false;
 let vfSeletorCorNativoAberto = false; // true enquanto o seletor de cor nativo (roda-viva) está aberto
+// checagem GERAL - qualquer pop-up (modal de anotação, notas, explicação,
+// excluir, o que for) bloqueia o início de um traço novo. Cobre todos os
+// pop-ups de uma vez, não só o seletor de cor nativo especificamente
+function vfAlgumModalAbertoVF(){
+  if(vfSeletorCorNativoAberto) return true;
+  return !!document.querySelector('.modal-overlay:not(.hidden)');
+}
 let vfTimerSeletorCorTravado = null;
 // função única pra marcar "aberto" - sempre arma um cão de guarda junto.
 // Não importa por qual caminho o seletor foi fechado (toque na página,
@@ -3407,14 +3414,26 @@ function vfEhToqueDeCaneta(touch){
   return touch && touch.touchType === 'stylus';
 }
 
+let vfBotaoPendenteToqueInfo = null; // {x, y, identifier} - toque começou num ícone pequeno, decisão adiada até ver se vira arrasto
+const VF_LIMIAR_ARRASTO_BOTAO_PX = 8;
+
 document.addEventListener('touchstart', (e) => {
   if(!vfEstaVisivelAgora()) return;
-  if(vfSeletorCorNativoAberto) return; // o roda-viva de cor tá aberto por cima - não deixa desenhar através dele
+  if(vfAlgumModalAbertoVF()) return; // nenhum pop-up (modal, seletor de cor nativo, etc) deixa desenhar através dele
   const touch = e.changedTouches[0];
   if(!vfEhToqueDeCaneta(touch)) return; // só a caneta desenha
   if(vfTocouNaBarra(e.target)) return; // deixa o toque chegar no botão normalmente
   if(e.target.closest('.vf-btn-resposta')) return; // idem pros botões Verdadeiro/Falso - nunca viram início de traço
   if(!vfDentroDaAreaDesenho(touch.clientX, touch.clientY)) return;
+  // ícones pequenos (tipo o "?" de explicação): não decide na hora - um
+  // TOQUE rápido deixa o clique do botão funcionar normalmente, mas se
+  // virar ARRASTO de verdade (um risco que passa por cima dele vindo de
+  // fora), continua como traço. A decisão só acontece no touchmove
+  const botaoIcone = e.target.closest('.btn-icone-pequeno');
+  if(botaoIcone){
+    vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier};
+    return;
+  }
   if(!vfCtxDesenho) inicializarCanvasDesenhoVF();
   if(!vfCtxDesenho) return;
   e.preventDefault();
@@ -3435,6 +3454,33 @@ document.addEventListener('touchstart', (e) => {
 }, {passive: false});
 
 document.addEventListener('touchmove', (e) => {
+  // decide o destino do toque que começou em cima de um ícone pequeno
+  if(vfBotaoPendenteToqueInfo){
+    const touchPendente = Array.from(e.changedTouches).find(t => t.identifier === vfBotaoPendenteToqueInfo.identifier);
+    if(touchPendente){
+      const dx = touchPendente.clientX - vfBotaoPendenteToqueInfo.x, dy = touchPendente.clientY - vfBotaoPendenteToqueInfo.y;
+      if(Math.hypot(dx, dy) > VF_LIMIAR_ARRASTO_BOTAO_PX){
+        // virou arrasto de verdade - começa o traço retroativamente a
+        // partir do ponto onde o dedo/caneta tocou primeiro, não de onde
+        // está agora (senão nasceria um pedacinho de traço faltando)
+        if(!vfCtxDesenho) inicializarCanvasDesenhoVF();
+        if(vfCtxDesenho){
+          vfDesenhandoAgora = true;
+          vfTouchIdAtivo = vfBotaoPendenteToqueInfo.identifier;
+          const canvas = document.getElementById('vf-canvas-desenho');
+          const rect = canvas.getBoundingClientRect();
+          const ponto = {x: vfBotaoPendenteToqueInfo.x - rect.left, y: vfBotaoPendenteToqueInfo.y - rect.top};
+          vfUltimoPontoDesenho = ponto;
+          vfPontoMedioAnterior = ponto;
+          vfForcaSuavizada = typeof touchPendente.force === 'number' && touchPendente.force > 0 ? touchPendente.force : 0.5;
+          document.body.style.touchAction = 'none';
+          document.documentElement.style.overflow = 'hidden';
+          mostrarBarraDesenhoVF();
+        }
+        vfBotaoPendenteToqueInfo = null;
+      }
+    }
+  }
   if(!vfDesenhandoAgora) return;
   const touch = Array.from(e.changedTouches).find(t => t.identifier === vfTouchIdAtivo);
   if(!touch) return;
@@ -3495,6 +3541,7 @@ document.addEventListener('touchmove', (e) => {
 }, {passive: false});
 
 function vfFinalizarTracoDesenho(e){
+  vfBotaoPendenteToqueInfo = null; // toque em cima do ícone terminou sem virar arrasto - deixa o clique nativo acontecer
   if(!vfDesenhandoAgora) return;
   // sempre libera, mesmo que o identifier não bata exatamente (evita a
   // trava de scroll ficar presa ligada por algum caso raro do navegador)
@@ -4574,10 +4621,10 @@ function renderizarItemVF(){
       <span style="display:flex;align-items:center;gap:6px">${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao} certas nessa sessão <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
     </div>
     <div class="card-questao">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 6px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 6px">
         <div>
-          <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0">${escapeHtml(publicacao)}</p>
-          ${item.capitulo ? `<p style="color:#999;font-size:var(--fs-b);margin:2px 0 0 0">${rotuloCapituloDoLivro(item.bibliografia?.titulo)} ${escapeHtml(String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))}</p>` : ''}
+          <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0;line-height:1.25">${escapeHtml(publicacao)}</p>
+          ${item.capitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:1px 0 0 0;line-height:1.25">${rotuloCapituloDoLivro(item.bibliografia?.titulo)} ${escapeHtml(String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))}</p>` : ''}
         </div>
         ${tagsPublicacao ? `<div style="display:flex;gap:6px;flex-shrink:0">${tagsPublicacao}</div>` : ''}
       </div>
