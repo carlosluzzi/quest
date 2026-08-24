@@ -1292,7 +1292,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-212';
+const VERSAO_APP = '2026-07-25-214';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2240,7 +2240,13 @@ window.addEventListener('focus', () => { if(vfEstaVisivelAgora()) aoVoltarParaVF
 function ehCampoDeTeclado(el){
   if(el.tagName === 'TEXTAREA') return true;
   if(el.tagName !== 'INPUT') return false;
-  return !['checkbox','radio'].includes(el.type);
+  // lista do que REALMENTE abre teclado, em vez de excluir só
+  // checkbox/radio - "color" (o seletor de cor) e "range" (o slider de
+  // espessura) nunca chamam teclado nenhum, mas caíam na lista antiga por
+  // não serem nem checkbox nem radio, e isso escondia a barra de baixo
+  // sem necessidade nenhuma
+  const tiposComTeclado = ['text','password','email','number','tel','url','search','date','datetime-local','month','time','week'];
+  return tiposComTeclado.includes(el.type);
 }
 document.addEventListener('focusin', (e)=>{
   if(ehCampoDeTeclado(e.target) && e.target.closest('#app-shell')){
@@ -3368,7 +3374,7 @@ function redimensionarCanvasDesenhoVF(){
   // o que já estava lá por causa de um resize disparado por qualquer motivo
   if(typeof vfIndiceHistoricoVF !== 'undefined' && vfIndiceHistoricoVF >= 0 && vfHistoricoDesenho[vfIndiceHistoricoVF]){
     const img = new Image();
-    img.onload = () => { ctx.drawImage(img, 0, 0, rect.width, rect.height); };
+    img.onload = () => { ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(img, 0, 0, rect.width, rect.height); };
     img.src = vfHistoricoDesenho[vfIndiceHistoricoVF];
   }
 }
@@ -3523,6 +3529,13 @@ function vfRestaurarEstadoHistoricoVF(dataUrl){
   img.onload = () => {
     if(minhaSequencia !== vfSequenciaRestauracaoVF) return; // já tem uma chamada mais nova, descarta essa
     vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+    // o modo de composição fica "destination-out" (apagar) depois de usar
+    // a borracha, e ISSO NUNCA SE DESFAZIA SOZINHO — desenhar (restaurar)
+    // em cima de um canvas já limpo usando modo "apagar" não pinta nada
+    // de volta (apagar algo que já está transparente não muda nada).
+    // Essa era a causa real do desfazer "parecer" apagar tudo em vez de
+    // restaurar: a imagem restaurada simplesmente nunca era pintada
+    vfCtxDesenho.globalCompositeOperation = 'source-over';
     vfCtxDesenho.drawImage(img, 0, 0, canvas.width/dpr, canvas.height/dpr);
     vfAtualizarBotoesHistoricoVF();
   };
