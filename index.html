@@ -1271,7 +1271,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-203';
+const VERSAO_APP = '2026-07-25-204';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3344,16 +3344,10 @@ function vfEhToqueDeCaneta(touch){
 
 document.addEventListener('touchstart', (e) => {
   if(!vfEstaVisivelAgora()) return;
-  // só trata como início de traço se a ferramenta de desenho estiver de
-  // fato aberta — antes faltava essa checagem, e qualquer toque de caneta
-  // em QUALQUER lugar da tela do Flash (inclusive em cima dos botões
-  // Verdadeiro/Falso) podia ser sequestrado como se fosse começar a
-  // desenhar, mesmo sem a barrinha aberta
-  const barraAberta = document.getElementById('vf-barra-desenho');
-  if(!barraAberta || barraAberta.classList.contains('hidden')) return;
   const touch = e.changedTouches[0];
   if(!vfEhToqueDeCaneta(touch)) return; // só a caneta desenha
   if(vfTocouNaBarra(e.target)) return; // deixa o toque chegar no botão normalmente
+  if(e.target.closest('.vf-btn-resposta')) return; // idem pros botões Verdadeiro/Falso - nunca viram início de traço
   if(!vfDentroDaAreaDesenho(touch.clientX, touch.clientY)) return;
   if(!vfCtxDesenho) inicializarCanvasDesenhoVF();
   if(!vfCtxDesenho) return;
