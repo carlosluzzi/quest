@@ -1271,7 +1271,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-204';
+const VERSAO_APP = '2026-07-25-205';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4085,15 +4085,15 @@ function sincronizarPoolVF(){
 async function sincronizarPoolVFReal(){
   if(!estadoVF || !ultimaSincronizacaoVF) return;
   const marcaAnterior = ultimaSincronizacaoVF;
-  // horário do servidor capturado ANTES da consulta, não depois — uma
-  // escrita de outro aparelho que caísse entre a consulta e a marca (uns
-  // 100-300ms) ficaria com atualizado_em menor que a marca nova e nunca
-  // mais seria buscada até recarregar a página. De quebra, uma chamada
-  // RPC a menos por sincronização (antes eram duas)
-  const {data: horarioServidorMs} = await sb.rpc('now_ms');
+  // as 3 consultas não dependem do resultado umas das outras — rodavam em
+  // sequência (3 idas-e-voltas ao banco somadas), agora rodam juntas em
+  // paralelo, cortando o tempo total pro tempo da mais lenta das 3
+  const [{data: horarioServidorMs}, {data: estadosNovos}, {data: userRow}] = await Promise.all([
+    sb.rpc('now_ms'),
+    sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id).gt('atualizado_em', marcaAnterior),
+    sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single()
+  ]);
   const novaMarca = typeof horarioServidorMs === 'number' ? new Date(horarioServidorMs).toISOString() : null;
-
-  const {data: estadosNovos} = await sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id).gt('atualizado_em', marcaAnterior);
 
   if(estadosNovos && estadosNovos.length){
     const porId = {};
@@ -4132,7 +4132,6 @@ async function sincronizarPoolVFReal(){
     }
   }
 
-  const {data: userRow} = await sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single();
   if(userRow?.contador_respostas_vf != null) estadoVF.contadorGlobal = Math.max(estadoVF.contadorGlobal, userRow.contador_respostas_vf);
   if(novaMarca) ultimaSincronizacaoVF = novaMarca;
 }
