@@ -746,54 +746,65 @@ input,select,textarea{font-family:inherit;font-size:16px}
     botões normal). A escuta de verdade roda com Touch Events nativos no
     document (não neste elemento), filtrando touch.touchType==='stylus' -->
     <canvas id="vf-canvas-desenho" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);width:100%;z-index:8;pointer-events:none;touch-action:none"></canvas>
-    <div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 10px);left:50%;transform:translateX(-50%);z-index:11;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;display:flex;flex-direction:column;gap:14px;width:280px;box-sizing:border-box">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-weight:600;font-size:16px;color:#111">Caneta</span>
-        <button onclick="fecharBarraDesenhoVF()" title="Fechar" style="width:26px;height:26px;border-radius:50%;background:#f5f5f5;border:none;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;color:#888">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
+    <!-- barra fina, sempre visível quando ativa - marcador+cor agrupados
+    (fundo azul claro quando ativo, igual PDF Expert) + borracha separada -->
+    <div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:11;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.15);padding:6px 8px;display:flex;align-items:center;gap:14px">
+      <button onclick="alternarPainelCanetaVF()" style="display:flex;align-items:center;gap:10px;background:#EAF4FD;border:none;border-radius:8px;padding:6px 12px;cursor:pointer">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="#1C2A40"><path d="M3 21l1.5-5L16 4.5a2 2 0 0 1 2.8 0l.7.7a2 2 0 0 1 0 2.8L8 19.5 3 21z"/></svg>
+        <span id="vf-swatch-cor-atual" style="width:18px;height:18px;border-radius:50%;background:#000000;display:inline-block"></span>
+      </button>
+      <div style="width:1px;height:22px;background:#eee"></div>
+      <button id="vf-btn-borracha" onclick="alternarBorrachaDesenhoVF()" style="background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;color:#555">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="15" height="8" rx="1.5" transform="rotate(-28 12.5 15)"/><line x1="9.3" y1="8.3" x2="16.7" y2="15.7"/></svg>
+      </button>
+      <div style="width:1px;height:22px;background:#eee"></div>
+      <button onclick="fecharBarraDesenhoVF()" title="Fechar" style="background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;color:#999">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- painel "Caneta" - só aparece ao tocar no grupo marcador+cor da
+    barra fina, fecha sozinho ao tocar de novo ou em Concluído -->
+    <div id="vf-painel-caneta" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:12;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
+      <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Caneta</div>
 
       <div>
-        <div style="font-size:11px;letter-spacing:.04em;color:#999;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
+        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
         <div style="display:flex;gap:10px;align-items:center">
-          <button class="vf-cor-desenho" data-cor="#000000" onclick="selecionarCorDesenhoVF('#000000')" style="width:28px;height:28px;border-radius:50%;background:#000000;border:none;cursor:pointer;padding:0;box-shadow:0 0 0 2px #fff, 0 0 0 4px #000000"></button>
-          <button class="vf-cor-desenho" data-cor="#CF3920" onclick="selecionarCorDesenhoVF('#CF3920')" style="width:28px;height:28px;border-radius:50%;background:#CF3920;border:none;cursor:pointer;padding:0"></button>
-          <button class="vf-cor-desenho" data-cor="#587835" onclick="selecionarCorDesenhoVF('#587835')" style="width:28px;height:28px;border-radius:50%;background:#587835;border:none;cursor:pointer;padding:0"></button>
-          <button class="vf-cor-desenho" data-cor="#1A40A1" onclick="selecionarCorDesenhoVF('#1A40A1')" style="width:28px;height:28px;border-radius:50%;background:#1A40A1;border:none;cursor:pointer;padding:0"></button>
-          <button class="vf-cor-desenho" data-cor="#6D2A9E" onclick="selecionarCorDesenhoVF('#6D2A9E')" style="width:28px;height:28px;border-radius:50%;background:#6D2A9E;border:none;cursor:pointer;padding:0"></button>
-          <button onclick="abrirSeletorCorCompletoVF()" title="Mais cores" style="width:28px;height:28px;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:none;cursor:pointer;padding:0"></button>
+          <button class="vf-cor-desenho" data-cor="#000000" onclick="selecionarCorDesenhoVF('#000000')" style="width:26px;height:26px;border-radius:50%;background:#000000;border:2px solid #fff;box-shadow:0 0 0 2px #5B9BD5;cursor:pointer;padding:0"></button>
+          <button class="vf-cor-desenho" data-cor="#CF3920" onclick="selecionarCorDesenhoVF('#CF3920')" style="width:26px;height:26px;border-radius:50%;background:#CF3920;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+          <button class="vf-cor-desenho" data-cor="#587835" onclick="selecionarCorDesenhoVF('#587835')" style="width:26px;height:26px;border-radius:50%;background:#587835;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+          <button class="vf-cor-desenho" data-cor="#1A40A1" onclick="selecionarCorDesenhoVF('#1A40A1')" style="width:26px;height:26px;border-radius:50%;background:#1A40A1;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+          <button class="vf-cor-desenho" data-cor="#6D2A9E" onclick="selecionarCorDesenhoVF('#6D2A9E')" style="width:26px;height:26px;border-radius:50%;background:#6D2A9E;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+          <button onclick="abrirSeletorCorCompletoVF()" title="Mais cores" style="width:26px;height:26px;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:2px solid #fff;cursor:pointer;padding:0"></button>
           <input type="color" id="vf-input-cor-nativo" value="#000000" oninput="corNativaEscolhidaVF(this.value)" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
         </div>
       </div>
 
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-          <span style="font-size:11px;letter-spacing:.04em;color:#999;font-weight:600;text-transform:uppercase">Espessura</span>
-          <span id="vf-espessura-valor" style="font-size:13px;color:#666;font-weight:500">2,5 pt</span>
+      <div style="margin-top:16px">
+        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Espessura</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="vf-preview-espessura" style="width:8px;height:8px;border-radius:50%;background:#000000;flex-shrink:0"></span>
+          <input type="range" id="vf-slider-espessura" min="1" max="10" step="0.5" value="2.5" oninput="mudarEspessuraSliderVF(this.value)" style="flex:1;accent-color:#5B9BD5">
+          <span id="vf-espessura-valor" style="font-size:14px;color:#333;width:34px;text-align:right;flex-shrink:0">2,5 pt</span>
         </div>
-        <input type="range" id="vf-slider-espessura" min="1" max="10" step="0.5" value="2.5" oninput="mudarEspessuraSliderVF(this.value)" style="width:100%;accent-color:#B23A34">
       </div>
 
-      <div>
-        <div style="font-size:11px;letter-spacing:.04em;color:#999;font-weight:600;text-transform:uppercase;margin-bottom:8px">Sensibilidade da ponta</div>
+      <div style="margin-top:16px">
+        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Sensibilidade da ponta</div>
         <div style="display:flex;gap:8px">
-          <button id="vf-btn-persistente" onclick="selecionarSensibilidadeVF('persistente')" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;color:#444;padding:10px 6px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500">
-            <svg viewBox="0 0 24 16" width="22" height="15"><path d="M2 8 Q6 3 10 8 T18 8 T22 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <button id="vf-btn-persistente" onclick="selecionarSensibilidadeVF('persistente')" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:13px">
+            <svg viewBox="0 0 24 16" width="20" height="14"><path d="M2 8 Q6 3 10 8 T18 8 T22 5" fill="none" stroke="#1C2A40" stroke-width="2" stroke-linecap="round"/></svg>
             Persistente
           </button>
-          <button id="vf-btn-variavel" onclick="selecionarSensibilidadeVF('variavel')" style="flex:1;border-radius:10px;border:1.5px solid #B23A34;background:#FCEBEB;color:#B23A34;padding:10px 6px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">
-            <svg viewBox="0 0 24 16" width="22" height="15"><path d="M2 9c1-5 4-6 6-4s1 6 4 6 3-4 6-5 3 1 4 2" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+          <button id="vf-btn-variavel" onclick="selecionarSensibilidadeVF('variavel')" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:13px">
+            <svg viewBox="0 0 24 16" width="20" height="14"><path d="M2 10c1-6 3-7 5-4c2 3 1 3 3 0c2-3 4-2 5 4c1 6 3 3 5-2" fill="none" stroke="#1C2A40" stroke-width="2.6" stroke-linecap="round"/></svg>
             Variável
           </button>
         </div>
       </div>
 
-      <div style="height:1px;background:#eee"></div>
-      <button id="vf-btn-borracha" onclick="alternarBorrachaDesenhoVF()" style="width:100%;border-radius:10px;border:1px solid #ddd;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;color:#666;padding:10px;font-size:13px;font-weight:500;font-family:inherit">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="15" height="8" rx="1.5" transform="rotate(-28 12.5 15)"/><line x1="9.3" y1="8.3" x2="16.7" y2="15.7"/></svg>
-        Borracha
-      </button>
+      <button onclick="alternarPainelCanetaVF()" style="width:100%;margin-top:16px;border-radius:10px;border:none;background:#F2F2F2;color:#333;padding:11px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Concluído</button>
     </div>
     <div id="vf-barra-fixa" class="vf-barra-fixa hidden"></div>
   </div>
@@ -1180,7 +1191,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-182';
+const VERSAO_APP = '2026-07-25-183';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3232,7 +3243,9 @@ function vfDentroDaAreaDesenho(clientX, clientY){
 // do canvas)
 function vfTocouNaBarra(target){
   const barra = document.getElementById('vf-barra-desenho');
-  return !!(barra && (barra === target || barra.contains(target)));
+  const painel = document.getElementById('vf-painel-caneta');
+  return !!((barra && (barra === target || barra.contains(target))) ||
+            (painel && (painel === target || painel.contains(target))));
 }
 
 function vfEhToqueDeCaneta(touch){
@@ -3259,9 +3272,10 @@ document.addEventListener('touchstart', (e) => {
   vfUltimoPontoDesenho = ponto;
   vfPontoMedioAnterior = ponto;
   // trava o scroll da página inteira enquanto o traço está em andamento —
-  // é o que resolve a tela "subindo e descendo" atrás da caneta, além do
-  // preventDefault. Some ao soltar o traço
+  // duas camadas (touch-action E overflow), pra fechar o máximo de portas
+  // possível contra a tela tremendo atrás da caneta. Some ao soltar o traço
   document.body.style.touchAction = 'none';
+  document.documentElement.style.overflow = 'hidden';
   mostrarBarraDesenhoVF();
 }, {passive: false});
 
@@ -3282,11 +3296,19 @@ document.addEventListener('touchmove', (e) => {
   vfCtxDesenho.globalCompositeOperation = vfModoBorracha ? 'destination-out' : 'source-over';
   vfCtxDesenho.strokeStyle = vfCorDesenhoAtual;
   let espessuraFinal = vfEspessuraDesenhoAtual;
-  if(vfSensibilidadePonta === 'variavel'){
-    const forca = typeof touch.force === 'number' && touch.force > 0 ? touch.force : 0.5;
-    espessuraFinal = vfEspessuraDesenhoAtual * (0.6 + forca * 0.8);
+  const forca = typeof touch.force === 'number' && touch.force > 0 ? touch.force : 0.5;
+  if(vfModoBorracha){
+    // borracha também responde à força, igual apps profissionais — não
+    // fica mais fixa enquanto o traço normal varia
+    espessuraFinal = 14 + forca * 16;
+  }else if(vfSensibilidadePonta === 'variavel'){
+    // a espessura do slider vira o TETO (força máxima chega perto dela),
+    // não o valor sempre usado — toque leve fica bem mais fino que o
+    // valor setado, toque forte chega perto do valor cheio. Mais parecido
+    // com a sensação de uma caneta de verdade que com o cálculo anterior
+    espessuraFinal = Math.max(0.8, vfEspessuraDesenhoAtual * (0.25 + forca * 0.75));
   }
-  vfCtxDesenho.lineWidth = vfModoBorracha ? 20 : Math.max(1, espessuraFinal);
+  vfCtxDesenho.lineWidth = Math.max(1, espessuraFinal);
   vfCtxDesenho.beginPath();
   vfCtxDesenho.moveTo(vfPontoMedioAnterior.x, vfPontoMedioAnterior.y);
   vfCtxDesenho.quadraticCurveTo(vfUltimoPontoDesenho.x, vfUltimoPontoDesenho.y, pontoMedio.x, pontoMedio.y);
@@ -3303,6 +3325,7 @@ function vfFinalizarTracoDesenho(e){
   vfDesenhandoAgora = false;
   vfTouchIdAtivo = null;
   document.body.style.touchAction = '';
+  document.documentElement.style.overflow = '';
 }
 document.addEventListener('touchend', vfFinalizarTracoDesenho);
 document.addEventListener('touchcancel', vfFinalizarTracoDesenho);
@@ -3321,14 +3344,26 @@ function mostrarBarraDesenhoVF(){
 // volta a aparecer normalmente (mostrarBarraDesenhoVF já cobre isso)
 function fecharBarraDesenhoVF(){
   document.getElementById('vf-barra-desenho').classList.add('hidden');
+  document.getElementById('vf-painel-caneta').classList.add('hidden');
+}
+
+// abre/fecha só o painel de configuração (Cor/Espessura/Sensibilidade) —
+// a barra fina continua visível o tempo todo, igual o PDF Expert: barra
+// permanente, painel temporário que aparece só pra mudar algo e volta
+function alternarPainelCanetaVF(){
+  document.getElementById('vf-painel-caneta').classList.toggle('hidden');
 }
 
 function selecionarCorDesenhoVF(cor){
   vfCorDesenhoAtual = cor;
   vfModoBorracha = false;
+  // seleção é uma MOLDURA ao redor (box-shadow colorido), não um brilho —
+  // igual o quadrado que aparece ao redor da bolinha escolhida no PDF Expert
   document.querySelectorAll('.vf-cor-desenho').forEach(btn => {
-    btn.style.boxShadow = btn.dataset.cor === cor ? `0 0 0 2px #fff, 0 0 0 4px ${cor}` : 'none';
+    btn.style.boxShadow = btn.dataset.cor === cor ? '0 0 0 2px #5B9BD5' : 'none';
   });
+  document.getElementById('vf-swatch-cor-atual').style.background = cor;
+  document.getElementById('vf-preview-espessura').style.background = cor;
   vfAtualizarEstiloBotaoBorracha();
 }
 
@@ -3350,18 +3385,17 @@ function mudarEspessuraSliderVF(valor){
 }
 
 // Persistente = espessura fixa, ignora a força da caneta. Variável = a
-// força de verdade influencia a espessura (padrão) — mesmo conceito do
-// PDF Expert
+// força de verdade influencia a espessura — mesmo conceito do PDF Expert.
+// Selecionado = fundo BRANCO com borda azul, não fundo tingido (era o que
+// eu tinha errado antes)
 let vfSensibilidadePonta = 'variavel';
 function selecionarSensibilidadeVF(modo){
   vfSensibilidadePonta = modo;
   const btnPersistente = document.getElementById('vf-btn-persistente');
   const btnVariavel = document.getElementById('vf-btn-variavel');
   function aplicarEstiloBotao(btn, ativo){
-    btn.style.borderColor = ativo ? '#B23A34' : '#ddd';
-    btn.style.background = ativo ? '#FCEBEB' : '#fff';
-    btn.style.color = ativo ? '#B23A34' : '#444';
-    btn.style.fontWeight = ativo ? '600' : '500';
+    btn.style.borderColor = ativo ? '#5B9BD5' : '#ddd';
+    btn.style.background = '#fff';
   }
   aplicarEstiloBotao(btnPersistente, modo === 'persistente');
   aplicarEstiloBotao(btnVariavel, modo === 'variavel');
@@ -3374,8 +3408,9 @@ function alternarBorrachaDesenhoVF(){
 function vfAtualizarEstiloBotaoBorracha(){
   const btnBorracha = document.getElementById('vf-btn-borracha');
   if(!btnBorracha) return;
-  btnBorracha.style.background = vfModoBorracha ? '#B23A34' : '#fff';
-  btnBorracha.style.color = vfModoBorracha ? '#fff' : '#666';
+  btnBorracha.style.background = vfModoBorracha ? '#EAF4FD' : 'none';
+  btnBorracha.style.color = vfModoBorracha ? '#1C2A40' : '#555';
+  btnBorracha.style.borderRadius = '8px';
 }
 
 // chamada sempre que a questão muda de verdade (próxima/anterior/nova) —
@@ -3384,7 +3419,9 @@ function vfAtualizarEstiloBotaoBorracha(){
 function limparCanvasDesenhoVF(){
   const canvas = document.getElementById('vf-canvas-desenho');
   const barra = document.getElementById('vf-barra-desenho');
+  const painel = document.getElementById('vf-painel-caneta');
   if(barra) barra.classList.add('hidden');
+  if(painel) painel.classList.add('hidden');
   if(!canvas || !vfCtxDesenho) return;
   const dpr = window.devicePixelRatio || 1;
   vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
