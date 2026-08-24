@@ -1292,7 +1292,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-218';
+const VERSAO_APP = '2026-07-25-219';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4536,6 +4536,11 @@ function renderizarItemVF(){
   const item = entrada.item;
   const jaRespondida = entrada.resposta !== null;
   const publicacao = item.bibliografia?.titulo || 'Publicação não identificada';
+  // trava de segurança: se a questão mudar (ex: clicou em Próxima) enquanto
+  // ainda estava editando a afirmação, o textarea é destruído sem passar
+  // pelo blur — sem isso, a barra de baixo podia ficar escondida pra sempre
+  document.getElementById('bottom-nav')?.classList.remove('teclado-aberto');
+  document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
 
   let blocoResultado = '';
   if(jaRespondida){
@@ -4627,6 +4632,11 @@ async function vfSalvarEdicaoEnunciadoVF(questaoId, textoOriginal){
   if(!textarea || !div) return;
   const textoNovo = textarea.value.trim();
   div.dataset.editando = '0';
+  // trava de segurança: troca de innerHTML no meio do blur pode atrapalhar
+  // o focusout de disparar limpo, deixando a barra de baixo escondida
+  // (mesma causa do bug que já apareceu com o seletor de cor nativo)
+  document.getElementById('bottom-nav')?.classList.remove('teclado-aberto');
+  document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
   if(!textoNovo || textoNovo === textoOriginal){
     // nada mudou (ou ficou vazio, o que não é válido) - só volta ao normal
     div.innerHTML = formatarTextoItemVF(textoOriginal);
