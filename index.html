@@ -821,7 +821,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
           com a caneta que indireção via .click() programático) -->
           <div style="position:relative;width:26px;height:26px;flex-shrink:0">
             <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:2px solid #fff;box-shadow:0 0 0 1px #ddd;pointer-events:none"></div>
-            <input type="color" id="vf-input-cor-nativo" value="#000000" oninput="corNativaEscolhidaVF(this.value)" onfocus="vfSeletorCorNativoAberto=true" onblur="vfSeletorCorNativoAberto=false" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none">
+            <input type="color" id="vf-input-cor-nativo" value="#000000" oninput="corNativaEscolhidaVF(this.value)" ontouchstart="vfSeletorCorNativoAberto=true" onfocus="vfSeletorCorNativoAberto=true" onblur="vfSeletorCorNativoAberto=false" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none">
           </div>
         </div>
       </div>
@@ -1285,7 +1285,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-209';
+const VERSAO_APP = '2026-07-25-210';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3291,6 +3291,12 @@ let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual
 let vfCtxDesenho = null;
 let vfDesenhandoAgora = false;
 let vfSeletorCorNativoAberto = false; // true enquanto o seletor de cor nativo (roda-viva) está aberto
+// sinal muito mais confiável que só o "blur" do input: se ESSE listener
+// está rodando, é porque o toque chegou até o JS da página — e isso só
+// acontece se o seletor nativo NÃO estiver mais capturando a tela por
+// cima (enquanto ele está de fato aberto, nenhum toque na página chega
+// aqui). O blur sozinho não disparava em arrastos de slider, por exemplo
+document.addEventListener('touchstart', () => { vfSeletorCorNativoAberto = false; }, {capture: true, passive: true});
 let vfTouchIdAtivo = null;
 let vfCorDesenhoAtual = '#000000';
 let vfEspessuraDesenhoAtual = 2.5;
