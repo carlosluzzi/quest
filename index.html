@@ -300,6 +300,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
   // barra de endereço expandindo/recolhendo). window.visualViewport é a API que
   // sempre reflete a área realmente visível, então usamos ela como fonte de verdade.
   function ajustarViewportReal(){
+    // enquanto a caneta está desenhando, qualquer disparo desse evento é
+    // ruído (Scribble do sistema, detecção de "hover" da Apple Pencil,
+    // etc) — não tem teclado abrindo nem zoom mudando de verdade nesse
+    // momento, então recalcular aqui só fazia o app-shell inteiro tremer
+    // a cada disparo espúrio. Suspende até o traço terminar
+    if(typeof vfDesenhandoAgora !== 'undefined' && vfDesenhandoAgora) return;
     const vv = window.visualViewport;
     if(vv){
       document.documentElement.style.setProperty('--vh-real', vv.height + 'px');
@@ -740,7 +746,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     botões normal). A escuta de verdade roda com Touch Events nativos no
     document (não neste elemento), filtrando touch.touchType==='stylus' -->
     <canvas id="vf-canvas-desenho" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);width:100%;z-index:8;pointer-events:none;touch-action:none"></canvas>
-    <div id="vf-barra-desenho" class="hidden" style="position:fixed;z-index:11;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;display:flex;flex-direction:column;gap:14px;width:280px;box-sizing:border-box">
+    <div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 10px);left:50%;transform:translateX(-50%);z-index:11;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;display:flex;flex-direction:column;gap:14px;width:280px;box-sizing:border-box">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-weight:600;font-size:16px;color:#111">Caneta</span>
         <button onclick="fecharBarraDesenhoVF()" title="Fechar" style="width:26px;height:26px;border-radius:50%;background:#f5f5f5;border:none;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;color:#888">
@@ -772,14 +778,20 @@ input,select,textarea{font-family:inherit;font-size:16px}
       <div>
         <div style="font-size:11px;letter-spacing:.04em;color:#999;font-weight:600;text-transform:uppercase;margin-bottom:8px">Sensibilidade da ponta</div>
         <div style="display:flex;gap:8px">
-          <button id="vf-btn-persistente" onclick="selecionarSensibilidadeVF('persistente')" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;color:#444;padding:10px 6px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">Persistente</button>
-          <button id="vf-btn-variavel" onclick="selecionarSensibilidadeVF('variavel')" style="flex:1;border-radius:10px;border:1.5px solid #B23A34;background:#FCEBEB;color:#B23A34;padding:10px 6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Variável</button>
+          <button id="vf-btn-persistente" onclick="selecionarSensibilidadeVF('persistente')" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;color:#444;padding:10px 6px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500">
+            <svg viewBox="0 0 24 16" width="22" height="15"><path d="M2 8 Q6 3 10 8 T18 8 T22 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Persistente
+          </button>
+          <button id="vf-btn-variavel" onclick="selecionarSensibilidadeVF('variavel')" style="flex:1;border-radius:10px;border:1.5px solid #B23A34;background:#FCEBEB;color:#B23A34;padding:10px 6px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">
+            <svg viewBox="0 0 24 16" width="22" height="15"><path d="M2 9c1-5 4-6 6-4s1 6 4 6 3-4 6-5 3 1 4 2" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+            Variável
+          </button>
         </div>
       </div>
 
       <div style="height:1px;background:#eee"></div>
       <button id="vf-btn-borracha" onclick="alternarBorrachaDesenhoVF()" style="width:100%;border-radius:10px;border:1px solid #ddd;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;color:#666;padding:10px;font-size:13px;font-weight:500;font-family:inherit">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H8l-6-6a2 2 0 0 1 0-3l9-9a2 2 0 0 1 3 0l7 7a2 2 0 0 1 0 3l-9 9"/><path d="M6 12l6 6"/></svg>
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="15" height="8" rx="1.5" transform="rotate(-28 12.5 15)"/><line x1="9.3" y1="8.3" x2="16.7" y2="15.7"/></svg>
         Borracha
       </button>
     </div>
@@ -1168,7 +1180,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-179';
+const VERSAO_APP = '2026-07-25-182';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2972,6 +2984,11 @@ function atualizarContadorDisponiveis(){
 function formatarTextoItemVF(texto){
   if(!texto) return '';
   return escapeHtml(texto)
+    // travessão longo (—) sempre vira curto (–) — o extrator às vezes
+    // ainda manda o longo por engano, mesmo pedindo o curto; corrigir
+    // aqui na exibição resolve de vez, sem precisar reeditar o PDF nem
+    // reenviar o pedido toda vez que acontecer
+    .replace(/—/g, '–')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
@@ -3245,7 +3262,7 @@ document.addEventListener('touchstart', (e) => {
   // é o que resolve a tela "subindo e descendo" atrás da caneta, além do
   // preventDefault. Some ao soltar o traço
   document.body.style.touchAction = 'none';
-  mostrarBarraDesenhoVF(touch.clientX, touch.clientY);
+  mostrarBarraDesenhoVF();
 }, {passive: false});
 
 document.addEventListener('touchmove', (e) => {
@@ -3293,15 +3310,8 @@ document.addEventListener('touchcancel', vfFinalizarTracoDesenho);
 // mostra a barrinha perto de onde a caneta tocou — só aparece ao começar
 // a desenhar, mas depois disso FICA na tela até trocar de questão (nunca
 // some sozinha entre um traço e outro)
-function mostrarBarraDesenhoVF(clientX, clientY){
-  const barra = document.getElementById('vf-barra-desenho');
-  if(!barra.classList.contains('hidden')) return; // já está aberta, não reposiciona à toa
-  barra.classList.remove('hidden');
-  const largura = 260;
-  const left = Math.min(Math.max(8, clientX - largura/2), window.innerWidth - largura - 8);
-  const top = Math.max(8, clientY - 70);
-  barra.style.left = left + 'px';
-  barra.style.top = top + 'px';
+function mostrarBarraDesenhoVF(){
+  document.getElementById('vf-barra-desenho').classList.remove('hidden');
 }
 
 // fecha só a barrinha — o desenho que já está no canvas continua lá
@@ -3347,10 +3357,14 @@ function selecionarSensibilidadeVF(modo){
   vfSensibilidadePonta = modo;
   const btnPersistente = document.getElementById('vf-btn-persistente');
   const btnVariavel = document.getElementById('vf-btn-variavel');
-  const ativo = 'border:1.5px solid #B23A34;background:#FCEBEB;color:#B23A34;font-weight:600';
-  const inativo = 'border:1.5px solid #ddd;background:#fff;color:#444;font-weight:500';
-  btnPersistente.style.cssText += modo === 'persistente' ? ativo : inativo;
-  btnVariavel.style.cssText += modo === 'variavel' ? ativo : inativo;
+  function aplicarEstiloBotao(btn, ativo){
+    btn.style.borderColor = ativo ? '#B23A34' : '#ddd';
+    btn.style.background = ativo ? '#FCEBEB' : '#fff';
+    btn.style.color = ativo ? '#B23A34' : '#444';
+    btn.style.fontWeight = ativo ? '600' : '500';
+  }
+  aplicarEstiloBotao(btnPersistente, modo === 'persistente');
+  aplicarEstiloBotao(btnVariavel, modo === 'variavel');
 }
 
 function alternarBorrachaDesenhoVF(){
