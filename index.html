@@ -1292,7 +1292,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-214';
+const VERSAO_APP = '2026-07-25-215';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3443,11 +3443,6 @@ document.addEventListener('touchmove', (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = touch.clientX - rect.left, y = touch.clientY - rect.top;
 
-  // suavização por curva quadrática: o ponto médio entre o anterior e o
-  // atual vira o destino da curva, o ponto anterior vira o "cabo" de
-  // controle. Evita o efeito de segmentos retos colados, mesma técnica
-  // usada em apps de desenho de verdade
-  const pontoMedio = {x: (vfUltimoPontoDesenho.x + x) / 2, y: (vfUltimoPontoDesenho.y + y) / 2};
   vfCtxDesenho.globalCompositeOperation = vfModoBorracha ? 'destination-out' : 'source-over';
   vfCtxDesenho.strokeStyle = vfCorDesenhoAtual;
   let espessuraFinal = vfEspessuraDesenhoAtual;
@@ -3469,13 +3464,34 @@ document.addEventListener('touchmove', (e) => {
     espessuraFinal = Math.max(0.8, vfEspessuraDesenhoAtual * (0.35 + forca * 1.85));
   }
   vfCtxDesenho.lineWidth = Math.max(1, espessuraFinal);
-  vfCtxDesenho.beginPath();
-  vfCtxDesenho.moveTo(vfPontoMedioAnterior.x, vfPontoMedioAnterior.y);
-  vfCtxDesenho.quadraticCurveTo(vfUltimoPontoDesenho.x, vfUltimoPontoDesenho.y, pontoMedio.x, pontoMedio.y);
-  vfCtxDesenho.stroke();
 
-  vfPontoMedioAnterior = pontoMedio;
-  vfUltimoPontoDesenho = {x, y};
+  // interpolação pra traço rápido: quando a caneta se move rápido, a
+  // amostragem de toque chega mais espaçada (é uma limitação do
+  // hardware/Safari, não tem como pedir mais amostras) — sem isso, um
+  // salto grande vira um segmento quase reto, com leve efeito facetado
+  // na curva. Subdivide o salto em pontos intermediários antes de
+  // desenhar, suavizando exatamente onde a suavização por si só não
+  // ajuda (ela já roda em cima desses pontos extras também)
+  const distancia = Math.hypot(x - vfUltimoPontoDesenho.x, y - vfUltimoPontoDesenho.y);
+  const LIMIAR_INTERPOLACAO_PX = 14;
+  const numEtapas = distancia > LIMIAR_INTERPOLACAO_PX ? Math.ceil(distancia / LIMIAR_INTERPOLACAO_PX) : 1;
+
+  for(let i = 1; i <= numEtapas; i++){
+    const t = i / numEtapas;
+    const xEtapa = vfUltimoPontoDesenho.x + (x - vfUltimoPontoDesenho.x) * t;
+    const yEtapa = vfUltimoPontoDesenho.y + (y - vfUltimoPontoDesenho.y) * t;
+    // suavização por curva quadrática: o ponto médio entre o anterior e o
+    // atual vira o destino da curva, o ponto anterior vira o "cabo" de
+    // controle. Evita o efeito de segmentos retos colados, mesma técnica
+    // usada em apps de desenho de verdade
+    const pontoMedio = {x: (vfUltimoPontoDesenho.x + xEtapa) / 2, y: (vfUltimoPontoDesenho.y + yEtapa) / 2};
+    vfCtxDesenho.beginPath();
+    vfCtxDesenho.moveTo(vfPontoMedioAnterior.x, vfPontoMedioAnterior.y);
+    vfCtxDesenho.quadraticCurveTo(vfUltimoPontoDesenho.x, vfUltimoPontoDesenho.y, pontoMedio.x, pontoMedio.y);
+    vfCtxDesenho.stroke();
+    vfPontoMedioAnterior = pontoMedio;
+    vfUltimoPontoDesenho = {x: xEtapa, y: yEtapa};
+  }
 }, {passive: false});
 
 function vfFinalizarTracoDesenho(e){
