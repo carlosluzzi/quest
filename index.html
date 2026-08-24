@@ -1292,7 +1292,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-215';
+const VERSAO_APP = '2026-07-25-217';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4289,7 +4289,7 @@ let notasVF = new Set();
 // estado de repetição de cada uma (ou 'nova' implícito se nunca respondida)
 async function carregarPoolVF(){
   const montarQueryQuestoesVF = () => {
-    let q = sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, capitulo, n_palavras, bibliografia(titulo, modulo_pscpp)').eq('anulada', false);
+    let q = sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, inconsistente, capitulo, n_palavras, bibliografia(titulo, modulo_pscpp)').eq('anulada', false);
     if(filtroVF.publicacao) q = q.eq('bibliografia_id', filtroVF.publicacao);
     if(filtroVF.capitulo) q = q.eq('capitulo', filtroVF.capitulo);
     // Número + Lista juntos = UNIÃO (ou uma coisa ou outra), não interseção —
@@ -4560,7 +4560,8 @@ function renderizarItemVF(){
 
   const tagsPublicacao = [
     item.eh_numero ? `<span style="background:#B23A34;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.03em;white-space:nowrap">NÚMERO</span>` : '',
-    item.eh_lista ? `<span style="background:#B23A34;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.03em;white-space:nowrap">LISTA</span>` : ''
+    item.eh_lista ? `<span style="background:#B23A34;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.03em;white-space:nowrap">LISTA</span>` : '',
+    item.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.03em;white-space:nowrap" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''
   ].filter(Boolean).join('');
 
   el.innerHTML = `
@@ -5634,6 +5635,7 @@ function renderizarQuestaoAtual(){
         <span style="display:flex;align-items:center;gap:6px;flex-shrink:0">
         ${souCarlos() ? `<button class="btn-icone-pequeno" onclick="abrirEdicaoDiretaAdmin('${q.id}')" title="Editar questão"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>` : ''}
         ${q.concurso_origem ? `<span style="background:#202A45;color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="${escapeHtml(q.concurso_origem)}${q.ano_prova?' '+q.ano_prova:''}">MB</span>` : ''}
+        ${q.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''}
         ${foiCorrigidaAntesDeResponder ? '<span class="selo-correcao" style="display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;text-transform:none;letter-spacing:normal;padding:2px 6px;flex-shrink:0;white-space:nowrap"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Corrigida recentemente</span>' : ''}
         </span>
       </div>
@@ -7401,6 +7403,13 @@ function parsearQuestoesDoTexto(textoBruto){
       .replace(/ +([,.;:)·/])/g, '$1')
       .trim());
 
+    // OBS:/OBSERVAÇÃO: Inconsistente — vem do gabarito de origem quando ele
+    // mesmo aponta uma contradição no livro. Procura no bloco inteiro (não
+    // só numa zona específica), porque ainda não se sabe em qual parte do
+    // texto gerado essa observação vai efetivamente aparecer
+    const obsMatchQuest = bloco.match(/OBS(?:ERVA[ÇC][ÃA]O)?:\s*([^\r\n]+)/i);
+    const inconsistenteQuest = obsMatchQuest ? /inconsistente/i.test(obsMatchQuest[1]) : false;
+
     if(enunciado && alternativas.length >= 4 && gabarito){
       questoes.push({
         numero: parseInt(iniciosQuestao[i][1] || iniciosQuestao[i][2], 10),
@@ -7409,6 +7418,7 @@ function parsearQuestoesDoTexto(textoBruto){
         gabarito,
         explicacao: explicacao || null,
         capituloDetectado: capituloDoBlocoBruto,
+        inconsistente: inconsistenteQuest,
         // texto bruto (com os metadados tipo "BIBLIOGRAFIA: SANTOS...")
         // que a limpeza do enunciado tira — precisa dele intacto pra
         // identificar a bibliografia, senão a informação já foi descartada
@@ -7486,6 +7496,10 @@ function parsearPorRespostaComoCorte(texto){
       )
       .map((a,idx) => `(${String.fromCharCode(97+idx)}) ${a.replace(/^[a-eA-E]\)\s*/,'')}`);
 
+    // mesma detecção do caminho principal
+    const obsMatchQuestReserva = antesResposta.match(/OBS(?:ERVA[ÇC][ÃA]O)?:\s*([^\r\n]+)/i);
+    const inconsistenteQuestReserva = obsMatchQuestReserva ? /inconsistente/i.test(obsMatchQuestReserva[1]) : false;
+
     if(enunciado && alternativas.length >= 4 && gabarito){
       questoes.push({
         numero: i+1,
@@ -7494,6 +7508,7 @@ function parsearPorRespostaComoCorte(texto){
         gabarito,
         explicacao: null, // formato de rodapé não separa explicação de forma confiável, deixa em branco
         capituloDetectado: capituloDoBlocoBruto,
+        inconsistente: inconsistenteQuestReserva,
         textoBrutoParaBibliografia: antesResposta
       });
     }
@@ -8281,6 +8296,11 @@ function parsearArquivoVF(textoCompleto){
       const tipoTexto = tipoMatch ? tipoMatch[1] : '';
       const ehNumero = /n[uú]mero/i.test(tipoTexto);
       const ehLista = /lista/i.test(tipoTexto);
+      // OBS:/OBSERVAÇÃO: Inconsistente — vem do gabarito de origem quando
+      // ele mesmo aponta uma contradição no livro. Aceita "OBS:" ou
+      // "OBSERVAÇÃO:" (com ou sem acento/cedilha), qualquer um dos dois
+      const obsMatch = bloco.match(/OBS(?:ERVA[ÇC][ÃA]O)?:\s*([^\r\n]+)/i);
+      const inconsistente = obsMatch ? /inconsistente/i.test(obsMatch[1]) : false;
       const respostaMatch = bloco.match(/RESPOSTA:\s*([VF])\b/);
       if(!bibliografiaMatch || !dificuldadeMatch || !respostaMatch){
         erros.push({indice: i, motivo: 'não achou BIBLIOGRAFIA/DIFICULDADE/RESPOSTA'});
@@ -8314,7 +8334,7 @@ function parsearArquivoVF(textoCompleto){
       const fonteMatch = bloco.match(/Fonte:\s*([\s\S]*?)(?=\n\s*\n|\n\s*Página \d+ de|$)/);
       const fonte = fonteMatch ? fonteMatch[1].replace(/\s+/g,' ').trim() : null;
 
-      questoes.push({texto: textoAfirmacao, resposta, explicacao, correcao, trechos_fonte: trechosFonte, fonte, bibliografiaTextoOriginal, dificuldade, ehNumero, ehLista});
+      questoes.push({texto: textoAfirmacao, resposta, explicacao, correcao, trechos_fonte: trechosFonte, fonte, bibliografiaTextoOriginal, dificuldade, ehNumero, ehLista, inconsistente});
     }catch(e){
       erros.push({indice: i, motivo: 'exceção: ' + e.message});
     }
@@ -8422,6 +8442,7 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
       n_palavras: q.texto.trim().split(/\s+/).filter(Boolean).length,
       eh_numero: q.ehNumero,
       eh_lista: q.ehLista,
+      inconsistente: q.inconsistente,
       dificuldade: q.dificuldade,
       autor_id: usuarioAtual.id,
       lote_upload_id: loteUploadId,
@@ -8562,6 +8583,7 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
           bibliografia_id: mapaBibliografiaId[bib.modulo+'|'+bib.titulo],
           explicacao: q.explicacao || null,
           explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada',
+          inconsistente: q.inconsistente || false,
           lote_upload_id: loteUploadId,
           concurso_origem: concursoOrigemUpload,
           ano_prova: anoProvaUpload
@@ -8589,6 +8611,7 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
         gabarito: q.gabarito,
         explicacao: q.explicacao || null,
         explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada',
+        inconsistente: q.inconsistente || false,
         capitulo: q.capituloDetectado || extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null,
         autor_id: usuarioAtual.id,
         nome_arquivo_origem: nomeArquivoAtual || null,
