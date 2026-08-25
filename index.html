@@ -1444,7 +1444,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-288';
+const VERSAO_APP = '2026-07-25-289';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3938,7 +3938,22 @@ document.addEventListener('touchmove', (e) => {
   // ajuda (ela já roda em cima desses pontos extras também)
   const distancia = Math.hypot(x - vfUltimoPontoDesenho.x, y - vfUltimoPontoDesenho.y);
   const LIMIAR_INTERPOLACAO_PX = 14;
-  const numEtapas = distancia > LIMIAR_INTERPOLACAO_PX ? Math.ceil(distancia / LIMIAR_INTERPOLACAO_PX) : 1;
+  let numEtapas = distancia > LIMIAR_INTERPOLACAO_PX ? Math.ceil(distancia / LIMIAR_INTERPOLACAO_PX) : 1;
+  // curvas MUITO fechadas (mudança de direção grande, tipo o topo de um
+  // laço de caligrafia) precisam de mais pontos intermediários mesmo com
+  // pouca distância entre eles - a interpolação por distância sozinha não
+  // cobre isso (a distância pode ser pequena mesmo numa virada apertada).
+  // Sem essa checagem extra, a curva quadrática não tinha pontos
+  // suficientes pra suavizar o ápice de verdade, sobrando um ângulo sutil
+  // no topo de letras cursivas - confirmado ampliando uma foto real de
+  // escrita bem de perto
+  const vAnteriorDirecao = {x: vfUltimoPontoDesenho.x - vfPontoMedioAnterior.x, y: vfUltimoPontoDesenho.y - vfPontoMedioAnterior.y};
+  const vNovaDirecao = {x: x - vfUltimoPontoDesenho.x, y: y - vfUltimoPontoDesenho.y};
+  const magAnteriorDirecao = Math.hypot(vAnteriorDirecao.x, vAnteriorDirecao.y), magNovaDirecao = Math.hypot(vNovaDirecao.x, vNovaDirecao.y);
+  if(magAnteriorDirecao > 0.5 && magNovaDirecao > 0.5){
+    const cosAnguloDirecao = (vAnteriorDirecao.x*vNovaDirecao.x + vAnteriorDirecao.y*vNovaDirecao.y) / (magAnteriorDirecao * magNovaDirecao);
+    if(cosAnguloDirecao < 0.5) numEtapas = Math.max(numEtapas, 3); // virada de mais de ~60° - garante pontos suficientes pra suavizar o ápice
+  }
 
   for(let i = 1; i <= numEtapas; i++){
     const t = i / numEtapas;
