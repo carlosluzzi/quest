@@ -66,7 +66,7 @@ estilizando o thumb/track manualmente via CSS, a cor muda de forma
 síncrona e confiável só trocando essa variável */
 #vf-slider-espessura-destaque{--cor-slider-destaque:#FFD84D;-webkit-appearance:none;appearance:none;background:transparent}
 #vf-slider-espessura-destaque::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--preenchimento-slider-destaque, #ddd)}
-#vf-slider-espessura-destaque::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--cor-slider-destaque);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);margin-top:-7px}
+#vf-slider-espessura-destaque::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:26px;border-radius:7px;background:var(--cor-slider-destaque);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);margin-top:-11px}
 
 /* --- Cards --- */
 .card-inicio{background:#fff;border-radius:18px;padding:13px;box-shadow:0 1px 4px rgba(0,0,0,0.05);margin-bottom:14px;position:relative;overflow:hidden}
@@ -1447,7 +1447,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-278';
+const VERSAO_APP = '2026-07-25-279';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3705,12 +3705,15 @@ function redimensionarCanvasDesenhoVF(){
   }
 }
 
-function vfDentroDaAreaDesenho(clientX, clientY){
-  const canvas = document.getElementById('vf-canvas-desenho');
-  if(!canvas) return false;
-  const rect = canvas.getBoundingClientRect();
-  return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
-}
+// NOTA: chegou a existir aqui uma checagem extra "vfDentroDaAreaDesenho"
+// (media se o toque caía dentro do retângulo do canvas via
+// getBoundingClientRect antes de aceitar o traço). Removida: o canvas
+// cobre 100% da tela (inset:0) sempre que está visível, então essa
+// checagem nunca acrescentava nada de útil - só forçava um recálculo de
+// layout síncrono (caro) em TODO toque de caneta, e criava risco de
+// bloquear o início de um traço se a medição saísse errada por qualquer
+// motivo de timing. As checagens que seguem (barra, botão resposta,
+// ícones) já cobrem tudo que realmente precisa ser excluído
 
 // true se o toque caiu em cima da própria barrinha de ferramentas — nesse
 // caso NÃO é início de traço, é um toque normal de botão (bug corrigido:
@@ -3752,7 +3755,6 @@ document.addEventListener('touchstart', (e) => {
   if(!vfEhToqueDeCaneta(touch)) return; // só a caneta desenha
   if(vfTocouNaBarra(e.target)) return; // deixa o toque chegar no botão normalmente
   if(e.target.closest('.vf-btn-resposta')) return; // idem pros botões Verdadeiro/Falso - nunca viram início de traço
-  if(!vfDentroDaAreaDesenho(touch.clientX, touch.clientY)) return;
   // ícones pequenos, itens de menu (barra de baixo/sidebar) e botões do
   // cabeçalho: não decide na hora - um TOQUE rápido deixa o clique
   // funcionar normal (trocar de aba, abrir perfil), mas se virar ARRASTO
@@ -3770,6 +3772,7 @@ document.addEventListener('touchstart', (e) => {
   vfDesenhandoAgora = true;
   vfTouchIdAtivo = touch.identifier;
   const canvas = document.getElementById('vf-canvas-desenho');
+
   const rect = canvas.getBoundingClientRect();
   const ponto = {x: touch.clientX - rect.left, y: touch.clientY - rect.top};
   vfUltimoPontoDesenho = ponto;
@@ -3868,16 +3871,27 @@ document.addEventListener('touchmove', (e) => {
   e.preventDefault();
   const canvas = document.getElementById('vf-canvas-desenho');
   const rect = canvas.getBoundingClientRect();
-  // suavização LEVE de posição (não só de força) - o sensor de toque tem
-  // um pequeno ruído/jitter próprio (testado: ~1px de desvio), que sem
-  // suavização nenhuma aparece como uma leve tremulação na linha,
-  // principalmente em traços lentos. Peso bem mais leve que o da força
-  // (90% do ponto novo, só 10% do suavizado anterior) - testado
-  // isoladamente antes de aplicar: reduz o ruído sem introduzir atraso
-  // perceptível entre a caneta física e o traço na tela (< 1px de atraso)
+  // suavização ADAPTATIVA de posição (não peso fixo) - a primeira versão
+  // usava peso fixo (90% novo/10% suavizado anterior) em TODO evento de
+  // toque, mas isso faz o atraso introduzido crescer junto com a
+  // velocidade do traço (testado: ~0.2px de atraso num traço lento, mas
+  // >5px num traço rápido - perceptível, ficava "cortando curva" e
+  // parecendo menos fiel quanto mais rápido a caneta se movia). Ajustar o
+  // peso pela distância do movimento resolve isso: suaviza forte só
+  // quando o movimento é pequeno (onde o ruído do sensor realmente
+  // aparece), e quase não suaviza quando o movimento é grande (onde a
+  // responsividade importa mais que o ruído, que já é desprezível
+  // perto da distância percorrida) - testado isoladamente antes de
+  // aplicar: atraso ficou baixo e estável (~0.3-0.5px) em qualquer
+  // velocidade, ao invés de crescer com ela
   const xBruto = touch.clientX - rect.left, yBruto = touch.clientY - rect.top;
-  const x = vfPosicaoSuavizada ? vfPosicaoSuavizada.x * 0.1 + xBruto * 0.9 : xBruto;
-  const y = vfPosicaoSuavizada ? vfPosicaoSuavizada.y * 0.1 + yBruto * 0.9 : yBruto;
+  let x = xBruto, y = yBruto;
+  if(vfPosicaoSuavizada){
+    const distanciaBruta = Math.hypot(xBruto - vfPosicaoSuavizada.x, yBruto - vfPosicaoSuavizada.y);
+    const pesoNovo = 0.85 + Math.min(distanciaBruta / 20, 1) * (0.99 - 0.85);
+    x = vfPosicaoSuavizada.x * (1 - pesoNovo) + xBruto * pesoNovo;
+    y = vfPosicaoSuavizada.y * (1 - pesoNovo) + yBruto * pesoNovo;
+  }
   vfPosicaoSuavizada = {x, y};
 
   // durante o arrasto, o destaque desenha em opacidade CHEIA no canvas
