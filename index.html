@@ -58,6 +58,15 @@ button:active{transform:scale(0.96)}
 input,select,textarea{font-family:inherit;font-size:16px}
 
 .hidden{display:none !important}
+/* slider de espessura do destaque - cor controlada por custom property
+(--cor-slider-destaque), não por accent-color. accent-color mostrou
+comportamento persistente/inconsistente no Safari (ficava com um resíduo
+azul do acento padrão do sistema, mesmo depois de recriar o elemento) -
+estilizando o thumb/track manualmente via CSS, a cor muda de forma
+síncrona e confiável só trocando essa variável */
+#vf-slider-espessura-destaque{--cor-slider-destaque:#FFD84D;-webkit-appearance:none;appearance:none;background:transparent}
+#vf-slider-espessura-destaque::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:#ddd}
+#vf-slider-espessura-destaque::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--cor-slider-destaque);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);margin-top:-7px}
 
 /* --- Cards --- */
 .card-inicio{background:#fff;border-radius:18px;padding:13px;box-shadow:0 1px 4px rgba(0,0,0,0.05);margin-bottom:14px;position:relative;overflow:hidden}
@@ -117,7 +126,15 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .onboarding-step.ativo{display:block}
 
 /* --- App shell --- */
-#app-shell{display:none;max-width:480px;margin:0 auto;position:fixed;top:var(--vv-top, 0px);left:0;right:0;height:var(--vh-real, 100vh);flex-direction:column;overflow:hidden}
+#app-shell{display:none;max-width:480px;margin:0 auto;position:fixed;top:var(--vv-top, 0px);left:0;right:0;height:var(--vh-real, 100vh);flex-direction:column;overflow:hidden;z-index:100}
+/* z-index explícito acima - sem isso, o app-shell (e QUALQUER modal
+dentro dele - nota, compartilhar, confirmação, etc) ficava com z-index
+"auto", que compete em desvantagem contra elementos irmãos com z-index
+numérico (o canvas de desenho e os painéis do V/F, que vivem fora do
+app-shell desde a correção do recorte no cabeçalho). Resultado: modais
+podiam renderizar atrás do canvas/painéis do V/F mesmo em outras abas.
+100 fica acima do canvas (8/9) mas abaixo dos painéis/barrinha do V/F
+(9999/10000) - preserva as duas correções ao mesmo tempo */
 #app-shell.ativo{display:flex}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;flex-shrink:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
 /* canvas de desenho voltou a ficar limitado à área de conteúdo (não mais
@@ -787,7 +804,93 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     canvas cobre a viewport de verdade sem esse recorte -->
     <!-- barra fina, sempre visível quando ativa - marcador+cor agrupados
     (fundo azul claro quando ativo, igual PDF Expert) + borracha separada -->
-    <div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:9999;background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.12);padding:6px 8px;display:flex;align-items:center;gap:14px">
+    
+    <div id="vf-barra-fixa" class="vf-barra-fixa hidden"></div>
+  </div>
+
+  <!-- ===== ADICIONAR QUESTÕES (popup no mobile/tablet, página no desktop) ===== -->
+  <div class="view-aba hidden" id="aba-adicionar">
+    <div class="modal-conteudo">
+      <h3 class="config-title" id="titulo-adicionar-questoes">Adicionar questões</h3>
+      <div class="card-questao" id="card-adicionar-questoes">
+
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div class="filter-btn active" id="toggle-upload-pdf" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="alternarTipoUpload('pdf')">PDF</div>
+        <div class="filter-btn" id="toggle-upload-planilha" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="alternarTipoUpload('planilha')">Planilha</div>
+      </div>
+
+      <div id="bloco-upload-marinha" class="hidden">
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#444;margin-bottom:10px;cursor:pointer">
+          <input type="checkbox" id="upload-eh-marinha" style="width:16px;height:16px;flex-shrink:0" onchange="document.getElementById('upload-campos-concurso').classList.toggle('hidden', !this.checked)">
+          Questões de prova real (Marinha)
+        </label>
+        <div id="upload-campos-concurso" class="hidden" style="margin-bottom:14px">
+          <input type="text" id="upload-concurso" class="filter-select" placeholder="Concurso (ex: PSCPP, EFOMM)" list="lista-concursos-existentes">
+          <datalist id="lista-concursos-existentes"></datalist>
+          <input type="number" id="upload-ano" class="filter-select" placeholder="Ano da prova">
+        </div>
+      </div>
+
+      <div id="secao-upload-pdf">
+        <p style="color:#666;font-size:var(--fs-d)">Selecione o PDF com as questões que você deseja adicionar ao banco.</p>
+        <input type="file" id="upload-arquivo" accept="application/pdf" multiple class="hidden" onchange="atualizarNomeArquivoSelecionado()">
+        <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 6px" onclick="document.getElementById('upload-arquivo').click()">Escolher arquivo</button>
+        <div id="nome-arquivo-selecionado" style="color:#888;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhum arquivo selecionado</div>
+        <div id="upload-status" style="margin:14px 0"></div>
+        <button class="btn-primario" onclick="enviarUpload()">Cadastrar questões</button>
+      </div>
+
+      <div id="secao-upload-planilha" class="hidden">
+        <p style="color:#666;font-size:var(--fs-d)">Selecione a planilha com as questões que você deseja adicionar ao banco.</p>
+        <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 10px;white-space:nowrap" onclick="baixarModeloPlanilha()">Baixar planilha-modelo</button>
+        <input type="file" id="upload-planilha" accept=".xlsx" class="hidden" onchange="atualizarNomePlanilhaSelecionada()">
+        <button type="button" class="btn-secundario" style="width:100%;margin-bottom:6px;white-space:nowrap" onclick="document.getElementById('upload-planilha').click()">Escolher planilha preenchida</button>
+        <div id="nome-planilha-selecionada" style="color:#888;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhuma planilha selecionada</div>
+        <div id="upload-planilha-status" style="margin:14px 0"></div>
+        <button class="btn-primario" onclick="enviarPlanilha()">Cadastrar questões</button>
+      </div>
+
+      <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="trocarAba('inicio')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <div class="bottom-nav" id="bottom-nav">
+    <div class="nav-item active" data-aba="inicio" onclick="trocarAba('inicio')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-6.5h5V21H18a1 1 0 0 0 1-1V9.5"/></svg></span><span class="nav-label">Início</span>
+    </div>
+    <div class="nav-item" data-aba="forum" onclick="trocarAba('forum')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor"><path fill-rule="evenodd" d="M1.75 1A1.75 1.75 0 000 2.75v9.5C0 13.216.784 14 1.75 14H3v1.543a1.457 1.457 0 002.487 1.03L8.061 14h6.189A1.75 1.75 0 0016 12.25v-9.5A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v9.5a.25.25 0 01-.25.25h-6.5a.75.75 0 00-.53.22L4.5 15.44v-2.19a.75.75 0 00-.75-.75h-2a.25.25 0 01-.25-.25v-9.5z"/><path d="M22.5 8.75a.25.25 0 00-.25-.25h-3.5a.75.75 0 010-1.5h3.5c.966 0 1.75.784 1.75 1.75v9.5A1.75 1.75 0 0122.25 20H21v1.543a1.457 1.457 0 01-2.487 1.03L15.939 20H10.75A1.75 1.75 0 019 18.25v-1.465a.75.75 0 011.5 0v1.465c0 .138.112.25.25.25h5.5a.75.75 0 01.53.22l2.72 2.72v-2.19a.75.75 0 01.75-.75h2a.25.25 0 00.25-.25v-9.5z"/></svg></span><span class="nav-label">Fórum</span>
+      <span id="badge-forum" class="badge-notificacao hidden">0</span>
+    </div>
+    <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M.75 23.25h22.5M6 16.25H3a.76.76 0 0 0-.75.75v6.25h4.5V17a.76.76 0 0 0-.75-.75m7.5-4h-3a.76.76 0 0 0-.75.75v10.25h4.5V13a.76.76 0 0 0-.75-.75m7.5-4h-3a.76.76 0 0 0-.75.75v14.25h4.5V9a.76.76 0 0 0-.75-.75m-16.82.99l16.07-7.3m-1.19 3.19l1.19-3.19L17.07.75"/></svg></span><span class="nav-label">Desempenho</span>
+    </div>
+    <div class="nav-item hidden" id="nav-item-vf" data-aba="vf" onclick="trocarAba('vf')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></span><span class="nav-label">Flash</span>
+    </div>
+    <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
+    </div>
+    <div class="nav-item" id="nav-item-adicionar" data-aba="adicionar" onclick="trocarAba('adicionar')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span><span class="nav-label">Adicionar questões</span>
+    </div>
+  </div>
+</div>
+
+<!-- canvas de desenho da caneta (Apple Pencil) - FORA do #app-shell de
+propósito. O app-shell é position:fixed + overflow:hidden, e isso recorta
+(clip) qualquer filho position:fixed nas bordas dele - causava um
+artefato visual sutil (linha mais escura) bem em cima do cabeçalho.
+Fora do app-shell, sem overflow:hidden no caminho, cobre a viewport de
+verdade sem esse recorte. Como não é mais filho de #aba-vf, a
+visibilidade é controlada manualmente em trocarAba(), não mais herdada
+automaticamente da classe .hidden do app-shell -->
+<canvas id="vf-canvas-desenho" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;touch-action:none"></canvas>
+<canvas id="vf-canvas-preview-destaque" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:9;pointer-events:none;touch-action:none"></canvas>
+<div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:9999;background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.12);padding:6px 8px;display:flex;align-items:center;gap:14px">
       <div id="vf-alca-arrastar" style="display:flex;flex-direction:column;gap:3px;padding:14px 12px;margin:-8px -8px;cursor:grab;touch-action:none">
         <div style="display:flex;gap:3px"><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span></div>
         <div style="display:flex;gap:3px"><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span></div>
@@ -798,7 +901,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
           <button onclick="vfAtivarModoMarcacaoTextoVF('grifar')" class="vf-btn-marcacao-texto" data-tipo-marcacao="grifar" title="Grifar - ative e arraste o dedo sobre o texto" style="width:32px;height:32px;border-radius:8px;background:none;border:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 690" width="20" height="20"><path d="M67.51 0.11C77.64 0.11 87.78 0.11 97.91 0.11C104.29 0.11 110.66 0.11 117.04 0.11C118.7 0.11 120.36 0.11 122.02 0.11C130.72 0.11 139.42 0.11 148.12 0.11C171.69 0.11 195.26 0.11 218.82 0.11C225.57 0.11 232.31 0.11 239.06 0.11C263.02 0.11 286.99 0.11 310.95 0.11C313.92 0.11 316.89 0.11 319.86 0.11C332.14 0.11 344.41 0.11 356.68 0.11C359.92 0.11 363.16 0.11 366.4 0.11C378.26 0.11 390.12 0.11 401.98 0.11C411.69 0.11 421.4 0.11 431.11 0.11C435.39 0.11 439.68 0.11 443.96 0.11C456.9 0.11 469.83 0.11 482.77 0.11C483.4 0.11 484.03 0.11 484.66 0.11C492.25 0.11 499.84 0.11 507.43 0.11C510.6 0.11 513.77 0.11 516.94 0.11C537.34 0.11 557.74 0.11 578.14 0.11C590.01 0.11 601.88 0.11 613.75 0.11C617.31 0.11 620.88 0.11 624.44 0.11C627.88 0.11 631.31 0.11 634.74 0.11C640.55 1.56 646.84 1.52 652.71 3.33C671.5 9.14 686.53 22.56 695.89 39.61C698.35 44.1 700.47 49.06 701.77 54.03C702.53 56.94 702.65 60.38 703.89 63.04C703.89 251.46 703.89 439.88 703.89 628.29C701.76 633.87 701.32 640.12 698.85 645.76C692.58 660.06 682.25 672.61 668.65 680.44C663.74 683.27 658.44 685.36 653.05 687.11C650.6 687.9 647.75 688.14 645.5 689.27C449.86 689.27 254.23 689.27 58.6 689.27C54.97 686.87 46.66 685.57 41.99 683.3C31.48 678.2 22.92 671.09 15.65 661.95C-0.22 641.99 0.79 619 0.79 594.93C0.8 565.68 0.84 536.42 0.78 507.17C0.52 393.12 0.59 279.08 0.71 165.03C0.73 142.98 0.67 120.94 0.67 98.89C0.67 88.43 -0.3 77.53 0.84 67.12C2.9 48.28 12.95 28.14 28.28 16.52C35.71 10.88 44.33 6.18 53.24 3.38C57.9 1.91 62.98 1.61 67.51 0.11ZM349 124.29C329.68 126.53 325.65 140.12 319.45 155.68C313.26 171.25 306.68 186.64 300.43 202.18C266.2 287.33 231.23 372.16 196.83 457.28C187.97 479.2 178.66 500.98 169.47 522.76C164.65 534.16 160.67 545.23 170.06 555.88C179.91 567.05 198.15 567.59 208.16 556.35C210.84 553.34 212.36 549.83 213.89 546.15C225.7 517.8 237.33 489.32 248.79 460.84C252.13 452.55 255.61 444.32 259 436.06C260.32 432.83 261.4 427.02 264.06 424.66C267.42 421.69 273.53 422.7 277.59 422.71C288.4 422.74 299.22 422.66 310.03 422.68C342.25 422.73 374.47 422.57 406.69 422.73C414.54 422.77 422.38 422.72 430.22 422.73C432.81 422.73 437.04 422.2 438.87 424.43C441.49 427.63 442.62 433.06 444.26 436.86C447.59 444.56 451.07 452.19 454.3 459.93C464.57 484.53 475.77 508.79 485.51 533.61C491.3 548.39 495.02 564.21 514.17 564.58C516.86 564.63 519.92 564.44 522.49 563.59C535.11 559.43 541.6 546.81 539.01 534.07C537.5 526.67 532.35 519.53 529.45 512.56C522.61 496.12 515.48 479.79 508.75 463.3C490.29 418.08 471.37 373.01 453.79 327.44C447.58 311.36 440.48 295.64 434.23 279.59C423.81 252.85 413.49 225.94 402.46 199.45C396.46 185.05 390.69 170.47 384.98 155.95C380.2 143.78 376.73 132.42 363.85 126.8C359.22 124.77 354.07 123.71 349 124.29ZM417.81 372.35C409.48 374.02 398.2 372.82 389.52 372.85C369.81 372.93 350.09 372.72 330.38 372.76C320.2 372.78 310.03 372.81 299.85 372.71C295.45 372.66 290.06 373.43 285.86 372.21C285.45 368.69 287.76 364.55 289.03 361.21C291.89 353.7 294.96 346.28 297.76 338.73C308.82 308.93 321 279.22 333.67 250.06C337.4 241.46 341.08 232.79 344.58 224.1C345.91 220.79 347.1 216.21 351.36 216.19C356.31 216.17 357.26 220.97 358.69 224.81C361.83 233.27 365.72 241.53 369.25 249.84C381.64 278.97 393.98 308.14 405.49 337.62C408.77 346.01 412.19 354.35 415.27 362.81C416.28 365.58 418.57 369.45 417.81 372.35Z" class="vf-tinta-marcacao-icone" data-cor-original="#da8bf9" fill="#da8bf9" fill-rule="evenodd" stroke="#da8bf9" stroke-width="0.25" stroke-linejoin="round"/><path d="M349 124.29C354.07 123.71 359.22 124.77 363.85 126.8C376.73 132.42 380.2 143.78 384.98 155.95C390.69 170.47 396.46 185.05 402.46 199.45C413.49 225.94 423.81 252.85 434.23 279.59C440.48 295.64 447.58 311.36 453.79 327.44C471.37 373.01 490.29 418.08 508.75 463.3C515.48 479.79 522.61 496.12 529.45 512.56C532.35 519.53 537.5 526.67 539.01 534.07C541.6 546.81 535.11 559.43 522.49 563.59C519.92 564.44 516.86 564.63 514.17 564.58C495.02 564.21 491.3 548.39 485.51 533.61C475.77 508.79 464.57 484.53 454.3 459.93C451.07 452.19 447.59 444.56 444.26 436.86C442.62 433.06 441.49 427.63 438.87 424.43C437.04 422.2 432.81 422.73 430.22 422.73C422.38 422.72 414.54 422.77 406.69 422.73C374.47 422.57 342.25 422.73 310.03 422.68C299.22 422.66 288.4 422.74 277.59 422.71C273.53 422.7 267.42 421.69 264.06 424.66C261.4 427.02 260.32 432.83 259 436.06C255.61 444.32 252.13 452.55 248.79 460.84C237.33 489.32 225.7 517.8 213.89 546.15C212.36 549.83 210.84 553.34 208.16 556.35C198.15 567.59 179.91 567.05 170.06 555.88C160.67 545.23 164.65 534.16 169.47 522.76C178.66 500.98 187.97 479.2 196.83 457.28C231.23 372.16 266.2 287.33 300.43 202.18C306.68 186.64 313.26 171.25 319.45 155.68C325.65 140.12 329.68 126.53 349 124.29ZM417.81 372.35C418.57 369.45 416.28 365.58 415.27 362.81C412.19 354.35 408.77 346.01 405.49 337.62C393.98 308.14 381.64 278.97 369.25 249.84C365.72 241.53 361.83 233.27 358.69 224.81C357.26 220.97 356.31 216.17 351.36 216.19C347.1 216.21 345.91 220.79 344.58 224.1C341.08 232.79 337.4 241.46 333.67 250.06C321 279.22 308.82 308.93 297.76 338.73C294.96 346.28 291.89 353.7 289.03 361.21C287.76 364.55 285.45 368.69 285.86 372.21C290.06 373.43 295.45 372.66 299.85 372.71C310.03 372.81 320.2 372.78 330.38 372.76C350.09 372.72 369.81 372.93 389.52 372.85C398.2 372.82 409.48 374.02 417.81 372.35Z" fill="#2a2a2e" fill-rule="evenodd" stroke="#2a2a2e" stroke-width="0.25" stroke-linejoin="round"/></svg>
           </button>
-          <button id="vf-swatch-cor-marcacao-texto-btn" onclick="abrirPainelMarcacaoTextoVF()" style="width:0px;height:20px;opacity:0;overflow:hidden;transition:width 0.25s ease, opacity 0.25s ease;padding:0;border:none;cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none;outline:none;box-shadow:none;-webkit-tap-highlight-color:transparent" title="Cor do grifo">
+          <button id="vf-swatch-cor-marcacao-texto-btn" onclick="abrirPainelMarcacaoTextoVF()" style="width:0px;height:20px;border-radius:50%;opacity:0;overflow:hidden;transition:width 0.25s ease, opacity 0.25s ease;padding:0;border:none;cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none;outline:none;box-shadow:none;-webkit-tap-highlight-color:transparent" title="Cor do grifo">
             <span id="vf-swatch-cor-marcacao-texto" style="width:20px;height:20px;border-radius:50%;background:#F08080;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15)"></span>
           </button>
         </div>
@@ -951,7 +1054,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Espessura</div>
         <div style="display:flex;align-items:center;gap:10px">
           <span id="vf-preview-espessura-destaque" style="width:8px;height:8px;border-radius:50%;background:#FFD84D;flex-shrink:0"></span>
-          <input type="range" id="vf-slider-espessura-destaque" min="8" max="30" step="1" value="20" oninput="mudarEspessuraSliderDestaqueVF(this.value)" style="flex:1;min-width:0;accent-color:#FFD84D">
+          <input type="range" id="vf-slider-espessura-destaque" min="8" max="30" step="1" value="20" oninput="mudarEspessuraSliderDestaqueVF(this.value)" style="flex:1;min-width:0">
           <span id="vf-espessura-valor-destaque" style="font-size:14px;color:#333;flex-shrink:0;white-space:nowrap">20 pt</span>
         </div>
       </div>
@@ -984,91 +1087,6 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Cor</div>
       <div id="vf-grade-cores-marcacao-texto" style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;justify-items:center"></div>
     </div>
-    <div id="vf-barra-fixa" class="vf-barra-fixa hidden"></div>
-  </div>
-
-  <!-- ===== ADICIONAR QUESTÕES (popup no mobile/tablet, página no desktop) ===== -->
-  <div class="view-aba hidden" id="aba-adicionar">
-    <div class="modal-conteudo">
-      <h3 class="config-title" id="titulo-adicionar-questoes">Adicionar questões</h3>
-      <div class="card-questao" id="card-adicionar-questoes">
-
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <div class="filter-btn active" id="toggle-upload-pdf" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="alternarTipoUpload('pdf')">PDF</div>
-        <div class="filter-btn" id="toggle-upload-planilha" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="alternarTipoUpload('planilha')">Planilha</div>
-      </div>
-
-      <div id="bloco-upload-marinha" class="hidden">
-        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#444;margin-bottom:10px;cursor:pointer">
-          <input type="checkbox" id="upload-eh-marinha" style="width:16px;height:16px;flex-shrink:0" onchange="document.getElementById('upload-campos-concurso').classList.toggle('hidden', !this.checked)">
-          Questões de prova real (Marinha)
-        </label>
-        <div id="upload-campos-concurso" class="hidden" style="margin-bottom:14px">
-          <input type="text" id="upload-concurso" class="filter-select" placeholder="Concurso (ex: PSCPP, EFOMM)" list="lista-concursos-existentes">
-          <datalist id="lista-concursos-existentes"></datalist>
-          <input type="number" id="upload-ano" class="filter-select" placeholder="Ano da prova">
-        </div>
-      </div>
-
-      <div id="secao-upload-pdf">
-        <p style="color:#666;font-size:var(--fs-d)">Selecione o PDF com as questões que você deseja adicionar ao banco.</p>
-        <input type="file" id="upload-arquivo" accept="application/pdf" multiple class="hidden" onchange="atualizarNomeArquivoSelecionado()">
-        <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 6px" onclick="document.getElementById('upload-arquivo').click()">Escolher arquivo</button>
-        <div id="nome-arquivo-selecionado" style="color:#888;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhum arquivo selecionado</div>
-        <div id="upload-status" style="margin:14px 0"></div>
-        <button class="btn-primario" onclick="enviarUpload()">Cadastrar questões</button>
-      </div>
-
-      <div id="secao-upload-planilha" class="hidden">
-        <p style="color:#666;font-size:var(--fs-d)">Selecione a planilha com as questões que você deseja adicionar ao banco.</p>
-        <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 10px;white-space:nowrap" onclick="baixarModeloPlanilha()">Baixar planilha-modelo</button>
-        <input type="file" id="upload-planilha" accept=".xlsx" class="hidden" onchange="atualizarNomePlanilhaSelecionada()">
-        <button type="button" class="btn-secundario" style="width:100%;margin-bottom:6px;white-space:nowrap" onclick="document.getElementById('upload-planilha').click()">Escolher planilha preenchida</button>
-        <div id="nome-planilha-selecionada" style="color:#888;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhuma planilha selecionada</div>
-        <div id="upload-planilha-status" style="margin:14px 0"></div>
-        <button class="btn-primario" onclick="enviarPlanilha()">Cadastrar questões</button>
-      </div>
-
-      <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="trocarAba('inicio')">Cancelar</button>
-      </div>
-    </div>
-  </div>
-
-  </div>
-
-  <div class="bottom-nav" id="bottom-nav">
-    <div class="nav-item active" data-aba="inicio" onclick="trocarAba('inicio')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-6.5h5V21H18a1 1 0 0 0 1-1V9.5"/></svg></span><span class="nav-label">Início</span>
-    </div>
-    <div class="nav-item" data-aba="forum" onclick="trocarAba('forum')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor"><path fill-rule="evenodd" d="M1.75 1A1.75 1.75 0 000 2.75v9.5C0 13.216.784 14 1.75 14H3v1.543a1.457 1.457 0 002.487 1.03L8.061 14h6.189A1.75 1.75 0 0016 12.25v-9.5A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v9.5a.25.25 0 01-.25.25h-6.5a.75.75 0 00-.53.22L4.5 15.44v-2.19a.75.75 0 00-.75-.75h-2a.25.25 0 01-.25-.25v-9.5z"/><path d="M22.5 8.75a.25.25 0 00-.25-.25h-3.5a.75.75 0 010-1.5h3.5c.966 0 1.75.784 1.75 1.75v9.5A1.75 1.75 0 0122.25 20H21v1.543a1.457 1.457 0 01-2.487 1.03L15.939 20H10.75A1.75 1.75 0 019 18.25v-1.465a.75.75 0 011.5 0v1.465c0 .138.112.25.25.25h5.5a.75.75 0 01.53.22l2.72 2.72v-2.19a.75.75 0 01.75-.75h2a.25.25 0 00.25-.25v-9.5z"/></svg></span><span class="nav-label">Fórum</span>
-      <span id="badge-forum" class="badge-notificacao hidden">0</span>
-    </div>
-    <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M.75 23.25h22.5M6 16.25H3a.76.76 0 0 0-.75.75v6.25h4.5V17a.76.76 0 0 0-.75-.75m7.5-4h-3a.76.76 0 0 0-.75.75v10.25h4.5V13a.76.76 0 0 0-.75-.75m7.5-4h-3a.76.76 0 0 0-.75.75v14.25h4.5V9a.76.76 0 0 0-.75-.75m-16.82.99l16.07-7.3m-1.19 3.19l1.19-3.19L17.07.75"/></svg></span><span class="nav-label">Desempenho</span>
-    </div>
-    <div class="nav-item hidden" id="nav-item-vf" data-aba="vf" onclick="trocarAba('vf')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></span><span class="nav-label">Flash</span>
-    </div>
-    <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
-    </div>
-    <div class="nav-item" id="nav-item-adicionar" data-aba="adicionar" onclick="trocarAba('adicionar')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span><span class="nav-label">Adicionar questões</span>
-    </div>
-  </div>
-</div>
-
-<!-- canvas de desenho da caneta (Apple Pencil) - FORA do #app-shell de
-propósito. O app-shell é position:fixed + overflow:hidden, e isso recorta
-(clip) qualquer filho position:fixed nas bordas dele - causava um
-artefato visual sutil (linha mais escura) bem em cima do cabeçalho.
-Fora do app-shell, sem overflow:hidden no caminho, cobre a viewport de
-verdade sem esse recorte. Como não é mais filho de #aba-vf, a
-visibilidade é controlada manualmente em trocarAba(), não mais herdada
-automaticamente da classe .hidden do app-shell -->
-<canvas id="vf-canvas-desenho" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;touch-action:none"></canvas>
-<canvas id="vf-canvas-preview-destaque" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:9;pointer-events:none;touch-action:none"></canvas>
 
 <div id="wrapper-barra-adicionar" class="hidden">
   <button id="barra-adicionar-questoes" onclick="trocarAba('adicionar')">
@@ -1429,7 +1447,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-271';
+const VERSAO_APP = '2026-07-25-275';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2447,6 +2465,11 @@ function trocarAba(nome){
   const mostrarCanvasVF = nome === 'vf';
   document.getElementById('vf-canvas-desenho').style.display = mostrarCanvasVF ? 'block' : 'none';
   document.getElementById('vf-canvas-preview-destaque').style.display = mostrarCanvasVF ? 'block' : 'none';
+  // a barrinha de desenho e os 4 painéis de configuração também vivem
+  // fora do #app-shell agora (movidos junto com os canvas, pra competir
+  // de igual pra igual em z-index sem o app-shell atrapalhar) - saindo
+  // da aba V/F, precisam ser escondidos manualmente também
+  if(!mostrarCanvasVF) fecharBarraDesenhoVF();
   document.querySelectorAll('#bottom-nav .nav-item').forEach(item=>item.classList.toggle('active', item.dataset.aba===nome));
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança, nunca fica presa escondida
   document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
@@ -4285,13 +4308,13 @@ async function vfAbrirFavoritosVF(){
   // (usuario_id, questao_vf_id). Pedir 'id' no select quebrava a página
   // inteira (erro de coluna inexistente) - achado testando direto no banco
   const {data, error} = await sb.from('favoritos_vf')
-    .select('criado_em, questao_vf_id, questoes_vf(texto, bibliografia(titulo))')
+    .select('criado_em, questao_vf_id, questoes_vf(texto, bibliografia(titulo, nome_exibicao))')
     .eq('usuario_id', usuarioAtual.id)
     .order('criado_em', {ascending: false});
   if(error){ el.innerHTML = '<p style="color:#A32D2D;text-align:center;padding:20px 0">Erro ao carregar.</p>'; return; }
   if(!data || !data.length){ el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Nenhuma questão favoritada ainda.</p>'; return; }
   el.innerHTML = data.map(f => {
-    const publicacao = f.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
+    const publicacao = f.questoes_vf?.bibliografia?.nome_exibicao || f.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
     const dataFormatada = new Date(f.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
     return `
       <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${f.questao_vf_id}')">
@@ -4320,7 +4343,7 @@ async function vfAbrirFlashSalvosVF(){
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
   document.getElementById('pagina-flash-salvos-vf').classList.remove('hidden');
   const {data, error} = await sb.from('flashs_salvos_vf')
-    .select('id, motivo, criado_em, imagem_anotacao, questao_vf_id, questoes_vf(texto, bibliografia(titulo))')
+    .select('id, motivo, criado_em, imagem_anotacao, questao_vf_id, questoes_vf(texto, bibliografia(titulo, nome_exibicao))')
     .eq('usuario_id', usuarioAtual.id)
     .order('criado_em', {ascending: false});
   if(error){ el.innerHTML = '<p style="color:#A32D2D;text-align:center;padding:20px 0">Erro ao carregar.</p>'; return; }
@@ -4330,7 +4353,7 @@ async function vfAbrirFlashSalvosVF(){
   const iconeCorrigir = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>';
 
   function renderizarItemSalvo(s){
-    const publicacao = s.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
+    const publicacao = s.questoes_vf?.bibliografia?.nome_exibicao || s.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
     const dataFormatada = new Date(s.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
     return `
       <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${s.questao_vf_id}')">
@@ -4634,6 +4657,20 @@ function fecharBarraDesenhoVF(){
 function vfDesativarModoMarcacaoTextoVF(){
   vfModoMarcacaoTextoAtivo = null;
   document.querySelectorAll('.vf-btn-marcacao-texto').forEach(btn => { btn.style.background = 'none'; });
+  // o fundo azul do grifar fica no GRUPO PAI (vf-grupo-grifar), não no
+  // próprio botão "A" - resetar só os .vf-btn-marcacao-texto não bastava,
+  // o grupo (e a bolinha de cor dentro dele) ficavam presos "ligados"
+  const grupoGrifar = document.getElementById('vf-grupo-grifar');
+  const swatchGrifarBtn = document.getElementById('vf-swatch-cor-marcacao-texto-btn');
+  if(grupoGrifar){
+    grupoGrifar.style.background = 'none';
+    grupoGrifar.style.gap = '0px';
+    grupoGrifar.style.padding = '0';
+  }
+  if(swatchGrifarBtn){
+    swatchGrifarBtn.style.width = '0px';
+    swatchGrifarBtn.style.opacity = '0';
+  }
   document.getElementById('vf-painel-marcacao-texto')?.classList.add('hidden');
   document.body.classList.remove('vf-marcacao-texto-ativa');
   vfAtualizarEstiloBotaoBorracha();
@@ -4737,6 +4774,7 @@ let vfMarcacaoTextoArrastandoVF = false;
 
 document.addEventListener('touchstart', (e) => {
   if(!vfModoMarcacaoTextoAtivo) return;
+  if(vfAlgumModalAbertoVF()) return; // painel de configuração de cor aberto - nunca interfere com toques nele
   const touch = e.touches[0];
   if(!touch) return;
   const elemento = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -4773,6 +4811,7 @@ document.addEventListener('touchmove', (e) => {
 
 document.addEventListener('touchend', (e) => {
   if(!vfModoMarcacaoTextoAtivo) return;
+  const pontoInicialVF = vfMarcacaoTextoPontoInicialVF;
   vfMarcacaoTextoArrastandoVF = false;
   vfMarcacaoTextoPontoInicialVF = null;
   const touch = e.changedTouches[0];
@@ -4784,7 +4823,22 @@ document.addEventListener('touchend', (e) => {
   const elementoContainer = noContainer.nodeType === 3 ? noContainer.parentElement : noContainer;
   const areaValida = elementoContainer.closest('#vf-enunciado-atual, #vf-correcao-atual');
   if(!areaValida) return;
-  vfAplicarMarcacaoNoRangeVF(vfModoMarcacaoTextoAtivo, range);
+  // direção do arrasto: esquerda->direita (sentido normal de leitura) =
+  // marca/estende; direita->esquerda = apaga. Descobre isso comparando o
+  // PONTO ONDE O DEDO TOCOU PRIMEIRO com onde soltou - o range em si
+  // sempre normaliza início<fim (perde a direção), por isso precisa
+  // comparar os pontos originais do gesto, não o range já pronto
+  let apagando = false;
+  if(pontoInicialVF && typeof document.caretRangeFromPoint === 'function'){
+    const rangeInicioGesto = document.caretRangeFromPoint(pontoInicialVF.x, pontoInicialVF.y);
+    const rangeFimGesto = document.caretRangeFromPoint(touch.clientX, touch.clientY);
+    if(rangeInicioGesto && rangeFimGesto){
+      const offsetInicioGesto = vfOffsetGlobalVF(areaValida, rangeInicioGesto.startContainer, rangeInicioGesto.startOffset);
+      const offsetFimGesto = vfOffsetGlobalVF(areaValida, rangeFimGesto.startContainer, rangeFimGesto.startOffset);
+      apagando = offsetFimGesto < offsetInicioGesto; // arrastou pra trás = apagar
+    }
+  }
+  vfAplicarMarcacaoNoRangeVF(vfModoMarcacaoTextoAtivo, range, apagando);
   selecao.removeAllRanges();
 });
 
@@ -4875,31 +4929,30 @@ function vfCriarSpanMarcaVF(tipo, cor, range){
   }
 }
 
-// regras aplicadas POR TRECHO de texto (não na marca inteira) - passar a
-// MESMA cor por cima de uma marca já existente remove SÓ ONDE PASSOU (se
-// a marca tinha "duas palavras" e só uma foi tocada, só essa vira texto
-// puro de novo, a outra continua marcada). Passar cor DIFERENTE troca a
-// cor SÓ ONDE PASSOU. Passar por texto sem marca nenhuma adiciona a marca
-// só ali. Nenhuma dessas ações nunca mexe no texto FORA do trecho tocado
-function vfAplicarMarcacaoNoRangeVF(tipo, range){
+// regra por DIREÇÃO do arrasto (não mais por trecho individual - aquilo
+// criava e apagava ao mesmo tempo de um jeito confuso): arrastar no
+// sentido normal de leitura (esquerda pra direita) sempre MARCA/ESTENDE
+// com a cor atual, fundindo com o que já existir. Arrastar ao contrário
+// (direita pra esquerda) sempre APAGA a marcação de tudo que for tocado,
+// não importa a cor - simples e previsível
+function vfAplicarMarcacaoNoRangeVF(tipo, range, apagando){
   const VERMELHO_FIXO_SUBLINHAR_RISCAR = '#F03E14'; // sempre essa cor - nunca segue a cor escolhida pro grifar
   const corAplicar = (tipo === 'grifar' ? vfCorMarcacaoTextoAtual : VERMELHO_FIXO_SUBLINHAR_RISCAR).toUpperCase();
 
   let containerEl = range.commonAncestorContainer;
   if(containerEl.nodeType === 3) containerEl = containerEl.parentElement;
   const container = containerEl.closest('#vf-enunciado-atual, #vf-correcao-atual');
-  if(!container){ vfCriarSpanMarcaVF(tipo, corAplicar, range); vfSalvarEstadoMarcacaoTextoVF(); return; }
+  if(!container){
+    if(!apagando) vfCriarSpanMarcaVF(tipo, corAplicar, range);
+    vfSalvarEstadoMarcacaoTextoVF();
+    return;
+  }
 
-  // calcula os offsets do range NOVO primeiro - tudo daqui pra frente
-  // compara por ARITMÉTICA DE NÚMEROS (não pela API compareBoundaryPoints
-  // do Range, que testei isolado e mostrou resultado inconsistente/errado
-  // em alguns casos - offsets numéricos são muito mais fáceis de
-  // verificar e confiar)
   const offsetRangeInicio = vfOffsetGlobalVF(container, range.startContainer, range.startOffset);
   const offsetRangeFim = vfOffsetGlobalVF(container, range.endContainer, range.endOffset);
 
   // acha marcas do MESMO tipo que tocam (mesmo que só um pouquinho) o
-  // trecho novo - sobreposição de intervalos [a,b) e [c,d): a < d && c < b
+  // trecho arrastado - sobreposição de intervalos [a,b) e [c,d): a<d && c<b
   const todasDoTipo = [...container.querySelectorAll(`.vf-marcacao-texto-sessao[data-tipo-marca="${tipo}"]`)];
   const marcasExistentes = [];
   todasDoTipo.forEach(span => {
@@ -4908,58 +4961,41 @@ function vfAplicarMarcacaoNoRangeVF(tipo, range){
     if(sobrepoe) marcasExistentes.push({inicio: oInicio, fim: oFim, cor: (span.dataset.corMarca||'').toUpperCase(), span});
   });
 
-  if(!marcasExistentes.length){
-    vfCriarSpanMarcaVF(tipo, corAplicar, range); // nada ali ainda - aplica normal
-    vfSalvarEstadoMarcacaoTextoVF();
-    return;
-  }
-
-  // pontos de quebra: início/fim do range novo + início/fim de cada marca
-  // que toca ele - dividem o intervalo total em pedaços onde a situação
-  // (dentro/fora do range novo, coberto ou não por marca existente) é
-  // uniforme em cada pedaço
-  const pontosSet = new Set([offsetRangeInicio, offsetRangeFim]);
-  marcasExistentes.forEach(m => { pontosSet.add(m.inicio); pontosSet.add(m.fim); });
-  const pontos = [...pontosSet].sort((a,b) => a-b);
-
-  // desfaz (unwrap) todas as marcas encontradas - volta a ser texto puro.
-  // Os offsets de caractere continuam válidos depois disso (unwrap não
-  // muda a quantidade de texto, só a estrutura de elementos ao redor)
-  marcasExistentes.forEach(m => {
-    const pai = m.span.parentNode;
-    while(m.span.firstChild) pai.insertBefore(m.span.firstChild, m.span);
-    pai.removeChild(m.span);
-    pai.normalize();
-  });
-
-  // percorre cada pedaço e decide o que fazer, da direita pra esquerda -
-  // criar um span mais à direita primeiro não afeta os offsets dos
-  // pedaços ainda não processados à esquerda dele
-  for(let i = pontos.length - 2; i >= 0; i--){
-    const segInicio = pontos[i], segFim = pontos[i+1];
-    if(segInicio === segFim) continue; // pedaço vazio (dois pontos coincidentes), ignora
-
-    const dentroDoRangeNovo = segInicio >= offsetRangeInicio && segFim <= offsetRangeFim;
-    // essa marca antiga cobria esse pedaço inteiro? (podia ser mais de
-    // uma marca tocando o mesmo pedaço só se elas se sobrepusessem entre
-    // si, o que não deveria acontecer no fluxo normal - pega a primeira)
-    const marcaCobrindo = marcasExistentes.find(m => segInicio >= m.inicio && segFim <= m.fim);
-
-    if(dentroDoRangeNovo){
-      if(marcaCobrindo && marcaCobrindo.cor === corAplicar){
-        continue; // já tinha marca da MESMA cor aqui - remove (não recria nada, já foi desfeito acima)
-      }
-      // não tinha marca aqui, ou tinha de cor diferente - aplica a nova cor
-      const r = vfRangeDoOffsetGlobalVF(container, segInicio, segFim);
-      if(r) vfCriarSpanMarcaVF(tipo, corAplicar, r);
-    }else if(marcaCobrindo){
-      // fora do range novo, mas dentro de uma marca antiga que sobrou -
-      // mantém exatamente como estava, com a cor ORIGINAL dela
-      const r = vfRangeDoOffsetGlobalVF(container, segInicio, segFim);
-      if(r) vfCriarSpanMarcaVF(tipo, marcaCobrindo.cor, r);
-    }
-    // fora do range novo E sem marca cobrindo: pedaço que nunca existiu de
-    // verdade (só apareceu como ponto de quebra por coincidência) - nada a fazer
+  if(apagando){
+    if(!marcasExistentes.length) return; // nada pra apagar ali, não faz nada
+    // desfaz as marcas tocadas e recria só as PARTES que ficam FORA do
+    // trecho arrastado (a parte que sobra de cada lado, se houver) -
+    // a parte que foi tocada nunca é recriada, fica sem marca mesmo
+    marcasExistentes.forEach(m => {
+      const pai = m.span.parentNode;
+      while(m.span.firstChild) pai.insertBefore(m.span.firstChild, m.span);
+      pai.removeChild(m.span);
+      pai.normalize();
+    });
+    marcasExistentes.forEach(m => {
+      const antesInicio = m.inicio, antesFim = Math.min(m.fim, offsetRangeInicio);
+      const depoisInicio = Math.max(m.inicio, offsetRangeFim), depoisFim = m.fim;
+      if(antesInicio < antesFim){ const r = vfRangeDoOffsetGlobalVF(container, antesInicio, antesFim); if(r) vfCriarSpanMarcaVF(tipo, m.cor, r); }
+      if(depoisInicio < depoisFim){ const r = vfRangeDoOffsetGlobalVF(container, depoisInicio, depoisFim); if(r) vfCriarSpanMarcaVF(tipo, m.cor, r); }
+    });
+  }else{
+    // marca/estende: desfaz as marcas tocadas e recria TUDO (união do
+    // trecho arrastado + todas as marcas que ele tocou) como UMA marca
+    // só, contínua, com a cor atual - isso já cobre "estender" (juntar
+    // com o que já tinha) e "substituir" (trocar de cor) ao mesmo tempo
+    let uniaoInicio = offsetRangeInicio, uniaoFim = offsetRangeFim;
+    marcasExistentes.forEach(m => {
+      if(m.inicio < uniaoInicio) uniaoInicio = m.inicio;
+      if(m.fim > uniaoFim) uniaoFim = m.fim;
+    });
+    marcasExistentes.forEach(m => {
+      const pai = m.span.parentNode;
+      while(m.span.firstChild) pai.insertBefore(m.span.firstChild, m.span);
+      pai.removeChild(m.span);
+      pai.normalize();
+    });
+    const r = vfRangeDoOffsetGlobalVF(container, uniaoInicio, uniaoFim);
+    if(r) vfCriarSpanMarcaVF(tipo, corAplicar, r);
   }
 
   vfMesclarSpansAdjacentesVF(container, tipo);
@@ -5414,11 +5450,9 @@ function vfExcluirCorCustomizadaVF(idGrid, cor){
 // existente no Safari - recriar o elemento do zero (clone + substituição)
 // força o navegador a desenhar ele de novo, sem "memória" da cor antiga
 function vfForcarRecoloracaoSliderVF(idSlider, corNova){
-  const sliderAntigo = document.getElementById(idSlider);
-  if(!sliderAntigo) return;
-  const clone = sliderAntigo.cloneNode(true);
-  clone.style.accentColor = corNova;
-  sliderAntigo.parentNode.replaceChild(clone, sliderAntigo);
+  const slider = document.getElementById(idSlider);
+  if(!slider) return;
+  slider.style.setProperty('--cor-slider-destaque', corNova);
 }
 
 function selecionarCorDestaqueVF(cor){
@@ -5631,9 +5665,9 @@ let notasVF = new Set();
 // de join nenhum na query pesada das 7.700+ questões
 async function vfCarregarBibliografiaCacheVF(){
   if(vfBibliografiaCache.size > 0) return; // já carregado nessa sessão
-  const {data, error} = await sb.from('bibliografia').select('id, titulo, modulo_pscpp');
+  const {data, error} = await sb.from('bibliografia').select('id, titulo, nome_exibicao, modulo_pscpp');
   if(error || !data) return;
-  vfBibliografiaCache = new Map(data.map(b => [b.id, {titulo: b.titulo, modulo_pscpp: b.modulo_pscpp}]));
+  vfBibliografiaCache = new Map(data.map(b => [b.id, {titulo: b.nome_exibicao || b.titulo, modulo_pscpp: b.modulo_pscpp}]));
 }
 
 // busca o conteúdo PESADO (texto/explicação/correção) de uma questão sob
@@ -6358,28 +6392,28 @@ function renderizarBarraFixaVF(item, jaRespondida){
   barraFixa.className = 'vf-barra-fixa';
   const podeVoltar = estadoVF.posicao > 0;
   const linhaPrincipal = jaRespondida
-    ? `<button class="btn-secundario" style="flex:1" ${podeVoltar?'':'disabled'} onclick="anteriorVF()">← Anterior</button>
-       <button class="btn-primario" style="flex:1" onclick="proximoVF()">Próxima →</button>`
+    ? `<button class="btn-secundario btn-icone-pequeno" style="flex:1;width:auto;height:auto;background:#f0f0ee;color:#111;border-radius:8px;padding:10px;border:none;display:block;transform:none !important" ${podeVoltar?'':'disabled'} onclick="anteriorVF()">← Anterior</button>
+       <button class="btn-primario btn-icone-pequeno" style="flex:1;width:auto;height:auto;background:#B23A34;color:#fff;border-radius:8px;padding:10px;border:none;display:block;transform:none !important" onclick="proximoVF()">Próxima →</button>`
     : `<button class="btn-secundario vf-btn-resposta" style="flex:1" onclick="responderVF(false)">Falso</button>
        <button class="btn-secundario vf-btn-resposta" style="flex:1" onclick="responderVF(true)">Verdadeiro</button>`;
 
   barraFixa.innerHTML = `
     <div class="vf-barra-fixa-principal">${linhaPrincipal}</div>
     <div class="vf-barra-fixa-acoes">
-      <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoVF('${item.id}')">
+      <button class="banco-acao-btn btn-icone-pequeno" style="width:auto;height:auto;padding:12px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;transform:none !important" onclick="abrirConfirmacaoExclusaoVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         <span>Excluir</span>
       </button>
-      <button class="banco-acao-btn ${favoritosVF.has(item.id)?'favoritada':''}" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar()" ontouchend="vfCancelarPressionarFavoritar()" ontouchmove="vfCancelarPressionarFavoritar()" onmousedown="vfIniciarPressionarFavoritar()" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
+      <button class="banco-acao-btn btn-icone-pequeno ${favoritosVF.has(item.id)?'favoritada':''}" style="width:auto;height:auto;padding:12px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;transform:none !important" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar()" ontouchend="vfCancelarPressionarFavoritar()" ontouchmove="vfCancelarPressionarFavoritar()" onmousedown="vfIniciarPressionarFavoritar()" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
         <svg viewBox="0 0 24 24" fill="${favoritosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
         <span>Favoritar</span>
       </button>
-      <button class="banco-acao-btn" onclick="abrirNotaVF('${item.id}')">
+      <button class="banco-acao-btn btn-icone-pequeno" style="width:auto;height:auto;padding:12px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;transform:none !important" onclick="abrirNotaVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M17 4v5h3"/></svg>
         <span>Notas</span>
         ${notasVF.has(item.id)?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
-      <button class="banco-acao-btn ${flashsSalvosVF.has(item.id)?'favoritada':''}" onclick="vfAbrirEscolhaMotivoSalvarVF('${item.id}')" ontouchstart="vfIniciarPressionarSalvar()" ontouchend="vfCancelarPressionarSalvar()" ontouchmove="vfCancelarPressionarSalvar()" onmousedown="vfIniciarPressionarSalvar()" onmouseup="vfCancelarPressionarSalvar()" onmouseleave="vfCancelarPressionarSalvar()">
+      <button class="banco-acao-btn btn-icone-pequeno ${flashsSalvosVF.has(item.id)?'favoritada':''}" style="width:auto;height:auto;padding:12px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;transform:none !important" onclick="vfAbrirEscolhaMotivoSalvarVF('${item.id}')" ontouchstart="vfIniciarPressionarSalvar()" ontouchend="vfCancelarPressionarSalvar()" ontouchmove="vfCancelarPressionarSalvar()" onmousedown="vfIniciarPressionarSalvar()" onmouseup="vfCancelarPressionarSalvar()" onmouseleave="vfCancelarPressionarSalvar()">
         <svg viewBox="0 0 24 24" fill="${flashsSalvosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         <span>Salvar</span>
       </button>
@@ -9416,9 +9450,18 @@ function textoContemTermo(textoNorm, termoNorm){
 // do Carlos, pra não fragmentar por engano uma fonte que o app sempre
 // trata como bloco só. Força "Único" independente do que o texto da
 // questão mencione internamente
+// consulta o dado REAL do banco (bibliografiaCache, já carregada) - a
+// versão antiga tentava ADIVINHAR isso com regex em cima do formato do
+// título (ex: título começa com "Lei"/"Decreto", tem "MSC." no meio...),
+// o que é frágil e ficava desatualizado sempre que uma nova publicação
+// não batesse com esses padrões (ex: "NORMAM-501/DHN" nunca bateria,
+// mesmo estando marcada capitulo_unico=true no banco) - foi exatamente
+// essa fragilidade que causou lixo sistemático (fragmentos de palavra,
+// números soltos) em milhares de afirmações - ver regra fixa no histórico
 function ehFonteCapituloUnico(titulo){
   if(!titulo) return false;
-  return /^(Lei|Decreto)\s|MSC\.|MSC\/Circ|Resolution\s+A\.\d|SOLAS.*Regra/i.test(titulo);
+  const bib = bibliografiaCache.find(b => b.titulo === titulo);
+  return bib?.capitulo_unico === true;
 }
 function extrairCapituloDoTexto(texto){
   const t = texto || '';
@@ -10256,13 +10299,15 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
   const resultados = await Promise.all(questoes.map(async q => {
     const bibEncontrada = identificarBibliografia(q.bibliografiaTextoOriginal, q.bibliografiaTextoOriginal);
     let bibliografiaId = null;
+    let bibCapituloUnico = false;
     if(bibEncontrada){
       const {data: bibRow} = await sb.from('bibliografia')
-        .select('id')
+        .select('id, capitulo_unico')
         .eq('modulo_pscpp', bibEncontrada.modulo)
         .eq('titulo', bibEncontrada.titulo)
         .maybeSingle();
       bibliografiaId = bibRow?.id || null;
+      bibCapituloUnico = bibRow?.capitulo_unico === true;
     }
 
     // checagem de duplicata — mesmo texto já cadastrado, pula sem inserir.
@@ -10272,6 +10317,13 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     const {data: existente} = await sb.from('questoes_vf').select('id').eq('texto', q.texto).maybeSingle();
     if(existente) return {ok: false, pulada: true, texto: q.texto};
 
+    // publicação marcada como capítulo único (bibliografia.capitulo_unico) -
+    // NUNCA usa o que foi extraído do cabeçalho do arquivo, mesmo que o
+    // cabeçalho mencione capítulos específicos (ex: "Capítulos I, IV e
+    // VIII") - o capítulo sempre é 'Único' nesse caso. Tentar extrair um
+    // capítulo real do texto pra essas publicações foi a causa de um bug
+    // sistemático que gerou lixo (fragmentos de palavra, números soltos)
+    // em milhares de afirmações - ver regra fixa no histórico do projeto
     const {data: inserida, error} = await sb.from('questoes_vf').insert({
       texto: q.texto,
       resposta: q.resposta,
@@ -10280,7 +10332,7 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
       trechos_fonte: q.trechos_fonte,
       fonte: q.fonte,
       bibliografia_id: bibliografiaId,
-      capitulo: capituloDoArquivo,
+      capitulo: bibCapituloUnico ? 'Único' : capituloDoArquivo,
       n_palavras: q.texto.trim().split(/\s+/).filter(Boolean).length,
       eh_numero: q.ehNumero,
       eh_lista: q.ehLista,
