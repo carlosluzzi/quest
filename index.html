@@ -1442,7 +1442,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-255';
+const VERSAO_APP = '2026-07-25-256';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3323,36 +3323,24 @@ function formatarTextoItemVF(texto){
 // Fable na análise do algoritmo)
 async function buscarTudoPaginadoVF(queryBuilder){
   const TAMANHO_PAGINA = 1000;
-  // primeira página sempre sequencial (necessária de qualquer forma) -
-  // se vier com menos que 1000, já é tudo (ex: repeticao_vf, hoje só 3
-  // linhas) e PARA AQUI, sem nenhuma requisição extra. Só se vier CHEIA
-  // (indicando que tem mais) é que busca o total exato (1 requisição leve,
-  // head:true - não baixa dado nenhum) e dispara o RESTO em paralelo,
-  // sabendo exatamente quantas páginas existem - nunca chuta um número
-  // fixo. É essa parte que tinha quebrado antes: chutar sempre 15 páginas
-  // disparava até 14 requisições muito além do fim pra tabelas pequenas.
-  // Agora tabela pequena nunca dispara requisição extra nenhuma
+  // primeira página já vem com o count total EMBUTIDO (queryBuilder
+  // define {count:'exact'} no próprio select) - zero requisições extras
+  // pra descobrir quantas páginas existem. Antes eu fazia uma segunda
+  // chamada só pra contar, e isso ainda pagava uma viagem inteira de ida
+  // e volta ao servidor (a query em si é rápida no banco, uns 6ms, mas o
+  // ROUND-TRIP de rede é o que pesa de verdade, principalmente no
+  // celular) - agora não tem mais essa etapa a mais nenhuma
   const primeira = await queryBuilder().range(0, TAMANHO_PAGINA - 1);
   if(primeira.error) return {data: null, error: primeira.error};
   let todosOsDados = primeira.data || [];
+  const totalReal = primeira.count;
+
   if(!primeira.data || primeira.data.length < TAMANHO_PAGINA){
-    return {data: todosOsDados, error: null}; // tabela pequena, já acabou
+    return {data: todosOsDados, error: null}; // já é tudo, sem mais nada a buscar
   }
 
-  const {count, error: erroCount} = await queryBuilder().select('*', {count: 'exact', head: true});
-  if(erroCount || !count){
-    // não conseguiu contar por algum motivo - continua sequencial a
-    // partir da página 2, sempre funciona mesmo sem saber o total
-    let pagina = 1;
-    while(true){
-      const {data, error} = await queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1);
-      if(error) return {data: null, error};
-      todosOsDados = todosOsDados.concat(data || []);
-      if(!data || data.length < TAMANHO_PAGINA) break;
-      pagina++;
-    }
-  }else{
-    const totalPaginas = Math.ceil(count / TAMANHO_PAGINA);
+  if(typeof totalReal === 'number' && totalReal > 0){
+    const totalPaginas = Math.ceil(totalReal / TAMANHO_PAGINA);
     const promessas = [];
     for(let pagina = 1; pagina < totalPaginas; pagina++){
       promessas.push(queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1));
@@ -3361,6 +3349,17 @@ async function buscarTudoPaginadoVF(queryBuilder){
     for(const {data, error} of resultados){
       if(error) return {data: null, error};
       todosOsDados = todosOsDados.concat(data || []);
+    }
+  }else{
+    // sem count (queryBuilder não pediu {count:'exact'}) - continua
+    // sequencial a partir da página 2, sempre funciona de qualquer jeito
+    let pagina = 1;
+    while(true){
+      const {data, error} = await queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1);
+      if(error) return {data: null, error};
+      todosOsDados = todosOsDados.concat(data || []);
+      if(!data || data.length < TAMANHO_PAGINA) break;
+      pagina++;
     }
   }
   // deduplica por id - proteção barata (apontada pelo Fable) contra um
@@ -5232,7 +5231,7 @@ async function carregarPoolVF(){
     // TODAS as 7.700+ questões toda vez que entrava no Flash, mesmo só
     // mostrando uma de cada vez. O conteúdo pesado é buscado sob demanda,
     // só da questão que realmente vai aparecer (vfGarantirConteudoCompletoVF)
-    let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, capitulo, n_palavras, bibliografia_id').eq('anulada', false);
+    let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, capitulo, n_palavras, bibliografia_id', {count: 'exact'}).eq('anulada', false);
     if(filtroVF.publicacao) q = q.eq('bibliografia_id', filtroVF.publicacao);
     if(filtroVF.capitulo) q = q.eq('capitulo', filtroVF.capitulo);
     // Número + Lista juntos = UNIÃO (ou uma coisa ou outra), não interseção —
@@ -5248,7 +5247,7 @@ async function carregarPoolVF(){
 
   const [{data: questoes}, {data: estados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}] = await Promise.all([
     buscarTudoPaginadoVF(montarQueryQuestoesVF),
-    buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
+    buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
