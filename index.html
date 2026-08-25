@@ -1317,7 +1317,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-234';
+const VERSAO_APP = '2026-07-25-235';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2263,6 +2263,10 @@ window.addEventListener('focus', () => { if(vfEstaVisivelAgora()) aoVoltarParaVF
 // Só conta como "abriu teclado" campo de texto de verdade – checkbox, radio
 // e select nunca chamam teclado no celular, então nunca podem esconder o menu.
 function ehCampoDeTeclado(el){
+  // esses 2 campos de edição (enunciado/explicação do Flash) não devem
+  // esconder o menu - mesmo abrindo teclado de verdade, Carlos prefere o
+  // menu continuar visível enquanto edita esse conteúdo específico
+  if(el.id === 'vf-textarea-enunciado' || el.id === 'vf-textarea-explicacao') return false;
   if(el.tagName === 'TEXTAREA') return true;
   if(el.tagName !== 'INPUT') return false;
   // lista do que REALMENTE abre teclado, em vez de excluir só
@@ -4830,11 +4834,24 @@ function vfIniciarEdicaoEnunciadoVF(){
   div.dataset.editando = '1';
   pausarTimerVF();
   const textoOriginal = item.texto;
-  div.innerHTML = `<textarea id="vf-textarea-enunciado" style="width:100%;min-height:90px;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:4px;padding:0;margin:0;font-family:inherit;font-size:inherit;line-height:inherit;color:#111;resize:vertical;box-sizing:border-box;background:transparent">${escapeHtml(textoOriginal)}</textarea>`;
+  // padding:6px + margin:-6px se cancelam pra letra ficar exatamente onde
+  // estava (não é padding:0 mais) - mas o quadro/contorno em volta fica
+  // maior, com respiro de verdade entre a borda e o texto
+  div.innerHTML = `<textarea id="vf-textarea-enunciado" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:inherit;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent">${escapeHtml(textoOriginal)}</textarea>`;
   const textarea = document.getElementById('vf-textarea-enunciado');
+  vfAutoAlturaTextareaVF(textarea);
+  textarea.addEventListener('input', () => vfAutoAlturaTextareaVF(textarea));
   textarea.focus();
   textarea.setSelectionRange(textarea.value.length, textarea.value.length);
   textarea.addEventListener('blur', () => vfSalvarEdicaoEnunciadoVF(item.id, textoOriginal));
+}
+
+// altura acompanha as linhas reais do texto - uma frase de 2 linhas abre
+// com o quadro do tamanho de 2 linhas, não um tamanho fixo grande demais.
+// Cresce sozinho enquanto digita, se passar pra mais linhas
+function vfAutoAlturaTextareaVF(textarea){
+  textarea.style.height = 'auto';
+  textarea.style.height = textarea.scrollHeight + 'px';
 }
 
 async function vfSalvarEdicaoEnunciadoVF(questaoId, textoOriginal){
@@ -5062,8 +5079,10 @@ function vfIniciarEdicaoExplicacaoVF(){
   if(!div || div.dataset.editando === '1') return;
   div.dataset.editando = '1';
   const textoOriginal = entrada.item.explicacao || '';
-  div.innerHTML = `<textarea id="vf-textarea-explicacao" style="width:100%;min-height:160px;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:4px;padding:0;margin:0;font-family:inherit;font-size:inherit;line-height:1.5;color:#111;resize:vertical;box-sizing:border-box;background:transparent">${escapeHtml(textoOriginal)}</textarea>`;
+  div.innerHTML = `<textarea id="vf-textarea-explicacao" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:1.5;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent">${escapeHtml(textoOriginal)}</textarea>`;
   const textarea = document.getElementById('vf-textarea-explicacao');
+  vfAutoAlturaTextareaVF(textarea);
+  textarea.addEventListener('input', () => vfAutoAlturaTextareaVF(textarea));
   textarea.focus();
   textarea.setSelectionRange(textarea.value.length, textarea.value.length);
   textarea.addEventListener('blur', () => vfSalvarEdicaoExplicacaoVF(vfQuestaoIdExplicacaoAtual, textoOriginal));
