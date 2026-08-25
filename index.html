@@ -114,8 +114,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #app-shell{display:none;max-width:480px;margin:0 auto;position:fixed;top:var(--vv-top, 0px);left:0;right:0;height:var(--vh-real, 100vh);flex-direction:column;overflow:hidden}
 #app-shell.ativo{display:flex}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;flex-shrink:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
-body.vf-desenho-ativo #vf-canvas-desenho{z-index:15}
-body.vf-desenho-ativo.vf-modo-destaque-ativo #vf-canvas-preview-destaque{z-index:16}
+/* canvas de desenho voltou a ficar limitado à área de conteúdo (não mais
+tela inteira) - por isso não precisa mais de z-index condicional pra
+"passar por cima" do cabeçalho/menu, já que fisicamente não os cobre mais */
 /* seleção de cor estilo PDF Expert: moldura quadrada ao redor da bolinha
 (não mais um anel circular) - pseudo-elemento separado, porque outline/
 box-shadow direto no próprio botão redondo sempre saem arredondados junto */
@@ -775,8 +776,8 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     pointer-events:none pra sempre (dedo/mouse passam direto pra tocar nos
     botões normal). A escuta de verdade roda com Touch Events nativos no
     document (não neste elemento), filtrando touch.touchType==='stylus' -->
-    <canvas id="vf-canvas-desenho" style="position:fixed;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;touch-action:none"></canvas>
-    <canvas id="vf-canvas-preview-destaque" style="position:fixed;inset:0;width:100%;height:100%;z-index:9;pointer-events:none;touch-action:none"></canvas>
+    <canvas id="vf-canvas-desenho" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);width:auto;height:auto;z-index:8;pointer-events:none;touch-action:none"></canvas>
+    <canvas id="vf-canvas-preview-destaque" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);width:auto;height:auto;z-index:9;pointer-events:none;touch-action:none"></canvas>
     <!-- barra fina, sempre visível quando ativa - marcador+cor agrupados
     (fundo azul claro quando ativo, igual PDF Expert) + borracha separada -->
     <div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:9999;background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.12);padding:6px 8px;display:flex;align-items:center;gap:14px">
@@ -1442,7 +1443,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-259';
+const VERSAO_APP = '2026-07-25-260';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3731,21 +3732,14 @@ document.addEventListener('touchstart', (e) => {
   if(vfTocouNaBarra(e.target)) return; // deixa o toque chegar no botão normalmente
   if(e.target.closest('.vf-btn-resposta')) return; // idem pros botões Verdadeiro/Falso - nunca viram início de traço
   if(!vfDentroDaAreaDesenho(touch.clientX, touch.clientY)) return;
-  // ícones pequenos, itens de menu (barra de baixo/sidebar) e botões do
-  // cabeçalho: não decide na hora - um TOQUE rápido deixa o clique
-  // funcionar normal (trocar de aba, abrir perfil), mas se virar ARRASTO
-  // de verdade, continua como traço - dá liberdade total pra desenhar em
-  // cima de qualquer coisa, sem perder a navegação normal com toque rápido
-  const itemMenu = e.target.closest('.nav-item');
-  const botaoIcone = itemMenu || e.target.closest('.btn-icone-pequeno, .topbar button, .topbar [onclick]');
+  // canvas voltou a ficar limitado à área de conteúdo (não mais tela
+  // inteira) - cabeçalho e menu lateral/de baixo ficam FORA dessa área
+  // fisicamente agora, então nem chegam a passar da checagem acima. Só
+  // os ícones pequenos DENTRO da área de conteúdo (explicação, barra
+  // fixa debaixo do card) ainda precisam desse adiamento de decisão
+  const botaoIcone = e.target.closest('.btn-icone-pequeno');
   if(botaoIcone){
-    // sobe o z-index do canvas JÁ, antes mesmo de saber se vai virar
-    // arrasto - sem isso, o começo do traço (do toque até o movimento
-    // ultrapassar o limiar) ficava escondido atrás do próprio menu/botão,
-    // porque o z-index só subia depois. vfBotaoTocouSemVirarTracoVF desfaz
-    // isso se o toque acabar sendo só um clique normal (não virou traço)
-    document.body.classList.add('vf-desenho-ativo');
-    vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX};
+    vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: VF_LIMIAR_ARRASTO_BOTAO_PX};
     return;
   }
   if(!vfCtxDesenho) inicializarCanvasDesenhoVF();
@@ -3934,22 +3928,8 @@ document.addEventListener('touchmove', (e) => {
 }, {passive: false});
 
 function vfFinalizarTracoDesenho(e){
-  const tinhaBotaoPendente = !!vfBotaoPendenteToqueInfo;
   vfBotaoPendenteToqueInfo = null; // toque em cima do ícone terminou sem virar arrasto - deixa o clique nativo acontecer
-  if(!vfDesenhandoAgora){
-    // se era um toque pendente sobre menu/ícone que NUNCA virou traço de
-    // verdade (a barra de desenho nunca chegou a aparecer), desfaz a
-    // subida antecipada do z-index que o touchstart fez só por
-    // precaução - sem isso, um simples toque de caneta pra navegar
-    // (sem desenhar) deixava o z-index preso lá em cima à toa
-    if(tinhaBotaoPendente){
-      const barra = document.getElementById('vf-barra-desenho');
-      if(barra && barra.classList.contains('hidden')){
-        document.body.classList.remove('vf-desenho-ativo');
-      }
-    }
-    return;
-  }
+  if(!vfDesenhandoAgora) return;
   // sempre libera, mesmo que o identifier não bata exatamente (evita a
   // trava de scroll ficar presa ligada por algum caso raro do navegador)
   vfDesenhandoAgora = false;
