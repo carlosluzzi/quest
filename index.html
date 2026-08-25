@@ -178,6 +178,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   #wrapper-barra-adicionar{display:none}
   #view-topico-detalhe{left:250px !important;width:calc(100% - 250px) !important}
   #pagina-flash-salvos-vf{left:250px !important;width:calc(100% - 250px) !important}
+  #pagina-favoritos-vf{left:250px !important;width:calc(100% - 250px) !important}
   .nav-icon{width:24px;height:24px}
   .nav-label{font-size:var(--fs-e)}
   .badge-notificacao{top:3px;left:30px;right:auto}
@@ -784,6 +785,17 @@ input,select,textarea{font-family:inherit;font-size:16px}
           <span id="vf-swatch-cor-atual" style="width:22px;height:22px;border-radius:50%;background:#1A40A1;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15)"></span>
         </button>
       </div>
+      <div id="vf-grupo-destaque" style="display:flex;align-items:center;gap:0px;background:none;border-radius:8px;padding:6px 8px;transition:gap 0.25s ease, background 0.25s ease">
+        <button onclick="selecionarFerramentaDestaqueVF()" style="background:none;border:none;padding:0;display:flex;cursor:pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1115 1077" width="20" height="20">
+<path d="M619.29 24.05C632.15 39.03 647.48 52.11 661.32 66.17C688.25 93.54 715.85 120.34 743.26 147.24C825.33 227.79 906.46 309.64 987.7 390.82C1008.34 411.44 1028.62 432.61 1049.63 452.87C1062.74 465.52 1078.54 479.94 1090.09 493.76C979.73 602.47 869.36 711.17 759 819.88C601.32 662.28 443.65 504.69 285.97 347.09C294.23 337.41 304.67 329.19 313.78 320.28C328.59 305.78 343.41 291.22 358.56 277.06C381.1 255.96 402.84 234 425.21 212.72C459.01 180.57 492.45 147.93 525.92 115.43C548.23 93.74 570.69 72.21 593.09 50.59C599.02 44.86 605.05 39.21 610.93 33.42C613.86 30.53 617.58 27.78 619.29 24.05ZM77.93 771.68C87.33 780.18 96.02 789.55 104.99 798.49C122.69 816.11 140.36 833.8 158.15 851.33C221.99 914.2 285.58 977.45 348 1041.66C343.35 1044.06 339.52 1049.5 335.74 1053.24C331.26 1057.66 326.76 1062.35 322.1 1066.59C315.83 1072.3 308.85 1074.16 301.12 1076.83C293.76 1076.83 286.4 1076.83 279.04 1076.83C274.62 1075.26 269.86 1074.21 265.58 1071.95C263.63 1070.92 262.13 1069.3 260.24 1068.23C258.88 1067.46 257.3 1067.25 255.92 1066.52C250.19 1063.5 245.13 1058.4 239.82 1054.67C228.12 1046.47 216.8 1037.7 205.25 1029.26C177.53 1008.99 149.76 988.79 122.13 968.38C107.76 957.77 93.55 946.83 78.94 936.57C62.17 924.79 45.75 912.4 29.32 900.15C23.79 896.03 18.2 891.97 12.62 887.92C10.08 886.08 6.69 884.26 4.62 881.91C2.41 879.4 1.77 875.71 0.17 872.97C0.17 866.66 0.17 860.35 0.17 854.03C2.45 850.15 3.46 845.5 6.32 841.79C9.32 837.92 13.35 834.73 16.82 831.29C26.52 821.66 36.3 812.13 46.07 802.57C53.31 795.48 60.5 788.33 67.77 781.27C71.06 778.06 74.16 774.24 77.93 771.68Z" class="vf-tinta-destaque" data-cor-original="#f9e007" fill="#f9e007" fill-rule="evenodd" stroke="#f9e007" stroke-width="0.25" stroke-linejoin="round"/>
+<path d="M571.85 0.17C576.22 0.17 580.59 0.17 584.96 0.17C589.59 1.97 594.64 2.78 599.11 5.39C606.9 9.93 612.94 17.78 619.29 24.05C617.58 27.78 613.86 30.53 610.93 33.42C605.05 39.21 599.02 44.86 593.09 50.59C570.69 72.21 548.23 93.74 525.92 115.43C492.45 147.93 459.01 180.57 425.21 212.72C402.84 234 381.1 255.96 358.56 277.06C343.41 291.22 328.59 305.78 313.78 320.28C304.67 329.19 294.23 337.41 285.97 347.09C277.03 353.85 268.1 364.46 259.99 372.49C241.9 390.39 223.76 408.29 205.35 425.87C198.2 432.7 191.12 439.61 184.01 446.48C181.94 448.48 176.05 453.18 175.25 455.69C173.99 459.65 175.05 465.35 175.03 469.5C174.99 480.17 175.01 490.83 175.01 501.5C175.02 523.5 174.95 545.5 175.01 567.5C175.04 578.75 174.23 590.31 175.27 601.5C177.89 603.83 181.04 605.5 183.69 607.83C190.91 614.19 197.46 621.43 204.32 628.19C219.93 643.57 235.19 659.31 250.77 674.73C286.27 709.91 321.5 745.32 356.69 780.81C393.03 817.46 429.49 854.02 465.85 890.64C481.84 906.74 498.36 922.6 513.5 939.47C523.42 940.16 533.56 939.59 543.5 939.57C562.83 939.54 582.17 939.5 601.5 939.55C609.83 939.57 618.17 939.52 626.5 939.58C629.74 939.61 634.83 940.61 637.84 939.33C640.17 938.34 647.29 930.25 649.53 928.01C658.17 919.34 667.33 911.11 675.71 902.2C683.61 893.81 692.34 886.14 700.48 877.99C711.28 867.15 722.11 856.27 733.11 845.63C737.68 841.2 742.23 836.73 746.74 832.23C750.77 828.21 755.67 824.51 759 819.88C869.36 711.17 979.73 602.47 1090.09 493.76C1093.93 496.19 1105.73 508.22 1108.39 512.13C1111.32 516.43 1112.84 521.53 1114.83 526.16C1114.83 531.76 1114.83 537.36 1114.83 542.95C1112.79 548.4 1110.89 554 1107.37 558.85C1104.87 562.31 1101.35 564.85 1098.33 567.83C1090.45 575.6 1082.53 583.35 1074.63 591.11C1050.06 615.23 1025.65 639.47 1000.93 663.45C963.57 699.69 926.87 736.7 889.73 773.23C850.73 811.59 811.54 849.76 772.8 888.31C749.27 911.72 725.44 934.93 701.95 958.46C689.27 971.16 677.09 986.42 660.45 994C645.73 1000.7 630.31 999.68 614.5 999.69C591.83 999.7 569.17 999.72 546.5 999.69C539.17 999.68 531.83 999.68 524.5 999.68C521.33 999.68 517.61 999.14 514.5 999.7C510.3 1000.47 502.12 1010.91 498.81 1014.29C487.28 1026.05 475.58 1037.8 463.72 1049.22C443.77 1068.4 412.84 1074.1 386.78 1066.63C371.28 1062.18 359.42 1052.46 348 1041.66C285.58 977.45 221.99 914.2 158.15 851.33C140.36 833.8 122.69 816.11 104.99 798.49C96.02 789.55 87.33 780.18 77.93 771.68C75.4 768.57 72.1 766.09 69.33 763.18C64.55 758.17 60.47 752.44 57.09 746.38C41.34 718.11 45.48 680.99 67.52 657.02C78.96 644.59 91.88 633.29 103.87 621.38C106.45 618.81 115.79 611.18 116.49 608.19C117.37 604.39 116.52 599.41 116.53 595.5C116.54 586.5 116.55 577.5 116.54 568.5C116.51 539.83 116.53 511.17 116.54 482.5C116.54 465.24 114.99 447.76 121.91 431.49C129.17 414.42 146.44 400.79 159.6 388.1C185.54 363.08 211.35 337.84 237.03 312.53C260.54 289.35 284.58 266.75 308.38 243.88C340.33 213.17 371.89 182.06 404.05 151.55C422.33 134.21 440.92 117.08 458.79 99.3C477.85 80.34 497.96 62.45 516.84 43.36C525.13 34.99 533.65 26.79 542.21 18.69C546.68 14.46 550.77 9.82 556.01 6.53C561.02 3.39 566.54 2.33 571.85 0.17ZM459.48 968.5C452.31 959.06 443.03 951.19 434.79 942.7C417.71 925.12 400.11 908.04 382.98 890.51C335.55 841.95 286.65 794.83 239 746.5C218.49 725.7 197.99 704.81 177 684.51C171.24 678.93 165.68 673.16 159.94 667.56C157.99 665.65 155.47 661.63 152.96 660.58C148.31 658.65 144.77 663.59 142 666.49C133.48 675.4 123.22 683.37 115.47 692.95C107.85 702.37 108.23 715.66 115.33 725.22C116.76 727.13 118.72 728.42 120.41 730.07C124.97 734.5 129.48 739.02 133.98 743.53C149.11 758.69 164.64 773.54 179.57 788.92C232.77 843.72 288.08 896.44 341.63 950.88C354.69 964.15 368.09 977.1 381.1 990.41C388.68 998.16 396 1006.95 407.5 1008.29C423.38 1010.14 437.69 991.59 447.63 981.14C451.59 976.98 456.16 973.16 459.48 968.5Z" fill="#222121" fill-rule="evenodd" stroke="#222121" stroke-width="0.25" stroke-linejoin="round"/>
+</svg>
+        </button>
+        <button id="vf-circulo-destaque-btn" onclick="abrirPainelDestaqueVF()" style="width:0px;height:20px;border-radius:50%;opacity:0;overflow:hidden;transition:width 0.25s ease, opacity 0.25s ease;background:none;border:none;padding:0;margin:0;cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none;outline:none;box-shadow:none;-webkit-tap-highlight-color:transparent">
+          <span style="width:20px;height:20px;border-radius:50%;background:#FFD84D;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15)"></span>
+        </button>
+      </div>
       <div style="width:1px;height:22px;background:#eee"></div>
       <div id="vf-grupo-borracha" style="display:flex;align-items:center;gap:0px;background:none;border-radius:8px;padding:6px 8px;transition:gap 0.25s ease, background 0.25s ease">
         <button onclick="selecionarFerramentaBorrachaVF()" style="background:none;border:none;padding:0;display:flex;cursor:pointer">
@@ -897,6 +909,52 @@ input,select,textarea{font-family:inherit;font-size:16px}
           </button>
           <button class="vf-tamanho-borracha" data-tamanho="28" onclick="selecionarTamanhoBorrachaVF(28)" style="width:34px;height:34px;box-sizing:border-box;border-radius:8px;border:2px solid #5B9BD5;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
             <span style="width:22px;height:22px;border-radius:50%;background:#999;flex-shrink:0;display:block"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="vf-painel-destaque" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:10000;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
+      <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Marcador</div>
+
+      <div>
+        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="vf-cor-destaque" data-cor="#FF3B30" onclick="selecionarCorDestaqueVF('#FF3B30')" style="width:26px;height:26px;border-radius:50%;background:#FF3B30;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+          <button class="vf-cor-destaque" data-cor="#FF9500" onclick="selecionarCorDestaqueVF('#FF9500')" style="width:26px;height:26px;border-radius:50%;background:#FF9500;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+          <button class="vf-cor-destaque" data-cor="#FFD84D" onclick="selecionarCorDestaqueVF('#FFD84D')" style="width:26px;height:26px;border-radius:50%;background:#FFD84D;border:2px solid #fff;box-shadow:0 0 0 2px #5B9BD5;cursor:pointer;padding:0"></button>
+          <button class="vf-cor-destaque" data-cor="#34C759" onclick="selecionarCorDestaqueVF('#34C759')" style="width:26px;height:26px;border-radius:50%;background:#34C759;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+          <button class="vf-cor-destaque" data-cor="#5B9BD5" onclick="selecionarCorDestaqueVF('#5B9BD5')" style="width:26px;height:26px;border-radius:50%;background:#5B9BD5;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Espessura</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="vf-preview-espessura-destaque" style="width:8px;height:8px;border-radius:50%;background:#FFD84D;flex-shrink:0"></span>
+          <input type="range" id="vf-slider-espessura-destaque" min="8" max="30" step="1" value="20" oninput="mudarEspessuraSliderDestaqueVF(this.value)" style="flex:1;min-width:0;accent-color:#5B9BD5">
+          <span id="vf-espessura-valor-destaque" style="font-size:14px;color:#333;flex-shrink:0;white-space:nowrap">20 pt</span>
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Opacidade</div>
+        <div style="display:flex;gap:8px">
+          <button class="vf-opacidade-destaque" data-opacidade="0.25" onclick="selecionarOpacidadeDestaqueVF(0.25)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:12px;color:#333">
+            <span style="width:22px;height:22px;border-radius:5px;background-image:repeating-conic-gradient(#e0e0e0 0% 25%, #fff 0% 50%);background-size:8px 8px;position:relative;display:block"><span style="position:absolute;inset:0;background:#FFD84D;opacity:0.25;border-radius:5px"></span></span>
+            25%
+          </button>
+          <button class="vf-opacidade-destaque" data-opacidade="0.45" onclick="selecionarOpacidadeDestaqueVF(0.45)" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:12px;color:#333">
+            <span style="width:22px;height:22px;border-radius:5px;background-image:repeating-conic-gradient(#e0e0e0 0% 25%, #fff 0% 50%);background-size:8px 8px;position:relative;display:block"><span style="position:absolute;inset:0;background:#FFD84D;opacity:0.45;border-radius:5px"></span></span>
+            50%
+          </button>
+          <button class="vf-opacidade-destaque" data-opacidade="0.7" onclick="selecionarOpacidadeDestaqueVF(0.7)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:12px;color:#333">
+            <span style="width:22px;height:22px;border-radius:5px;background-image:repeating-conic-gradient(#e0e0e0 0% 25%, #fff 0% 50%);background-size:8px 8px;position:relative;display:block"><span style="position:absolute;inset:0;background:#FFD84D;opacity:0.7;border-radius:5px"></span></span>
+            75%
+          </button>
+          <button class="vf-opacidade-destaque" data-opacidade="1" onclick="selecionarOpacidadeDestaqueVF(1)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:12px;color:#333">
+            <span style="width:22px;height:22px;border-radius:5px;background:#FFD84D;display:block"></span>
+            100%
           </button>
         </div>
       </div>
@@ -1099,6 +1157,16 @@ input,select,textarea{font-family:inherit;font-size:16px}
       Corrigir depois
     </button>
   </div>
+</div>
+
+<div id="pagina-favoritos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:40;display:flex;flex-direction:column;overflow:hidden">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
+    <h2 style="margin:0;font-size:20px;font-weight:700;color:#111">Flash favoritos</h2>
+    <button onclick="document.getElementById('pagina-favoritos-vf').classList.add('hidden')" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div id="vf-lista-favoritos" style="flex:1;overflow-y:auto;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px"></div>
 </div>
 
 <div id="pagina-flash-salvos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:40;display:flex;flex-direction:column;overflow:hidden">
@@ -1325,7 +1393,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-237';
+const VERSAO_APP = '2026-07-25-243';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3198,7 +3266,8 @@ const VF_ALGO = {
   ESCAPE_H: [6, 12],
   TETO_H: 2160,
   FUZZ: 0.05,
-  JITTER_FILA: 0.02
+  JITTER_FILA: 0.02,
+  BOOST_FAVORITO: 1.25 // favorita "vence" a fila mais cedo (~80% do intervalo em vez de 100%) - calibrado pelo Fable pra não virar spam nem dominar o topo
 };
 
 function clampVF(v, min, max){ return Math.max(min, Math.min(max, v)); }
@@ -3293,9 +3362,16 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
   pool.forEach(q => {
     if(q.estado === 'revisao'){
       const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
+      // favorita "vence" a fila mais cedo - multiplica a razão ANTES do
+      // jitter, não depois (a ordem importa: isso desloca quando ela passa
+      // a competir de verdade, o jitter só embaralha um pouco por cima)
+      const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
+      const razao = (decorridoH / q.intervalo_horas) * boost;
       const jitter = 1 + (pseudoAleatorioVF(sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
-      rn.push({score: (decorridoH / q.intervalo_horas) * jitter, item: q});
+      rn.push({score: razao * jitter, item: q});
     }else if(!q.estado || q.estado === 'nova'){
+      // favorita nova fica em 1.0 normal (na prática nem acontece, só dá
+      // pra favoritar o que já foi visto) - sem boost aqui de propósito
       const jitter = 1 + (pseudoAleatorioVF(sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
       rn.push({score: 1.0 * jitter, item: q});
     }
@@ -3350,6 +3426,8 @@ function vfAlgumModalAbertoVF(){
   if(document.querySelector('.modal-overlay:not(.hidden)')) return true;
   const paginaSalvos = document.getElementById('pagina-flash-salvos-vf');
   if(paginaSalvos && !paginaSalvos.classList.contains('hidden')) return true;
+  const paginaFavoritos = document.getElementById('pagina-favoritos-vf');
+  if(paginaFavoritos && !paginaFavoritos.classList.contains('hidden')) return true;
   return false;
 }
 let vfTimerSeletorCorTravado = null;
@@ -3383,6 +3461,10 @@ let vfCorDesenhoAtual = '#1A40A1';
 let vfEspessuraDesenhoAtual = 4.5;
 let vfForcaSuavizada = 0.5; // suaviza a força entre um touchmove e outro, evita a espessura "pulando" abrupto
 let vfModoBorracha = false;
+let vfModoDestaque = false; // highlighter - traço translúcido, tipo marca-texto de verdade
+let vfCorDestaqueAtual = '#FFD84D';
+let vfEspessuraDestaqueAtual = 20;
+let vfOpacidadeDestaqueAtual = 0.45;
 let vfUltimoPontoDesenho = null;
 let vfPontoMedioAnterior = null;
 
@@ -3422,7 +3504,7 @@ function redimensionarCanvasDesenhoVF(){
   // o que já estava lá por causa de um resize disparado por qualquer motivo
   if(typeof vfIndiceHistoricoVF !== 'undefined' && vfIndiceHistoricoVF >= 0 && vfHistoricoDesenho[vfIndiceHistoricoVF]){
     const img = new Image();
-    img.onload = () => { ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(img, 0, 0, rect.width, rect.height); };
+    img.onload = () => { ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.drawImage(img, 0, 0, rect.width, rect.height); };
     img.src = vfHistoricoDesenho[vfIndiceHistoricoVF];
   }
 }
@@ -3465,14 +3547,13 @@ document.addEventListener('touchstart', (e) => {
   if(!vfEhToqueDeCaneta(touch)) return; // só a caneta desenha
   if(vfTocouNaBarra(e.target)) return; // deixa o toque chegar no botão normalmente
   if(e.target.closest('.vf-btn-resposta')) return; // idem pros botões Verdadeiro/Falso - nunca viram início de traço
-  if(e.target.closest('.topbar')) return; // cabeçalho sempre clicável normal - agora que o canvas cobre a tela toda
-  if(e.target.closest('.bottom-nav')) return; // idem pro menu (serve tanto a barra de baixo quanto a sidebar)
   if(!vfDentroDaAreaDesenho(touch.clientX, touch.clientY)) return;
-  // ícones pequenos (tipo o "?" de explicação): não decide na hora - um
-  // TOQUE rápido deixa o clique do botão funcionar normalmente, mas se
-  // virar ARRASTO de verdade (um risco que passa por cima dele vindo de
-  // fora), continua como traço. A decisão só acontece no touchmove
-  const botaoIcone = e.target.closest('.btn-icone-pequeno');
+  // ícones pequenos, itens de menu (barra de baixo/sidebar) e botões do
+  // cabeçalho: não decide na hora - um TOQUE rápido deixa o clique
+  // funcionar normal (trocar de aba, abrir perfil), mas se virar ARRASTO
+  // de verdade, continua como traço - dá liberdade total pra desenhar em
+  // cima de qualquer coisa, sem perder a navegação normal com toque rápido
+  const botaoIcone = e.target.closest('.btn-icone-pequeno, .nav-item, .topbar button, .topbar [onclick]');
   if(botaoIcone){
     vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier};
     return;
@@ -3532,8 +3613,17 @@ document.addEventListener('touchmove', (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = touch.clientX - rect.left, y = touch.clientY - rect.top;
 
-  vfCtxDesenho.globalCompositeOperation = vfModoBorracha ? 'destination-out' : 'source-over';
-  vfCtxDesenho.strokeStyle = vfCorDesenhoAtual;
+  if(vfModoDestaque){
+    // multiply é o jeito certo de simular marca-texto de verdade - escurece
+    // o que já está desenhado por baixo, em vez de só sobrepor uma cor sólida
+    vfCtxDesenho.globalCompositeOperation = 'multiply';
+    vfCtxDesenho.strokeStyle = vfCorDestaqueAtual;
+    vfCtxDesenho.globalAlpha = vfOpacidadeDestaqueAtual;
+  }else{
+    vfCtxDesenho.globalCompositeOperation = vfModoBorracha ? 'destination-out' : 'source-over';
+    vfCtxDesenho.strokeStyle = vfCorDesenhoAtual;
+    vfCtxDesenho.globalAlpha = 1;
+  }
   let espessuraFinal = vfEspessuraDesenhoAtual;
   const forcaBruta = typeof touch.force === 'number' && touch.force > 0 ? touch.force : 0.5;
   // suaviza a força entre um touchmove e outro (média móvel exponencial) -
@@ -3541,7 +3631,12 @@ document.addEventListener('touchmove', (e) => {
   // força reportada oscilar rápido, deixa a transição mais orgânica
   vfForcaSuavizada = vfForcaSuavizada * 0.7 + forcaBruta * 0.3;
   const forca = vfForcaSuavizada;
-  if(vfModoBorracha){
+  if(vfModoDestaque){
+    // marca-texto de verdade não varia muito de espessura com a força -
+    // é uma ponta chata e larga, diferente da caneta. Usa o valor real do
+    // slider do painel, não mais um número fixo
+    espessuraFinal = vfEspessuraDestaqueAtual + forca * 4;
+  }else if(vfModoBorracha){
     // usa o tamanho escolhido no painel Borracha — Total borra mais forte
     // (multiplicador maior) que Parcial, e ainda responde um pouco à força
     const multiplicadorModo = vfModoErasePDF === 'total' ? 1.3 : 0.85;
@@ -3642,6 +3737,7 @@ function vfRestaurarEstadoHistoricoVF(dataUrl){
     // Essa era a causa real do desfazer "parecer" apagar tudo em vez de
     // restaurar: a imagem restaurada simplesmente nunca era pintada
     vfCtxDesenho.globalCompositeOperation = 'source-over';
+    vfCtxDesenho.globalAlpha = 1; // mesma lição do bug do modo "apagar" - o destaque deixa alpha reduzido, precisa resetar antes de restaurar
     vfCtxDesenho.drawImage(img, 0, 0, canvas.width/dpr, canvas.height/dpr);
     vfAtualizarBotoesHistoricoVF();
   };
@@ -3726,6 +3822,45 @@ function vfLimparHistoricoVF(){
 // sessão, limpa o canvas, e um botãozinho no resultado deixa rever depois
 // se quiser
 // varre os pixels pra achar só a área que tem desenho de verdade (não
+// varre os pixels pra achar só a área que tem desenho de verdade (não
+// transparente), e recorta só ela - em vez de guardar o quadro inteiro
+// (que na maioria das vezes está quase todo vazio). Usado pelo Salvar
+// deliberado (Estudar/Corrigir depois) - captura highlight + caneta juntos,
+// já que os dois vivem no mesmo canvas
+function vfRecortarAreaDesenhadaVF(canvas){
+  const ctx = canvas.getContext('2d');
+  const { width, height } = canvas;
+  const dados = ctx.getImageData(0, 0, width, height).data;
+  let minX = width, minY = height, maxX = 0, maxY = 0;
+  let achouAlgo = false;
+  const PASSO = 2; // varre de 2 em 2 pixels pra ir mais rápido
+  for(let y = 0; y < height; y += PASSO){
+    for(let x = 0; x < width; x += PASSO){
+      const alpha = dados[(y * width + x) * 4 + 3];
+      if(alpha > 10){
+        achouAlgo = true;
+        if(x < minX) minX = x;
+        if(x > maxX) maxX = x;
+        if(y < minY) minY = y;
+        if(y > maxY) maxY = y;
+      }
+    }
+  }
+  if(!achouAlgo) return null; // nada desenhado de verdade
+  const PADDING = 24;
+  minX = Math.max(0, minX - PADDING);
+  minY = Math.max(0, minY - PADDING);
+  maxX = Math.min(width, maxX + PADDING);
+  maxY = Math.min(height, maxY + PADDING);
+  const larguraRecorte = maxX - minX, alturaRecorte = maxY - minY;
+  const canvasRecorte = document.createElement('canvas');
+  canvasRecorte.width = larguraRecorte;
+  canvasRecorte.height = alturaRecorte;
+  const ctxRecorte = canvasRecorte.getContext('2d');
+  ctxRecorte.drawImage(canvas, minX, minY, larguraRecorte, alturaRecorte, 0, 0, larguraRecorte, alturaRecorte);
+  return canvasRecorte.toDataURL();
+}
+
 function vfSalvarEClimparAnotacaoVF(entrada){
   const canvas = document.getElementById('vf-canvas-desenho');
   if(!canvas || !vfCtxDesenho || vfIndiceHistoricoVF < 0) return; // nada desenhado, nada a fazer
@@ -3781,12 +3916,47 @@ function vfAtualizarTextoTimerSessaoVF(){
   span.textContent = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
+async function vfAbrirFavoritosVF(){
+  const el = document.getElementById('vf-lista-favoritos');
+  el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
+  document.getElementById('pagina-favoritos-vf').classList.remove('hidden');
+  const {data, error} = await sb.from('favoritos_vf')
+    .select('id, criado_em, questao_vf_id, questoes_vf(texto, bibliografia(titulo))')
+    .eq('usuario_id', usuarioAtual.id)
+    .order('criado_em', {ascending: false});
+  if(error){ el.innerHTML = '<p style="color:#A32D2D;text-align:center;padding:20px 0">Erro ao carregar.</p>'; return; }
+  if(!data || !data.length){ el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Nenhuma questão favoritada ainda.</p>'; return; }
+  el.innerHTML = data.map(f => {
+    const publicacao = f.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
+    const dataFormatada = new Date(f.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
+    return `
+      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${f.questao_vf_id}')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div>
+            <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
+            <p style="color:#999;font-size:var(--fs-a);margin:2px 0 0 0">${dataFormatada}</p>
+          </div>
+          <button class="btn-icone-pequeno" onclick="event.stopPropagation();vfDesfavoritarDaListaVF('${f.id}','${f.questao_vf_id}')" title="Desfavoritar">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
+          </button>
+        </div>
+        ${f.questoes_vf?.texto ? `<p style="color:#666;font-size:var(--fs-b);margin:6px 0 0 0;line-height:1.4">${escapeHtml(f.questoes_vf.texto)}</p>` : ''}
+      </div>`;
+  }).join('');
+}
+
+async function vfDesfavoritarDaListaVF(favoritoId, questaoVfId){
+  await sb.from('favoritos_vf').delete().eq('id', favoritoId);
+  favoritosVF.delete(questaoVfId);
+  vfAbrirFavoritosVF(); // recarrega a lista
+}
+
 async function vfAbrirFlashSalvosVF(){
   const el = document.getElementById('vf-lista-flash-salvos');
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
   document.getElementById('pagina-flash-salvos-vf').classList.remove('hidden');
   const {data, error} = await sb.from('flashs_salvos_vf')
-    .select('id, motivo, criado_em, questao_vf_id, questoes_vf(texto, bibliografia(titulo))')
+    .select('id, motivo, criado_em, imagem_anotacao, questao_vf_id, questoes_vf(texto, bibliografia(titulo))')
     .eq('usuario_id', usuarioAtual.id)
     .order('criado_em', {ascending: false});
   if(error){ el.innerHTML = '<p style="color:#A32D2D;text-align:center;padding:20px 0">Erro ao carregar.</p>'; return; }
@@ -3810,6 +3980,7 @@ async function vfAbrirFlashSalvosVF(){
           </button>
         </div>
         ${s.questoes_vf?.texto ? `<p style="color:#666;font-size:var(--fs-b);margin:6px 0 0 0;line-height:1.4">${escapeHtml(s.questoes_vf.texto)}</p>` : ''}
+        ${s.imagem_anotacao ? `<img src="${s.imagem_anotacao}" style="width:100%;border-radius:8px;border:0.5px solid #eee;background:#fff;margin-top:10px" alt="O que foi marcado nessa questão">` : ''}
       </div>`;
   }
 
@@ -3832,6 +4003,7 @@ async function vfAbrirFlashSalvosVF(){
 
 function vfIrParaQuestaoSalvaVF(questaoVfId){
   document.getElementById('pagina-flash-salvos-vf').classList.add('hidden');
+  document.getElementById('pagina-favoritos-vf').classList.add('hidden');
   const indice = estadoVF.historico.findIndex(h => h.item.id === questaoVfId);
   if(indice >= 0){
     estadoVF.posicao = indice;
@@ -3875,8 +4047,17 @@ async function vfSalvarFlashComMotivoVF(motivo){
   const questaoId = document.getElementById('vf-escolha-motivo-questao-id').value;
   fecharModal('modal-escolha-motivo-salvar-vf');
   if(!questaoId) return;
+  // captura o que estiver marcado (highlight + caneta, os dois vivem no
+  // mesmo canvas) - só faz sentido guardar aqui porque é uma decisão
+  // deliberada de salvar, não um rabisco de raciocínio no meio da questão
+  const canvas = document.getElementById('vf-canvas-desenho');
+  const imagemAnotacao = (canvas && vfCtxDesenho && vfIndiceHistoricoVF >= 0) ? vfRecortarAreaDesenhadaVF(canvas) : null;
+  const dadosParaSalvar = {usuario_id: usuarioAtual.id, questao_vf_id: questaoId, motivo};
+  // só inclui a imagem se tiver uma nova de verdade - senão o upsert ia
+  // sobrescrever com null uma imagem que já estava salva de um save anterior
+  if(imagemAnotacao) dadosParaSalvar.imagem_anotacao = imagemAnotacao;
   const {error} = await sb.from('flashs_salvos_vf')
-    .upsert({usuario_id: usuarioAtual.id, questao_vf_id: questaoId, motivo}, {onConflict: 'usuario_id,questao_vf_id'});
+    .upsert(dadosParaSalvar, {onConflict: 'usuario_id,questao_vf_id'});
   if(error){ alert('Erro ao salvar: '+error.message); return; }
   flashsSalvosVF.set(questaoId, motivo);
   renderizarItemVF(); // atualiza o ícone preenchido na hora
@@ -3922,6 +4103,7 @@ function mostrarBarraDesenhoVF(){
   document.body.classList.add('vf-desenho-ativo');
   vfRestaurarPosicaoBarraVF();
   vfRecolorirIconeMarcador(vfCorDesenhoAtual);
+  vfRecolorirIconeDestaqueVF(vfCorDestaqueAtual);
 }
 
 // restaura a posição que ficou salva da última vez que a barrinha foi
@@ -4049,24 +4231,38 @@ function fecharBarraDesenhoVF(){
 // clica pra configurar
 function selecionarFerramentaCanetaVF(){
   vfModoBorracha = false;
+  vfModoDestaque = false;
   vfAtualizarEstiloBotaoBorracha();
   document.getElementById('vf-painel-caneta').classList.add('hidden');
   document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
 }
 
 function selecionarFerramentaBorrachaVF(){
   vfModoBorracha = true;
+  vfModoDestaque = false;
   vfAtualizarEstiloBotaoBorracha();
   document.getElementById('vf-painel-caneta').classList.add('hidden');
   document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
+}
+
+function selecionarFerramentaDestaqueVF(){
+  vfModoBorracha = false;
+  vfModoDestaque = true;
+  vfAtualizarEstiloBotaoBorracha();
+  document.getElementById('vf-painel-caneta').classList.add('hidden');
+  document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
 }
 
 // clicar na BOLINHA (só existe/aparece quando a ferramenta já está
 // selecionada) abre/fecha o painel de configuração daquela ferramenta
 function abrirPainelCanetaVF(){
-  if(vfModoBorracha) return; // segurança - a bolinha só devia aparecer clicável quando ativa
+  if(vfModoBorracha || vfModoDestaque) return; // segurança - a bolinha só devia aparecer clicável quando ativa
   const painel = document.getElementById('vf-painel-caneta');
   document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
   painel.classList.toggle('hidden');
   if(!painel.classList.contains('hidden')) vfReposicionarPainelSobreBarraVF();
 }
@@ -4075,6 +4271,16 @@ function abrirPainelBorrachaVF(){
   if(!vfModoBorracha) return;
   const painel = document.getElementById('vf-painel-borracha');
   document.getElementById('vf-painel-caneta').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
+  painel.classList.toggle('hidden');
+  if(!painel.classList.contains('hidden')) vfReposicionarPainelSobreBarraVF();
+}
+
+function abrirPainelDestaqueVF(){
+  if(!vfModoDestaque) return;
+  const painel = document.getElementById('vf-painel-destaque');
+  document.getElementById('vf-painel-caneta').classList.add('hidden');
+  document.getElementById('vf-painel-borracha').classList.add('hidden');
   painel.classList.toggle('hidden');
   if(!painel.classList.contains('hidden')) vfReposicionarPainelSobreBarraVF();
 }
@@ -4131,6 +4337,31 @@ function vfRecolorirIconeMarcador(corAlvoHex){
       const hsl = vfHexParaHSL(path.dataset.corOriginal);
       const deltaS = hsl.s - principal.s; // 0 pra a própria principal
       const deltaL = hsl.l - principal.l; // 0 pra a própria principal
+      const novaSaturacao = Math.min(100, Math.max(0, alvo.s + deltaS));
+      const novaLuminosidade = Math.min(100, Math.max(0, alvo.l + deltaL));
+      path.setAttribute('fill', vfHslParaHex(alvo.h, novaSaturacao, novaLuminosidade));
+    });
+  });
+}
+
+// mesma lógica da caneta, mas com classe própria (.vf-tinta-destaque) -
+// isolado de propósito. Se reaproveitasse .vf-tinta-marcador, chamar essa
+// função pra recolorir o highlight ia RECOLORIR A CANETA JUNTO (a função
+// busca por classe em TODO o DOM, não só dentro de um ícone específico)
+function vfRecolorirIconeDestaqueVF(corAlvoHex){
+  const alvo = vfHexParaHSL(corAlvoHex);
+  const grupos = new Map();
+  document.querySelectorAll('.vf-tinta-destaque').forEach(path => {
+    const svgPai = path.closest('svg');
+    if(!grupos.has(svgPai)) grupos.set(svgPai, []);
+    grupos.get(svgPai).push(path);
+  });
+  grupos.forEach(paths => {
+    const principal = vfHexParaHSL(paths[0].dataset.corOriginal);
+    paths.forEach(path => {
+      const hsl = vfHexParaHSL(path.dataset.corOriginal);
+      const deltaS = hsl.s - principal.s;
+      const deltaL = hsl.l - principal.l;
       const novaSaturacao = Math.min(100, Math.max(0, alvo.s + deltaS));
       const novaLuminosidade = Math.min(100, Math.max(0, alvo.l + deltaL));
       path.setAttribute('fill', vfHslParaHex(alvo.h, novaSaturacao, novaLuminosidade));
@@ -4346,35 +4577,56 @@ function selecionarTamanhoBorrachaVF(tamanho){
   });
 }
 
+// ---- painel do Marcador/Highlight - cor, espessura, opacidade ----
+function selecionarCorDestaqueVF(cor){
+  vfCorDestaqueAtual = cor;
+  document.querySelectorAll('.vf-cor-destaque').forEach(btn => {
+    btn.style.boxShadow = btn.dataset.cor === cor ? '0 0 0 2px #5B9BD5' : 'none';
+  });
+  document.getElementById('vf-preview-espessura-destaque').style.background = cor;
+  document.getElementById('vf-slider-espessura-destaque').style.accentColor = cor;
+  // as prévias de opacidade mostram a cor escolhida, não fica travado no amarelo
+  document.querySelectorAll('.vf-opacidade-destaque span span').forEach(prev => { prev.style.background = cor; });
+  const swatch100 = document.querySelector('.vf-opacidade-destaque[data-opacidade="1"] span');
+  if(swatch100) swatch100.style.background = cor;
+  // o ícone da ferramenta na barrinha segue a cor escolhida de verdade,
+  // mesma técnica de girar a matiz usada na caneta
+  vfRecolorirIconeDestaqueVF(cor);
+}
+
+function mudarEspessuraSliderDestaqueVF(valor){
+  vfEspessuraDestaqueAtual = Number(valor);
+  document.getElementById('vf-espessura-valor-destaque').textContent = `${valor} pt`;
+}
+
+function selecionarOpacidadeDestaqueVF(opacidade){
+  vfOpacidadeDestaqueAtual = opacidade;
+  document.querySelectorAll('.vf-opacidade-destaque').forEach(btn => {
+    btn.style.borderColor = Number(btn.dataset.opacidade) === opacidade ? '#5B9BD5' : '#ddd';
+  });
+}
+
 // alterna o fundo azul entre o grupo Caneta e a Borracha - só um dos dois
 // fica marcado como ativo por vez, nunca os dois juntos
 function vfAtualizarEstiloBotaoBorracha(){
   const grupoCaneta = document.getElementById('vf-grupo-caneta');
   const grupoBorracha = document.getElementById('vf-grupo-borracha');
+  const grupoDestaque = document.getElementById('vf-grupo-destaque');
   const swatchCanetaBtn = document.getElementById('vf-swatch-cor-atual-btn');
   const circuloBorrachaBtn = document.getElementById('vf-circulo-borracha-btn');
-  if(!grupoCaneta || !grupoBorracha || !swatchCanetaBtn || !circuloBorrachaBtn) return;
-  if(vfModoBorracha){
-    grupoCaneta.style.background = 'none';
-    grupoCaneta.style.gap = '0px';
-    swatchCanetaBtn.style.width = '0px';
-    swatchCanetaBtn.style.opacity = '0';
+  const circuloDestaqueBtn = document.getElementById('vf-circulo-destaque-btn');
+  if(!grupoCaneta || !grupoBorracha || !grupoDestaque || !swatchCanetaBtn || !circuloBorrachaBtn || !circuloDestaqueBtn) return;
 
-    grupoBorracha.style.background = '#D2E7FA';
-    grupoBorracha.style.gap = '10px';
-    circuloBorrachaBtn.style.width = '20px';
-    circuloBorrachaBtn.style.opacity = '1';
-  }else{
-    grupoBorracha.style.background = 'none';
-    grupoBorracha.style.gap = '0px';
-    circuloBorrachaBtn.style.width = '0px';
-    circuloBorrachaBtn.style.opacity = '0';
-
-    grupoCaneta.style.background = '#D2E7FA';
-    grupoCaneta.style.gap = '10px';
-    swatchCanetaBtn.style.width = '22px';
-    swatchCanetaBtn.style.opacity = '1';
+  function aplicar(grupo, circulo, ativo, larguraCirculo){
+    grupo.style.background = ativo ? '#D2E7FA' : 'none';
+    grupo.style.gap = ativo ? '10px' : '0px';
+    circulo.style.width = ativo ? larguraCirculo : '0px';
+    circulo.style.opacity = ativo ? '1' : '0';
   }
+
+  aplicar(grupoCaneta, swatchCanetaBtn, !vfModoBorracha && !vfModoDestaque, '22px');
+  aplicar(grupoBorracha, circuloBorrachaBtn, vfModoBorracha, '20px');
+  aplicar(grupoDestaque, circuloDestaqueBtn, vfModoDestaque, '20px');
 }
 
 // chamada sempre que a questão muda de verdade (próxima/anterior/nova) —
@@ -4779,26 +5031,21 @@ function renderizarItemVF(){
   if(jaRespondida){
     const cor = entrada.acertou ? '#3B6D11' : '#A32D2D';
     const textoResultado = `${entrada.acertou ? 'Acertou!' : 'Errou!'} É ${item.resposta ? 'VERDADEIRO' : 'FALSO'}`;
-    const atributosEdicaoCorrecao = souCarlos() ? `id="vf-correcao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarCorrecao()" ontouchend="vfCancelarPressionarCorrecao()" ontouchmove="vfCancelarPressionarCorrecao()" onmousedown="vfIniciarPressionarCorrecao()" onmouseup="vfCancelarPressionarCorrecao()" onmouseleave="vfCancelarPressionarCorrecao()"` : `id="vf-correcao-atual"`;
+    const atributosEdicaoCorrecao = `id="vf-correcao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarCorrecao()" ontouchend="vfSoltarPressionarCorrecao()" ontouchmove="vfCancelarPressionarCorrecaoSilencioso()" onmousedown="vfIniciarPressionarCorrecao()" onmouseup="vfSoltarPressionarCorrecao()" onmouseleave="vfCancelarPressionarCorrecaoSilencioso()"`;
     const botaoAnotacao = entrada.anotacaoDataUrl ? `
-        <button class="btn-icone-pequeno" style="width:34px;height:34px;border-radius:9px" onclick="vfAbrirAnotacaoSalvaVF()" title="Ver o que você escreveu">
+        <button class="btn-icone-pequeno" style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="vfAbrirAnotacaoSalvaVF()" title="Ver o que você escreveu">
           <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
         </button>` : '';
     blocoResultado = `
       <div style="height:1px;background:#eee;margin:14px 0"></div>
       <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:34px">
-        <div style="position:absolute;left:0;top:50%;transform:translateY(-50%);display:flex;gap:2px">
-          ${botaoAnotacao}
-          <button class="btn-icone-pequeno" style="width:34px;height:34px;border-radius:9px;position:relative" onclick="vfCopiarAfirmacaoVerdadeiraVF('${item.id}', this)" title="Copiar afirmação verdadeira">
-            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          </button>
-        </div>
+        ${botaoAnotacao}
         <span style="font-weight:700;font-size:16px;text-align:center;color:${cor};letter-spacing:.02em">${textoResultado}</span>
         <button class="btn-icone-pequeno" style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="abrirExplicacaoVF('${item.id}')" title="Ver explicação">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
       </div>
-      ${!item.resposta ? `<div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;color:#111;margin-top:14px;text-align:left;font-weight:400" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
+      ${!item.resposta ? `<div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;color:#111;margin-top:14px;text-align:left;font-weight:400;position:relative" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
     `;
   }
 
@@ -4826,7 +5073,7 @@ function renderizarItemVF(){
         </div>
         ${tagsPublicacao ? `<div style="display:flex;gap:6px;flex-shrink:0">${tagsPublicacao}</div>` : ''}
       </div>
-      <div class="enunciado" id="vf-enunciado-atual" style="margin-top:10px" ${souCarlos() && jaRespondida ? `data-editavel-vf="1" ontouchstart="vfIniciarPressionarEnunciado()" ontouchend="vfCancelarPressionarEnunciado()" ontouchmove="vfCancelarPressionarEnunciado()" onmousedown="vfIniciarPressionarEnunciado()" onmouseup="vfCancelarPressionarEnunciado()" onmouseleave="vfCancelarPressionarEnunciado()"` : ''}>${formatarTextoItemVF(item.texto)}</div>
+      <div class="enunciado" id="vf-enunciado-atual" style="margin-top:10px;position:relative" ${jaRespondida ? `data-editavel-vf="1" ontouchstart="vfIniciarPressionarEnunciado()" ontouchend="vfSoltarPressionarEnunciado()" ontouchmove="vfCancelarPressionarEnunciadoSilencioso()" onmousedown="vfIniciarPressionarEnunciado()" onmouseup="vfSoltarPressionarEnunciado()" onmouseleave="vfCancelarPressionarEnunciadoSilencioso()"` : ''}>${formatarTextoItemVF(item.texto)}</div>
       ${blocoResultado}
     </div>
   `;
@@ -4843,16 +5090,37 @@ function renderizarItemVF(){
 let vfTimerPressionarEnunciado = null;
 const VF_DURACAO_PRESSIONAR_ENUNCIADO_MS = 500;
 
+let vfMoveuDuranteToqueEnunciado = false;
 function vfIniciarPressionarEnunciado(){
+  vfMoveuDuranteToqueEnunciado = false;
   clearTimeout(vfTimerPressionarEnunciado);
-  vfTimerPressionarEnunciado = setTimeout(() => {
-    vfTimerPressionarEnunciado = null;
-    vfIniciarEdicaoEnunciadoVF();
-  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+  if(souCarlos()){
+    vfTimerPressionarEnunciado = setTimeout(() => {
+      vfTimerPressionarEnunciado = null;
+      vfIniciarEdicaoEnunciadoVF();
+    }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+  }
 }
-function vfCancelarPressionarEnunciado(){
+// usado no touchmove/mouseleave - moveu ou saiu = não é toque limpo, só
+// cancela a espera de edição, NÃO copia (senão um arrasto/scroll ia
+// disparar cópia sem querer)
+function vfCancelarPressionarEnunciadoSilencioso(){
+  vfMoveuDuranteToqueEnunciado = true;
   clearTimeout(vfTimerPressionarEnunciado);
   vfTimerPressionarEnunciado = null;
+}
+// usado no touchend/mouseup - se a edição não tinha entrado (nem começou
+// a virar edição, nem já virou) e não houve movimento no meio, foi um
+// toque limpo -> copia. Funciona tanto pro Carlos (toque rápido) quanto
+// pra qualquer outro usuário (nunca vira edição, então qualquer toque
+// limpo copia)
+function vfSoltarPressionarEnunciado(){
+  clearTimeout(vfTimerPressionarEnunciado);
+  vfTimerPressionarEnunciado = null;
+  const div = document.getElementById('vf-enunciado-atual');
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueEnunciado){
+    vfCopiarTextoElementoVF(div, div.textContent);
+  }
 }
 
 function vfIniciarEdicaoEnunciadoVF(){
@@ -4916,28 +5184,27 @@ async function vfSalvarEdicaoEnunciadoVF(questaoId, textoOriginal){
 
 // copia só a afirmação verdadeira (o texto original se a questão é
 // verdadeira, ou a correção se for falsa) - rápido, sem formatação extra
-async function vfCopiarAfirmacaoVerdadeiraVF(questaoId, botao){
-  const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
-  if(!entrada) return;
-  const item = entrada.item;
-  const afirmacaoVerdadeira = item.resposta ? item.texto : (item.correcao || item.texto);
+// copia o texto exato passado (não precisa mais buscar "afirmação
+// verdadeira" com lógica própria - agora cada bloco de texto copia
+// exatamente o que está escrito nele mesmo)
+async function vfCopiarTextoElementoVF(elemento, texto){
   try{
-    await navigator.clipboard.writeText(afirmacaoVerdadeira);
-    vfMostrarSelinhoCopiadoVF(botao);
+    await navigator.clipboard.writeText(texto.trim());
+    vfMostrarSelinhoCopiadoVF(elemento);
   }catch(e){
     alert('Não consegui copiar automaticamente. Tenta selecionar o texto manualmente.');
   }
 }
 
-// selinho de texto "Copiado" flutuando acima do botão, estilo apps de
-// banco - some sozinho depois de um tempo, sem trocar o ícone do botão
-function vfMostrarSelinhoCopiadoVF(botao){
-  botao.querySelector('.vf-selinho-copiado')?.remove(); // se já tinha um preso de um clique rápido anterior
+// selinho de texto "Copiado" flutuando acima do elemento, estilo apps de
+// banco - some sozinho depois de um tempo
+function vfMostrarSelinhoCopiadoVF(elemento){
+  elemento.querySelector(':scope > .vf-selinho-copiado')?.remove(); // se já tinha um preso de um toque anterior
   const selinho = document.createElement('span');
   selinho.className = 'vf-selinho-copiado';
   selinho.textContent = 'Copiado';
-  selinho.style.cssText = 'position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:6px;background:#111;color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.15s ease;z-index:1';
-  botao.appendChild(selinho);
+  selinho.style.cssText = 'position:absolute;top:-8px;left:50%;transform:translate(-50%,-100%);background:#111;color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.15s ease;z-index:2';
+  elemento.appendChild(selinho);
   requestAnimationFrame(() => { selinho.style.opacity = '1'; });
   setTimeout(() => {
     selinho.style.opacity = '0';
@@ -4948,16 +5215,29 @@ function vfMostrarSelinhoCopiadoVF(botao){
 // ---- editar a correção ("Correto:") segurando nela, mesmo sistema já
 // usado no enunciado e na explicação ----
 let vfTimerPressionarCorrecao = null;
+let vfMoveuDuranteToqueCorrecao = false;
 function vfIniciarPressionarCorrecao(){
+  vfMoveuDuranteToqueCorrecao = false;
   clearTimeout(vfTimerPressionarCorrecao);
-  vfTimerPressionarCorrecao = setTimeout(() => {
-    vfTimerPressionarCorrecao = null;
-    vfIniciarEdicaoCorrecaoVF();
-  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+  if(souCarlos()){
+    vfTimerPressionarCorrecao = setTimeout(() => {
+      vfTimerPressionarCorrecao = null;
+      vfIniciarEdicaoCorrecaoVF();
+    }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+  }
 }
-function vfCancelarPressionarCorrecao(){
+function vfCancelarPressionarCorrecaoSilencioso(){
+  vfMoveuDuranteToqueCorrecao = true;
   clearTimeout(vfTimerPressionarCorrecao);
   vfTimerPressionarCorrecao = null;
+}
+function vfSoltarPressionarCorrecao(){
+  clearTimeout(vfTimerPressionarCorrecao);
+  vfTimerPressionarCorrecao = null;
+  const div = document.getElementById('vf-correcao-atual');
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueCorrecao){
+    vfCopiarTextoElementoVF(div, div.textContent);
+  }
 }
 
 function vfIniciarEdicaoCorrecaoVF(){
@@ -5016,7 +5296,7 @@ function renderizarBarraFixaVF(item, jaRespondida){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         <span>Excluir</span>
       </button>
-      <button class="banco-acao-btn ${favoritosVF.has(item.id)?'favoritada':''}" onclick="toggleFavoritoVF('${item.id}')">
+      <button class="banco-acao-btn ${favoritosVF.has(item.id)?'favoritada':''}" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar()" ontouchend="vfCancelarPressionarFavoritar()" ontouchmove="vfCancelarPressionarFavoritar()" onmousedown="vfIniciarPressionarFavoritar()" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
         <svg viewBox="0 0 24 24" fill="${favoritosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
         <span>Favoritar</span>
       </button>
@@ -5108,13 +5388,53 @@ async function responderVF(resposta){
   if(rpcResultado?.data != null) estadoVF.contadorGlobal = Math.max(estadoVF.contadorGlobal, rpcResultado.data);
 }
 
+// toque longo no botão Favoritar abre a lista de favoritos - toque normal
+// continua favoritando/desfavoritando como sempre foi
+let vfTimerPressionarFavoritar = null;
+let vfFoiToqueLongoFavoritar = false;
+function vfIniciarPressionarFavoritar(){
+  vfFoiToqueLongoFavoritar = false;
+  clearTimeout(vfTimerPressionarFavoritar);
+  vfTimerPressionarFavoritar = setTimeout(() => {
+    vfTimerPressionarFavoritar = null;
+    vfFoiToqueLongoFavoritar = true;
+    vfAbrirFavoritosVF();
+  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+}
+function vfCancelarPressionarFavoritar(){
+  clearTimeout(vfTimerPressionarFavoritar);
+  vfTimerPressionarFavoritar = null;
+}
+
 async function toggleFavoritoVF(questaoVfId){
+  if(vfFoiToqueLongoFavoritar){
+    // o toque longo já abriu a lista - esse clique é só a "sobra" do
+    // mesmo toque, não é pra alternar o favorito também
+    vfFoiToqueLongoFavoritar = false;
+    return;
+  }
   if(favoritosVF.has(questaoVfId)){
     await sb.from('favoritos_vf').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
     favoritosVF.delete(questaoVfId);
+    // o boost de fila (VF_ALGO.BOOST_FAVORITO) já some sozinho ao checar
+    // favoritosVF.has() de novo - não precisa desfazer nada aqui. O
+    // encolhimento de intervalo (efeito imediato de quando favoritou)
+    // também NUNCA é desfeito - vira só uma revisão a mais que aconteceu,
+    // inofensivo, o Fable foi claro nisso
   }else{
     await sb.from('favoritos_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoVfId});
     favoritosVF.add(questaoVfId);
+    // efeito imediato, uma vez só: "acertei, mas fiquei ressabiado" - se
+    // está em revisão com intervalo > 24h, encolhe pra 24h (equivalente ao
+    // botão "Hard" do Anki). NÃO mexe em fator nem em degraus, só puxa a
+    // próxima aparição pra amanhã em vez de daqui a dias
+    const entrada = estadoVF.historico.find(h => h.item.id === questaoVfId);
+    const item = entrada?.item;
+    if(item && item.estado === 'revisao' && item.intervalo_horas > 24){
+      item.intervalo_horas = 24;
+      const {error} = await sb.from('repeticao_vf').update({intervalo_horas: 24}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
+      if(error) console.error('erro ao encolher intervalo do favorito:', error);
+    }
   }
   renderizarItemVF();
 }
