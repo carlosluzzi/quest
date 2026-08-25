@@ -867,7 +867,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
         <!-- renderizado dinamicamente por vfRenderizarGradeCoresVF - sempre
         7 posições, espaçadas de ponta a ponta (justify-content:space-between) -->
-        <div id="vf-grade-cores-caneta" style="display:flex;justify-content:space-between;align-items:center"></div>
+        <div id="vf-grade-cores-caneta" style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;justify-items:center"></div>
       </div>
 
       <div style="margin-top:16px">
@@ -944,7 +944,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
 
       <div>
         <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
-        <div id="vf-grade-cores-destaque" style="display:flex;justify-content:space-between;align-items:center"></div>
+        <div id="vf-grade-cores-destaque" style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;justify-items:center"></div>
       </div>
 
       <div style="margin-top:16px">
@@ -982,7 +982,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     <div id="vf-painel-marcacao-texto" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:10000;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
       <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
       <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Cor</div>
-      <div id="vf-grade-cores-marcacao-texto" style="display:flex;justify-content:space-between;align-items:center"></div>
+      <div id="vf-grade-cores-marcacao-texto" style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;justify-items:center"></div>
     </div>
     <div id="vf-barra-fixa" class="vf-barra-fixa hidden"></div>
   </div>
@@ -1429,7 +1429,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-269';
+const VERSAO_APP = '2026-07-25-271';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4041,12 +4041,12 @@ function vfRestaurarEstadoMarcacaoTextoVF(estado){
 }
 
 let vfSequenciaRestauracaoVF = 0; // protege contra 2 restaurações se cruzando se clicar rápido demais
-function vfRestaurarEstadoHistoricoVF(dataUrl){
+function vfRestaurarEstadoHistoricoVF(estado){
   const canvas = document.getElementById('vf-canvas-desenho');
   if(!canvas || !vfCtxDesenho) return;
   const dpr = (window.devicePixelRatio || 1) * 1.5;
   const minhaSequencia = ++vfSequenciaRestauracaoVF;
-  if(!dataUrl){
+  if(!estado){
     // não tem nenhum estado anterior - só limpa mesmo (volta ao vazio)
     vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
     vfAtualizarBotoesHistoricoVF();
@@ -4070,35 +4070,65 @@ function vfRestaurarEstadoHistoricoVF(dataUrl){
     vfCtxDesenho.drawImage(img, 0, 0, canvas.width/dpr, canvas.height/dpr);
     vfAtualizarBotoesHistoricoVF();
   };
-  img.src = dataUrl;
+  img.src = estado.dataUrl;
 }
 
+// desfazer/refazer decide ENTRE os dois sistemas (desenho no canvas e
+// marcação de texto no DOM) qual foi a ação mais recente, comparando os
+// timestamps guardados em cada histórico - antes só existia o do
+// desenho, então grifar/sublinhar/riscar nunca eram desfeitos por aqui
 let vfUltimoDesfazerRefazerMs = 0; // debounce contra disparo duplo (reforço de clique da caneta + clique nativo no mesmo toque)
 function vfDesfazerDesenho(){
   const agora = Date.now();
   if(agora - vfUltimoDesfazerRefazerMs < 250) return;
   vfUltimoDesfazerRefazerMs = agora;
-  if(vfIndiceHistoricoVF < 0) return;
-  vfIndiceHistoricoVF--;
-  const estadoAnterior = vfIndiceHistoricoVF >= 0 ? vfHistoricoDesenho[vfIndiceHistoricoVF] : null;
-  vfRestaurarEstadoHistoricoVF(estadoAnterior);
+
+  const topoDesenho = vfIndiceHistoricoVF >= 0 ? vfHistoricoDesenho[vfIndiceHistoricoVF] : null;
+  const topoTexto = vfIndiceHistoricoMarcacaoTexto >= 0 ? vfHistoricoMarcacaoTexto[vfIndiceHistoricoMarcacaoTexto] : null;
+  if(!topoDesenho && !topoTexto) return; // nada pra desfazer em nenhum dos dois
+
+  // desfaz o sistema com o timestamp mais RECENTE - foi a última coisa feita
+  const desfazerTexto = topoTexto && (!topoDesenho || topoTexto.timestamp > topoDesenho.timestamp);
+  if(desfazerTexto){
+    vfIndiceHistoricoMarcacaoTexto--;
+    const estadoAnterior = vfIndiceHistoricoMarcacaoTexto >= 0 ? vfHistoricoMarcacaoTexto[vfIndiceHistoricoMarcacaoTexto] : null;
+    vfRestaurarEstadoMarcacaoTextoVF(estadoAnterior);
+    vfAtualizarBotoesHistoricoVF();
+  }else{
+    vfIndiceHistoricoVF--;
+    const estadoAnterior = vfIndiceHistoricoVF >= 0 ? vfHistoricoDesenho[vfIndiceHistoricoVF] : null;
+    vfRestaurarEstadoHistoricoVF(estadoAnterior);
+  }
 }
 
 function vfRefazerDesenho(){
   const agora = Date.now();
   if(agora - vfUltimoDesfazerRefazerMs < 250) return;
   vfUltimoDesfazerRefazerMs = agora;
-  if(vfIndiceHistoricoVF >= vfHistoricoDesenho.length - 1) return;
-  vfIndiceHistoricoVF++;
-  vfRestaurarEstadoHistoricoVF(vfHistoricoDesenho[vfIndiceHistoricoVF]);
+
+  const proximoDesenho = vfIndiceHistoricoVF < vfHistoricoDesenho.length - 1 ? vfHistoricoDesenho[vfIndiceHistoricoVF + 1] : null;
+  const proximoTexto = vfIndiceHistoricoMarcacaoTexto < vfHistoricoMarcacaoTexto.length - 1 ? vfHistoricoMarcacaoTexto[vfIndiceHistoricoMarcacaoTexto + 1] : null;
+  if(!proximoDesenho && !proximoTexto) return; // nada pra refazer em nenhum dos dois
+
+  // refaz o sistema cujo próximo passo tem o timestamp mais ANTIGO - foi
+  // a ação desfeita mais recentemente na sequência cronológica original
+  const refazerTexto = proximoTexto && (!proximoDesenho || proximoTexto.timestamp < proximoDesenho.timestamp);
+  if(refazerTexto){
+    vfIndiceHistoricoMarcacaoTexto++;
+    vfRestaurarEstadoMarcacaoTextoVF(vfHistoricoMarcacaoTexto[vfIndiceHistoricoMarcacaoTexto]);
+    vfAtualizarBotoesHistoricoVF();
+  }else{
+    vfIndiceHistoricoVF++;
+    vfRestaurarEstadoHistoricoVF(vfHistoricoDesenho[vfIndiceHistoricoVF]);
+  }
 }
 
 function vfAtualizarBotoesHistoricoVF(){
   const btnDesfazer = document.getElementById('vf-btn-desfazer');
   const btnRefazer = document.getElementById('vf-btn-refazer');
   if(!btnDesfazer || !btnRefazer) return;
-  const podeDesfazer = vfIndiceHistoricoVF >= 0;
-  const podeRefazer = vfIndiceHistoricoVF < vfHistoricoDesenho.length - 1;
+  const podeDesfazer = vfIndiceHistoricoVF >= 0 || vfIndiceHistoricoMarcacaoTexto >= 0;
+  const podeRefazer = vfIndiceHistoricoVF < vfHistoricoDesenho.length - 1 || vfIndiceHistoricoMarcacaoTexto < vfHistoricoMarcacaoTexto.length - 1;
   btnDesfazer.disabled = !podeDesfazer;
   btnDesfazer.style.opacity = podeDesfazer ? '1' : '0.4';
   btnDesfazer.style.color = podeDesfazer ? '#555' : '#ccc';
@@ -4143,6 +4173,8 @@ vfLigarBotaoHistoricoVF('vf-btn-refazer', () => vfRefazerDesenho());
 function vfLimparHistoricoVF(){
   vfHistoricoDesenho = [];
   vfIndiceHistoricoVF = -1;
+  vfHistoricoMarcacaoTexto = [];
+  vfIndiceHistoricoMarcacaoTexto = -1;
   vfAtualizarBotoesHistoricoVF();
 }
 
@@ -4449,9 +4481,9 @@ function mostrarBarraDesenhoVF(){
   barra.classList.remove('hidden');
   document.body.classList.add('vf-desenho-ativo');
   vfRestaurarPosicaoBarraVF();
-  // monta as 3 grades de cor do zero (cores fixas + customizadas salvas +
-  // seletor arco-íris + slots vazios até completar 7) - idempotente,
-  // seguro de chamar toda vez que a barrinha aparece
+  // monta as 3 grades de cor do zero (cores fixas + customizadas salvas
+  // + seletor arco-íris) - idempotente, seguro de chamar toda vez que a
+  // barrinha aparece
   vfRenderizarGradeCoresVF('vf-grade-cores-caneta', vfCorDesenhoAtual);
   vfRenderizarGradeCoresVF('vf-grade-cores-destaque', vfCorDestaqueAtual);
   vfRenderizarGradeCoresVF('vf-grade-cores-marcacao-texto', vfCorMarcacaoTextoAtual);
@@ -4843,11 +4875,12 @@ function vfCriarSpanMarcaVF(tipo, cor, range){
   }
 }
 
-// regras: passar por cima de uma marca JÁ existente do MESMO tipo, com a
-// MESMA cor, sem tocar texto novo nenhum -> remove a marcação (toggle
-// off). Passar por cima com cor DIFERENTE -> só substitui a cor. Passar
-// começando de dentro de uma marca já existente mas esticando pra texto
-// novo -> funde tudo numa marca só, contínua (estender)
+// regras aplicadas POR TRECHO de texto (não na marca inteira) - passar a
+// MESMA cor por cima de uma marca já existente remove SÓ ONDE PASSOU (se
+// a marca tinha "duas palavras" e só uma foi tocada, só essa vira texto
+// puro de novo, a outra continua marcada). Passar cor DIFERENTE troca a
+// cor SÓ ONDE PASSOU. Passar por texto sem marca nenhuma adiciona a marca
+// só ali. Nenhuma dessas ações nunca mexe no texto FORA do trecho tocado
 function vfAplicarMarcacaoNoRangeVF(tipo, range){
   const VERMELHO_FIXO_SUBLINHAR_RISCAR = '#F03E14'; // sempre essa cor - nunca segue a cor escolhida pro grifar
   const corAplicar = (tipo === 'grifar' ? vfCorMarcacaoTextoAtual : VERMELHO_FIXO_SUBLINHAR_RISCAR).toUpperCase();
@@ -4855,7 +4888,7 @@ function vfAplicarMarcacaoNoRangeVF(tipo, range){
   let containerEl = range.commonAncestorContainer;
   if(containerEl.nodeType === 3) containerEl = containerEl.parentElement;
   const container = containerEl.closest('#vf-enunciado-atual, #vf-correcao-atual');
-  if(!container){ vfCriarSpanMarcaVF(tipo, corAplicar, range); return; }
+  if(!container){ vfCriarSpanMarcaVF(tipo, corAplicar, range); vfSalvarEstadoMarcacaoTextoVF(); return; }
 
   // calcula os offsets do range NOVO primeiro - tudo daqui pra frente
   // compara por ARITMÉTICA DE NÚMEROS (não pela API compareBoundaryPoints
@@ -4869,52 +4902,90 @@ function vfAplicarMarcacaoNoRangeVF(tipo, range){
   // trecho novo - sobreposição de intervalos [a,b) e [c,d): a < d && c < b
   const todasDoTipo = [...container.querySelectorAll(`.vf-marcacao-texto-sessao[data-tipo-marca="${tipo}"]`)];
   const marcasExistentes = [];
-  const offsetsExistentes = [];
   todasDoTipo.forEach(span => {
     const {inicio: oInicio, fim: oFim} = vfOffsetDoElementoVF(container, span);
     const sobrepoe = offsetRangeInicio < oFim && oInicio < offsetRangeFim;
-    if(sobrepoe){ marcasExistentes.push(span); offsetsExistentes.push({inicio: oInicio, fim: oFim, cor: (span.dataset.corMarca||'').toUpperCase()}); }
+    if(sobrepoe) marcasExistentes.push({inicio: oInicio, fim: oFim, cor: (span.dataset.corMarca||'').toUpperCase(), span});
   });
 
   if(!marcasExistentes.length){
     vfCriarSpanMarcaVF(tipo, corAplicar, range); // nada ali ainda - aplica normal
+    vfSalvarEstadoMarcacaoTextoVF();
     return;
   }
 
-  // união de tudo (range novo + marcas encontradas) e união só das
-  // marcas encontradas (sem o range novo) - a segunda serve pra saber se
-  // o range novo tocou texto QUE AINDA NÃO TINHA MARCA
-  let offsetUniaoInicio = offsetRangeInicio, offsetUniaoFim = offsetRangeFim;
-  let offsetSoExistentesInicio = offsetsExistentes[0].inicio, offsetSoExistentesFim = offsetsExistentes[0].fim;
-  let todasMesmaCor = true;
-  offsetsExistentes.forEach(o => {
-    if(o.inicio < offsetUniaoInicio) offsetUniaoInicio = o.inicio;
-    if(o.fim > offsetUniaoFim) offsetUniaoFim = o.fim;
-    if(o.inicio < offsetSoExistentesInicio) offsetSoExistentesInicio = o.inicio;
-    if(o.fim > offsetSoExistentesFim) offsetSoExistentesFim = o.fim;
-    if(o.cor !== corAplicar) todasMesmaCor = false;
-  });
-  // o range novo já estava TOTALMENTE dentro da união das marcas
-  // existentes (sozinhas, sem contar ele) - ou seja, não tocou texto
-  // novo nenhum, só re-passou por cima do que já tinha marca
-  const rangeTotalmenteContido = offsetRangeInicio >= offsetSoExistentesInicio && offsetRangeFim <= offsetSoExistentesFim;
+  // pontos de quebra: início/fim do range novo + início/fim de cada marca
+  // que toca ele - dividem o intervalo total em pedaços onde a situação
+  // (dentro/fora do range novo, coberto ou não por marca existente) é
+  // uniforme em cada pedaço
+  const pontosSet = new Set([offsetRangeInicio, offsetRangeFim]);
+  marcasExistentes.forEach(m => { pontosSet.add(m.inicio); pontosSet.add(m.fim); });
+  const pontos = [...pontosSet].sort((a,b) => a-b);
 
   // desfaz (unwrap) todas as marcas encontradas - volta a ser texto puro.
-  // É a forma mais limpa de "juntar" ou "remover" marcações que se tocam,
-  // sem ter que lidar com sobreposições parciais de span manualmente
-  marcasExistentes.forEach(span => {
-    const pai = span.parentNode;
-    while(span.firstChild) pai.insertBefore(span.firstChild, span);
-    pai.removeChild(span);
+  // Os offsets de caractere continuam válidos depois disso (unwrap não
+  // muda a quantidade de texto, só a estrutura de elementos ao redor)
+  marcasExistentes.forEach(m => {
+    const pai = m.span.parentNode;
+    while(m.span.firstChild) pai.insertBefore(m.span.firstChild, m.span);
+    pai.removeChild(m.span);
     pai.normalize();
   });
 
-  if(rangeTotalmenteContido && todasMesmaCor) return; // toggle off - já desfeito acima, não recria nada
+  // percorre cada pedaço e decide o que fazer, da direita pra esquerda -
+  // criar um span mais à direita primeiro não afeta os offsets dos
+  // pedaços ainda não processados à esquerda dele
+  for(let i = pontos.length - 2; i >= 0; i--){
+    const segInicio = pontos[i], segFim = pontos[i+1];
+    if(segInicio === segFim) continue; // pedaço vazio (dois pontos coincidentes), ignora
 
-  // ou mudou a cor (substituir) ou esticou pra texto novo (estender) -
-  // nos dois casos, recria UMA marca só cobrindo a união de tudo
-  const rangeFinal = vfRangeDoOffsetGlobalVF(container, offsetUniaoInicio, offsetUniaoFim);
-  if(rangeFinal) vfCriarSpanMarcaVF(tipo, corAplicar, rangeFinal);
+    const dentroDoRangeNovo = segInicio >= offsetRangeInicio && segFim <= offsetRangeFim;
+    // essa marca antiga cobria esse pedaço inteiro? (podia ser mais de
+    // uma marca tocando o mesmo pedaço só se elas se sobrepusessem entre
+    // si, o que não deveria acontecer no fluxo normal - pega a primeira)
+    const marcaCobrindo = marcasExistentes.find(m => segInicio >= m.inicio && segFim <= m.fim);
+
+    if(dentroDoRangeNovo){
+      if(marcaCobrindo && marcaCobrindo.cor === corAplicar){
+        continue; // já tinha marca da MESMA cor aqui - remove (não recria nada, já foi desfeito acima)
+      }
+      // não tinha marca aqui, ou tinha de cor diferente - aplica a nova cor
+      const r = vfRangeDoOffsetGlobalVF(container, segInicio, segFim);
+      if(r) vfCriarSpanMarcaVF(tipo, corAplicar, r);
+    }else if(marcaCobrindo){
+      // fora do range novo, mas dentro de uma marca antiga que sobrou -
+      // mantém exatamente como estava, com a cor ORIGINAL dela
+      const r = vfRangeDoOffsetGlobalVF(container, segInicio, segFim);
+      if(r) vfCriarSpanMarcaVF(tipo, marcaCobrindo.cor, r);
+    }
+    // fora do range novo E sem marca cobrindo: pedaço que nunca existiu de
+    // verdade (só apareceu como ponto de quebra por coincidência) - nada a fazer
+  }
+
+  vfMesclarSpansAdjacentesVF(container, tipo);
+  vfSalvarEstadoMarcacaoTextoVF();
+}
+
+// depois de criar/recriar vários pedaços, spans ADJACENTES do MESMO tipo
+// e MESMA cor (sem nada entre eles) viram várias "peças" separadas de
+// uma marca que deveria ser uma coisa só - funde elas visualmente e
+// estruturalmente numa única marca contínua
+function vfMesclarSpansAdjacentesVF(container, tipo){
+  let mudou = true;
+  while(mudou){
+    mudou = false;
+    const spans = [...container.querySelectorAll(`.vf-marcacao-texto-sessao[data-tipo-marca="${tipo}"]`)];
+    for(const span of spans){
+      const proximo = span.nextSibling;
+      if(proximo && proximo.nodeType === 1 && proximo.classList && proximo.classList.contains('vf-marcacao-texto-sessao')
+         && proximo.dataset.tipoMarca === tipo && proximo.dataset.corMarca === span.dataset.corMarca){
+        while(proximo.firstChild) span.appendChild(proximo.firstChild);
+        proximo.remove();
+        mudou = true;
+        break; // reconsulta do zero - a lista mudou
+      }
+    }
+  }
 }
 
 // clicar na BOLINHA (só existe/aparece quando a ferramenta já está
@@ -4959,7 +5030,7 @@ function abrirPainelDestaqueVF(){
     // clicada. Se o painel abria sem clicar em nada, ficava preso na
     // cor de antes (às vezes azul, mesmo com amarelo selecionado)
     document.getElementById('vf-preview-espessura-destaque').style.background = vfCorDestaqueAtual;
-    document.getElementById('vf-slider-espessura-destaque').style.accentColor = vfCorDestaqueAtual;
+    vfForcarRecoloracaoSliderVF('vf-slider-espessura-destaque', vfCorDestaqueAtual);
   }
 }
 
@@ -5207,10 +5278,8 @@ function corNativaDestaqueEscolhidaVF(valor){
 // sempre 7 posições visíveis, espaçadas de ponta a ponta do balão
 // (justify-content:space-between no container). Ordem: cores fixas,
 // depois cores customizadas (na ordem que foram adicionadas), depois o
-// seletor arco-íris (sempre logo após a última cor - quando adiciona uma
-// nova, ela ocupa o lugar de antes do seletor, e o seletor "anda" pro
-// próximo buraco), depois os slots que sobrarem aparecem como um círculo
-// vazio/tracejado, só pra completar visualmente até 7 ----
+// seletor arco-íris (sempre logo após a última cor). Sem limite de
+// quantidade - quebra linha sozinho, 7 colunas por linha ----
 const VF_CONFIG_GRADES_CORES = {
   'vf-grade-cores-caneta': {
     coresFixas: ['#000000','#CF3920','#587835','#1A40A1','#6D2A9E'],
@@ -5234,7 +5303,17 @@ const VF_CONFIG_GRADES_CORES = {
     funcaoOninput: 'corNativaMarcacaoTextoEscolhidaVF'
   }
 };
-const VF_TOTAL_SLOTS_CORES = 7;
+// limpeza ÚNICA das cores customizadas acumuladas durante os testes -
+// roda 1 vez só (marca com uma versão no localStorage pra nunca repetir,
+// nem apagar cores que o usuário for adicionando de verdade depois)
+(function vfLimpezaUnicaCoresDeTesteVF(){
+  const VERSAO_LIMPEZA = '1';
+  if(localStorage.getItem('vf_limpeza_cores_teste_v') === VERSAO_LIMPEZA) return;
+  Object.keys(VF_CONFIG_GRADES_CORES).forEach(idGrid => {
+    try{ localStorage.removeItem('vf_cores_custom_' + idGrid); }catch(e){}
+  });
+  try{ localStorage.setItem('vf_limpeza_cores_teste_v', VERSAO_LIMPEZA); }catch(e){}
+})();
 
 function vfCoresCustomizadasSalvasVF(idGrid){
   try{ return JSON.parse(localStorage.getItem('vf_cores_custom_' + idGrid) || '[]'); }catch(e){ return []; }
@@ -5250,8 +5329,11 @@ function vfRenderizarGradeCoresVF(idGrid, corAtual){
   if(!config || !grade) return;
   const coresCustomizadas = vfCoresCustomizadasSalvasVF(idGrid);
   const todasAsCores = [...config.coresFixas, ...coresCustomizadas];
-  // -1 sempre reservado pro seletor arco-íris, mesmo com 7 cores completas
-  const vaziosNecessarios = Math.max(0, VF_TOTAL_SLOTS_CORES - todasAsCores.length - 1);
+
+  // impede seleção de texto/callout nativo do iOS ao segurar uma bolinha
+  // (sem isso, segurar pra excluir uma cor customizada abria a seleção
+  // nativa de texto do Safari em vez de ativar o gesto de excluir)
+  const SEM_SELECAO = 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;';
 
   let html = '';
   todasAsCores.forEach((cor, indice) => {
@@ -5263,19 +5345,20 @@ function vfRenderizarGradeCoresVF(idGrid, corAtual){
     const atributosSegurar = ehCustomizada
       ? ` ontouchstart="vfIniciarPressionarCorCustomizadaVF('${idGrid}','${cor}')" ontouchend="vfCancelarPressionarCorCustomizadaVF()" ontouchmove="vfCancelarPressionarCorCustomizadaVF()" onmousedown="vfIniciarPressionarCorCustomizadaVF('${idGrid}','${cor}')" onmouseup="vfCancelarPressionarCorCustomizadaVF()" onmouseleave="vfCancelarPressionarCorCustomizadaVF()"`
       : '';
-    html += `<button class="${config.classeBotao}${classeExtra}" data-cor="${cor}"${ehCustomizada ? ' data-customizada="1"' : ''} onclick="${config.funcaoSelecionar}('${cor}')"${atributosSegurar} style="width:26px;height:26px;border-radius:50%;background:${cor};border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0;flex-shrink:0"></button>`;
+    html += `<button class="${config.classeBotao}${classeExtra}" data-cor="${cor}"${ehCustomizada ? ' data-customizada="1"' : ''} onclick="${config.funcaoSelecionar}('${cor}')"${atributosSegurar} style="width:26px;height:26px;border-radius:50%;background:${cor};border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0;${SEM_SELECAO}"></button>`;
   });
   // seletor arco-íris - SEMPRE mostra o gradiente, nunca a cor escolhida.
   // O input nativo real fica por cima, invisível, ocupando o mesmo
-  // espaço - toque sempre direto no controle nativo
-  html += `<div style="position:relative;width:26px;height:26px;flex-shrink:0">
+  // espaço - toque sempre direto no controle nativo. clip-path FORÇA o
+  // recorte circular de verdade - só -webkit-appearance:none às vezes
+  // deixava um resquício quadrado/acinzentado por baixo no Safari (o
+  // mesmo bug que já tinha aparecido na caneta antes)
+  html += `<div style="position:relative;width:26px;height:26px">
     <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:2px solid #fff;box-shadow:0 0 0 1px #ddd;pointer-events:none"></div>
-    <input type="color" id="${config.idInputNativo}" value="${corAtual||'#000000'}" oninput="${config.funcaoOninput}(this.value)" onchange="corNativaConfirmadaVF(this.value, '${idGrid}')" ontouchstart="vfMarcarSeletorCorAbertoVF()" onfocus="vfMarcarSeletorCorAbertoVF()" onblur="vfDesmarcarSeletorCorAbertoVF()" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none">
+    <input type="color" id="${config.idInputNativo}" value="${corAtual||'#000000'}" oninput="${config.funcaoOninput}(this.value)" onchange="corNativaConfirmadaVF(this.value, '${idGrid}')" ontouchstart="vfMarcarSeletorCorAbertoVF()" onfocus="vfMarcarSeletorCorAbertoVF()" onblur="vfDesmarcarSeletorCorAbertoVF()" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;clip-path:circle(50%);border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none;background:transparent">
   </div>`;
-  // slots vazios (placeholder tracejado) só pra completar visualmente até 7
-  for(let i=0; i<vaziosNecessarios; i++){
-    html += `<div style="width:26px;height:26px;border-radius:50%;border:1.5px dashed #ddd;flex-shrink:0;box-sizing:border-box"></div>`;
-  }
+  // sem slots vazios/tracejados - o resto do espaço da linha simplesmente
+  // fica em branco (o grid de 7 colunas já reserva o lugar certo sozinho)
   grade.innerHTML = html;
 }
 
@@ -5290,9 +5373,10 @@ function corNativaConfirmadaVF(valorBruto, idGrid){
   const cor = valorBruto.toUpperCase();
   const coresCustomizadas = vfCoresCustomizadasSalvasVF(idGrid);
   const jaExiste = [...config.coresFixas, ...coresCustomizadas].some(c => c.toUpperCase() === cor);
-  // limite de 7 posições total (6 cores + o seletor) - se já estiver
-  // cheio, a cor nova simplesmente não entra (nada quebra, só não soma)
-  if(!jaExiste && config.coresFixas.length + coresCustomizadas.length < VF_TOTAL_SLOTS_CORES - 1){
+  // sem limite de 7 mais - o grid agora quebra linha sozinho, aceita
+  // quantas cores quiser. Só um teto de segurança bem folgado, pra nunca
+  // crescer infinitamente por engano
+  if(!jaExiste && coresCustomizadas.length < 100){
     coresCustomizadas.push(cor);
     try{ localStorage.setItem('vf_cores_custom_' + idGrid, JSON.stringify(coresCustomizadas)); }catch(e){}
   }
@@ -5325,13 +5409,25 @@ function vfExcluirCorCustomizadaVF(idGrid, cor){
   vfRenderizarGradeCoresVF(idGrid, corAtualPorGrid[idGrid] ? corAtualPorGrid[idGrid]() : null);
 }
 
+// alguns elementos nativos (como input range) às vezes deixam resíduo
+// visual ao atualizar accent-color dinamicamente num elemento já
+// existente no Safari - recriar o elemento do zero (clone + substituição)
+// força o navegador a desenhar ele de novo, sem "memória" da cor antiga
+function vfForcarRecoloracaoSliderVF(idSlider, corNova){
+  const sliderAntigo = document.getElementById(idSlider);
+  if(!sliderAntigo) return;
+  const clone = sliderAntigo.cloneNode(true);
+  clone.style.accentColor = corNova;
+  sliderAntigo.parentNode.replaceChild(clone, sliderAntigo);
+}
+
 function selecionarCorDestaqueVF(cor){
   vfCorDestaqueAtual = cor;
   document.querySelectorAll('.vf-cor-destaque').forEach(btn => {
     btn.classList.toggle('vf-cor-selecionada', btn.dataset.cor === cor);
   });
   document.getElementById('vf-preview-espessura-destaque').style.background = cor;
-  document.getElementById('vf-slider-espessura-destaque').style.accentColor = cor;
+  vfForcarRecoloracaoSliderVF('vf-slider-espessura-destaque', cor);
   document.getElementById('vf-swatch-destaque-atual').style.background = cor;
   // as prévias de opacidade mostram a cor escolhida, não fica travado no amarelo
   document.querySelectorAll('.vf-bolinha-opacidade-preview').forEach(prev => { prev.style.background = cor; });
@@ -5368,6 +5464,12 @@ function vfAtualizarEstiloBotaoBorracha(){
     grupo.style.gap = ativo ? '10px' : '0px';
     circulo.style.width = ativo ? larguraCirculo : '0px';
     circulo.style.opacity = ativo ? '1' : '0';
+    // força o navegador a aplicar/repintar AGORA, não numa próxima
+    // oportunidade preguiçosa - defesa contra o indicador de uma
+    // ferramenta ficar "preso" visualmente com o fundo azul, mesmo
+    // depois do valor real já ter mudado (mesma categoria de bug do
+    // slider "mostarda", resolvido à força lendo uma propriedade de volta)
+    void grupo.offsetHeight;
   }
 
   aplicar(grupoCaneta, swatchCanetaBtn, !vfModoBorracha && !vfModoDestaque && !vfModoMarcacaoTextoAtivo, '22px');
