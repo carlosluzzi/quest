@@ -3937,7 +3937,7 @@ document.addEventListener('touchmove', (e) => {
   // desenhar, suavizando exatamente onde a suavização por si só não
   // ajuda (ela já roda em cima desses pontos extras também)
   const distancia = Math.hypot(x - vfUltimoPontoDesenho.x, y - vfUltimoPontoDesenho.y);
-  const LIMIAR_INTERPOLACAO_PX = 5;
+  const LIMIAR_INTERPOLACAO_PX = 10;
   let numEtapas = distancia > LIMIAR_INTERPOLACAO_PX ? Math.ceil(distancia / LIMIAR_INTERPOLACAO_PX) : 1;
   // curvas MUITO fechadas (mudança de direção grande, tipo o topo de um
   // laço de caligrafia) precisam de mais pontos intermediários mesmo com
@@ -3952,7 +3952,7 @@ document.addEventListener('touchmove', (e) => {
   const magAnteriorDirecao = Math.hypot(vAnteriorDirecao.x, vAnteriorDirecao.y), magNovaDirecao = Math.hypot(vNovaDirecao.x, vNovaDirecao.y);
   if(magAnteriorDirecao > 0.5 && magNovaDirecao > 0.5){
     const cosAnguloDirecao = (vAnteriorDirecao.x*vNovaDirecao.x + vAnteriorDirecao.y*vNovaDirecao.y) / (magAnteriorDirecao * magNovaDirecao);
-    if(cosAnguloDirecao < 0.9397) numEtapas = Math.max(numEtapas, 3); // virada de mais de ~20° - garante pontos suficientes pra suavizar o ápice
+    if(cosAnguloDirecao < 0.5) numEtapas = Math.max(numEtapas, 3); // virada de mais de ~60° - garante pontos suficientes pra suavizar o ápice
   }
 
   for(let i = 1; i <= numEtapas; i++){
