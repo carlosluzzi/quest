@@ -5210,17 +5210,34 @@ function vfPreBuscarProximasVF(){
   if(!estadoVF || !estadoVF.pool) return;
   const agoraMs = agoraCorrigidoVF();
   const idAtual = estadoVF.historico[estadoVF.posicao]?.item?.id;
-  const candidatos = estadoVF.pool
-    .filter(q => q.id !== idAtual && q.estado === 'revisao' && q.intervalo_horas && q.ultima_resposta_em && q.texto === undefined)
+  const jaCarregadosOuAtual = new Set([idAtual]);
+
+  // 'aprendendo' tem PRIORIDADE MÁXIMA no algoritmo real (escolherProximaVF
+  // sempre pega dali primeiro, quando tem alguma elegível) - a pré-busca
+  // antiga só olhava 'revisao', então toda vez que uma questão recém-
+  // respondida voltava pouco depois (é assim que aprendendo funciona,
+  // por natureza), o conteúdo NUNCA tinha sido pré-buscado, e cada troca
+  // de questão nessa fase esperava uma busca ao vivo. É essa lacuna que
+  // provavelmente estava deixando "cada questão" lenta
+  const aprendendoElegiveis = estadoVF.pool
+    .filter(q => q.id !== idAtual && q.estado === 'aprendendo' && q.texto === undefined
+      && elegibilidadeAprendendoVF(q, agoraMs, estadoVF.contadorGlobal, estadoVF.pool.length))
+    .sort((a,b) => (a.marca_contador||0) - (b.marca_contador||0))
+    .slice(0, 3);
+  aprendendoElegiveis.forEach(q => jaCarregadosOuAtual.add(q.id));
+
+  const revisaoPorScore = estadoVF.pool
+    .filter(q => !jaCarregadosOuAtual.has(q.id) && q.estado === 'revisao' && q.intervalo_horas && q.ultima_resposta_em && q.texto === undefined)
     .map(q => {
       const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
       const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
       return {q, score: (decorridoH / q.intervalo_horas) * boost};
     })
     .sort((a,b) => b.score - a.score)
-    .slice(0, 3)
+    .slice(0, 5)
     .map(c => c.q);
-  candidatos.forEach(q => { vfGarantirConteudoCompletoVF(q).catch(() => {}); });
+
+  [...aprendendoElegiveis, ...revisaoPorScore].forEach(q => { vfGarantirConteudoCompletoVF(q).catch(() => {}); });
 }
 
 async function carregarPoolVF(){
