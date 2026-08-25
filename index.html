@@ -778,12 +778,13 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     <div id="vf-conteudo" style="padding-bottom:170px">
       <div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>
     </div>
-    <!-- camada de desenho com a caneta (Apple Pencil) — position:fixed,
-    pointer-events:none pra sempre (dedo/mouse passam direto pra tocar nos
-    botões normal). A escuta de verdade roda com Touch Events nativos no
-    document (não neste elemento), filtrando touch.touchType==='stylus' -->
-    <canvas id="vf-canvas-desenho" style="position:fixed;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;touch-action:none"></canvas>
-    <canvas id="vf-canvas-preview-destaque" style="position:fixed;inset:0;width:100%;height:100%;z-index:9;pointer-events:none;touch-action:none"></canvas>
+    <!-- camada de desenho com a caneta (Apple Pencil) - movida pra FORA do
+    #app-shell (ver logo depois do fechamento dele) - o app-shell é
+    position:fixed + overflow:hidden, e isso recorta (clip) qualquer
+    filho position:fixed nas bordas dele, o que causava uma linha de
+    artefato visual sutil na borda desse recorte, bem em cima do
+    cabeçalho. Fora do app-shell, sem overflow:hidden no caminho, o
+    canvas cobre a viewport de verdade sem esse recorte -->
     <!-- barra fina, sempre visível quando ativa - marcador+cor agrupados
     (fundo azul claro quando ativo, igual PDF Expert) + borracha separada -->
     <div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:9999;background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.12);padding:6px 8px;display:flex;align-items:center;gap:14px">
@@ -1092,6 +1093,17 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     </div>
   </div>
 </div>
+
+<!-- canvas de desenho da caneta (Apple Pencil) - FORA do #app-shell de
+propósito. O app-shell é position:fixed + overflow:hidden, e isso recorta
+(clip) qualquer filho position:fixed nas bordas dele - causava um
+artefato visual sutil (linha mais escura) bem em cima do cabeçalho.
+Fora do app-shell, sem overflow:hidden no caminho, cobre a viewport de
+verdade sem esse recorte. Como não é mais filho de #aba-vf, a
+visibilidade é controlada manualmente em trocarAba(), não mais herdada
+automaticamente da classe .hidden do app-shell -->
+<canvas id="vf-canvas-desenho" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;touch-action:none"></canvas>
+<canvas id="vf-canvas-preview-destaque" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:9;pointer-events:none;touch-action:none"></canvas>
 
 <div id="wrapper-barra-adicionar" class="hidden">
   <button id="barra-adicionar-questoes" onclick="trocarAba('adicionar')">
@@ -1452,7 +1464,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-266';
+const VERSAO_APP = '2026-07-25-267';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2464,6 +2476,12 @@ function trocarAba(nome){
 
   document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
   document.getElementById('aba-'+nome).classList.remove('hidden');
+  // canvas de desenho vive FORA do #app-shell agora (ver comentário lá) -
+  // não é mais filho de #aba-vf, então precisa ser mostrado/escondido
+  // manualmente aqui, não herda mais do .hidden da aba automaticamente
+  const mostrarCanvasVF = nome === 'vf';
+  document.getElementById('vf-canvas-desenho').style.display = mostrarCanvasVF ? 'block' : 'none';
+  document.getElementById('vf-canvas-preview-destaque').style.display = mostrarCanvasVF ? 'block' : 'none';
   document.querySelectorAll('#bottom-nav .nav-item').forEach(item=>item.classList.toggle('active', item.dataset.aba===nome));
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança, nunca fica presa escondida
   document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
@@ -4220,8 +4238,11 @@ async function vfAbrirFavoritosVF(){
   const el = document.getElementById('vf-lista-favoritos');
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
   document.getElementById('pagina-favoritos-vf').classList.remove('hidden');
+  // a tabela favoritos_vf não tem coluna 'id' própria - a chave é o par
+  // (usuario_id, questao_vf_id). Pedir 'id' no select quebrava a página
+  // inteira (erro de coluna inexistente) - achado testando direto no banco
   const {data, error} = await sb.from('favoritos_vf')
-    .select('id, criado_em, questao_vf_id, questoes_vf(texto, bibliografia(titulo))')
+    .select('criado_em, questao_vf_id, questoes_vf(texto, bibliografia(titulo))')
     .eq('usuario_id', usuarioAtual.id)
     .order('criado_em', {ascending: false});
   if(error){ el.innerHTML = '<p style="color:#A32D2D;text-align:center;padding:20px 0">Erro ao carregar.</p>'; return; }
@@ -4236,7 +4257,7 @@ async function vfAbrirFavoritosVF(){
             <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
             <p style="color:#999;font-size:var(--fs-a);margin:2px 0 0 0">${dataFormatada}</p>
           </div>
-          <button class="btn-icone-pequeno" onclick="event.stopPropagation();vfDesfavoritarDaListaVF('${f.id}','${f.questao_vf_id}')" title="Desfavoritar">
+          <button class="btn-icone-pequeno" onclick="event.stopPropagation();vfDesfavoritarDaListaVF('${f.questao_vf_id}')" title="Desfavoritar">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
           </button>
         </div>
@@ -4245,8 +4266,8 @@ async function vfAbrirFavoritosVF(){
   }).join('');
 }
 
-async function vfDesfavoritarDaListaVF(favoritoId, questaoVfId){
-  await sb.from('favoritos_vf').delete().eq('id', favoritoId);
+async function vfDesfavoritarDaListaVF(questaoVfId){
+  await sb.from('favoritos_vf').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
   favoritosVF.delete(questaoVfId);
   vfAbrirFavoritosVF(); // recarrega a lista
 }
@@ -4275,7 +4296,7 @@ async function vfAbrirFlashSalvosVF(){
             <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
             <p style="color:#999;font-size:var(--fs-a);margin:2px 0 0 0">${dataFormatada}</p>
           </div>
-          <button class="btn-icone-pequeno" onclick="event.stopPropagation();vfExcluirFlashSalvoVF('${s.id}')" title="Remover dos salvos">
+          <button class="btn-icone-pequeno" onclick="event.stopPropagation();vfExcluirFlashSalvoVF('${s.id}','${s.questao_vf_id}')" title="Remover dos salvos">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
           </button>
         </div>
@@ -4313,9 +4334,22 @@ function vfIrParaQuestaoSalvaVF(questaoVfId){
   // não força a entrada de uma questão fora da fila de repetição espaçada
 }
 
-async function vfExcluirFlashSalvoVF(salvoId){
+async function vfExcluirFlashSalvoVF(salvoId, questaoVfId){
   const {error} = await sb.from('flashs_salvos_vf').delete().eq('id', salvoId);
   if(error){ alert('Erro ao excluir: '+error.message); return; }
+  // remove do estado em memória também - sem isso, o botão "Salvar" da
+  // questão continuava "aceso" até a página recarregar do zero, mesmo já
+  // tendo sido excluída da lista
+  flashsSalvosVF.delete(questaoVfId);
+  const entradaAtual = estadoVF?.historico[estadoVF.posicao];
+  if(entradaAtual && entradaAtual.item.id === questaoVfId){
+    const botaoSalvar = document.querySelector('.banco-acao-btn[onclick*="vfAbrirEscolhaMotivoSalvarVF"]');
+    if(botaoSalvar){
+      botaoSalvar.classList.remove('favoritada');
+      const svg = botaoSalvar.querySelector('svg');
+      if(svg) svg.setAttribute('fill', 'none');
+    }
+  }
   vfAbrirFlashSalvosVF(); // recarrega a lista
 }
 
@@ -4713,6 +4747,7 @@ document.addEventListener('touchend', (e) => {
 function vfAplicarMarcacaoNoRangeVF(tipo, range){
   const span = document.createElement('span');
   span.className = 'vf-marcacao-texto-sessao';
+  const VERMELHO_FIXO_SUBLINHAR_RISCAR = '#F03E14'; // sempre essa cor - nunca segue a cor escolhida pro grifar
   if(tipo === 'grifar'){
     span.style.backgroundColor = vfCorMarcacaoTextoAtual;
     span.style.borderRadius = '2px';
@@ -4720,11 +4755,11 @@ function vfAplicarMarcacaoNoRangeVF(tipo, range){
     span.style.webkitBoxDecorationBreak = 'clone';
   }else if(tipo === 'sublinhar'){
     span.style.textDecorationLine = 'underline';
-    span.style.textDecorationColor = vfCorMarcacaoTextoAtual;
+    span.style.textDecorationColor = VERMELHO_FIXO_SUBLINHAR_RISCAR;
     span.style.textDecorationThickness = '2.5px';
   }else if(tipo === 'riscar'){
     span.style.textDecorationLine = 'line-through';
-    span.style.textDecorationColor = vfCorMarcacaoTextoAtual;
+    span.style.textDecorationColor = VERMELHO_FIXO_SUBLINHAR_RISCAR;
     span.style.textDecorationThickness = '2.5px';
   }
   try{
@@ -5908,7 +5943,6 @@ function renderizarItemVF(){
           </button>
         </span>
       </div>
-      ${vfTotalAfirmacoesNoBanco !== null ? `<span style="font-size:var(--fs-a);color:#aaa">${vfTotalAfirmacoesNoBanco.toLocaleString('pt-BR')} afirmações no total</span>` : ''}
     </div>
     <div class="card-questao">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 6px">
