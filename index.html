@@ -865,24 +865,9 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
 
       <div>
         <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
-        <div id="vf-grade-cores-caneta" style="display:grid;grid-template-columns:repeat(6, 26px);gap:10px;justify-content:start">
-          <button class="vf-cor-desenho" data-cor="#000000" onclick="selecionarCorDesenhoVF('#000000')" style="width:26px;height:26px;border-radius:50%;background:#000000;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
-          <button class="vf-cor-desenho" data-cor="#CF3920" onclick="selecionarCorDesenhoVF('#CF3920')" style="width:26px;height:26px;border-radius:50%;background:#CF3920;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
-          <button class="vf-cor-desenho" data-cor="#587835" onclick="selecionarCorDesenhoVF('#587835')" style="width:26px;height:26px;border-radius:50%;background:#587835;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
-          <button class="vf-cor-desenho vf-cor-selecionada" data-cor="#1A40A1" onclick="selecionarCorDesenhoVF('#1A40A1')" style="width:26px;height:26px;border-radius:50%;background:#1A40A1;border:2px solid #fff;cursor:pointer;padding:0"></button>
-          <button class="vf-cor-desenho" data-cor="#6D2A9E" onclick="selecionarCorDesenhoVF('#6D2A9E')" style="width:26px;height:26px;border-radius:50%;background:#6D2A9E;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
-          <!-- botão de arco-íris: SEMPRE mostra o gradiente, nunca a cor escolhida.
-          O input de cor nativo real fica por cima, invisível, ocupando o mesmo
-          espaço - assim o toque é sempre direto no controle nativo (mais confiável
-          com a caneta que indireção via .click() programático) -->
-          <div style="position:relative;width:26px;height:26px;flex-shrink:0">
-            <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:2px solid #fff;box-shadow:0 0 0 1px #ddd;pointer-events:none"></div>
-            <input type="color" id="vf-input-cor-nativo" value="#000000" oninput="corNativaEscolhidaVF(this.value)" onchange="corNativaConfirmadaVF(this.value, 'vf-grade-cores-caneta', 'vf-cor-desenho', 'selecionarCorDesenhoVF')" ontouchstart="vfMarcarSeletorCorAbertoVF()" onfocus="vfMarcarSeletorCorAbertoVF()" onblur="vfDesmarcarSeletorCorAbertoVF()" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none">
-          </div>
-          <!-- cores customizadas adicionadas pelo usuário entram aqui, direto
-          como irmãs no grid (nunca dentro de um wrapper separado - quebraria
-          o alinhamento em colunas) -->
-        </div>
+        <!-- renderizado dinamicamente por vfRenderizarGradeCoresVF - sempre
+        7 posições, espaçadas de ponta a ponta (justify-content:space-between) -->
+        <div id="vf-grade-cores-caneta" style="display:flex;justify-content:space-between;align-items:center"></div>
       </div>
 
       <div style="margin-top:16px">
@@ -959,17 +944,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
 
       <div>
         <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
-        <div id="vf-grade-cores-destaque" style="display:grid;grid-template-columns:repeat(6, 26px);gap:10px;justify-content:start">
-          <button class="vf-cor-destaque" data-cor="#FF3B30" onclick="selecionarCorDestaqueVF('#FF3B30')" style="width:26px;height:26px;border-radius:50%;background:#FF3B30;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
-          <button class="vf-cor-destaque" data-cor="#FF9500" onclick="selecionarCorDestaqueVF('#FF9500')" style="width:26px;height:26px;border-radius:50%;background:#FF9500;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
-          <button class="vf-cor-destaque vf-cor-selecionada" data-cor="#FFD84D" onclick="selecionarCorDestaqueVF('#FFD84D')" style="width:26px;height:26px;border-radius:50%;background:#FFD84D;border:2px solid #fff;cursor:pointer;padding:0"></button>
-          <button class="vf-cor-destaque" data-cor="#34C759" onclick="selecionarCorDestaqueVF('#34C759')" style="width:26px;height:26px;border-radius:50%;background:#34C759;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
-          <button class="vf-cor-destaque" data-cor="#5B9BD5" onclick="selecionarCorDestaqueVF('#5B9BD5')" style="width:26px;height:26px;border-radius:50%;background:#5B9BD5;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
-          <div style="position:relative;width:26px;height:26px;flex-shrink:0">
-            <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:2px solid #fff;box-shadow:0 0 0 1px #ddd;pointer-events:none"></div>
-            <input type="color" id="vf-input-cor-nativo-destaque" value="#FFD84D" oninput="corNativaDestaqueEscolhidaVF(this.value)" onchange="corNativaConfirmadaVF(this.value, 'vf-grade-cores-destaque', 'vf-cor-destaque', 'selecionarCorDestaqueVF')" ontouchstart="vfMarcarSeletorCorAbertoVF()" onfocus="vfMarcarSeletorCorAbertoVF()" onblur="vfDesmarcarSeletorCorAbertoVF()" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none">
-          </div>
-        </div>
+        <div id="vf-grade-cores-destaque" style="display:flex;justify-content:space-between;align-items:center"></div>
       </div>
 
       <div style="margin-top:16px">
@@ -1007,17 +982,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     <div id="vf-painel-marcacao-texto" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:10000;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
       <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
       <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Cor</div>
-      <div id="vf-grade-cores-marcacao-texto" style="display:grid;grid-template-columns:repeat(6, 26px);gap:10px;justify-content:start">
-        <button class="vf-cor-marcacao-texto vf-cor-selecionada" data-cor="#F08080" onclick="selecionarCorMarcacaoTextoVF('#F08080')" style="width:26px;height:26px;border-radius:50%;background:#F08080;border:2px solid #fff;cursor:pointer;padding:0"></button>
-        <button class="vf-cor-marcacao-texto" data-cor="#FFB84D" onclick="selecionarCorMarcacaoTextoVF('#FFB84D')" style="width:26px;height:26px;border-radius:50%;background:#FFB84D;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
-        <button class="vf-cor-marcacao-texto" data-cor="#FFD84D" onclick="selecionarCorMarcacaoTextoVF('#FFD84D')" style="width:26px;height:26px;border-radius:50%;background:#FFD84D;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
-        <button class="vf-cor-marcacao-texto" data-cor="#8FD97A" onclick="selecionarCorMarcacaoTextoVF('#8FD97A')" style="width:26px;height:26px;border-radius:50%;background:#8FD97A;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
-        <button class="vf-cor-marcacao-texto" data-cor="#8FCBEE" onclick="selecionarCorMarcacaoTextoVF('#8FCBEE')" style="width:26px;height:26px;border-radius:50%;background:#8FCBEE;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
-        <div style="position:relative;width:26px;height:26px;flex-shrink:0">
-          <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:2px solid #fff;box-shadow:0 0 0 1px #ddd;pointer-events:none"></div>
-          <input type="color" id="vf-input-cor-marcacao-texto" value="#F08080" oninput="corNativaMarcacaoTextoEscolhidaVF(this.value)" onchange="corNativaConfirmadaVF(this.value, 'vf-grade-cores-marcacao-texto', 'vf-cor-marcacao-texto', 'selecionarCorMarcacaoTextoVF')" ontouchstart="vfMarcarSeletorCorAbertoVF()" onfocus="vfMarcarSeletorCorAbertoVF()" onblur="vfDesmarcarSeletorCorAbertoVF()" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none">
-        </div>
-      </div>
+      <div id="vf-grade-cores-marcacao-texto" style="display:flex;justify-content:space-between;align-items:center"></div>
     </div>
     <div id="vf-barra-fixa" class="vf-barra-fixa hidden"></div>
   </div>
@@ -1464,7 +1429,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-267';
+const VERSAO_APP = '2026-07-25-268';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4438,11 +4403,12 @@ function mostrarBarraDesenhoVF(){
   barra.classList.remove('hidden');
   document.body.classList.add('vf-desenho-ativo');
   vfRestaurarPosicaoBarraVF();
-  // cores customizadas salvas em sessões anteriores - a função já
-  // protege contra duplicar, segura de chamar toda vez
-  vfRestaurarCoresCustomizadasVF('vf-grade-cores-caneta', 'vf-cor-desenho', 'selecionarCorDesenhoVF');
-  vfRestaurarCoresCustomizadasVF('vf-grade-cores-destaque', 'vf-cor-destaque', 'selecionarCorDestaqueVF');
-  vfRestaurarCoresCustomizadasVF('vf-grade-cores-marcacao-texto', 'vf-cor-marcacao-texto', 'selecionarCorMarcacaoTextoVF');
+  // monta as 3 grades de cor do zero (cores fixas + customizadas salvas +
+  // seletor arco-íris + slots vazios até completar 7) - idempotente,
+  // seguro de chamar toda vez que a barrinha aparece
+  vfRenderizarGradeCoresVF('vf-grade-cores-caneta', vfCorDesenhoAtual);
+  vfRenderizarGradeCoresVF('vf-grade-cores-destaque', vfCorDestaqueAtual);
+  vfRenderizarGradeCoresVF('vf-grade-cores-marcacao-texto', vfCorMarcacaoTextoAtual);
   vfRecolorirIconeMarcador(vfCorDesenhoAtual);
   vfRecolorirIconeDestaqueVF(vfCorDestaqueAtual);
   vfRecolorirIconesMarcacaoTextoVF(vfCorMarcacaoTextoAtual);
@@ -5174,62 +5140,126 @@ function corNativaDestaqueEscolhidaVF(valor){
   selecionarCorDestaqueVF(valor.toUpperCase());
 }
 
+// ---- sistema de cores dos 3 painéis (Caneta/Destaque/Marcação de texto) -
+// sempre 7 posições visíveis, espaçadas de ponta a ponta do balão
+// (justify-content:space-between no container). Ordem: cores fixas,
+// depois cores customizadas (na ordem que foram adicionadas), depois o
+// seletor arco-íris (sempre logo após a última cor - quando adiciona uma
+// nova, ela ocupa o lugar de antes do seletor, e o seletor "anda" pro
+// próximo buraco), depois os slots que sobrarem aparecem como um círculo
+// vazio/tracejado, só pra completar visualmente até 7 ----
+const VF_CONFIG_GRADES_CORES = {
+  'vf-grade-cores-caneta': {
+    coresFixas: ['#000000','#CF3920','#587835','#1A40A1','#6D2A9E'],
+    classeBotao: 'vf-cor-desenho',
+    funcaoSelecionar: 'selecionarCorDesenhoVF',
+    idInputNativo: 'vf-input-cor-nativo',
+    funcaoOninput: 'corNativaEscolhidaVF'
+  },
+  'vf-grade-cores-destaque': {
+    coresFixas: ['#FF3B30','#FF9500','#FFD84D','#34C759','#5B9BD5'],
+    classeBotao: 'vf-cor-destaque',
+    funcaoSelecionar: 'selecionarCorDestaqueVF',
+    idInputNativo: 'vf-input-cor-nativo-destaque',
+    funcaoOninput: 'corNativaDestaqueEscolhidaVF'
+  },
+  'vf-grade-cores-marcacao-texto': {
+    coresFixas: ['#F08080','#FFB84D','#FFD84D','#8FD97A','#8FCBEE'],
+    classeBotao: 'vf-cor-marcacao-texto',
+    funcaoSelecionar: 'selecionarCorMarcacaoTextoVF',
+    idInputNativo: 'vf-input-cor-marcacao-texto',
+    funcaoOninput: 'corNativaMarcacaoTextoEscolhidaVF'
+  }
+};
+const VF_TOTAL_SLOTS_CORES = 7;
+
+function vfCoresCustomizadasSalvasVF(idGrid){
+  try{ return JSON.parse(localStorage.getItem('vf_cores_custom_' + idGrid) || '[]'); }catch(e){ return []; }
+}
+
+// renderiza a grade INTEIRA do zero - chamada sempre que algo muda
+// (adicionar cor, excluir cor, abrir o painel) em vez de mexer em
+// elementos individuais, bem mais simples de manter os 7 slots sempre
+// corretos e na ordem certa
+function vfRenderizarGradeCoresVF(idGrid, corAtual){
+  const config = VF_CONFIG_GRADES_CORES[idGrid];
+  const grade = document.getElementById(idGrid);
+  if(!config || !grade) return;
+  const coresCustomizadas = vfCoresCustomizadasSalvasVF(idGrid);
+  const todasAsCores = [...config.coresFixas, ...coresCustomizadas];
+  // -1 sempre reservado pro seletor arco-íris, mesmo com 7 cores completas
+  const vaziosNecessarios = Math.max(0, VF_TOTAL_SLOTS_CORES - todasAsCores.length - 1);
+
+  let html = '';
+  todasAsCores.forEach((cor, indice) => {
+    const ehCustomizada = indice >= config.coresFixas.length;
+    const selecionada = cor.toUpperCase() === (corAtual||'').toUpperCase();
+    const classeExtra = selecionada ? ' vf-cor-selecionada' : '';
+    // cor customizada: segurar exclui (toque longo, com vibração de
+    // confirmação) - cor fixa não pode ser excluída, não tem esse atributo
+    const atributosSegurar = ehCustomizada
+      ? ` ontouchstart="vfIniciarPressionarCorCustomizadaVF('${idGrid}','${cor}')" ontouchend="vfCancelarPressionarCorCustomizadaVF()" ontouchmove="vfCancelarPressionarCorCustomizadaVF()" onmousedown="vfIniciarPressionarCorCustomizadaVF('${idGrid}','${cor}')" onmouseup="vfCancelarPressionarCorCustomizadaVF()" onmouseleave="vfCancelarPressionarCorCustomizadaVF()"`
+      : '';
+    html += `<button class="${config.classeBotao}${classeExtra}" data-cor="${cor}"${ehCustomizada ? ' data-customizada="1"' : ''} onclick="${config.funcaoSelecionar}('${cor}')"${atributosSegurar} style="width:26px;height:26px;border-radius:50%;background:${cor};border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0;flex-shrink:0"></button>`;
+  });
+  // seletor arco-íris - SEMPRE mostra o gradiente, nunca a cor escolhida.
+  // O input nativo real fica por cima, invisível, ocupando o mesmo
+  // espaço - toque sempre direto no controle nativo
+  html += `<div style="position:relative;width:26px;height:26px;flex-shrink:0">
+    <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:2px solid #fff;box-shadow:0 0 0 1px #ddd;pointer-events:none"></div>
+    <input type="color" id="${config.idInputNativo}" value="${corAtual||'#000000'}" oninput="${config.funcaoOninput}(this.value)" onchange="corNativaConfirmadaVF(this.value, '${idGrid}')" ontouchstart="vfMarcarSeletorCorAbertoVF()" onfocus="vfMarcarSeletorCorAbertoVF()" onblur="vfDesmarcarSeletorCorAbertoVF()" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none">
+  </div>`;
+  // slots vazios (placeholder tracejado) só pra completar visualmente até 7
+  for(let i=0; i<vaziosNecessarios; i++){
+    html += `<div style="width:26px;height:26px;border-radius:50%;border:1.5px dashed #ddd;flex-shrink:0;box-sizing:border-box"></div>`;
+  }
+  grade.innerHTML = html;
+}
+
 // quando o usuário CONFIRMA uma cor no seletor nativo (soltar o dedo,
 // evento change - diferente do oninput que dispara a cada arraste), ela
 // passa a existir de verdade: vira uma bolinha nova no grid (persistida,
 // sobrevive a fechar e abrir o app) - antes só aplicava a cor na hora e
 // esquecia, o balãozinho nunca guardava nada de fato
-function corNativaConfirmadaVF(valorBruto, idGrid, classeBotao, nomeFuncaoSelecionar){
+function corNativaConfirmadaVF(valorBruto, idGrid){
+  const config = VF_CONFIG_GRADES_CORES[idGrid];
+  if(!config) return;
   const cor = valorBruto.toUpperCase();
-  const grade = document.getElementById(idGrid);
-  if(!grade) return;
-  // já existe essa cor no grid (fixa ou já salva antes)? não duplica
-  const jaExiste = [...grade.querySelectorAll(`.${classeBotao}`)].some(btn => btn.dataset.cor === cor);
-  if(!jaExiste){
-    const btn = document.createElement('button');
-    btn.className = classeBotao;
-    btn.dataset.cor = cor;
-    btn.dataset.customizada = '1'; // marca de onde veio, pra achar na hora de salvar/restaurar
-    btn.setAttribute('onclick', `${nomeFuncaoSelecionar}('${cor}')`);
-    btn.style.cssText = `width:26px;height:26px;border-radius:50%;background:${cor};border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0`;
-    // insere ANTES do bloco do arco-íris (sempre o último filho do grid),
-    // pra ele continuar sendo o último e mais fácil de achar
-    const blocoArcoIris = grade.lastElementChild;
-    grade.insertBefore(btn, blocoArcoIris);
-    vfSalvarCoresCustomizadasVF(idGrid, classeBotao);
+  const coresCustomizadas = vfCoresCustomizadasSalvasVF(idGrid);
+  const jaExiste = [...config.coresFixas, ...coresCustomizadas].some(c => c.toUpperCase() === cor);
+  // limite de 7 posições total (6 cores + o seletor) - se já estiver
+  // cheio, a cor nova simplesmente não entra (nada quebra, só não soma)
+  if(!jaExiste && config.coresFixas.length + coresCustomizadas.length < VF_TOTAL_SLOTS_CORES - 1){
+    coresCustomizadas.push(cor);
+    try{ localStorage.setItem('vf_cores_custom_' + idGrid, JSON.stringify(coresCustomizadas)); }catch(e){}
   }
-  // chamar a função de selecionar já aplica a cor + a moldura quadrada nela
-  window[nomeFuncaoSelecionar](cor);
+  vfRenderizarGradeCoresVF(idGrid, cor); // re-renderiza com a nova cor já incluída E selecionada
+  window[config.funcaoSelecionar](cor); // aplica de verdade (ícone da barrinha, variável de estado, etc)
 }
 
-// persiste as cores customizadas desse painel específico no localStorage
-// - sobrevive a fechar e abrir o app de novo, não é só da sessão atual
-function vfSalvarCoresCustomizadasVF(idGrid, classeBotao){
-  const grade = document.getElementById(idGrid);
-  if(!grade) return;
-  const cores = [...grade.querySelectorAll(`.${classeBotao}[data-customizada="1"]`)].map(btn => btn.dataset.cor);
-  try{ localStorage.setItem('vf_cores_custom_' + idGrid, JSON.stringify(cores)); }catch(e){}
+// ---- excluir cor customizada: segura a bolinha por um instante ----
+let vfTimerPressionarCorCustomizadaVF = null;
+function vfIniciarPressionarCorCustomizadaVF(idGrid, cor){
+  clearTimeout(vfTimerPressionarCorCustomizadaVF);
+  vfTimerPressionarCorCustomizadaVF = setTimeout(() => {
+    vfTimerPressionarCorCustomizadaVF = null;
+    if(navigator.vibrate) navigator.vibrate(15); // feedback tátil de "ativou o toque longo"
+    vfExcluirCorCustomizadaVF(idGrid, cor);
+  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
 }
-
-// repovoa as cores customizadas salvas - chamada uma vez ao montar a
-// barrinha de desenho, antes de qualquer seleção
-function vfRestaurarCoresCustomizadasVF(idGrid, classeBotao, nomeFuncaoSelecionar){
-  const grade = document.getElementById(idGrid);
-  if(!grade) return;
-  let cores = [];
-  try{ cores = JSON.parse(localStorage.getItem('vf_cores_custom_' + idGrid) || '[]'); }catch(e){}
-  cores.forEach(cor => {
-    const jaExiste = [...grade.querySelectorAll(`.${classeBotao}`)].some(btn => btn.dataset.cor === cor);
-    if(jaExiste) return;
-    const btn = document.createElement('button');
-    btn.className = classeBotao;
-    btn.dataset.cor = cor;
-    btn.dataset.customizada = '1';
-    btn.setAttribute('onclick', `${nomeFuncaoSelecionar}('${cor}')`);
-    btn.style.cssText = `width:26px;height:26px;border-radius:50%;background:${cor};border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0`;
-    const blocoArcoIris = grade.lastElementChild;
-    grade.insertBefore(btn, blocoArcoIris);
-  });
+function vfCancelarPressionarCorCustomizadaVF(){
+  clearTimeout(vfTimerPressionarCorCustomizadaVF);
+  vfTimerPressionarCorCustomizadaVF = null;
+}
+function vfExcluirCorCustomizadaVF(idGrid, cor){
+  const restantes = vfCoresCustomizadasSalvasVF(idGrid).filter(c => c.toUpperCase() !== cor.toUpperCase());
+  try{ localStorage.setItem('vf_cores_custom_' + idGrid, JSON.stringify(restantes)); }catch(e){}
+  const corAtualPorGrid = {
+    'vf-grade-cores-caneta': () => vfCorDesenhoAtual,
+    'vf-grade-cores-destaque': () => vfCorDestaqueAtual,
+    'vf-grade-cores-marcacao-texto': () => vfCorMarcacaoTextoAtual
+  };
+  vfRenderizarGradeCoresVF(idGrid, corAtualPorGrid[idGrid] ? corAtualPorGrid[idGrid]() : null);
 }
 
 function selecionarCorDestaqueVF(cor){
