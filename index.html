@@ -203,6 +203,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .item-lista-modulo:last-child{border-bottom:none}
 .item-lista-modulo:active{background:#F5F5F4}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#aba-vf .card-questao .enunciado,#aba-vf .card-questao .enunciado *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 .enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap}
 .linha-numerada{display:flex;gap:8px;margin-top:10px;align-items:flex-start}
 .linha-marcador{flex-shrink:0;font-weight:400;min-width:16px}
@@ -774,6 +775,18 @@ input,select,textarea{font-family:inherit;font-size:16px}
         <div style="display:flex;gap:3px"><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span></div>
         <div style="display:flex;gap:3px"><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span></div>
       </div>
+      <div id="vf-grupo-marcacao-texto" style="display:flex;align-items:center;gap:2px">
+        <button onclick="vfAplicarMarcacaoTextoVF('grifar')" class="btn-icone-pequeno" title="Grifar o texto selecionado" style="width:32px;height:32px;border-radius:8px">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="15" width="18" height="6" rx="1" fill="#FFD84D"/><text x="12" y="14" font-family="serif" font-size="15" font-weight="700" text-anchor="middle" fill="#232426">A</text></svg>
+        </button>
+        <button onclick="vfAplicarMarcacaoTextoVF('sublinhar')" class="btn-icone-pequeno" title="Sublinhar o texto selecionado" style="width:32px;height:32px;border-radius:8px">
+          <svg viewBox="0 0 24 24" width="20" height="20"><text x="12" y="16" font-family="serif" font-size="16" font-weight="700" text-anchor="middle" fill="#232426">A</text><line x1="5" y1="20" x2="19" y2="20" stroke="#B23A34" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </button>
+        <button onclick="vfAplicarMarcacaoTextoVF('riscar')" class="btn-icone-pequeno" title="Riscar o texto selecionado" style="width:32px;height:32px;border-radius:8px">
+          <svg viewBox="0 0 24 24" width="20" height="20"><text x="12" y="16" font-family="serif" font-size="16" font-weight="700" text-anchor="middle" fill="#232426">A</text><line x1="5" y1="12.5" x2="19" y2="12.5" stroke="#B23A34" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div style="width:1px;height:22px;background:#eee"></div>
       <div id="vf-grupo-caneta" style="display:flex;align-items:center;gap:10px;background:#D2E7FA;border-radius:8px;padding:6px 12px;transition:gap 0.25s ease, background 0.25s ease">
         <button onclick="selecionarFerramentaCanetaVF()" style="background:none;border:none;padding:0;display:flex;cursor:pointer">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1094 1097" width="20" height="20">	
@@ -919,7 +932,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
       <div>
         <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;gap:0;align-items:center;justify-content:space-between;flex-wrap:wrap">
           <button class="vf-cor-destaque" data-cor="#FF3B30" onclick="selecionarCorDestaqueVF('#FF3B30')" style="width:26px;height:26px;border-radius:50%;background:#FF3B30;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
           <button class="vf-cor-destaque" data-cor="#FF9500" onclick="selecionarCorDestaqueVF('#FF9500')" style="width:26px;height:26px;border-radius:50%;background:#FF9500;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
           <button class="vf-cor-destaque" data-cor="#FFD84D" onclick="selecionarCorDestaqueVF('#FFD84D')" style="width:26px;height:26px;border-radius:50%;background:#FFD84D;border:2px solid #fff;box-shadow:0 0 0 2px #5B9BD5;cursor:pointer;padding:0"></button>
@@ -1393,7 +1406,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-243';
+const VERSAO_APP = '2026-07-25-247';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3398,6 +3411,7 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
 let estadoVF = null;
 let filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false};
 let favoritosVF = new Set();
+let vfTotalAfirmacoesNoBanco = null; // total geral no banco, buscado uma vez só ao entrar na sessão
 let flashsSalvosVF = new Map(); // questao_vf_id -> motivo ('estudar' ou 'corrigir')
 let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual que o banco, enquanto o upsert está em voo
 
@@ -3416,6 +3430,8 @@ let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual
 // suavizada (não linha reta simples) — é a mesma técnica usada por apps
 // de desenho de verdade.
 let vfCtxDesenho = null;
+let vfCanvasTracoTemp = null; // canvas à parte só durante um traço de destaque, funde no final
+let vfCtxTracoTemp = null;
 let vfDesenhandoAgora = false;
 let vfSeletorCorNativoAberto = false; // true enquanto o seletor de cor nativo (roda-viva) está aberto
 // checagem GERAL - qualquer pop-up (modal de anotação, notas, explicação,
@@ -3569,6 +3585,22 @@ document.addEventListener('touchstart', (e) => {
   vfUltimoPontoDesenho = ponto;
   vfPontoMedioAnterior = ponto;
   vfForcaSuavizada = typeof touch.force === 'number' && touch.force > 0 ? touch.force : 0.5; // começa do zero, não herda do traço anterior
+  // modo destaque desenha num canvas TEMPORÁRIO à parte, em opacidade
+  // cheia (sem transparência nenhuma durante o arrasto) - e só funde no
+  // canvas de verdade quando solta o dedo, com a opacidade escolhida
+  // aplicada UMA VEZ SÓ. Sem isso, cada pedacinho do traço curvo (um
+  // stroke() por movimento) empilhava opacidade nas emendas, criando
+  // aquele efeito de "salsicha"/conta em vez de uma linha lisa e única
+  if(vfModoDestaque){
+    vfCanvasTracoTemp = document.createElement('canvas');
+    vfCanvasTracoTemp.width = canvas.width;
+    vfCanvasTracoTemp.height = canvas.height;
+    vfCtxTracoTemp = vfCanvasTracoTemp.getContext('2d');
+    const dpr = (window.devicePixelRatio || 1) * 1.5;
+    vfCtxTracoTemp.setTransform(dpr, 0, 0, dpr, 0, 0);
+    vfCtxTracoTemp.lineCap = 'round';
+    vfCtxTracoTemp.lineJoin = 'round';
+  }
   // trava o scroll da página inteira enquanto o traço está em andamento —
   // duas camadas (touch-action E overflow), pra fechar o máximo de portas
   // possível contra a tela tremendo atrás da caneta. Some ao soltar o traço
@@ -3597,6 +3629,16 @@ document.addEventListener('touchmove', (e) => {
           vfUltimoPontoDesenho = ponto;
           vfPontoMedioAnterior = ponto;
           vfForcaSuavizada = typeof touchPendente.force === 'number' && touchPendente.force > 0 ? touchPendente.force : 0.5;
+          if(vfModoDestaque){
+            vfCanvasTracoTemp = document.createElement('canvas');
+            vfCanvasTracoTemp.width = canvas.width;
+            vfCanvasTracoTemp.height = canvas.height;
+            vfCtxTracoTemp = vfCanvasTracoTemp.getContext('2d');
+            const dpr = (window.devicePixelRatio || 1) * 1.5;
+            vfCtxTracoTemp.setTransform(dpr, 0, 0, dpr, 0, 0);
+            vfCtxTracoTemp.lineCap = 'round';
+            vfCtxTracoTemp.lineJoin = 'round';
+          }
           document.body.style.touchAction = 'none';
           document.documentElement.style.overflow = 'hidden';
           mostrarBarraDesenhoVF();
@@ -3613,16 +3655,18 @@ document.addEventListener('touchmove', (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = touch.clientX - rect.left, y = touch.clientY - rect.top;
 
+  // durante o arrasto, o destaque desenha em opacidade CHEIA no canvas
+  // temporário (sem multiply, sem alpha reduzido) - a mistura translúcida
+  // só acontece uma vez, no final do traço inteiro
+  const ctxAtivo = (vfModoDestaque && vfCtxTracoTemp) ? vfCtxTracoTemp : vfCtxDesenho;
   if(vfModoDestaque){
-    // multiply é o jeito certo de simular marca-texto de verdade - escurece
-    // o que já está desenhado por baixo, em vez de só sobrepor uma cor sólida
-    vfCtxDesenho.globalCompositeOperation = 'multiply';
-    vfCtxDesenho.strokeStyle = vfCorDestaqueAtual;
-    vfCtxDesenho.globalAlpha = vfOpacidadeDestaqueAtual;
+    ctxAtivo.globalCompositeOperation = 'source-over';
+    ctxAtivo.strokeStyle = vfCorDestaqueAtual;
+    ctxAtivo.globalAlpha = 1;
   }else{
-    vfCtxDesenho.globalCompositeOperation = vfModoBorracha ? 'destination-out' : 'source-over';
-    vfCtxDesenho.strokeStyle = vfCorDesenhoAtual;
-    vfCtxDesenho.globalAlpha = 1;
+    ctxAtivo.globalCompositeOperation = vfModoBorracha ? 'destination-out' : 'source-over';
+    ctxAtivo.strokeStyle = vfCorDesenhoAtual;
+    ctxAtivo.globalAlpha = 1;
   }
   let espessuraFinal = vfEspessuraDesenhoAtual;
   const forcaBruta = typeof touch.force === 'number' && touch.force > 0 ? touch.force : 0.5;
@@ -3647,7 +3691,7 @@ document.addEventListener('touchmove', (e) => {
     // mais fina. Diferença mais dramática entre leve e forte
     espessuraFinal = Math.max(0.8, vfEspessuraDesenhoAtual * (0.35 + forca * 1.85));
   }
-  vfCtxDesenho.lineWidth = Math.max(1, espessuraFinal);
+  ctxAtivo.lineWidth = Math.max(1, espessuraFinal);
 
   // interpolação pra traço rápido: quando a caneta se move rápido, a
   // amostragem de toque chega mais espaçada (é uma limitação do
@@ -3669,10 +3713,10 @@ document.addEventListener('touchmove', (e) => {
     // controle. Evita o efeito de segmentos retos colados, mesma técnica
     // usada em apps de desenho de verdade
     const pontoMedio = {x: (vfUltimoPontoDesenho.x + xEtapa) / 2, y: (vfUltimoPontoDesenho.y + yEtapa) / 2};
-    vfCtxDesenho.beginPath();
-    vfCtxDesenho.moveTo(vfPontoMedioAnterior.x, vfPontoMedioAnterior.y);
-    vfCtxDesenho.quadraticCurveTo(vfUltimoPontoDesenho.x, vfUltimoPontoDesenho.y, pontoMedio.x, pontoMedio.y);
-    vfCtxDesenho.stroke();
+    ctxAtivo.beginPath();
+    ctxAtivo.moveTo(vfPontoMedioAnterior.x, vfPontoMedioAnterior.y);
+    ctxAtivo.quadraticCurveTo(vfUltimoPontoDesenho.x, vfUltimoPontoDesenho.y, pontoMedio.x, pontoMedio.y);
+    ctxAtivo.stroke();
     vfPontoMedioAnterior = pontoMedio;
     vfUltimoPontoDesenho = {x: xEtapa, y: yEtapa};
   }
@@ -3687,6 +3731,19 @@ function vfFinalizarTracoDesenho(e){
   vfTouchIdAtivo = null;
   document.body.style.touchAction = '';
   document.documentElement.style.overflow = '';
+  // funde o traço de destaque (que foi desenhado em opacidade cheia no
+  // canvas temporário) no canvas de verdade - multiply + opacidade
+  // escolhida aplicados UMA VEZ SÓ pro traço inteiro, garantindo que ele
+  // saia como uma coisa só, uniforme, sem as emendas mais escuras
+  if(vfCanvasTracoTemp){
+    vfCtxDesenho.globalCompositeOperation = 'multiply';
+    vfCtxDesenho.globalAlpha = vfOpacidadeDestaqueAtual;
+    const dpr = (window.devicePixelRatio || 1) * 1.5;
+    vfCtxDesenho.drawImage(vfCanvasTracoTemp, 0, 0, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
+    vfCtxDesenho.globalAlpha = 1;
+    vfCanvasTracoTemp = null;
+    vfCtxTracoTemp = null;
+  }
   vfSalvarEstadoHistoricoVF();
 }
 document.addEventListener('touchend', vfFinalizarTracoDesenho);
@@ -4254,6 +4311,57 @@ function selecionarFerramentaDestaqueVF(){
   document.getElementById('vf-painel-caneta').classList.add('hidden');
   document.getElementById('vf-painel-borracha').classList.add('hidden');
   document.getElementById('vf-painel-destaque').classList.add('hidden');
+}
+
+// ---- marcação de texto de verdade (grifar/sublinhar/riscar) - seleciona
+// o texto com o dedo/caneta (como selecionar pra copiar), depois toca no
+// botão certo. Só na sessão atual, não salva no banco (mesma lógica do
+// rabisco livre com a caneta) - some ao trocar de questão ou recarregar
+function vfAplicarMarcacaoTextoVF(tipo){
+  const selecao = window.getSelection();
+  if(!selecao || selecao.rangeCount === 0 || selecao.isCollapsed){
+    alert('Selecione um trecho do texto primeiro (segure e arraste o dedo/caneta sobre as palavras).');
+    return;
+  }
+  const range = selecao.getRangeAt(0);
+  const noContainer = range.commonAncestorContainer;
+  const elementoContainer = noContainer.nodeType === 3 ? noContainer.parentElement : noContainer;
+  // só aplica dentro das áreas de texto permitidas do Flash - nunca em
+  // cima de botões, menu, ou qualquer outro texto da tela
+  const areaValida = elementoContainer.closest('#vf-enunciado-atual, #vf-correcao-atual');
+  if(!areaValida){
+    alert('Selecione um trecho dentro do texto da questão.');
+    return;
+  }
+
+  const span = document.createElement('span');
+  span.className = 'vf-marcacao-texto-sessao'; // só pra identificar visualmente, não afeta nada
+  if(tipo === 'grifar'){
+    span.style.backgroundColor = vfCorDestaqueAtual;
+    span.style.borderRadius = '2px';
+    span.style.boxDecorationBreak = 'clone';
+    span.style.webkitBoxDecorationBreak = 'clone';
+  }else if(tipo === 'sublinhar'){
+    span.style.textDecorationLine = 'underline';
+    span.style.textDecorationColor = vfCorDestaqueAtual;
+    span.style.textDecorationThickness = '2.5px';
+  }else if(tipo === 'riscar'){
+    span.style.textDecorationLine = 'line-through';
+    span.style.textDecorationColor = vfCorDestaqueAtual;
+    span.style.textDecorationThickness = '2.5px';
+  }
+
+  try{
+    // funciona bem quando a seleção não cruza fronteiras de outras tags
+    range.surroundContents(span);
+  }catch(e){
+    // seleção cruzou fronteira de outro elemento (ex: parte em negrito) -
+    // extrai o conteúdo (preserva as tags internas) e envolve no span
+    const fragmento = range.extractContents();
+    span.appendChild(fragmento);
+    range.insertNode(span);
+  }
+  selecao.removeAllRanges();
 }
 
 // clicar na BOLINHA (só existe/aparece quando a ferramenta já está
@@ -4854,14 +4962,16 @@ async function entrarNoModoVF(){
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
   document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
 
-  const [{data: userRow}, {data: horarioServidorMs}] = await Promise.all([
+  const [{data: userRow}, {data: horarioServidorMs}, {count: totalGeral}] = await Promise.all([
     sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single(),
-    sb.rpc('now_ms')
+    sb.rpc('now_ms'),
+    sb.from('questoes_vf').select('id', {count: 'exact', head: true}).eq('anulada', false)
   ]);
   if(typeof horarioServidorMs === 'number'){
     offsetRelogioVF = horarioServidorMs - Date.now();
     ultimaSincronizacaoVF = new Date(horarioServidorMs).toISOString(); // marca o início da sessão como o primeiro "já sincronizado até aqui"
   }
+  vfTotalAfirmacoesNoBanco = totalGeral ?? null;
   estadoVF = {
     pool: [],
     contadorGlobal: userRow?.contador_respostas_vf || 0,
@@ -5056,14 +5166,17 @@ function renderizarItemVF(){
   ].filter(Boolean).join('');
 
   el.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:2px 2px 14px;color:#888;font-size:var(--fs-c)">
-      <span style="display:flex;align-items:center;gap:6px">${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao} certas nessa sessão <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
-      <span style="display:flex;align-items:center;gap:6px">
-        <span id="vf-tempo-sessao-texto" class="hidden" style="font-variant-numeric:tabular-nums;color:#666"></span>
-        <button class="btn-icone-pequeno" onclick="vfToggleTimerSessaoVF()" title="Tempo nessa sessão">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        </button>
-      </span>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:2px 2px 14px;color:#888;font-size:var(--fs-c)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="display:flex;align-items:center;gap:6px">${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao} certas nessa sessão <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span id="vf-tempo-sessao-texto" class="hidden" style="font-variant-numeric:tabular-nums;color:#666"></span>
+          <button class="btn-icone-pequeno" onclick="vfToggleTimerSessaoVF()" title="Tempo nessa sessão">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </button>
+        </span>
+      </div>
+      ${vfTotalAfirmacoesNoBanco !== null ? `<span style="font-size:var(--fs-a);color:#aaa">${vfTotalAfirmacoesNoBanco.toLocaleString('pt-BR')} afirmações no total</span>` : ''}
     </div>
     <div class="card-questao">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 6px">
@@ -7796,7 +7909,7 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Legislação", autorBusca:["7.652"], autor:"BRASIL", titulo:"Lei nº 7.652/1988 – Registro da Propriedade Marítima", capitulos:null},
   {modulo:"Legislação", autorBusca:["9.432"], autor:"BRASIL", titulo:"Lei nº 9.432/1997 – Ordenação do Transporte Aquaviário", capitulos:null},
   {modulo:"Legislação", autorBusca:["lei complementar", "97/1999"], autor:"BRASIL", titulo:"Lei Complementar nº 97/1999 (cap. VI, art. 17)", capitulos:null},
-  {modulo:"Legislação", autorBusca:["12.815", "lei dos portos"], autor:"BRASIL", titulo:"Lei nº 12.815/2013 – Lei dos Portos", capitulos:null},
+  {modulo:"Legislação", autorBusca:["12.815"], autor:"BRASIL", titulo:"Lei nº 12.815/2013 – Lei dos Portos", capitulos:null},
   {modulo:"Legislação", autorBusca:["14.813"], autor:"BRASIL", titulo:"Lei nº 14.813/2024 – Regulamenta a atividade de praticagem", capitulos:null},
   {modulo:"Legislação", autorBusca:["9.537", "lesta"], autor:"BRASIL", titulo:"Lei nº 9.537/1997 – LESTA", capitulos:null},
   {modulo:"Legislação", autorBusca:["2.180", "tribunal marítimo"], autor:"BRASIL", titulo:"Lei nº 2.180/1954 – Tribunal Marítimo", capitulos:null},
@@ -7842,8 +7955,8 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Meteorologia e Oceanografia", autorBusca:["noções de meteorologia para navegantes"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["pianc 117"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["hydro/meteo"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
-  {modulo:"Meteorologia e Oceanografia", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:[1, 2]},
-  {modulo:"Meteorologia e Oceanografia", autorBusca:["mesquita", "ondas"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (livro completo)", capitulos:[1, 2]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 1-2)", capitulos:[1, 2]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["mesquita", "ondas"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 1-2)", capitulos:[1, 2]},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["ynoue"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["meteorologia", "nocoes basicas"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["bento"], autor:"BENTO, C. N. S.", titulo:"Navegação Integrada", capitulos:null},
