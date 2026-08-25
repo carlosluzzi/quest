@@ -1442,7 +1442,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-256';
+const VERSAO_APP = '2026-07-25-257';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3321,7 +3321,7 @@ function formatarTextoItemVF(texto){
 // primeiras 1000 simplesmente nunca apareceriam pro algoritmo, quebrando
 // a garantia de "nada é esquecido" quando o banco crescer (apontado pelo
 // Fable na análise do algoritmo)
-async function buscarTudoPaginadoVF(queryBuilder){
+async function buscarTudoPaginadoVF(queryBuilder, aoCarregarRestanteVF){
   const TAMANHO_PAGINA = 1000;
   // primeira página já vem com o count total EMBUTIDO (queryBuilder
   // define {count:'exact'} no próprio select) - zero requisições extras
@@ -3336,19 +3336,37 @@ async function buscarTudoPaginadoVF(queryBuilder){
   const totalReal = primeira.count;
 
   if(!primeira.data || primeira.data.length < TAMANHO_PAGINA){
-    return {data: todosOsDados, error: null}; // já é tudo, sem mais nada a buscar
+    return {data: todosOsDados, error: null, count: totalReal}; // já é tudo, sem mais nada a buscar
   }
 
   if(typeof totalReal === 'number' && totalReal > 0){
     const totalPaginas = Math.ceil(totalReal / TAMANHO_PAGINA);
-    const promessas = [];
-    for(let pagina = 1; pagina < totalPaginas; pagina++){
-      promessas.push(queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1));
-    }
-    const resultados = await Promise.all(promessas);
-    for(const {data, error} of resultados){
-      if(error) return {data: null, error};
-      todosOsDados = todosOsDados.concat(data || []);
+    const buscarPaginasRestantesVF = async () => {
+      const promessas = [];
+      for(let pagina = 1; pagina < totalPaginas; pagina++){
+        promessas.push(queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1));
+      }
+      const resultados = await Promise.all(promessas);
+      let extras = [];
+      for(const {data, error} of resultados){
+        if(error) return null;
+        extras = extras.concat(data || []);
+      }
+      return extras;
+    };
+
+    if(aoCarregarRestanteVF){
+      // ENTRADA PROGRESSIVA (ideia do Carlos, confirmada pelo Fable): não
+      // espera o resto - retorna JÁ com a primeira leva de 1000, e quando
+      // o resto chegar (em paralelo, em segundo plano), entrega via
+      // callback pra quem chamou anexar sozinho. Só a busca de questões
+      // usa isso hoje; quem não passar o callback mantém o comportamento
+      // de sempre (espera tudo, retorna tudo de uma vez)
+      buscarPaginasRestantesVF().then(extras => { if(extras) aoCarregarRestanteVF(extras); });
+    }else{
+      const extras = await buscarPaginasRestantesVF();
+      if(extras === null) return {data: null, error: {message: 'erro ao buscar páginas seguintes'}};
+      todosOsDados = todosOsDados.concat(extras);
     }
   }else{
     // sem count (queryBuilder não pediu {count:'exact'}) - continua
@@ -3371,7 +3389,7 @@ async function buscarTudoPaginadoVF(queryBuilder){
     todosOsDados.forEach(linha => vistos.set(linha.id, linha));
     todosOsDados = [...vistos.values()];
   }
-  return {data: todosOsDados, error: null};
+  return {data: todosOsDados, error: null, count: totalReal};
 }
 
 // horário corrigido pelo relógio do SERVIDOR, não do aparelho — um
@@ -5163,7 +5181,13 @@ async function sincronizarPoolVFReal(){
       estadoVF.historico.pop();
       estadoVF.posicao--;
       if(novaMarca) ultimaSincronizacaoVF = novaMarca;
-      await avancarParaProximaVF();
+      // SEM await de propósito - chamar com await aqui era exatamente o
+      // ciclo do deadlock: essa função (sincronizarPoolVFReal) ainda em
+      // voo, esperando avancarParaProximaVF, que por sua vez esperava a
+      // MESMA promise de sincronização de volta (nunca resolvia, a tela
+      // V/F congelava até dar F5). Agora avancarParaProximaVF nem espera
+      // mais sync nenhuma, então nunca mais cria esse ciclo
+      avancarParaProximaVF();
       return;
     }
   }
@@ -5200,12 +5224,36 @@ async function vfGarantirConteudoCompletoVF(item){
   Object.assign(item, data);
 }
 
+// mesma coisa, mas em LOTE - uma única query com .in('id', [...]) pra
+// várias questões de uma vez, em vez de uma viagem de rede por questão.
+// Usada pela pré-busca (que hoje tenta preparar até 8 candidatas de uma
+// vez - virar 8 queries separadas seria o oposto do que a otimização
+// inteira está tentando resolver)
+async function vfBuscarConteudoEmLoteVF(itens){
+  const pendentes = itens.filter(item => item.texto === undefined && !vfConteudoCompletoCache.has(item.id));
+  if(!pendentes.length) return;
+  const ids = pendentes.map(item => item.id);
+  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente').in('id', ids);
+  if(error || !data) return;
+  const porId = new Map(data.map(d => [d.id, d]));
+  pendentes.forEach(item => {
+    const conteudo = porId.get(item.id);
+    if(!conteudo) return;
+    const {id, ...resto} = conteudo;
+    vfConteudoCompletoCache.set(item.id, resto);
+    Object.assign(item, resto);
+  });
+}
+
 // enquanto o usuário lê a questão atual, busca em segundo plano o
-// conteúdo das candidatas mais prováveis a vir em seguida (mesma
-// pontuação do algoritmo de fila, sem o jitter/gate de aprendendo - é só
-// uma estimativa, não precisa ser exata). Não bloqueia nada, roda solta;
-// se a estimativa errar, a questão de verdade é buscada normalmente na
-// hora de aparecer mesmo, sem quebrar nada
+// conteúdo das candidatas mais prováveis a vir em seguida. Cobre os 3
+// estados que o algoritmo real considera (aprendendo tem prioridade
+// máxima quando existe alguma elegível; revisão por razão decorrido/
+// intervalo; novas com a MESMA fórmula de score do algoritmo real -
+// score determinístico via jitter semeado por sessão+id, então dá pra
+// saber com certeza quais 3 novas ele escolheria a seguir, não é só uma
+// estimativa). Não bloqueia nada, roda solta; se errar, a busca ao vivo
+// ainda cobre (agora em lote também, ver vfGarantirConteudoCompletoVF)
 function vfPreBuscarProximasVF(){
   if(!estadoVF || !estadoVF.pool) return;
   const agoraMs = agoraCorrigidoVF();
@@ -5213,12 +5261,9 @@ function vfPreBuscarProximasVF(){
   const jaCarregadosOuAtual = new Set([idAtual]);
 
   // 'aprendendo' tem PRIORIDADE MÁXIMA no algoritmo real (escolherProximaVF
-  // sempre pega dali primeiro, quando tem alguma elegível) - a pré-busca
-  // antiga só olhava 'revisao', então toda vez que uma questão recém-
-  // respondida voltava pouco depois (é assim que aprendendo funciona,
-  // por natureza), o conteúdo NUNCA tinha sido pré-buscado, e cada troca
-  // de questão nessa fase esperava uma busca ao vivo. É essa lacuna que
-  // provavelmente estava deixando "cada questão" lenta
+  // sempre pega dali primeiro, quando tem alguma elegível) - toda vez que
+  // uma questão recém-respondida volta pouco depois (é assim que
+  // aprendendo funciona, por natureza), o conteúdo precisa estar pronto
   const aprendendoElegiveis = estadoVF.pool
     .filter(q => q.id !== idAtual && q.estado === 'aprendendo' && q.texto === undefined
       && elegibilidadeAprendendoVF(q, agoraMs, estadoVF.contadorGlobal, estadoVF.pool.length))
@@ -5231,16 +5276,75 @@ function vfPreBuscarProximasVF(){
     .map(q => {
       const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
       const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
-      return {q, score: (decorridoH / q.intervalo_horas) * boost};
+      const jitter = 1 + (pseudoAleatorioVF(estadoVF.sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
+      return {q, score: (decorridoH / q.intervalo_horas) * boost * jitter};
     })
     .sort((a,b) => b.score - a.score)
     .slice(0, 5)
     .map(c => c.q);
+  revisaoPorScore.forEach(q => jaCarregadosOuAtual.add(q.id));
 
-  [...aprendendoElegiveis, ...revisaoPorScore].forEach(q => { vfGarantirConteudoCompletoVF(q).catch(() => {}); });
+  // com um banco majoritariamente de questões NUNCA respondidas, a
+  // próxima é quase sempre uma nova - a fórmula é a MESMA que
+  // escolherProximaVF usa (1.0 × jitter da semente), então dá pra saber
+  // com certeza quais ela escolheria, não é um chute
+  const novasPorScore = estadoVF.pool
+    .filter(q => !jaCarregadosOuAtual.has(q.id) && (!q.estado || q.estado === 'nova') && q.texto === undefined)
+    .map(q => {
+      const jitter = 1 + (pseudoAleatorioVF(estadoVF.sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
+      return {q, score: 1.0 * jitter};
+    })
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 3)
+    .map(c => c.q);
+
+  vfBuscarConteudoEmLoteVF([...aprendendoElegiveis, ...revisaoPorScore, ...novasPorScore]).catch(() => {});
 }
 
-async function carregarPoolVF(){
+// token de geração - incrementa toda vez que uma carga de pool começa.
+// Se uma página atrasada (chegando em segundo plano, entrada progressiva)
+// responder depois que o filtro já mudou (nova geração começou), ela é
+// descartada em vez de ser anexada por cima do pool errado
+let vfTokenGeracaoPoolVF = 0;
+
+// processa questões cruas (metadados) em itens de pool prontos - extraído
+// pra função própria porque agora roda duas vezes: na primeira leva (que
+// já aparece na tela) e nas páginas que chegam depois em segundo plano
+// (entrada progressiva)
+function vfProcessarQuestoesCruasVF(questoesCruas, estadoPorId, idsExcluidos){
+  return (questoesCruas||[])
+    .filter(q => !idsExcluidos.has(q.id) && (!filtroVF.modulo || vfBibliografiaCache.get(q.bibliografia_id)?.modulo_pscpp === filtroVF.modulo))
+    .map(q => {
+      // se essa questão tem uma escrita em voo (respondida agora mesmo, mas
+      // o upsert ainda não confirmou), o estado local já é mais atual que
+      // o que acabou de vir do banco — usa ele em vez do que a query trouxe
+      const pendente = escritasPendentesVF.get(q.id);
+      if(pendente) return {...q, ...pendente};
+      const e = estadoPorId[q.id];
+      // blindagem contra linha corrompida (migração ou bug antigo): se diz
+      // 'revisao' mas não tem intervalo, ou 'aprendendo' sem total_degraus,
+      // trata como segura em vez de propagar NaN pro cálculo e de volta pro banco
+      let estado = e?.estado || 'nova';
+      let totalDegraus = e?.total_degraus ?? null;
+      if(estado === 'revisao' && !e?.intervalo_horas) estado = 'nova';
+      if(estado === 'aprendendo' && !totalDegraus) totalDegraus = 1;
+      return {
+        ...q, estado,
+        intervalo_horas: e?.intervalo_horas ?? null,
+        fator: e?.fator ?? VF_ALGO.FATOR_INI,
+        ultima_resposta_em: e?.ultima_resposta_em ?? null,
+        degrau: e?.degrau ?? 0,
+        total_degraus: totalDegraus,
+        intervalo_pendente: e?.intervalo_pendente ?? null,
+        marca_contador: e?.marca_contador ?? null,
+        total_respostas: e?.total_respostas ?? 0,
+        total_erros: e?.total_erros ?? 0
+      };
+    });
+}
+
+async function carregarPoolVF(incluirDadosEntradaVF){
+  const tokenDestaCargaVF = ++vfTokenGeracaoPoolVF;
   const montarQueryQuestoesVF = () => {
     // só os campos que o ALGORITMO precisa pra escolher a próxima questão -
     // nada de texto/explicação/correção aqui. Isso é ~95% menos dados
@@ -5262,14 +5366,49 @@ async function carregarPoolVF(){
     // página e outra, podendo pular ou duplicar linha acima de 1000
   };
 
-  const [{data: questoes}, {data: estados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}] = await Promise.all([
-    buscarTudoPaginadoVF(montarQueryQuestoesVF),
+  // na entrada inicial, as consultas de userRow/now_ms entram NO MESMO
+  // Promise.all do pool - antes eram uma rodada sequencial separada,
+  // pagando uma viagem de rede inteira a mais só na primeira abertura
+  const consultasEntradaVF = incluirDadosEntradaVF ? [
+    sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single(),
+    sb.rpc('now_ms')
+  ] : [];
+
+  // ENTRADA PROGRESSIVA (ideia do Carlos, confirmada pelo Fable): na
+  // entrada inicial, não espera as 7.700+ questões todas chegarem - a
+  // primeira leva de 1000 já é suficiente pra escolher e mostrar a
+  // primeira questão. O resto continua chegando em segundo plano e vai
+  // sendo ANEXADO ao pool já em uso (com dedup), a fila recalcula
+  // sozinha a cada escolha, então as que chegarem depois entram na
+  // disputa naturalmente. Fora da entrada (troca de filtro, por
+  // exemplo), continua esperando tudo de uma vez, mais simples e seguro
+  // as questões extras (páginas seguintes) também precisam respeitar
+  // exclusões - só sei quais são DEPOIS que o Promise.all principal
+  // resolver, mas o callback é definido ANTES (precisa ser passado já
+  // pronto pra buscarTudoPaginadoVF). Uma variável de closure resolve:
+  // o callback só EXECUTA de fato mais tarde (quando as páginas
+  // seguintes chegarem, depois da primeira leva já ter voltado), e lê o
+  // valor mais atual dessa variável nesse momento
+  let idsExcluidosParaCallbackVF = new Set();
+  let estadoPorIdParaCallbackVF = {};
+  const aoCarregarRestanteQuestoesVF = incluirDadosEntradaVF ? (questoesCruasExtras) => {
+    if(tokenDestaCargaVF !== vfTokenGeracaoPoolVF) return; // filtro mudou no meio - descarta, é de uma carga velha
+    if(!estadoVF || !estadoVF.pool) return;
+    const idsJaNoPool = new Set(estadoVF.pool.map(q => q.id));
+    const processadas = vfProcessarQuestoesCruasVF(questoesCruasExtras, estadoPorIdParaCallbackVF, idsExcluidosParaCallbackVF)
+      .filter(q => !idsJaNoPool.has(q.id));
+    if(processadas.length) estadoVF.pool = estadoVF.pool.concat(processadas);
+  } : undefined;
+
+  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, , ...resultadosEntradaVF] = await Promise.all([
+    buscarTudoPaginadoVF(montarQueryQuestoesVF, aoCarregarRestanteQuestoesVF),
     buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('flashs_salvos_vf').select('questao_vf_id, motivo').eq('usuario_id', usuarioAtual.id),
-    vfCarregarBibliografiaCacheVF() // idempotente - só busca de verdade na primeira vez da sessão
+    vfCarregarBibliografiaCacheVF(), // idempotente - só busca de verdade na primeira vez da sessão
+    ...consultasEntradaVF
   ]);
   favoritosVF = new Set((favData||[]).map(f=>f.questao_vf_id));
   notasVF = new Set((notaData||[]).map(n=>n.questao_vf_id));
@@ -5277,39 +5416,25 @@ async function carregarPoolVF(){
   const idsExcluidos = new Set((excluidas||[]).map(e=>e.questao_vf_id));
   const estadoPorId = {};
   (estados||[]).forEach(e => { estadoPorId[e.questao_vf_id] = e; });
+  // agora sim os valores reais - o callback das páginas seguintes (mais
+  // lentas, ainda rodando em segundo plano nesse momento) vai ler essas
+  // variáveis via closure só quando for chamado de fato, o que acontece
+  // bem depois daqui
+  idsExcluidosParaCallbackVF = idsExcluidos;
+  estadoPorIdParaCallbackVF = estadoPorId;
 
-  return (questoes||[])
-    .filter(q => !idsExcluidos.has(q.id) && (!filtroVF.modulo || vfBibliografiaCache.get(q.bibliografia_id)?.modulo_pscpp === filtroVF.modulo))
-    .map(q => {
-      // se essa questão tem uma escrita em voo (respondida agora mesmo, mas
-      // o upsert ainda não confirmou), o estado local já é mais atual que
-      // o que acabou de vir do banco — usa ele em vez do que a query trouxe
-      const pendente = escritasPendentesVF.get(q.id);
-      if(pendente) return {...q, ...pendente};
-
-      const e = estadoPorId[q.id];
-      // blindagem contra linha corrompida (migração ou bug antigo): se diz
-      // 'revisao' mas não tem intervalo, ou 'aprendendo' sem total_degraus,
-      // trata como segura em vez de propagar NaN pro cálculo e de volta pro banco
-      let estado = e?.estado || 'nova';
-      let totalDegraus = e?.total_degraus ?? null;
-      if(estado === 'revisao' && !e?.intervalo_horas) estado = 'nova';
-      if(estado === 'aprendendo' && !totalDegraus) totalDegraus = 1;
-
-      return {
-        ...q,
-        estado,
-        intervalo_horas: e?.intervalo_horas ?? null,
-        fator: e?.fator ?? VF_ALGO.FATOR_INI,
-        ultima_resposta_em: e?.ultima_resposta_em ?? null,
-        degrau: e?.degrau ?? 0,
-        total_degraus: totalDegraus,
-        intervalo_pendente: e?.intervalo_pendente ?? null,
-        marca_contador: e?.marca_contador ?? null,
-        total_respostas: e?.total_respostas ?? 0,
-        total_erros: e?.total_erros ?? 0
-      };
-    });
+  const poolPronto = vfProcessarQuestoesCruasVF(questoes, estadoPorId, idsExcluidos);
+  // anexa os dados de entrada como propriedades extras no próprio array
+  // (arrays são objetos em JS) - preserva a assinatura de retorno pra
+  // quem já chama sem esse parâmetro (recarga por filtro, por exemplo)
+  if(incluirDadosEntradaVF){
+    poolPronto.dadosEntradaVF = {
+      userRow: resultadosEntradaVF[0]?.data,
+      horarioServidorMs: resultadosEntradaVF[1]?.data,
+      totalGeralQuestoesVF // só faz sentido como "total geral" aqui porque a entrada roda sem filtro nenhum ativo ainda
+    };
+  }
+  return poolPronto;
 }
 
 // entrada na aba — se já tem uma sessão em andamento NESSA aba do
@@ -5332,19 +5457,9 @@ async function entrarNoModoVF(){
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
   document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
 
-  const [{data: userRow}, {data: horarioServidorMs}, {count: totalGeral}] = await Promise.all([
-    sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single(),
-    sb.rpc('now_ms'),
-    sb.from('questoes_vf').select('id', {count: 'exact', head: true}).eq('anulada', false)
-  ]);
-  if(typeof horarioServidorMs === 'number'){
-    offsetRelogioVF = horarioServidorMs - Date.now();
-    ultimaSincronizacaoVF = new Date(horarioServidorMs).toISOString(); // marca o início da sessão como o primeiro "já sincronizado até aqui"
-  }
-  vfTotalAfirmacoesNoBanco = totalGeral ?? null;
   estadoVF = {
     pool: [],
-    contadorGlobal: userRow?.contador_respostas_vf || 0,
+    contadorGlobal: 0,
     sementeSessao: String(Date.now()) + '-' + Math.random(),
     anteriorVeioDeAprendizado: false,
     historico: [],
@@ -5353,20 +5468,32 @@ async function entrarNoModoVF(){
     respondidasSessao: 0,
     inicioSessaoVFMs: Date.now()
   };
-  await recarregarPoolEContinuarVF();
+  // userRow/now_ms/total geral agora entram NO MESMO Promise.all da busca
+  // do pool (dentro de carregarPoolVF) - antes eram uma rodada sequencial
+  // separada, pagando uma viagem de rede inteira a mais só na entrada
+  await recarregarPoolEContinuarVF(true);
 }
 
 // busca o pool de novo (com o filtro atual) e continua a fila — usado na
 // entrada e sempre que o filtro muda. NÃO reinicia nada (histórico,
 // contador, placar da sessão continuam): o estado de cada questão é
 // global, o filtro só re-recorta qual pool está visível agora
-async function recarregarPoolEContinuarVF(){
+async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
   const el = document.getElementById('vf-conteudo');
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
   document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
 
-  const pool = await carregarPoolVF();
+  const pool = await carregarPoolVF(ehEntradaInicialVF);
   estadoVF.pool = pool;
+  if(ehEntradaInicialVF && pool.dadosEntradaVF){
+    const {userRow, horarioServidorMs, totalGeralQuestoesVF} = pool.dadosEntradaVF;
+    if(typeof horarioServidorMs === 'number'){
+      offsetRelogioVF = horarioServidorMs - Date.now();
+      ultimaSincronizacaoVF = new Date(horarioServidorMs).toISOString(); // marca o início da sessão como o primeiro "já sincronizado até aqui"
+    }
+    estadoVF.contadorGlobal = userRow?.contador_respostas_vf || 0;
+    vfTotalAfirmacoesNoBanco = totalGeralQuestoesVF ?? null;
+  }
   if(!pool.length){
     el.innerHTML = `<p style="padding:24px 4px;color:#888">Nenhum item disponível pra praticar com esses filtros.</p>`;
     return;
@@ -5386,8 +5513,21 @@ async function recarregarPoolEContinuarVF(){
   await avancarParaProximaVF();
 }
 
+// sincronização com outro aparelho não pode mais bloquear CADA avanço de
+// questão (era um pedágio de rede inteiro por toque em "Próxima", e pior:
+// causava um deadlock real - ver abaixo). Dispara sem esperar, no máximo
+// 1 vez por minuto - não precisa ser instantâneo, sincronizar com outro
+// aparelho em segundo plano já cobre o caso bem
+let ultimaVezQueDisparouSyncMs = 0;
+function dispararSincronizacaoEmSegundoPlanoVF(){
+  const agora = Date.now();
+  if(agora - ultimaVezQueDisparouSyncMs < 60000) return;
+  ultimaVezQueDisparouSyncMs = agora;
+  sincronizarPoolVF().catch(() => {});
+}
+
 async function avancarParaProximaVF(){
-  await sincronizarPoolVF(); // antes de escolher, traz o que mudou em outro aparelho
+  dispararSincronizacaoEmSegundoPlanoVF(); // não bloqueia mais o avanço
   const agoraMs = agoraCorrigidoVF();
   const pick = escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao);
   if(!pick){
