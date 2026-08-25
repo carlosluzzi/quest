@@ -1442,7 +1442,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-252';
+const VERSAO_APP = '2026-07-25-253';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3323,24 +3323,21 @@ function formatarTextoItemVF(texto){
 // Fable na análise do algoritmo)
 async function buscarTudoPaginadoVF(queryBuilder){
   const TAMANHO_PAGINA = 1000;
-  // cobre até 15.000 registros de uma vez, bem acima do que existe hoje —
-  // as páginas além do fim dos dados reais só voltam vazias (sem custo de
-  // tempo, já que rodam em paralelo com as outras, não uma depois da
-  // outra). Isso é o que estava deixando o Flash lento pra carregar: com
-  // ~7.700 questões, eram 8 páginas esperando uma a outra terminar antes
-  // de pedir a próxima — agora todas saem ao mesmo tempo
-  const MAX_PAGINAS_PARALELAS = 15;
-  const promessas = [];
-  for(let pagina = 0; pagina < MAX_PAGINAS_PARALELAS; pagina++){
-    promessas.push(queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1));
-  }
-  const resultados = await Promise.all(promessas);
-
+  // voltou a ser sequencial - a versão paralela (que buscava sempre até
+  // 15 páginas de uma vez) quebrou o carregamento do Flash de verdade
+  // (confirmado em vídeo: a tela ficava presa, sem nenhuma questão
+  // aparecendo). A causa provável é que tabelas pequenas como
+  // repeticao_vf (hoje só 3 linhas) disparavam até 14 requisições muito
+  // além do fim dos dados de uma vez, junto com as outras - instável.
+  // Prioridade agora é o app funcionar de verdade, não ser mais rápido
   let todosOsDados = [];
-  for(const {data, error} of resultados){
+  let pagina = 0;
+  while(true){
+    const {data, error} = await queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1);
     if(error) return {data: null, error};
-    if(!data || !data.length) break; // chegou no fim dos dados reais, o resto são páginas vazias
-    todosOsDados = todosOsDados.concat(data);
+    todosOsDados = todosOsDados.concat(data || []);
+    if(!data || data.length < TAMANHO_PAGINA) break;
+    pagina++;
   }
   return {data: todosOsDados, error: null};
 }
