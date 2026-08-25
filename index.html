@@ -1447,7 +1447,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-277';
+const VERSAO_APP = '2026-07-25-278';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5389,12 +5389,22 @@ function vfRenderizarGradeCoresVF(idGrid, corAtual){
     const ehCustomizada = indice >= config.coresFixas.length;
     const selecionada = cor.toUpperCase() === (corAtual||'').toUpperCase();
     const classeExtra = selecionada ? ' vf-cor-selecionada' : '';
-    // cor customizada: segurar exclui (toque longo, com vibração de
-    // confirmação) - cor fixa não pode ser excluída, não tem esse atributo
-    const atributosSegurar = ehCustomizada
+    // segurar uma cor customizada (dedo ou caneta) não exclui direto -
+    // só ARMA o modo excluir nessa bolinha específica, mostrando um X no
+    // canto. Só tocar o X de fato apaga; tocar em qualquer outro lugar
+    // sai do modo sem mexer em nada
+    const emModoExcluir = ehCustomizada && vfCorEmModoExcluirVF && vfCorEmModoExcluirVF.idGrid === idGrid && vfCorEmModoExcluirVF.cor.toUpperCase() === cor.toUpperCase();
+    const atributosSegurar = (ehCustomizada && !emModoExcluir)
       ? ` ontouchstart="vfIniciarPressionarCorCustomizadaVF('${idGrid}','${cor}')" ontouchend="vfCancelarPressionarCorCustomizadaVF()" ontouchmove="vfCancelarPressionarCorCustomizadaVF()" onmousedown="vfIniciarPressionarCorCustomizadaVF('${idGrid}','${cor}')" onmouseup="vfCancelarPressionarCorCustomizadaVF()" onmouseleave="vfCancelarPressionarCorCustomizadaVF()"`
       : '';
-    html += `<button class="${config.classeBotao}${classeExtra}" data-cor="${cor}"${ehCustomizada ? ' data-customizada="1"' : ''} onclick="${config.funcaoSelecionar}('${cor}')"${atributosSegurar} style="width:26px;height:26px;border-radius:50%;background:${cor};border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0;${SEM_SELECAO}"></button>`;
+    const onclickBotao = emModoExcluir ? `vfSairDoModoExcluirCorVF()` : `${config.funcaoSelecionar}('${cor}')`;
+    const botaoX = emModoExcluir
+      ? `<button type="button" onclick="event.stopPropagation();vfExcluirCorCustomizadaVF('${idGrid}','${cor}')" title="Excluir cor" style="position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:#B23A34;border:1.5px solid #fff;color:#fff;font-size:10px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.35);${SEM_SELECAO}">✕</button>`
+      : '';
+    html += `<div style="position:relative;width:26px;height:26px;flex-shrink:0">
+      <button class="${config.classeBotao}${classeExtra}" data-cor="${cor}"${ehCustomizada ? ' data-customizada="1"' : ''} onclick="${onclickBotao}"${atributosSegurar} style="width:26px;height:26px;border-radius:50%;background:${cor};border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0;${SEM_SELECAO}"></button>
+      ${botaoX}
+    </div>`;
   });
   // seletor arco-íris - SEMPRE mostra o gradiente, nunca a cor escolhida.
   // O input nativo real fica por cima, invisível, ocupando o mesmo
@@ -5433,30 +5443,56 @@ function corNativaConfirmadaVF(valorBruto, idGrid){
   window[config.funcaoSelecionar](cor); // aplica de verdade (ícone da barrinha, variável de estado, etc)
 }
 
-// ---- excluir cor customizada: segura a bolinha por um instante ----
+// ---- excluir cor customizada: segura a bolinha por um instante pra
+// ARMAR o modo excluir (mostra um X no canto dela) - só tocar o X de
+// fato apaga. Segurar sozinho nunca excluí direto, só oferece a opção ----
 let vfTimerPressionarCorCustomizadaVF = null;
+let vfCorEmModoExcluirVF = null; // {idGrid, cor} da bolinha mostrando o X agora, ou null
+
+function vfCorAtualDoGridVF(idGrid){
+  const mapa = {
+    'vf-grade-cores-caneta': () => vfCorDesenhoAtual,
+    'vf-grade-cores-destaque': () => vfCorDestaqueAtual,
+    'vf-grade-cores-marcacao-texto': () => vfCorMarcacaoTextoAtual
+  };
+  return mapa[idGrid] ? mapa[idGrid]() : null;
+}
+
 function vfIniciarPressionarCorCustomizadaVF(idGrid, cor){
   clearTimeout(vfTimerPressionarCorCustomizadaVF);
   vfTimerPressionarCorCustomizadaVF = setTimeout(() => {
     vfTimerPressionarCorCustomizadaVF = null;
     if(navigator.vibrate) navigator.vibrate(15); // feedback tátil de "ativou o toque longo"
-    vfExcluirCorCustomizadaVF(idGrid, cor);
+    vfCorEmModoExcluirVF = {idGrid, cor};
+    vfRenderizarGradeCoresVF(idGrid, vfCorAtualDoGridVF(idGrid));
   }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
 }
 function vfCancelarPressionarCorCustomizadaVF(){
   clearTimeout(vfTimerPressionarCorCustomizadaVF);
   vfTimerPressionarCorCustomizadaVF = null;
 }
+// toca em qualquer lugar fora do X (inclusive na própria bolinha que
+// estava mostrando o X) sai do modo excluir sem apagar nada
+function vfSairDoModoExcluirCorVF(){
+  if(!vfCorEmModoExcluirVF) return;
+  const {idGrid} = vfCorEmModoExcluirVF;
+  vfCorEmModoExcluirVF = null;
+  vfRenderizarGradeCoresVF(idGrid, vfCorAtualDoGridVF(idGrid));
+}
 function vfExcluirCorCustomizadaVF(idGrid, cor){
   const restantes = vfCoresCustomizadasSalvasVF(idGrid).filter(c => c.toUpperCase() !== cor.toUpperCase());
   try{ localStorage.setItem('vf_cores_custom_' + idGrid, JSON.stringify(restantes)); }catch(e){}
-  const corAtualPorGrid = {
-    'vf-grade-cores-caneta': () => vfCorDesenhoAtual,
-    'vf-grade-cores-destaque': () => vfCorDestaqueAtual,
-    'vf-grade-cores-marcacao-texto': () => vfCorMarcacaoTextoAtual
-  };
-  vfRenderizarGradeCoresVF(idGrid, corAtualPorGrid[idGrid] ? corAtualPorGrid[idGrid]() : null);
+  vfCorEmModoExcluirVF = null;
+  vfRenderizarGradeCoresVF(idGrid, vfCorAtualDoGridVF(idGrid));
 }
+// toque em QUALQUER lugar fora do botão X cancela o modo excluir - sem
+// isso, o X ficava preso na tela pra sempre se o usuário mudasse de ideia
+document.addEventListener('touchstart', (e) => {
+  if(!vfCorEmModoExcluirVF) return;
+  if(e.target.closest('button[onclick*="vfExcluirCorCustomizadaVF"]')) return; // deixa o toque no X seguir normal
+  vfSairDoModoExcluirCorVF();
+}, {capture: true, passive: true});
+
 
 // alguns elementos nativos (como input range) às vezes deixam resíduo
 // visual ao atualizar accent-color dinamicamente num elemento já
