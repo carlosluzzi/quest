@@ -1442,7 +1442,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-254';
+const VERSAO_APP = '2026-07-25-255';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3323,21 +3323,45 @@ function formatarTextoItemVF(texto){
 // Fable na análise do algoritmo)
 async function buscarTudoPaginadoVF(queryBuilder){
   const TAMANHO_PAGINA = 1000;
-  // voltou a ser sequencial - a versão paralela (que buscava sempre até
-  // 15 páginas de uma vez) quebrou o carregamento do Flash de verdade
-  // (confirmado em vídeo: a tela ficava presa, sem nenhuma questão
-  // aparecendo). A causa provável é que tabelas pequenas como
-  // repeticao_vf (hoje só 3 linhas) disparavam até 14 requisições muito
-  // além do fim dos dados de uma vez, junto com as outras - instável.
-  // Prioridade agora é o app funcionar de verdade, não ser mais rápido
-  let todosOsDados = [];
-  let pagina = 0;
-  while(true){
-    const {data, error} = await queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1);
-    if(error) return {data: null, error};
-    todosOsDados = todosOsDados.concat(data || []);
-    if(!data || data.length < TAMANHO_PAGINA) break;
-    pagina++;
+  // primeira página sempre sequencial (necessária de qualquer forma) -
+  // se vier com menos que 1000, já é tudo (ex: repeticao_vf, hoje só 3
+  // linhas) e PARA AQUI, sem nenhuma requisição extra. Só se vier CHEIA
+  // (indicando que tem mais) é que busca o total exato (1 requisição leve,
+  // head:true - não baixa dado nenhum) e dispara o RESTO em paralelo,
+  // sabendo exatamente quantas páginas existem - nunca chuta um número
+  // fixo. É essa parte que tinha quebrado antes: chutar sempre 15 páginas
+  // disparava até 14 requisições muito além do fim pra tabelas pequenas.
+  // Agora tabela pequena nunca dispara requisição extra nenhuma
+  const primeira = await queryBuilder().range(0, TAMANHO_PAGINA - 1);
+  if(primeira.error) return {data: null, error: primeira.error};
+  let todosOsDados = primeira.data || [];
+  if(!primeira.data || primeira.data.length < TAMANHO_PAGINA){
+    return {data: todosOsDados, error: null}; // tabela pequena, já acabou
+  }
+
+  const {count, error: erroCount} = await queryBuilder().select('*', {count: 'exact', head: true});
+  if(erroCount || !count){
+    // não conseguiu contar por algum motivo - continua sequencial a
+    // partir da página 2, sempre funciona mesmo sem saber o total
+    let pagina = 1;
+    while(true){
+      const {data, error} = await queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1);
+      if(error) return {data: null, error};
+      todosOsDados = todosOsDados.concat(data || []);
+      if(!data || data.length < TAMANHO_PAGINA) break;
+      pagina++;
+    }
+  }else{
+    const totalPaginas = Math.ceil(count / TAMANHO_PAGINA);
+    const promessas = [];
+    for(let pagina = 1; pagina < totalPaginas; pagina++){
+      promessas.push(queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1));
+    }
+    const resultados = await Promise.all(promessas);
+    for(const {data, error} of resultados){
+      if(error) return {data: null, error};
+      todosOsDados = todosOsDados.concat(data || []);
+    }
   }
   // deduplica por id - proteção barata (apontada pelo Fable) contra um
   // upload inserir linhas no meio da busca, deslocando o que cada página
