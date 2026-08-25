@@ -58,19 +58,20 @@ button:active{transform:scale(0.96)}
 input,select,textarea{font-family:inherit;font-size:16px}
 
 .hidden{display:none !important}
-/* sliders de espessura (caneta e destaque) - MESMO visual nos dois, pílula
-horizontal neutra (branca, como o thumb padrão nativo da Apple), não
-mais colorida - accent-color mostrou comportamento persistente/
-inconsistente no Safari (ficava com resíduo de cor errada mesmo depois
-de recriar o elemento), então o thumb é estilizado manualmente aqui,
-sempre a mesma cor neutra fixa nos dois. Só o PREENCHIMENTO da trilha
-(até o valor atual) continua colorido e dinâmico, cada um com sua
-própria cor - isso é controlado por JS trocando a custom property de
-cada slider individualmente */
-#vf-slider-espessura, #vf-slider-espessura-destaque{-webkit-appearance:none;appearance:none;background:transparent}
+/* sliders de espessura (caneta, destaque e tamanho da borracha) - MESMO
+visual nos três, pílula horizontal neutra (branca, como o thumb padrão
+nativo da Apple), não mais colorida - accent-color mostrou comportamento
+persistente/inconsistente no Safari (ficava com resíduo de cor errada
+mesmo depois de recriar o elemento), então o thumb é estilizado
+manualmente aqui, sempre a mesma cor neutra fixa nos três. Só o
+PREENCHIMENTO da trilha (até o valor atual) continua colorido e
+dinâmico, cada um com sua própria cor - isso é controlado por JS
+trocando a custom property de cada slider individualmente */
+#vf-slider-espessura, #vf-slider-espessura-destaque, #vf-slider-tamanho-borracha{-webkit-appearance:none;appearance:none;background:transparent}
 #vf-slider-espessura::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--preenchimento-slider-caneta, #ddd)}
 #vf-slider-espessura-destaque::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--preenchimento-slider-destaque, #ddd)}
-#vf-slider-espessura::-webkit-slider-thumb, #vf-slider-espessura-destaque::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:14px;border-radius:7px;background:#fff;border:1px solid #ccc;box-shadow:0 1px 3px rgba(0,0,0,0.3);margin-top:-5px}
+#vf-slider-tamanho-borracha::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--preenchimento-slider-borracha, #ddd)}
+#vf-slider-espessura::-webkit-slider-thumb, #vf-slider-espessura-destaque::-webkit-slider-thumb, #vf-slider-tamanho-borracha::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:14px;border-radius:7px;background:#fff;border:1px solid #ccc;box-shadow:0 1px 3px rgba(0,0,0,0.3);margin-top:-5px}
 
 /* --- Cards --- */
 .card-inicio{background:#fff;border-radius:18px;padding:13px;box-shadow:0 1px 4px rgba(0,0,0,0.05);margin-bottom:14px;position:relative;overflow:hidden}
@@ -1030,16 +1031,9 @@ automaticamente da classe .hidden do app-shell -->
 
       <div style="margin-top:16px">
         <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Tamanho</div>
-        <div style="display:flex;gap:14px;align-items:center">
-          <button class="vf-tamanho-borracha" data-tamanho="14" onclick="selecionarTamanhoBorrachaVF(14)" style="width:34px;height:34px;box-sizing:border-box;border-radius:8px;border:2px solid transparent;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <span style="width:10px;height:10px;border-radius:50%;background:#999;flex-shrink:0;display:block"></span>
-          </button>
-          <button class="vf-tamanho-borracha" data-tamanho="20" onclick="selecionarTamanhoBorrachaVF(20)" style="width:34px;height:34px;box-sizing:border-box;border-radius:8px;border:2px solid transparent;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <span style="width:16px;height:16px;border-radius:50%;background:#999;flex-shrink:0;display:block"></span>
-          </button>
-          <button class="vf-tamanho-borracha" data-tamanho="28" onclick="selecionarTamanhoBorrachaVF(28)" style="width:34px;height:34px;box-sizing:border-box;border-radius:8px;border:2px solid #5B9BD5;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <span style="width:22px;height:22px;border-radius:50%;background:#999;flex-shrink:0;display:block"></span>
-          </button>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="range" id="vf-slider-tamanho-borracha" min="10" max="40" step="1" value="28" oninput="mudarTamanhoBorrachaVF(this.value)" style="flex:1;min-width:0">
+          <span id="vf-preview-tamanho-borracha" style="width:28px;height:28px;border-radius:50%;background:#999;flex-shrink:0;display:block"></span>
         </div>
       </div>
     </div>
@@ -1450,7 +1444,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-285';
+const VERSAO_APP = '2026-07-25-286';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5298,13 +5292,17 @@ function selecionarModoBorrachaVF(modo){
 // Tamanho da borracha — 3 opções fixas (pequena/média/grande), igual as 3
 // bolinhas vistas no painel real
 let vfTamanhoBorracha = 28;
-function selecionarTamanhoBorrachaVF(tamanho){
-  vfTamanhoBorracha = tamanho;
-  document.querySelectorAll('.vf-tamanho-borracha').forEach(btn => {
-    // a borda é sempre 2px (só muda a cor) - nunca 'none', pra não mudar
-    // o tamanho da caixa e nunca espremer o círculo de dentro
-    btn.style.borderColor = Number(btn.dataset.tamanho) === tamanho ? '#5B9BD5' : 'transparent';
-  });
+function mudarTamanhoBorrachaVF(valor){
+  vfTamanhoBorracha = Number(valor);
+  // a bolinha de preview CRESCE de diâmetro junto com o valor - o próprio
+  // valor do slider já é usado direto como tamanho em pixels, então o
+  // crescimento reflete o tamanho real da borracha, não uma escala
+  // arbitrária. align-items:center no container garante que o eixo da
+  // bolinha sempre fique alinhado com o eixo da barrinha, mesmo ela
+  // crescendo - o flexbox recalcula a centralização sozinho a cada frame
+  const preview = document.getElementById('vf-preview-tamanho-borracha');
+  if(preview){ preview.style.width = vfTamanhoBorracha + 'px'; preview.style.height = vfTamanhoBorracha + 'px'; }
+  vfAtualizarPreenchimentoSliderVF('vf-slider-tamanho-borracha', '--preenchimento-slider-borracha', '#999');
 }
 
 // ---- painel do Marcador/Highlight - cor, espessura, opacidade ----
