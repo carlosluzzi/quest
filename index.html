@@ -131,6 +131,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* --- Bottom nav --- */
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
 .vf-barra-fixa{position:fixed;bottom:var(--nav-height, 76px);left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#FBFBFA;padding:14px 16px 18px;display:flex;flex-direction:column;gap:20px;z-index:9;box-sizing:border-box}
+.vf-barra-fixa,.vf-barra-fixa *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .vf-barra-fixa-principal{display:flex;gap:10px}
 .vf-barra-fixa-acoes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 @media(min-width:1100px){.vf-barra-fixa{max-width:none;left:250px;right:0;transform:none;width:auto}}
@@ -176,6 +177,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   #nav-item-adicionar .nav-label{white-space:nowrap}
   #wrapper-barra-adicionar{display:none}
   #view-topico-detalhe{left:250px !important;width:calc(100% - 250px) !important}
+  #pagina-flash-salvos-vf{left:250px !important;width:calc(100% - 250px) !important}
   .nav-icon{width:24px;height:24px}
   .nav-label{font-size:var(--fs-e)}
   .badge-notificacao{top:3px;left:30px;right:auto}
@@ -1076,22 +1078,29 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
-<div id="pagina-flash-salvos-vf" class="hidden" style="position:fixed;inset:0;background:#FBFBFA;z-index:60;display:flex;flex-direction:column">
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
+<div class="modal-overlay hidden" id="modal-escolha-motivo-salvar-vf" onclick="if(event.target===this) fecharModal('modal-escolha-motivo-salvar-vf')">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Salvar esse Flash</h3>
+    <input type="hidden" id="vf-escolha-motivo-questao-id">
+    <button class="btn-secundario" style="width:100%;text-align:left;display:flex;align-items:center;gap:10px" onclick="vfSalvarFlashComMotivoVF('estudar')">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#1A40A1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Estudar depois
+    </button>
+    <button class="btn-secundario" style="width:100%;text-align:left;display:flex;align-items:center;gap:10px;margin-top:8px" onclick="vfSalvarFlashComMotivoVF('corrigir')">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#A32D2D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+      Corrigir depois
+    </button>
+  </div>
+</div>
+
+<div id="pagina-flash-salvos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:40;display:flex;flex-direction:column;overflow:hidden">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
     <h2 style="margin:0;font-size:20px;font-weight:700;color:#111">Flash salvos</h2>
     <button onclick="document.getElementById('pagina-flash-salvos-vf').classList.add('hidden')" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
-  <div id="vf-lista-flash-salvos" style="flex:1;overflow-y:auto;padding:20px;max-width:600px;width:100%;margin:0 auto;box-sizing:border-box;display:flex;flex-direction:column;gap:14px"></div>
-</div>
-
-<div class="modal-overlay hidden" id="modal-anotacao-vf">
-  <div class="modal-conteudo" style="max-width:600px;max-height:90vh">
-    <h3 class="config-title">Anotações</h3>
-    <img id="vf-img-anotacao-salva" style="width:100%;border-radius:8px;border:0.5px solid #eee;background:#fff" alt="Anotação feita nessa questão">
-    <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-anotacao-vf')">Fechar</button>
-  </div>
+  <div id="vf-lista-flash-salvos" style="flex:1;overflow-y:auto;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px"></div>
 </div>
 
 <div class="modal-overlay hidden" id="modal-envio-tracker">
@@ -1308,7 +1317,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-230';
+const VERSAO_APP = '2026-07-25-233';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3301,6 +3310,7 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
 let estadoVF = null;
 let filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false};
 let favoritosVF = new Set();
+let flashsSalvosVF = new Map(); // questao_vf_id -> motivo ('estudar' ou 'corrigir')
 let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual que o banco, enquanto o upsert está em voo
 
 // ---- desenho com a caneta (Apple Pencil) por cima da questão ----
@@ -3702,61 +3712,14 @@ function vfLimparHistoricoVF(){
 // sessão, limpa o canvas, e um botãozinho no resultado deixa rever depois
 // se quiser
 // varre os pixels pra achar só a área que tem desenho de verdade (não
-// transparente), e recorta só ela - em vez de salvar o quadro inteiro
-// (que na maioria das vezes está quase todo vazio)
-function vfRecortarAreaDesenhadaVF(canvas){
-  const ctx = canvas.getContext('2d');
-  const { width, height } = canvas;
-  const dados = ctx.getImageData(0, 0, width, height).data;
-  let minX = width, minY = height, maxX = 0, maxY = 0;
-  let achouAlgo = false;
-  // varre de 2 em 2 pixels pra ir mais rápido - não precisa de precisão de
-  // pixel único pra achar os limites de uma área desenhada à mão
-  const PASSO = 2;
-  for(let y = 0; y < height; y += PASSO){
-    for(let x = 0; x < width; x += PASSO){
-      const alpha = dados[(y * width + x) * 4 + 3];
-      if(alpha > 10){
-        achouAlgo = true;
-        if(x < minX) minX = x;
-        if(x > maxX) maxX = x;
-        if(y < minY) minY = y;
-        if(y > maxY) maxY = y;
-      }
-    }
-  }
-  if(!achouAlgo) return canvas.toDataURL(); // não achou nada desenhado, devolve o quadro inteiro mesmo
-  const PADDING = 24;
-  minX = Math.max(0, minX - PADDING);
-  minY = Math.max(0, minY - PADDING);
-  maxX = Math.min(width, maxX + PADDING);
-  maxY = Math.min(height, maxY + PADDING);
-  const larguraRecorte = maxX - minX, alturaRecorte = maxY - minY;
-  const canvasRecorte = document.createElement('canvas');
-  canvasRecorte.width = larguraRecorte;
-  canvasRecorte.height = alturaRecorte;
-  const ctxRecorte = canvasRecorte.getContext('2d');
-  ctxRecorte.drawImage(canvas, minX, minY, larguraRecorte, alturaRecorte, 0, 0, larguraRecorte, alturaRecorte);
-  return canvasRecorte.toDataURL();
-}
-
 function vfSalvarEClimparAnotacaoVF(entrada){
   const canvas = document.getElementById('vf-canvas-desenho');
   if(!canvas || !vfCtxDesenho || vfIndiceHistoricoVF < 0) return; // nada desenhado, nada a fazer
-  const dataUrl = vfRecortarAreaDesenhadaVF(canvas);
-  entrada.anotacaoDataUrl = dataUrl;
+  // rabisco de raciocínio no meio da questão não vale guardar - só limpa,
+  // pra não sobrepor o resultado, sem salvar nada em lugar nenhum
   const dpr = (window.devicePixelRatio || 1) * 1.5;
   vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
   vfLimparHistoricoVF();
-  // salva persistente também, não só na sessão atual - senão some ao
-  // recarregar a página ou sair do Flash
-  sb.from('anotacoes_vf').insert({
-    usuario_id: usuarioAtual.id,
-    questao_vf_id: entrada.item.id,
-    imagem_data_url: dataUrl
-  }).then(({error}) => {
-    if(error) console.error('erro ao salvar anotação persistente:', error);
-  });
 }
 
 // timer da sessão - escondido por padrão, só aparece quando clica no
@@ -3794,48 +3757,88 @@ function vfAtualizarTextoTimerSessaoVF(){
   span.textContent = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
-function vfAbrirAnotacaoSalvaVF(){
-  if(!estadoVF || estadoVF.posicao < 0) return;
-  const entrada = estadoVF.historico[estadoVF.posicao];
-  if(!entrada || !entrada.anotacaoDataUrl) return;
-  document.getElementById('vf-img-anotacao-salva').src = entrada.anotacaoDataUrl;
-  abrirModal('modal-anotacao-vf');
-}
-
 async function vfAbrirFlashSalvosVF(){
   const el = document.getElementById('vf-lista-flash-salvos');
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
   document.getElementById('pagina-flash-salvos-vf').classList.remove('hidden');
-  const {data, error} = await sb.from('anotacoes_vf')
-    .select('id, imagem_data_url, criado_em, questoes_vf(texto, bibliografia(titulo))')
+  const {data, error} = await sb.from('flashs_salvos_vf')
+    .select('id, motivo, criado_em, questao_vf_id, questoes_vf(texto, bibliografia(titulo))')
     .eq('usuario_id', usuarioAtual.id)
     .order('criado_em', {ascending: false});
   if(error){ el.innerHTML = '<p style="color:#A32D2D;text-align:center;padding:20px 0">Erro ao carregar.</p>'; return; }
-  if(!data || !data.length){ el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Nenhum Flash salvo ainda.</p>'; return; }
-  el.innerHTML = data.map(a => {
-    const publicacao = a.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
-    const dataFormatada = new Date(a.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  if(!data || !data.length){ el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Nenhum Flash salvo ainda. Segure o botão "Salvos" numa questão pra guardar ela aqui.</p>'; return; }
+  const rotuloMotivo = {estudar: 'Estudar depois', corrigir: 'Corrigir depois'};
+  const corMotivo = {estudar: '#1A40A1', corrigir: '#A32D2D'};
+  el.innerHTML = data.map(s => {
+    const publicacao = s.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
+    const dataFormatada = new Date(s.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
     return `
-      <div style="border:0.5px solid #eee;border-radius:10px;padding:12px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${s.questao_vf_id}')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
           <div>
-            <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
+            <span style="background:${corMotivo[s.motivo]};color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em">${rotuloMotivo[s.motivo] || s.motivo}</span>
+            <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:6px 0 0 0">${escapeHtml(publicacao)}</p>
             <p style="color:#999;font-size:var(--fs-a);margin:2px 0 0 0">${dataFormatada}</p>
           </div>
-          <button class="btn-icone-pequeno" onclick="vfExcluirFlashSalvoVF('${a.id}')" title="Excluir">
+          <button class="btn-icone-pequeno" onclick="event.stopPropagation();vfExcluirFlashSalvoVF('${s.id}')" title="Remover dos salvos">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
           </button>
         </div>
-        ${a.questoes_vf?.texto ? `<p style="color:#666;font-size:var(--fs-b);margin:0 0 8px 0;line-height:1.4">${escapeHtml(a.questoes_vf.texto)}</p>` : ''}
-        <img src="${a.imagem_data_url}" style="width:100%;border-radius:8px;border:0.5px solid #eee;background:#fff" alt="Anotação salva">
+        ${s.questoes_vf?.texto ? `<p style="color:#666;font-size:var(--fs-b);margin:6px 0 0 0;line-height:1.4">${escapeHtml(s.questoes_vf.texto)}</p>` : ''}
       </div>`;
   }).join('');
 }
 
-async function vfExcluirFlashSalvoVF(anotacaoId){
-  const {error} = await sb.from('anotacoes_vf').delete().eq('id', anotacaoId);
+function vfIrParaQuestaoSalvaVF(questaoVfId){
+  document.getElementById('pagina-flash-salvos-vf').classList.add('hidden');
+  const indice = estadoVF.historico.findIndex(h => h.item.id === questaoVfId);
+  if(indice >= 0){
+    estadoVF.posicao = indice;
+    renderizarItemVF();
+  }
+  // se não estiver no histórico da sessão atual, só fecha a página mesmo -
+  // não força a entrada de uma questão fora da fila de repetição espaçada
+}
+
+async function vfExcluirFlashSalvoVF(salvoId){
+  const {error} = await sb.from('flashs_salvos_vf').delete().eq('id', salvoId);
   if(error){ alert('Erro ao excluir: '+error.message); return; }
   vfAbrirFlashSalvosVF(); // recarrega a lista
+}
+
+// ---- toque longo no botão Salvos: abre um miniescolha (Estudar depois /
+// Corrigir depois). Toque normal (sem segurar) continua abrindo a lista ----
+let vfTimerPressionarSalvar = null;
+let vfQuestaoIdPressionandoSalvar = null;
+function vfIniciarPressionarSalvar(questaoId){
+  vfQuestaoIdPressionandoSalvar = questaoId;
+  clearTimeout(vfTimerPressionarSalvar);
+  vfTimerPressionarSalvar = setTimeout(() => {
+    vfTimerPressionarSalvar = null;
+    vfAbrirEscolhaMotivoSalvarVF(questaoId);
+  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+}
+function vfCancelarPressionarSalvar(){
+  clearTimeout(vfTimerPressionarSalvar);
+  vfTimerPressionarSalvar = null;
+}
+
+function vfAbrirEscolhaMotivoSalvarVF(questaoId){
+  // navegador vibra se suportado - só um feedback de "ativou o toque longo"
+  if(navigator.vibrate) navigator.vibrate(15);
+  document.getElementById('vf-escolha-motivo-questao-id').value = questaoId;
+  abrirModal('modal-escolha-motivo-salvar-vf');
+}
+
+async function vfSalvarFlashComMotivoVF(motivo){
+  const questaoId = document.getElementById('vf-escolha-motivo-questao-id').value;
+  fecharModal('modal-escolha-motivo-salvar-vf');
+  if(!questaoId) return;
+  const {error} = await sb.from('flashs_salvos_vf')
+    .upsert({usuario_id: usuarioAtual.id, questao_vf_id: questaoId, motivo}, {onConflict: 'usuario_id,questao_vf_id'});
+  if(error){ alert('Erro ao salvar: '+error.message); return; }
+  flashsSalvosVF.set(questaoId, motivo);
+  renderizarItemVF(); // atualiza o ícone preenchido na hora
 }
 
 // reforço: dentro da barra/painel, dispara o clique manualmente no
@@ -4489,15 +4492,17 @@ async function carregarPoolVF(){
     // página e outra, podendo pular ou duplicar linha acima de 1000
   };
 
-  const [{data: questoes}, {data: estados}, {data: excluidas}, {data: favData}, {data: notaData}] = await Promise.all([
+  const [{data: questoes}, {data: estados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}] = await Promise.all([
     buscarTudoPaginadoVF(montarQueryQuestoesVF),
     buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
-    sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id)
+    sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
+    sb.from('flashs_salvos_vf').select('questao_vf_id, motivo').eq('usuario_id', usuarioAtual.id)
   ]);
   favoritosVF = new Set((favData||[]).map(f=>f.questao_vf_id));
   notasVF = new Set((notaData||[]).map(n=>n.questao_vf_id));
+  flashsSalvosVF = new Map((salvosData||[]).map(s=>[s.questao_vf_id, s.motivo]));
   const idsExcluidos = new Set((excluidas||[]).map(e=>e.questao_vf_id));
   const estadoPorId = {};
   (estados||[]).forEach(e => { estadoPorId[e.questao_vf_id] = e; });
@@ -4733,14 +4738,9 @@ function renderizarItemVF(){
   if(jaRespondida){
     const cor = entrada.acertou ? '#3B6D11' : '#A32D2D';
     const textoResultado = `${entrada.acertou ? 'Acertou!' : 'Errou!'} É ${item.resposta ? 'VERDADEIRO' : 'FALSO'}`;
-    const botaoAnotacao = entrada.anotacaoDataUrl ? `
-        <button class="btn-icone-pequeno" style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="vfAbrirAnotacaoSalvaVF()" title="Ver o que você escreveu">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-        </button>` : '';
     blocoResultado = `
       <div style="height:1px;background:#eee;margin:14px 0"></div>
       <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:34px">
-        ${botaoAnotacao}
         <span style="font-weight:700;font-size:16px;text-align:center;color:${cor};letter-spacing:.02em">${textoResultado}</span>
         <button class="btn-icone-pequeno" style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="abrirExplicacaoVF('${item.id}')" title="Ver explicação">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -4875,8 +4875,8 @@ function renderizarBarraFixaVF(item, jaRespondida){
         <span>Notas</span>
         ${notasVF.has(item.id)?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
-      <button class="banco-acao-btn" onclick="vfAbrirFlashSalvosVF()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      <button class="banco-acao-btn ${flashsSalvosVF.has(item.id)?'favoritada':''}" onclick="vfAbrirFlashSalvosVF()" ontouchstart="vfIniciarPressionarSalvar('${item.id}')" ontouchend="vfCancelarPressionarSalvar()" ontouchmove="vfCancelarPressionarSalvar()" onmousedown="vfIniciarPressionarSalvar('${item.id}')" onmouseup="vfCancelarPressionarSalvar()" onmouseleave="vfCancelarPressionarSalvar()">
+        <svg viewBox="0 0 24 24" fill="${flashsSalvosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         <span>Salvos</span>
       </button>
     </div>
@@ -5094,7 +5094,7 @@ async function vfCopiarExplicacaoParaClaude(){
     item.explicacao ? `Explicação: ${item.explicacao}` : null,
     '',
     '---',
-    'Me explique isso da forma mais clara possível — e se ajudar a entender, desenhe o que o autor quis dizer.'
+    'Antes de explicar: abra o livro na pasta PSCPP/Bibliografia, localize a seção citada acima e leia. Não responda de memória. A Explicação acima é meu ponto de partida, não a fonte — confira contra o livro e me avise se divergir em algo.\n\nExplique isso da forma mais clara possível, by the book: o que o autor escreveu, na ordem em que ele apresenta. Se precisar acrescentar algo que não está no texto para a explicação fechar, marque como complemento seu. Se não achar o trecho no livro, me diga — não preencha com conhecimento geral.\n\nSe ajudar a entender, desenhe o que o autor quis dizer: um desenho em HTML renderizado aqui no chat. Não publique página nem artefato.\n\nNada além disso: sem seções extras, sem tabela-resumo, sem box de revisão, sem relatório dos meus erros anteriores. Explicação + desenho, e para. Se eu tiver dúvida, eu pergunto.'
   ].filter(p => p !== null).join('\n');
 
   try{
