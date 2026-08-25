@@ -65,7 +65,7 @@ azul do acento padrão do sistema, mesmo depois de recriar o elemento) -
 estilizando o thumb/track manualmente via CSS, a cor muda de forma
 síncrona e confiável só trocando essa variável */
 #vf-slider-espessura-destaque{--cor-slider-destaque:#FFD84D;-webkit-appearance:none;appearance:none;background:transparent}
-#vf-slider-espessura-destaque::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:#ddd}
+#vf-slider-espessura-destaque::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--preenchimento-slider-destaque, #ddd)}
 #vf-slider-espessura-destaque::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--cor-slider-destaque);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);margin-top:-7px}
 
 /* --- Cards --- */
@@ -1447,7 +1447,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-275';
+const VERSAO_APP = '2026-07-25-277';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3653,6 +3653,7 @@ let vfOpacidadeDestaqueAtual = 0.45;
 let vfCorMarcacaoTextoAtual = '#F08080'; // compartilhada pelos 3 (grifar/sublinhar/riscar)
 let vfUltimoPontoDesenho = null;
 let vfPontoMedioAnterior = null;
+let vfPosicaoSuavizada = null; // suavização leve de x,y - reseta a cada novo traço (touchstart), ver uso em touchmove
 
 function inicializarCanvasDesenhoVF(){
   const canvas = document.getElementById('vf-canvas-desenho');
@@ -3773,6 +3774,7 @@ document.addEventListener('touchstart', (e) => {
   const ponto = {x: touch.clientX - rect.left, y: touch.clientY - rect.top};
   vfUltimoPontoDesenho = ponto;
   vfPontoMedioAnterior = ponto;
+  vfPosicaoSuavizada = ponto; // reseta - não herda do traço anterior, senão o primeiro ponto "saltaria"
   vfForcaSuavizada = typeof touch.force === 'number' && touch.force > 0 ? touch.force : 0.5; // começa do zero, não herda do traço anterior
   // modo destaque desenha num canvas TEMPORÁRIO à parte, em opacidade
   // cheia (sem transparência nenhuma durante o arrasto) - e só funde no
@@ -3835,6 +3837,7 @@ document.addEventListener('touchmove', (e) => {
           const ponto = {x: vfBotaoPendenteToqueInfo.x - rect.left, y: vfBotaoPendenteToqueInfo.y - rect.top};
           vfUltimoPontoDesenho = ponto;
           vfPontoMedioAnterior = ponto;
+          vfPosicaoSuavizada = ponto; // reseta - mesmo motivo do outro caminho de início de traço
           vfForcaSuavizada = typeof touchPendente.force === 'number' && touchPendente.force > 0 ? touchPendente.force : 0.5;
           if(vfModoDestaque){
             vfCanvasTracoTemp = document.createElement('canvas');
@@ -3865,7 +3868,17 @@ document.addEventListener('touchmove', (e) => {
   e.preventDefault();
   const canvas = document.getElementById('vf-canvas-desenho');
   const rect = canvas.getBoundingClientRect();
-  const x = touch.clientX - rect.left, y = touch.clientY - rect.top;
+  // suavização LEVE de posição (não só de força) - o sensor de toque tem
+  // um pequeno ruído/jitter próprio (testado: ~1px de desvio), que sem
+  // suavização nenhuma aparece como uma leve tremulação na linha,
+  // principalmente em traços lentos. Peso bem mais leve que o da força
+  // (90% do ponto novo, só 10% do suavizado anterior) - testado
+  // isoladamente antes de aplicar: reduz o ruído sem introduzir atraso
+  // perceptível entre a caneta física e o traço na tela (< 1px de atraso)
+  const xBruto = touch.clientX - rect.left, yBruto = touch.clientY - rect.top;
+  const x = vfPosicaoSuavizada ? vfPosicaoSuavizada.x * 0.1 + xBruto * 0.9 : xBruto;
+  const y = vfPosicaoSuavizada ? vfPosicaoSuavizada.y * 0.1 + yBruto * 0.9 : yBruto;
+  vfPosicaoSuavizada = {x, y};
 
   // durante o arrasto, o destaque desenha em opacidade CHEIA no canvas
   // temporário (sem multiply, sem alpha reduzido) - a mistura translúcida
@@ -5453,6 +5466,20 @@ function vfForcarRecoloracaoSliderVF(idSlider, corNova){
   const slider = document.getElementById(idSlider);
   if(!slider) return;
   slider.style.setProperty('--cor-slider-destaque', corNova);
+  vfAtualizarPreenchimentoSliderDestaqueVF(corNova);
+}
+
+// preenchimento colorido da trilha (do início até o valor atual) - visual
+// que o accent-color já dava de graça, mas precisa ser refeito à mão já
+// que accent-color foi trocado por causa do bug de resíduo de cor no
+// Safari. Um gradiente de 2 cores, com o corte exatamente na porcentagem
+// do valor atual, imita o mesmo efeito
+function vfAtualizarPreenchimentoSliderDestaqueVF(cor){
+  const slider = document.getElementById('vf-slider-espessura-destaque');
+  if(!slider) return;
+  const min = Number(slider.min), max = Number(slider.max), valor = Number(slider.value);
+  const pct = max > min ? ((valor - min) / (max - min)) * 100 : 0;
+  slider.style.setProperty('--preenchimento-slider-destaque', `linear-gradient(to right, ${cor} 0%, ${cor} ${pct}%, #ddd ${pct}%, #ddd 100%)`);
 }
 
 function selecionarCorDestaqueVF(cor){
@@ -5473,6 +5500,7 @@ function selecionarCorDestaqueVF(cor){
 function mudarEspessuraSliderDestaqueVF(valor){
   vfEspessuraDestaqueAtual = Number(valor);
   document.getElementById('vf-espessura-valor-destaque').textContent = `${valor} pt`;
+  vfAtualizarPreenchimentoSliderDestaqueVF(vfCorDestaqueAtual);
 }
 
 function selecionarOpacidadeDestaqueVF(opacidade){
