@@ -764,7 +764,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     pointer-events:none pra sempre (dedo/mouse passam direto pra tocar nos
     botões normal). A escuta de verdade roda com Touch Events nativos no
     document (não neste elemento), filtrando touch.touchType==='stylus' -->
-    <canvas id="vf-canvas-desenho" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);width:100%;z-index:8;pointer-events:none;touch-action:none"></canvas>
+    <canvas id="vf-canvas-desenho" style="position:fixed;inset:0;width:100%;height:100%;z-index:15;pointer-events:none;touch-action:none"></canvas>
     <!-- barra fina, sempre visível quando ativa - marcador+cor agrupados
     (fundo azul claro quando ativo, igual PDF Expert) + borracha separada -->
     <div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:9999;background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.12);padding:6px 8px;display:flex;align-items:center;gap:14px">
@@ -1078,6 +1078,14 @@ input,select,textarea{font-family:inherit;font-size:16px}
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-anotacao-sessao-vf">
+  <div class="modal-conteudo" style="max-width:600px;max-height:90vh">
+    <h3 class="config-title">O que você escreveu</h3>
+    <img id="vf-img-anotacao-sessao" style="width:100%;border-radius:8px;border:0.5px solid #eee;background:#fff" alt="Anotação feita nessa questão">
+    <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-anotacao-sessao-vf')">Fechar</button>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-escolha-motivo-salvar-vf" onclick="if(event.target===this) fecharModal('modal-escolha-motivo-salvar-vf')">
   <div class="modal-conteudo">
     <h3 class="config-title">Salvar esse Flash</h3>
@@ -1181,7 +1189,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
     <h3 class="config-title" style="flex-shrink:0">Explicação</h3>
     <div id="conteudo-explicacao-vf" style="flex:1;min-height:0;overflow-y:auto"></div>
     <div style="display:flex;gap:8px;margin-top:14px;flex-shrink:0">
-      <button id="vf-btn-copiar-explicacao" class="btn-secundario" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px" onclick="vfCopiarExplicacaoParaClaude()">
+      <button id="vf-btn-copiar-explicacao" class="btn-secundario" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;position:relative" onclick="vfCopiarExplicacaoParaClaude(this)">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         Copiar pra IA
       </button>
@@ -1317,7 +1325,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-235';
+const VERSAO_APP = '2026-07-25-237';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2266,7 +2274,7 @@ function ehCampoDeTeclado(el){
   // esses 2 campos de edição (enunciado/explicação do Flash) não devem
   // esconder o menu - mesmo abrindo teclado de verdade, Carlos prefere o
   // menu continuar visível enquanto edita esse conteúdo específico
-  if(el.id === 'vf-textarea-enunciado' || el.id === 'vf-textarea-explicacao') return false;
+  if(el.id === 'vf-textarea-enunciado' || el.id === 'vf-textarea-explicacao' || el.id === 'vf-textarea-correcao') return false;
   if(el.tagName === 'TEXTAREA') return true;
   if(el.tagName !== 'INPUT') return false;
   // lista do que REALMENTE abre teclado, em vez de excluir só
@@ -3457,6 +3465,8 @@ document.addEventListener('touchstart', (e) => {
   if(!vfEhToqueDeCaneta(touch)) return; // só a caneta desenha
   if(vfTocouNaBarra(e.target)) return; // deixa o toque chegar no botão normalmente
   if(e.target.closest('.vf-btn-resposta')) return; // idem pros botões Verdadeiro/Falso - nunca viram início de traço
+  if(e.target.closest('.topbar')) return; // cabeçalho sempre clicável normal - agora que o canvas cobre a tela toda
+  if(e.target.closest('.bottom-nav')) return; // idem pro menu (serve tanto a barra de baixo quanto a sidebar)
   if(!vfDentroDaAreaDesenho(touch.clientX, touch.clientY)) return;
   // ícones pequenos (tipo o "?" de explicação): não decide na hora - um
   // TOQUE rápido deixa o clique do botão funcionar normalmente, mas se
@@ -3719,11 +3729,21 @@ function vfLimparHistoricoVF(){
 function vfSalvarEClimparAnotacaoVF(entrada){
   const canvas = document.getElementById('vf-canvas-desenho');
   if(!canvas || !vfCtxDesenho || vfIndiceHistoricoVF < 0) return; // nada desenhado, nada a fazer
-  // rabisco de raciocínio no meio da questão não vale guardar - só limpa,
-  // pra não sobrepor o resultado, sem salvar nada em lugar nenhum
+  // guarda só na memória da sessão atual (nunca no banco) - dá pra rever
+  // logo depois de responder, mas some ao trocar de questão/recarregar,
+  // sem virar lixo acumulado
+  entrada.anotacaoDataUrl = canvas.toDataURL();
   const dpr = (window.devicePixelRatio || 1) * 1.5;
   vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
   vfLimparHistoricoVF();
+}
+
+function vfAbrirAnotacaoSalvaVF(){
+  if(!estadoVF || estadoVF.posicao < 0) return;
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  if(!entrada || !entrada.anotacaoDataUrl) return;
+  document.getElementById('vf-img-anotacao-sessao').src = entrada.anotacaoDataUrl;
+  abrirModal('modal-anotacao-sessao-vf');
 }
 
 // timer da sessão - escondido por padrão, só aparece quando clica no
@@ -4759,15 +4779,26 @@ function renderizarItemVF(){
   if(jaRespondida){
     const cor = entrada.acertou ? '#3B6D11' : '#A32D2D';
     const textoResultado = `${entrada.acertou ? 'Acertou!' : 'Errou!'} É ${item.resposta ? 'VERDADEIRO' : 'FALSO'}`;
+    const atributosEdicaoCorrecao = souCarlos() ? `id="vf-correcao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarCorrecao()" ontouchend="vfCancelarPressionarCorrecao()" ontouchmove="vfCancelarPressionarCorrecao()" onmousedown="vfIniciarPressionarCorrecao()" onmouseup="vfCancelarPressionarCorrecao()" onmouseleave="vfCancelarPressionarCorrecao()"` : `id="vf-correcao-atual"`;
+    const botaoAnotacao = entrada.anotacaoDataUrl ? `
+        <button class="btn-icone-pequeno" style="width:34px;height:34px;border-radius:9px" onclick="vfAbrirAnotacaoSalvaVF()" title="Ver o que você escreveu">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>` : '';
     blocoResultado = `
       <div style="height:1px;background:#eee;margin:14px 0"></div>
       <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:34px">
+        <div style="position:absolute;left:0;top:50%;transform:translateY(-50%);display:flex;gap:2px">
+          ${botaoAnotacao}
+          <button class="btn-icone-pequeno" style="width:34px;height:34px;border-radius:9px;position:relative" onclick="vfCopiarAfirmacaoVerdadeiraVF('${item.id}', this)" title="Copiar afirmação verdadeira">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
         <span style="font-weight:700;font-size:16px;text-align:center;color:${cor};letter-spacing:.02em">${textoResultado}</span>
         <button class="btn-icone-pequeno" style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="abrirExplicacaoVF('${item.id}')" title="Ver explicação">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
       </div>
-      ${!item.resposta ? `<div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;color:#111;margin-top:14px;text-align:left;font-weight:400">${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
+      ${!item.resposta ? `<div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;color:#111;margin-top:14px;text-align:left;font-weight:400" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
     `;
   }
 
@@ -4880,6 +4911,91 @@ async function vfSalvarEdicaoEnunciadoVF(questaoId, textoOriginal){
   const {error} = await sb.from('questoes_vf').update({texto: textoNovo}).eq('id', questaoId);
   if(error){
     alert('Erro ao salvar a edição da afirmação: '+error.message);
+  }
+}
+
+// copia só a afirmação verdadeira (o texto original se a questão é
+// verdadeira, ou a correção se for falsa) - rápido, sem formatação extra
+async function vfCopiarAfirmacaoVerdadeiraVF(questaoId, botao){
+  const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
+  if(!entrada) return;
+  const item = entrada.item;
+  const afirmacaoVerdadeira = item.resposta ? item.texto : (item.correcao || item.texto);
+  try{
+    await navigator.clipboard.writeText(afirmacaoVerdadeira);
+    vfMostrarSelinhoCopiadoVF(botao);
+  }catch(e){
+    alert('Não consegui copiar automaticamente. Tenta selecionar o texto manualmente.');
+  }
+}
+
+// selinho de texto "Copiado" flutuando acima do botão, estilo apps de
+// banco - some sozinho depois de um tempo, sem trocar o ícone do botão
+function vfMostrarSelinhoCopiadoVF(botao){
+  botao.querySelector('.vf-selinho-copiado')?.remove(); // se já tinha um preso de um clique rápido anterior
+  const selinho = document.createElement('span');
+  selinho.className = 'vf-selinho-copiado';
+  selinho.textContent = 'Copiado';
+  selinho.style.cssText = 'position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:6px;background:#111;color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.15s ease;z-index:1';
+  botao.appendChild(selinho);
+  requestAnimationFrame(() => { selinho.style.opacity = '1'; });
+  setTimeout(() => {
+    selinho.style.opacity = '0';
+    setTimeout(() => selinho.remove(), 200);
+  }, 1200);
+}
+
+// ---- editar a correção ("Correto:") segurando nela, mesmo sistema já
+// usado no enunciado e na explicação ----
+let vfTimerPressionarCorrecao = null;
+function vfIniciarPressionarCorrecao(){
+  clearTimeout(vfTimerPressionarCorrecao);
+  vfTimerPressionarCorrecao = setTimeout(() => {
+    vfTimerPressionarCorrecao = null;
+    vfIniciarEdicaoCorrecaoVF();
+  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+}
+function vfCancelarPressionarCorrecao(){
+  clearTimeout(vfTimerPressionarCorrecao);
+  vfTimerPressionarCorrecao = null;
+}
+
+function vfIniciarEdicaoCorrecaoVF(){
+  if(!estadoVF || estadoVF.posicao < 0) return;
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  if(!entrada) return;
+  const item = entrada.item;
+  const div = document.getElementById('vf-correcao-atual');
+  if(!div || div.dataset.editando === '1') return;
+  div.dataset.editando = '1';
+  const textoOriginal = item.correcao || item.texto;
+  div.innerHTML = `<textarea id="vf-textarea-correcao" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:inherit;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent">${escapeHtml(textoOriginal)}</textarea>`;
+  const textarea = document.getElementById('vf-textarea-correcao');
+  vfAutoAlturaTextareaVF(textarea);
+  textarea.addEventListener('input', () => vfAutoAlturaTextareaVF(textarea));
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.addEventListener('blur', () => vfSalvarEdicaoCorrecaoVF(item.id, textoOriginal));
+}
+
+async function vfSalvarEdicaoCorrecaoVF(questaoId, textoOriginal){
+  const textarea = document.getElementById('vf-textarea-correcao');
+  const div = document.getElementById('vf-correcao-atual');
+  if(!textarea || !div) return;
+  const textoNovo = textarea.value.trim();
+  div.dataset.editando = '0';
+  document.getElementById('bottom-nav')?.classList.remove('teclado-aberto');
+  document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
+  if(!textoNovo || textoNovo === textoOriginal){
+    div.innerHTML = formatarTextoItemVF(textoOriginal);
+    return;
+  }
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  if(entrada && entrada.item && entrada.item.id === questaoId) entrada.item.correcao = textoNovo;
+  div.innerHTML = formatarTextoItemVF(textoNovo);
+  const {error} = await sb.from('questoes_vf').update({correcao: textoNovo}).eq('id', questaoId);
+  if(error){
+    alert('Erro ao salvar a edição da correção: '+error.message);
   }
 }
 
@@ -5109,7 +5225,7 @@ async function vfSalvarEdicaoExplicacaoVF(questaoId, textoOriginal){
   }
 }
 
-async function vfCopiarExplicacaoParaClaude(){
+async function vfCopiarExplicacaoParaClaude(botao){
   const entrada = estadoVF.historico.find(h => h.item.id === vfQuestaoIdExplicacaoAtual);
   if(!entrada) return;
   const item = entrada.item;
@@ -5135,10 +5251,7 @@ async function vfCopiarExplicacaoParaClaude(){
 
   try{
     await navigator.clipboard.writeText(partes);
-    const btn = document.getElementById('vf-btn-copiar-explicacao');
-    const textoOriginalBtn = btn.innerHTML;
-    btn.innerHTML = '✓ Copiado!';
-    setTimeout(() => { btn.innerHTML = textoOriginalBtn; }, 1600);
+    vfMostrarSelinhoCopiadoVF(botao);
   }catch(e){
     alert('Não consegui copiar automaticamente. Tenta selecionar o texto manualmente.');
   }
