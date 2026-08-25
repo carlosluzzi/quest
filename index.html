@@ -888,8 +888,8 @@ Fora do app-shell, sem overflow:hidden no caminho, cobre a viewport de
 verdade sem esse recorte. Como não é mais filho de #aba-vf, a
 visibilidade é controlada manualmente em trocarAba(), não mais herdada
 automaticamente da classe .hidden do app-shell -->
-<canvas id="vf-canvas-desenho" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;touch-action:none"></canvas>
-<canvas id="vf-canvas-preview-destaque" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:9;pointer-events:none;touch-action:none"></canvas>
+<canvas id="vf-canvas-desenho" style="display:none;position:fixed;top:0;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;width:100%;height:100%;z-index:8;pointer-events:none;touch-action:none"></canvas>
+<canvas id="vf-canvas-preview-destaque" style="display:none;position:fixed;top:0;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;width:100%;height:100%;z-index:9;pointer-events:none;touch-action:none"></canvas>
 <div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:9999;background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.12);padding:6px 8px;display:flex;align-items:center;gap:14px">
       <div id="vf-alca-arrastar" style="display:flex;flex-direction:column;gap:3px;padding:14px 12px;margin:-8px -8px;cursor:grab;touch-action:none">
         <div style="display:flex;gap:3px"><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span></div>
@@ -1447,7 +1447,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-279';
+const VERSAO_APP = '2026-07-25-280';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
