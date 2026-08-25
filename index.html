@@ -5803,7 +5803,7 @@ function renderizarItemVF(){
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
       </div>
-      ${!item.resposta ? `<div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;color:#111;margin-top:14px;text-align:left;font-weight:400;position:relative" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
+      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;color:#111;margin-top:14px;text-align:left;font-weight:400;position:relative" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
     `;
   }
 
@@ -6249,8 +6249,8 @@ function abrirExplicacaoVF(questaoVfId){
   const explicacao = entrada.item.explicacao || '';
   const atributosEdicao = souCarlos() ? `id="vf-explicacao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarExplicacao()" ontouchend="vfCancelarPressionarExplicacao()" ontouchmove="vfCancelarPressionarExplicacao()" onmousedown="vfIniciarPressionarExplicacao()" onmouseup="vfCancelarPressionarExplicacao()" onmouseleave="vfCancelarPressionarExplicacao()"` : `id="vf-explicacao-atual"`;
   el.innerHTML = explicacao
-    ? `<div ${atributosEdicao} style="margin:0;line-height:1.5;color:#111">${formatarTextoItemVF(explicacao)}</div>`
-    : `<p ${atributosEdicao} style="margin:0;color:#666">${souCarlos() ? 'Sem explicação cadastrada — segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
+    ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;margin:0;line-height:1.5;color:#111;position:relative">${formatarTextoItemVF(explicacao)}</div>`
+    : `<p ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;margin:0;color:#666;position:relative">${souCarlos() ? 'Sem explicação cadastrada — segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
   abrirModal('modal-explicacao-vf');
 }
 
