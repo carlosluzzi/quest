@@ -58,15 +58,19 @@ button:active{transform:scale(0.96)}
 input,select,textarea{font-family:inherit;font-size:16px}
 
 .hidden{display:none !important}
-/* slider de espessura do destaque - cor controlada por custom property
-(--cor-slider-destaque), não por accent-color. accent-color mostrou
-comportamento persistente/inconsistente no Safari (ficava com um resíduo
-azul do acento padrão do sistema, mesmo depois de recriar o elemento) -
-estilizando o thumb/track manualmente via CSS, a cor muda de forma
-síncrona e confiável só trocando essa variável */
-#vf-slider-espessura-destaque{--cor-slider-destaque:#FFD84D;-webkit-appearance:none;appearance:none;background:transparent}
+/* sliders de espessura (caneta e destaque) - MESMO visual nos dois, pílula
+horizontal neutra (branca, como o thumb padrão nativo da Apple), não
+mais colorida - accent-color mostrou comportamento persistente/
+inconsistente no Safari (ficava com resíduo de cor errada mesmo depois
+de recriar o elemento), então o thumb é estilizado manualmente aqui,
+sempre a mesma cor neutra fixa nos dois. Só o PREENCHIMENTO da trilha
+(até o valor atual) continua colorido e dinâmico, cada um com sua
+própria cor - isso é controlado por JS trocando a custom property de
+cada slider individualmente */
+#vf-slider-espessura, #vf-slider-espessura-destaque{-webkit-appearance:none;appearance:none;background:transparent}
+#vf-slider-espessura::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--preenchimento-slider-caneta, #ddd)}
 #vf-slider-espessura-destaque::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--preenchimento-slider-destaque, #ddd)}
-#vf-slider-espessura-destaque::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:26px;border-radius:7px;background:var(--cor-slider-destaque);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);margin-top:-11px}
+#vf-slider-espessura::-webkit-slider-thumb, #vf-slider-espessura-destaque::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:14px;border-radius:7px;background:#fff;border:1px solid #ccc;box-shadow:0 1px 3px rgba(0,0,0,0.3);margin-top:-5px}
 
 /* --- Cards --- */
 .card-inicio{background:#fff;border-radius:18px;padding:13px;box-shadow:0 1px 4px rgba(0,0,0,0.05);margin-bottom:14px;position:relative;overflow:hidden}
@@ -143,8 +147,7 @@ tela inteira) - por isso não precisa mais de z-index condicional pra
 /* seleção de cor estilo PDF Expert: moldura quadrada ao redor da bolinha
 (não mais um anel circular) - pseudo-elemento separado, porque outline/
 box-shadow direto no próprio botão redondo sempre saem arredondados junto */
-.vf-cor-selecionada{position:relative}
-.vf-cor-selecionada::after{content:'';position:absolute;left:-6px;right:-6px;top:-6px;bottom:-6px;border-radius:7px;border:2px solid #5B9BD5;pointer-events:none}
+.vf-cor-selecionada{box-shadow:0 0 0 2px #fff, 0 0 0 4px #5B9BD5 !important}
 #vf-barra-desenho,#vf-barra-desenho *,#vf-painel-caneta,#vf-painel-caneta *,#vf-painel-borracha,#vf-painel-borracha *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:#B23A34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0;border:none;padding:0;margin:0;-webkit-appearance:none;appearance:none;cursor:pointer;overflow:hidden}
 
@@ -977,7 +980,7 @@ automaticamente da classe .hidden do app-shell -->
         <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Espessura</div>
         <div style="display:flex;align-items:center;gap:10px">
           <span id="vf-preview-espessura" style="width:8px;height:8px;border-radius:50%;background:#1A40A1;flex-shrink:0"></span>
-          <input type="range" id="vf-slider-espessura" min="1" max="10" step="0.5" value="4.5" oninput="mudarEspessuraSliderVF(this.value)" style="flex:1;min-width:0;accent-color:#5B9BD5">
+          <input type="range" id="vf-slider-espessura" min="1" max="10" step="0.5" value="4.5" oninput="mudarEspessuraSliderVF(this.value)" style="flex:1;min-width:0">
           <span id="vf-espessura-valor" style="font-size:14px;color:#333;flex-shrink:0;white-space:nowrap">4,5 pt</span>
         </div>
       </div>
@@ -1447,7 +1450,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-283';
+const VERSAO_APP = '2026-07-25-284';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4798,6 +4801,7 @@ function vfAtivarModoMarcacaoTextoVF(tipo){
 // simples arrasto direto sobre o texto já basta ----
 let vfMarcacaoTextoPontoInicialVF = null; // {x, y} de onde o dedo tocou primeiro
 let vfMarcacaoTextoArrastandoVF = false;
+let vfMarcacaoTextoDirecaoApagarVF = false; // calculada 1x por movimento, reaproveitada no touchend
 
 document.addEventListener('touchstart', (e) => {
   if(!vfModoMarcacaoTextoAtivo) return;
@@ -4809,6 +4813,7 @@ document.addEventListener('touchstart', (e) => {
   if(!areaValida) return;
   vfMarcacaoTextoPontoInicialVF = {x: touch.clientX, y: touch.clientY};
   vfMarcacaoTextoArrastandoVF = true;
+  vfMarcacaoTextoDirecaoApagarVF = false; // reseta - até mover de verdade, assume "marcando" (mais seguro como padrão)
 }, {passive: true});
 
 document.addEventListener('touchmove', (e) => {
@@ -4824,6 +4829,14 @@ document.addEventListener('touchmove', (e) => {
   // o dedo pode arrastar tanto pra frente quanto pra trás no texto -
   // compara as posições reais no documento pra montar o range na ordem certa
   const ordem = rangeInicio.compareBoundaryPoints(Range.START_TO_START, rangeFim);
+  // guarda a direção JÁ CALCULADA aqui (mesmo compareBoundaryPoints que
+  // monta a seleção) - reaproveitada direto no touchend, sem precisar
+  // chamar caretRangeFromPoint de novo lá. Duas chamadas separadas (uma
+  // no touchmove, outra no touchend) podiam dar resultado levemente
+  // diferente por qualquer variação mínima de timing/layout entre os
+  // dois momentos, fazendo a direção sair errada mesmo a lógica em si
+  // estando certa - calcular 1x só e reaproveitar elimina essa brecha
+  vfMarcacaoTextoDirecaoApagarVF = ordem > 0; // ponto inicial veio DEPOIS do atual = arrastando pra trás = apagando
   if(ordem <= 0){
     range.setStart(rangeInicio.startContainer, rangeInicio.startOffset);
     range.setEnd(rangeFim.startContainer, rangeFim.startOffset);
@@ -4838,7 +4851,7 @@ document.addEventListener('touchmove', (e) => {
 
 document.addEventListener('touchend', (e) => {
   if(!vfModoMarcacaoTextoAtivo) return;
-  const pontoInicialVF = vfMarcacaoTextoPontoInicialVF;
+  const apagando = vfMarcacaoTextoDirecaoApagarVF;
   vfMarcacaoTextoArrastandoVF = false;
   vfMarcacaoTextoPontoInicialVF = null;
   const touch = e.changedTouches[0];
@@ -4850,21 +4863,6 @@ document.addEventListener('touchend', (e) => {
   const elementoContainer = noContainer.nodeType === 3 ? noContainer.parentElement : noContainer;
   const areaValida = elementoContainer.closest('#vf-enunciado-atual, #vf-correcao-atual');
   if(!areaValida) return;
-  // direção do arrasto: esquerda->direita (sentido normal de leitura) =
-  // marca/estende; direita->esquerda = apaga. Descobre isso comparando o
-  // PONTO ONDE O DEDO TOCOU PRIMEIRO com onde soltou - o range em si
-  // sempre normaliza início<fim (perde a direção), por isso precisa
-  // comparar os pontos originais do gesto, não o range já pronto
-  let apagando = false;
-  if(pontoInicialVF && typeof document.caretRangeFromPoint === 'function'){
-    const rangeInicioGesto = document.caretRangeFromPoint(pontoInicialVF.x, pontoInicialVF.y);
-    const rangeFimGesto = document.caretRangeFromPoint(touch.clientX, touch.clientY);
-    if(rangeInicioGesto && rangeFimGesto){
-      const offsetInicioGesto = vfOffsetGlobalVF(areaValida, rangeInicioGesto.startContainer, rangeInicioGesto.startOffset);
-      const offsetFimGesto = vfOffsetGlobalVF(areaValida, rangeFimGesto.startContainer, rangeFimGesto.startOffset);
-      apagando = offsetFimGesto < offsetInicioGesto; // arrastou pra trás = apagar
-    }
-  }
   vfAplicarMarcacaoNoRangeVF(vfModoMarcacaoTextoAtivo, range, apagando);
   selecao.removeAllRanges();
 });
@@ -5065,7 +5063,7 @@ function abrirPainelCanetaVF(){
     // mesma sincronização do painel de destaque - sem isso o slider podia
     // abrir com a cor de antes, não a atualmente selecionada
     document.getElementById('vf-preview-espessura').style.background = vfCorDesenhoAtual;
-    document.getElementById('vf-slider-espessura').style.accentColor = vfCorDesenhoAtual;
+    vfAtualizarPreenchimentoSliderVF('vf-slider-espessura', '--preenchimento-slider-caneta', vfCorDesenhoAtual);
   }
 }
 
@@ -5093,7 +5091,7 @@ function abrirPainelDestaqueVF(){
     // clicada. Se o painel abria sem clicar em nada, ficava preso na
     // cor de antes (às vezes azul, mesmo com amarelo selecionado)
     document.getElementById('vf-preview-espessura-destaque').style.background = vfCorDestaqueAtual;
-    vfForcarRecoloracaoSliderVF('vf-slider-espessura-destaque', vfCorDestaqueAtual);
+    vfAtualizarPreenchimentoSliderVF('vf-slider-espessura-destaque', '--preenchimento-slider-destaque', vfCorDestaqueAtual);
   }
 }
 
@@ -5215,7 +5213,7 @@ function selecionarCorDesenhoVF(cor){
   });
   document.getElementById('vf-swatch-cor-atual').style.background = cor;
   document.getElementById('vf-preview-espessura').style.background = cor;
-  document.getElementById('vf-slider-espessura').style.accentColor = cor;
+  vfAtualizarPreenchimentoSliderVF('vf-slider-espessura', '--preenchimento-slider-caneta', cor);
   // o marcador, e agora também os ícones de Persistente/Variável, seguem
   // a cor escolhida de verdade, girando a matiz de cada tom (mantém toda
   // a sombra/luz dos ícones reais)
@@ -5265,6 +5263,7 @@ function corNativaEscolhidaVF(valor){
 function mudarEspessuraSliderVF(valor){
   vfEspessuraDesenhoAtual = parseFloat(valor);
   document.getElementById('vf-espessura-valor').textContent = vfEspessuraDesenhoAtual.toFixed(1).replace('.', ',') + ' pt';
+  vfAtualizarPreenchimentoSliderVF('vf-slider-espessura', '--preenchimento-slider-caneta', vfCorDesenhoAtual);
 }
 
 // Persistente = espessura fixa, ignora a força da caneta. Variável = a
@@ -5409,7 +5408,7 @@ function vfRenderizarGradeCoresVF(idGrid, corAtual){
     // sai do modo sem mexer em nada
     const emModoExcluir = ehCustomizada && vfCorEmModoExcluirVF && vfCorEmModoExcluirVF.idGrid === idGrid && vfCorEmModoExcluirVF.cor.toUpperCase() === cor.toUpperCase();
     const atributosSegurar = (ehCustomizada && !emModoExcluir)
-      ? ` ontouchstart="vfIniciarPressionarCorCustomizadaVF('${idGrid}','${cor}')" ontouchend="vfCancelarPressionarCorCustomizadaVF()" ontouchmove="vfCancelarPressionarCorCustomizadaVF()" onmousedown="vfIniciarPressionarCorCustomizadaVF('${idGrid}','${cor}')" onmouseup="vfCancelarPressionarCorCustomizadaVF()" onmouseleave="vfCancelarPressionarCorCustomizadaVF()"`
+      ? ` ontouchstart="vfIniciarPressionarCorCustomizadaVF('${idGrid}','${cor}',event)" ontouchend="vfCancelarPressionarCorCustomizadaVF()" ontouchmove="vfCancelarPressionarCorCustomizadaVF(event)" onmousedown="vfIniciarPressionarCorCustomizadaVF('${idGrid}','${cor}',event)" onmouseup="vfCancelarPressionarCorCustomizadaVF()" onmouseleave="vfCancelarPressionarCorCustomizadaVF()"`
       : '';
     const onclickBotao = emModoExcluir ? `vfSairDoModoExcluirCorVF()` : `${config.funcaoSelecionar}('${cor}')`;
     const botaoX = emModoExcluir
@@ -5461,6 +5460,7 @@ function corNativaConfirmadaVF(valorBruto, idGrid){
 // ARMAR o modo excluir (mostra um X no canto dela) - só tocar o X de
 // fato apaga. Segurar sozinho nunca excluí direto, só oferece a opção ----
 let vfTimerPressionarCorCustomizadaVF = null;
+let vfPosicaoInicialPressionarCorVF = null;
 let vfCorEmModoExcluirVF = null; // {idGrid, cor} da bolinha mostrando o X agora, ou null
 
 function vfCorAtualDoGridVF(idGrid){
@@ -5472,18 +5472,38 @@ function vfCorAtualDoGridVF(idGrid){
   return mapa[idGrid] ? mapa[idGrid]() : null;
 }
 
-function vfIniciarPressionarCorCustomizadaVF(idGrid, cor){
+function vfIniciarPressionarCorCustomizadaVF(idGrid, cor, evento){
   clearTimeout(vfTimerPressionarCorCustomizadaVF);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarCorVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
   vfTimerPressionarCorCustomizadaVF = setTimeout(() => {
     vfTimerPressionarCorCustomizadaVF = null;
+    vfPosicaoInicialPressionarCorVF = null;
     if(navigator.vibrate) navigator.vibrate(15); // feedback tátil de "ativou o toque longo"
     vfCorEmModoExcluirVF = {idGrid, cor};
     vfRenderizarGradeCoresVF(idGrid, vfCorAtualDoGridVF(idGrid));
   }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
 }
-function vfCancelarPressionarCorCustomizadaVF(){
+// tolerância generosa pro tremor natural da Apple Pencil "parada" (mesma
+// razão documentada em VF_LIMIAR_ARRASTO_NAV_ITEM_PX, nesse mesmo
+// arquivo) - sem isso, segurar com a caneta cancelava o toque longo quase
+// sempre antes dos 500ms completarem (o tremor gera touchmove mesmo sem
+// mover de propósito), e só funcionava de verdade com o dedo, que é mais
+// estável naturalmente. touchend (soltar de vez) sempre cancela, não tem
+// tolerância - só o touchmove (ainda segurando) é que precisa dela
+const VF_LIMIAR_CANCELAR_PRESSIONAR_COR_PX = 25;
+function vfCancelarPressionarCorCustomizadaVF(evento){
+  if(evento && vfPosicaoInicialPressionarCorVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarCorVF.x;
+      const dy = ponto.clientY - vfPosicaoInicialPressionarCorVF.y;
+      if(Math.hypot(dx, dy) < VF_LIMIAR_CANCELAR_PRESSIONAR_COR_PX) return; // ainda dentro da tolerância, não cancela
+    }
+  }
   clearTimeout(vfTimerPressionarCorCustomizadaVF);
   vfTimerPressionarCorCustomizadaVF = null;
+  vfPosicaoInicialPressionarCorVF = null;
 }
 // toca em qualquer lugar fora do X (inclusive na própria bolinha que
 // estava mostrando o X) sai do modo excluir sem apagar nada
@@ -5508,28 +5528,20 @@ document.addEventListener('touchstart', (e) => {
 }, {capture: true, passive: true});
 
 
-// alguns elementos nativos (como input range) às vezes deixam resíduo
-// visual ao atualizar accent-color dinamicamente num elemento já
-// existente no Safari - recriar o elemento do zero (clone + substituição)
-// força o navegador a desenhar ele de novo, sem "memória" da cor antiga
-function vfForcarRecoloracaoSliderVF(idSlider, corNova){
-  const slider = document.getElementById(idSlider);
-  if(!slider) return;
-  slider.style.setProperty('--cor-slider-destaque', corNova);
-  vfAtualizarPreenchimentoSliderDestaqueVF(corNova);
-}
-
 // preenchimento colorido da trilha (do início até o valor atual) - visual
 // que o accent-color já dava de graça, mas precisa ser refeito à mão já
 // que accent-color foi trocado por causa do bug de resíduo de cor no
 // Safari. Um gradiente de 2 cores, com o corte exatamente na porcentagem
-// do valor atual, imita o mesmo efeito
-function vfAtualizarPreenchimentoSliderDestaqueVF(cor){
-  const slider = document.getElementById('vf-slider-espessura-destaque');
+// do valor atual, imita o mesmo efeito. Nome da variável CSS muda
+// conforme o slider (caneta ou destaque), já que cada um tem sua própria
+// cor de preenchimento - o thumb (pílula) em si é sempre neutro/branco
+// fixo agora, não muda de cor (visual único, igual nos dois sliders)
+function vfAtualizarPreenchimentoSliderVF(idSlider, nomePropriedade, cor){
+  const slider = document.getElementById(idSlider);
   if(!slider) return;
   const min = Number(slider.min), max = Number(slider.max), valor = Number(slider.value);
   const pct = max > min ? ((valor - min) / (max - min)) * 100 : 0;
-  slider.style.setProperty('--preenchimento-slider-destaque', `linear-gradient(to right, ${cor} 0%, ${cor} ${pct}%, #ddd ${pct}%, #ddd 100%)`);
+  slider.style.setProperty(nomePropriedade, `linear-gradient(to right, ${cor} 0%, ${cor} ${pct}%, #ddd ${pct}%, #ddd 100%)`);
 }
 
 function selecionarCorDestaqueVF(cor){
@@ -5538,7 +5550,7 @@ function selecionarCorDestaqueVF(cor){
     btn.classList.toggle('vf-cor-selecionada', btn.dataset.cor === cor);
   });
   document.getElementById('vf-preview-espessura-destaque').style.background = cor;
-  vfForcarRecoloracaoSliderVF('vf-slider-espessura-destaque', cor);
+  vfAtualizarPreenchimentoSliderVF('vf-slider-espessura-destaque', '--preenchimento-slider-destaque', cor);
   document.getElementById('vf-swatch-destaque-atual').style.background = cor;
   // as prévias de opacidade mostram a cor escolhida, não fica travado no amarelo
   document.querySelectorAll('.vf-bolinha-opacidade-preview').forEach(prev => { prev.style.background = cor; });
@@ -5550,7 +5562,7 @@ function selecionarCorDestaqueVF(cor){
 function mudarEspessuraSliderDestaqueVF(valor){
   vfEspessuraDestaqueAtual = Number(valor);
   document.getElementById('vf-espessura-valor-destaque').textContent = `${valor} pt`;
-  vfAtualizarPreenchimentoSliderDestaqueVF(vfCorDestaqueAtual);
+  vfAtualizarPreenchimentoSliderVF('vf-slider-espessura-destaque', '--preenchimento-slider-destaque', vfCorDestaqueAtual);
 }
 
 function selecionarOpacidadeDestaqueVF(opacidade){
