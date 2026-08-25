@@ -1442,7 +1442,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-253';
+const VERSAO_APP = '2026-07-25-254';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3339,6 +3339,15 @@ async function buscarTudoPaginadoVF(queryBuilder){
     if(!data || data.length < TAMANHO_PAGINA) break;
     pagina++;
   }
+  // deduplica por id - proteção barata (apontada pelo Fable) contra um
+  // upload inserir linhas no meio da busca, deslocando o que cada página
+  // pega e trazendo a mesma linha duas vezes. Se a linha não tiver 'id'
+  // (tabelas sem PK simples), não deduplica - mantém como está
+  if(todosOsDados.length && todosOsDados[0]?.id !== undefined){
+    const vistos = new Map();
+    todosOsDados.forEach(linha => vistos.set(linha.id, linha));
+    todosOsDados = [...vistos.values()];
+  }
   return {data: todosOsDados, error: null};
 }
 
@@ -3494,6 +3503,16 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
 let estadoVF = null;
 let filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false};
 let favoritosVF = new Set();
+// bibliografia é uma tabela pequena (dezenas/centenas de linhas, não
+// milhares) - buscar ela inteira uma vez e guardar em memória é muito
+// mais leve que fazer join em toda query de 7.700+ questões. Dá pra
+// mostrar o nome da publicação e filtrar por módulo instantaneamente,
+// sem esperar o conteúdo pesado de cada questão (ideia do Fable)
+let vfBibliografiaCache = new Map(); // id -> {titulo, modulo_pscpp}
+// conteúdo pesado (texto/explicação/correção) de cada questão, buscado
+// SOB DEMANDA só quando a questão é de fato escolhida pra aparecer -
+// nunca faz parte da busca inicial do pool inteiro
+let vfConteudoCompletoCache = new Map(); // id -> {texto, resposta, explicacao, correcao, dificuldade, inconsistente}
 let vfTotalAfirmacoesNoBanco = null; // total geral no banco, buscado uma vez só ao entrar na sessão
 let flashsSalvosVF = new Map(); // questao_vf_id -> motivo ('estudar' ou 'corrigir')
 let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual que o banco, enquanto o upsert está em voo
@@ -5133,9 +5152,63 @@ let notasVF = new Set();
 
 // busca todas as questões do pool atual (respeitando filtro), já com o
 // estado de repetição de cada uma (ou 'nova' implícito se nunca respondida)
+// carrega a tabela bibliografia inteira UMA VEZ (é pequena) - dá pra
+// mostrar nome de publicação, capítulo e filtrar por módulo sem precisar
+// de join nenhum na query pesada das 7.700+ questões
+async function vfCarregarBibliografiaCacheVF(){
+  if(vfBibliografiaCache.size > 0) return; // já carregado nessa sessão
+  const {data, error} = await sb.from('bibliografia').select('id, titulo, modulo_pscpp');
+  if(error || !data) return;
+  vfBibliografiaCache = new Map(data.map(b => [b.id, {titulo: b.titulo, modulo_pscpp: b.modulo_pscpp}]));
+}
+
+// busca o conteúdo PESADO (texto/explicação/correção) de uma questão sob
+// demanda - só quando ela é de fato escolhida pra aparecer na tela, nunca
+// como parte da busca inicial do pool inteiro. Idempotente: se já tem o
+// conteúdo (seja porque já foi mostrada, seja porque foi pré-buscada em
+// segundo plano), não busca de novo
+async function vfGarantirConteudoCompletoVF(item){
+  if(item.texto !== undefined) return; // já carregado nesse próprio objeto
+  const emCache = vfConteudoCompletoCache.get(item.id);
+  if(emCache){ Object.assign(item, emCache); return; }
+  const {data, error} = await sb.from('questoes_vf').select('texto, resposta, explicacao, correcao, dificuldade, inconsistente').eq('id', item.id).single();
+  if(error || !data) return;
+  vfConteudoCompletoCache.set(item.id, data);
+  Object.assign(item, data);
+}
+
+// enquanto o usuário lê a questão atual, busca em segundo plano o
+// conteúdo das candidatas mais prováveis a vir em seguida (mesma
+// pontuação do algoritmo de fila, sem o jitter/gate de aprendendo - é só
+// uma estimativa, não precisa ser exata). Não bloqueia nada, roda solta;
+// se a estimativa errar, a questão de verdade é buscada normalmente na
+// hora de aparecer mesmo, sem quebrar nada
+function vfPreBuscarProximasVF(){
+  if(!estadoVF || !estadoVF.pool) return;
+  const agoraMs = agoraCorrigidoVF();
+  const idAtual = estadoVF.historico[estadoVF.posicao]?.item?.id;
+  const candidatos = estadoVF.pool
+    .filter(q => q.id !== idAtual && q.estado === 'revisao' && q.intervalo_horas && q.ultima_resposta_em && q.texto === undefined)
+    .map(q => {
+      const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
+      const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
+      return {q, score: (decorridoH / q.intervalo_horas) * boost};
+    })
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 3)
+    .map(c => c.q);
+  candidatos.forEach(q => { vfGarantirConteudoCompletoVF(q).catch(() => {}); });
+}
+
 async function carregarPoolVF(){
   const montarQueryQuestoesVF = () => {
-    let q = sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, eh_numero, eh_lista, inconsistente, capitulo, n_palavras, bibliografia(titulo, modulo_pscpp)').eq('anulada', false);
+    // só os campos que o ALGORITMO precisa pra escolher a próxima questão -
+    // nada de texto/explicação/correção aqui. Isso é ~95% menos dados
+    // trafegados (ideia do Fable): antes baixava o conteúdo pesado de
+    // TODAS as 7.700+ questões toda vez que entrava no Flash, mesmo só
+    // mostrando uma de cada vez. O conteúdo pesado é buscado sob demanda,
+    // só da questão que realmente vai aparecer (vfGarantirConteudoCompletoVF)
+    let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, capitulo, n_palavras, bibliografia_id').eq('anulada', false);
     if(filtroVF.publicacao) q = q.eq('bibliografia_id', filtroVF.publicacao);
     if(filtroVF.capitulo) q = q.eq('capitulo', filtroVF.capitulo);
     // Número + Lista juntos = UNIÃO (ou uma coisa ou outra), não interseção —
@@ -5155,7 +5228,8 @@ async function carregarPoolVF(){
     sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
-    sb.from('flashs_salvos_vf').select('questao_vf_id, motivo').eq('usuario_id', usuarioAtual.id)
+    sb.from('flashs_salvos_vf').select('questao_vf_id, motivo').eq('usuario_id', usuarioAtual.id),
+    vfCarregarBibliografiaCacheVF() // idempotente - só busca de verdade na primeira vez da sessão
   ]);
   favoritosVF = new Set((favData||[]).map(f=>f.questao_vf_id));
   notasVF = new Set((notaData||[]).map(n=>n.questao_vf_id));
@@ -5165,7 +5239,7 @@ async function carregarPoolVF(){
   (estados||[]).forEach(e => { estadoPorId[e.questao_vf_id] = e; });
 
   return (questoes||[])
-    .filter(q => !idsExcluidos.has(q.id) && (!filtroVF.modulo || q.bibliografia?.modulo_pscpp === filtroVF.modulo))
+    .filter(q => !idsExcluidos.has(q.id) && (!filtroVF.modulo || vfBibliografiaCache.get(q.bibliografia_id)?.modulo_pscpp === filtroVF.modulo))
     .map(q => {
       // se essa questão tem uma escrita em voo (respondida agora mesmo, mas
       // o upsert ainda não confirmou), o estado local já é mais atual que
@@ -5293,8 +5367,15 @@ async function avancarParaProximaVF(){
   // mesmo dela ser lida — ignora clique nesses botões por um instante
   estadoVF.bloqueadoAteMs = agoraMs + 400;
   limparCanvasDesenhoVF(); // questão nova = rascunho da anterior some
+  // busca o conteúdo pesado (texto/explicação/correção) dessa questão -
+  // se já foi pré-buscada em segundo plano (vfPreBuscarProximasVF, chamada
+  // depois de renderizar a questão anterior), isso é instantâneo (já
+  // está em vfConteudoCompletoCache). Se não, é uma busca rápida de uma
+  // linha só (~50ms), não o pool inteiro como era antes
+  await vfGarantirConteudoCompletoVF(pick.item);
   renderizarItemVF();
   retomarTimerVF(); // só agora, com a questão já na tela, o cronômetro começa a contar
+  vfPreBuscarProximasVF(); // não espera - roda solta em segundo plano enquanto o usuário lê
 }
 
 function mudarModuloFiltroVF(){
@@ -5371,8 +5452,12 @@ function alternarFiltrosVF(){
 async function popularFiltroModuloVF(){
   const el = document.getElementById('vf-filtro-modulo');
   if(el.dataset.populado) return;
-  const {data} = await sb.from('questoes_vf').select('bibliografia(modulo_pscpp)').eq('anulada', false);
-  const modulosComVF = new Set((data||[]).map(q=>q.bibliografia?.modulo_pscpp).filter(Boolean));
+  await vfCarregarBibliografiaCacheVF(); // idempotente - garante que o cache de bibliografia já existe
+  // busca só o bibliografia_id de cada questão (sem join, sem texto) e
+  // cruza com o cache já carregado - bem mais leve que o join direto de
+  // antes, que trazia bibliografia(modulo_pscpp) pra cada uma das 7.700+
+  const {data} = await sb.from('questoes_vf').select('bibliografia_id').eq('anulada', false);
+  const modulosComVF = new Set((data||[]).map(q => vfBibliografiaCache.get(q.bibliografia_id)?.modulo_pscpp).filter(Boolean));
   el.innerHTML = '<option value="">Todos os módulos</option>' + [...modulosComVF].sort((a,b)=>a.localeCompare(b,'pt')).map(m=>
     `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`
   ).join('');
@@ -5385,8 +5470,22 @@ function renderizarItemVF(){
   const entrada = estadoVF.historico[estadoVF.posicao];
   if(!entrada) return;
   const item = entrada.item;
+  if(item.texto === undefined){
+    // conteúdo pesado (texto/explicação/correção) ainda não chegou - busca
+    // agora e re-renderiza assim que tiver. Na prática isso quase nunca
+    // aparece de verdade: avancarParaProximaVF já espera o conteúdo antes
+    // de chamar renderizarItemVF, e a pré-busca em segundo plano
+    // (vfPreBuscarProximasVF) geralmente já deixa a próxima pronta
+    // enquanto você ainda está lendo a atual. Essa é só uma rede de
+    // segurança pra nunca mostrar "undefined" na tela
+    el.innerHTML = `<div style="padding:60px 20px;text-align:center;color:#999">Carregando...</div>`;
+    vfGarantirConteudoCompletoVF(item).then(() => {
+      if(estadoVF.historico[estadoVF.posicao]?.item === item) renderizarItemVF();
+    });
+    return;
+  }
   const jaRespondida = entrada.resposta !== null;
-  const publicacao = item.bibliografia?.titulo || 'Publicação não identificada';
+  const publicacao = vfBibliografiaCache.get(item.bibliografia_id)?.titulo || 'Publicação não identificada';
   // trava de segurança: se a questão mudar (ex: clicou em Próxima) enquanto
   // ainda estava editando a afirmação, o textarea é destruído sem passar
   // pelo blur — sem isso, a barra de baixo podia ficar escondida pra sempre
@@ -5438,7 +5537,7 @@ function renderizarItemVF(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 6px">
         <div>
           <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0;line-height:1.25">${escapeHtml(publicacao)}</p>
-          ${item.capitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:1px 0 0 0;line-height:1.25">${rotuloCapituloDoLivro(item.bibliografia?.titulo)} ${escapeHtml(String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))}</p>` : ''}
+          ${item.capitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:1px 0 0 0;line-height:1.25">${rotuloCapituloDoLivro(publicacao)} ${escapeHtml(String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))}</p>` : ''}
         </div>
         ${tagsPublicacao ? `<div style="display:flex;gap:6px;flex-shrink:0">${tagsPublicacao}</div>` : ''}
       </div>
@@ -5918,9 +6017,9 @@ async function vfCopiarExplicacaoParaClaude(botao){
   const entrada = estadoVF.historico.find(h => h.item.id === vfQuestaoIdExplicacaoAtual);
   if(!entrada) return;
   const item = entrada.item;
-  const livro = item.bibliografia?.titulo || 'Publicação não identificada';
+  const livro = vfBibliografiaCache.get(item.bibliografia_id)?.titulo || 'Publicação não identificada';
   const capituloTexto = item.capitulo
-    ? `${rotuloCapituloDoLivro(item.bibliografia?.titulo)} ${String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')}`
+    ? `${rotuloCapituloDoLivro(livro)} ${String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')}`
     : null;
   // sempre a versão VERDADEIRA da afirmação - se a original é falsa, usa a
   // correção (o que vinha depois de "Correto:" no upload), nunca o texto
