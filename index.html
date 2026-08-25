@@ -256,7 +256,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
 /* --- Placar --- */
 
 /* --- Modal genérico --- */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
 #overlay-arrastar-arquivo{position:fixed;inset:0;background:rgba(217,119,87,0.08);z-index:200;display:flex;align-items:center;justify-content:center;pointer-events:none}
 #overlay-arrastar-arquivo.hidden{display:none}
 #overlay-arrastar-arquivo>div{background:#fff;border:2px dashed #B23A34;border-radius:16px;padding:32px 40px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
@@ -3651,6 +3651,7 @@ let vfOpacidadeDestaqueAtual = 0.45;
 let vfCorMarcacaoTextoAtual = '#F08080'; // compartilhada pelos 3 (grifar/sublinhar/riscar)
 let vfUltimoPontoDesenho = null;
 let vfPontoMedioAnterior = null;
+let vfPontoAnteriorAnterior = null; // ponto anterior ao último - usado para reconstruir curvas mais fiéis sem adicionar atraso
 let vfPosicaoSuavizada = null; // suavização leve de x,y - reseta a cada novo traço (touchstart), ver uso em touchmove
 
 function inicializarCanvasDesenhoVF(){
@@ -3775,6 +3776,7 @@ document.addEventListener('touchstart', (e) => {
   const ponto = {x: touch.clientX - rect.left, y: touch.clientY - rect.top};
   vfUltimoPontoDesenho = ponto;
   vfPontoMedioAnterior = ponto;
+  vfPontoAnteriorAnterior = null;
   vfPosicaoSuavizada = ponto; // reseta - não herda do traço anterior, senão o primeiro ponto "saltaria"
   vfForcaSuavizada = typeof touch.force === 'number' && touch.force > 0 ? touch.force : 0.5; // começa do zero, não herda do traço anterior
   // modo destaque desenha num canvas TEMPORÁRIO à parte, em opacidade
@@ -3838,6 +3840,7 @@ document.addEventListener('touchmove', (e) => {
           const ponto = {x: vfBotaoPendenteToqueInfo.x - rect.left, y: vfBotaoPendenteToqueInfo.y - rect.top};
           vfUltimoPontoDesenho = ponto;
           vfPontoMedioAnterior = ponto;
+          vfPontoAnteriorAnterior = null;
           vfPosicaoSuavizada = ponto; // reseta - mesmo motivo do outro caminho de início de traço
           vfForcaSuavizada = typeof touchPendente.force === 'number' && touchPendente.force > 0 ? touchPendente.force : 0.5;
           if(vfModoDestaque){
@@ -3930,47 +3933,62 @@ document.addEventListener('touchmove', (e) => {
   }
   ctxAtivo.lineWidth = Math.max(1, espessuraFinal);
 
-  // interpolação pra traço rápido: quando a caneta se move rápido, a
-  // amostragem de toque chega mais espaçada (é uma limitação do
-  // hardware/Safari, não tem como pedir mais amostras) — sem isso, um
-  // salto grande vira um segmento quase reto, com leve efeito facetado
-  // na curva. Subdivide o salto em pontos intermediários antes de
-  // desenhar, suavizando exatamente onde a suavização por si só não
-  // ajuda (ela já roda em cima desses pontos extras também)
-  const distancia = Math.hypot(x - vfUltimoPontoDesenho.x, y - vfUltimoPontoDesenho.y);
-  const LIMIAR_INTERPOLACAO_PX = 5;
-  let numEtapas = distancia > LIMIAR_INTERPOLACAO_PX ? Math.ceil(distancia / LIMIAR_INTERPOLACAO_PX) : 1;
-  // curvas MUITO fechadas (mudança de direção grande, tipo o topo de um
-  // laço de caligrafia) precisam de mais pontos intermediários mesmo com
-  // pouca distância entre eles - a interpolação por distância sozinha não
-  // cobre isso (a distância pode ser pequena mesmo numa virada apertada).
-  // Sem essa checagem extra, a curva quadrática não tinha pontos
-  // suficientes pra suavizar o ápice de verdade, sobrando um ângulo sutil
-  // no topo de letras cursivas - confirmado ampliando uma foto real de
-  // escrita bem de perto
-  const vAnteriorDirecao = {x: vfUltimoPontoDesenho.x - vfPontoMedioAnterior.x, y: vfUltimoPontoDesenho.y - vfPontoMedioAnterior.y};
-  const vNovaDirecao = {x: x - vfUltimoPontoDesenho.x, y: y - vfUltimoPontoDesenho.y};
-  const magAnteriorDirecao = Math.hypot(vAnteriorDirecao.x, vAnteriorDirecao.y), magNovaDirecao = Math.hypot(vNovaDirecao.x, vNovaDirecao.y);
-  if(magAnteriorDirecao > 0.5 && magNovaDirecao > 0.5){
-    const cosAnguloDirecao = (vAnteriorDirecao.x*vNovaDirecao.x + vAnteriorDirecao.y*vNovaDirecao.y) / (magAnteriorDirecao * magNovaDirecao);
-    if(cosAnguloDirecao < 0.5) numEtapas = Math.max(numEtapas, 5); // virada de mais de ~60° - garante pontos suficientes pra suavizar o ápice
-  }
+  // Renderização geométrica do traço:
+  // em vez de criar vários pequenos segmentos retos quando os eventos
+  // chegam espaçados, reconstruímos cada trecho como uma curva cúbica.
+  // Isso melhora a fidelidade das curvas rápidas sem aplicar um filtro
+  // adicional que introduza atraso na ponta da Apple Pencil.
+  //
+  // A tangente de entrada usa o movimento anterior e a tangente de saída
+  // usa o movimento atual. Assim a curva acompanha a direção real da
+  // escrita e não "corta" as curvas fechadas quando a amostragem fica
+  // mais espaçada.
+  const p0 = vfUltimoPontoDesenho;
+  const p1 = {x, y};
+  const pPrev = vfPontoAnteriorAnterior || p0;
 
-  for(let i = 1; i <= numEtapas; i++){
-    const t = i / numEtapas;
-    const xEtapa = vfUltimoPontoDesenho.x + (x - vfUltimoPontoDesenho.x) * t;
-    const yEtapa = vfUltimoPontoDesenho.y + (y - vfUltimoPontoDesenho.y) * t;
-    // suavização por curva quadrática: o ponto médio entre o anterior e o
-    // atual vira o destino da curva, o ponto anterior vira o "cabo" de
-    // controle. Evita o efeito de segmentos retos colados, mesma técnica
-    // usada em apps de desenho de verdade
-    const pontoMedio = {x: (vfUltimoPontoDesenho.x + xEtapa) / 2, y: (vfUltimoPontoDesenho.y + yEtapa) / 2};
+  const dx0 = p1.x - pPrev.x;
+  const dy0 = p1.y - pPrev.y;
+  const dx1 = p1.x - p0.x;
+  const dy1 = p1.y - p0.y;
+
+  // Tangentes limitadas para não criar overshoot em mudanças muito bruscas
+  // de direção. O limite é proporcional ao próprio trecho, então a linha
+  // continua responsiva mesmo em escrita muito rápida.
+  const comprimento = Math.hypot(dx1, dy1);
+  if(comprimento > 0.01){
+    const anteriorComprimento = Math.hypot(dx0, dy0);
+    const fatorEntrada = Math.min(anteriorComprimento > 0.01 ? comprimento / anteriorComprimento : 1, 2.5);
+    const maxControle = comprimento * 0.48;
+
+    let c1x = p0.x + (dx0 / 6) * fatorEntrada;
+    let c1y = p0.y + (dy0 / 6) * fatorEntrada;
+    let c2x = p1.x - dx1 / 6;
+    let c2y = p1.y - dy1 / 6;
+
+    // limita a distância dos controles para evitar uma "barriga" quando
+    // a caneta muda de direção muito rápido
+    const d1x = c1x - p0.x, d1y = c1y - p0.y;
+    const d1 = Math.hypot(d1x, d1y);
+    if(d1 > maxControle){
+      const k = maxControle / d1;
+      c1x = p0.x + d1x * k; c1y = p0.y + d1y * k;
+    }
+    const d2x = c2x - p1.x, d2y = c2y - p1.y;
+    const d2 = Math.hypot(d2x, d2y);
+    if(d2 > maxControle){
+      const k = maxControle / d2;
+      c2x = p1.x + d2x * k; c2y = p1.y + d2y * k;
+    }
+
     ctxAtivo.beginPath();
-    ctxAtivo.moveTo(vfPontoMedioAnterior.x, vfPontoMedioAnterior.y);
-    ctxAtivo.quadraticCurveTo(vfUltimoPontoDesenho.x, vfUltimoPontoDesenho.y, pontoMedio.x, pontoMedio.y);
+    ctxAtivo.moveTo(p0.x, p0.y);
+    ctxAtivo.bezierCurveTo(c1x, c1y, c2x, c2y, p1.x, p1.y);
     ctxAtivo.stroke();
-    vfPontoMedioAnterior = pontoMedio;
-    vfUltimoPontoDesenho = {x: xEtapa, y: yEtapa};
+
+    vfPontoAnteriorAnterior = p0;
+    vfUltimoPontoDesenho = p1;
+    vfPontoMedioAnterior = p1;
   }
 
   // mostra o resultado FINAL (com a mistura já aplicada) em tempo real no
