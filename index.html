@@ -114,6 +114,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 #app-shell{display:none;max-width:480px;margin:0 auto;position:fixed;top:var(--vv-top, 0px);left:0;right:0;height:var(--vh-real, 100vh);flex-direction:column;overflow:hidden}
 #app-shell.ativo{display:flex}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;flex-shrink:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
+body.vf-desenho-ativo #vf-canvas-desenho{z-index:15}
+body.vf-desenho-ativo #vf-canvas-preview-destaque{z-index:16}
 #vf-barra-desenho,#vf-barra-desenho *,#vf-painel-caneta,#vf-painel-caneta *,#vf-painel-borracha,#vf-painel-borracha *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:#B23A34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0;border:none;padding:0;margin:0;-webkit-appearance:none;appearance:none;cursor:pointer;overflow:hidden}
 
@@ -203,7 +205,9 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .item-lista-modulo:last-child{border-bottom:none}
 .item-lista-modulo:active{background:#F5F5F4}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-#aba-vf .card-questao .enunciado,#aba-vf .card-questao .enunciado *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado,body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+#vf-correcao-atual{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf-correcao-atual *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 .enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap}
 .linha-numerada{display:flex;gap:8px;margin-top:10px;align-items:flex-start}
 .linha-marcador{flex-shrink:0;font-weight:400;min-width:16px}
@@ -739,7 +743,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   <!-- ===== V/F (beta, só Carlos por enquanto) ===== -->
   <div class="view-aba hidden" id="aba-vf">
     <div id="vf-filtros" style="margin-bottom:16px;background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:14px 16px">
-      <button onclick="alternarFiltrosVF()" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:4px 2px;cursor:pointer;font-family:inherit;color:#B23A34;font-size:var(--fs-d);font-weight:700">
+      <button onclick="alternarFiltrosVF()" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:4px 2px;cursor:pointer;font-family:inherit;color:#B23A34;font-size:var(--fs-d);font-weight:700;-webkit-appearance:none;appearance:none;outline:none;-webkit-tap-highlight-color:transparent">
         <span>Filtros</span>
         <svg id="vf-chevron-filtros" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
@@ -766,7 +770,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
     pointer-events:none pra sempre (dedo/mouse passam direto pra tocar nos
     botões normal). A escuta de verdade roda com Touch Events nativos no
     document (não neste elemento), filtrando touch.touchType==='stylus' -->
-    <canvas id="vf-canvas-desenho" style="position:fixed;inset:0;width:100%;height:100%;z-index:15;pointer-events:none;touch-action:none"></canvas>
+    <canvas id="vf-canvas-desenho" style="position:fixed;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;touch-action:none"></canvas>
+    <canvas id="vf-canvas-preview-destaque" style="position:fixed;inset:0;width:100%;height:100%;z-index:9;pointer-events:none;touch-action:none"></canvas>
     <!-- barra fina, sempre visível quando ativa - marcador+cor agrupados
     (fundo azul claro quando ativo, igual PDF Expert) + borracha separada -->
     <div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:9999;background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.12);padding:6px 8px;display:flex;align-items:center;gap:14px">
@@ -776,14 +781,17 @@ input,select,textarea{font-family:inherit;font-size:16px}
         <div style="display:flex;gap:3px"><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span></div>
       </div>
       <div id="vf-grupo-marcacao-texto" style="display:flex;align-items:center;gap:2px">
-        <button onclick="vfAplicarMarcacaoTextoVF('grifar')" class="btn-icone-pequeno" title="Grifar o texto selecionado" style="width:32px;height:32px;border-radius:8px">
+        <button onclick="vfAtivarModoMarcacaoTextoVF('grifar')" class="vf-btn-marcacao-texto btn-icone-pequeno" data-tipo-marcacao="grifar" title="Grifar - ative e arraste o dedo sobre o texto" style="width:32px;height:32px;border-radius:8px">
           <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="15" width="18" height="6" rx="1" fill="#FFD84D"/><text x="12" y="14" font-family="serif" font-size="15" font-weight="700" text-anchor="middle" fill="#232426">A</text></svg>
         </button>
-        <button onclick="vfAplicarMarcacaoTextoVF('sublinhar')" class="btn-icone-pequeno" title="Sublinhar o texto selecionado" style="width:32px;height:32px;border-radius:8px">
+        <button onclick="vfAtivarModoMarcacaoTextoVF('sublinhar')" class="vf-btn-marcacao-texto btn-icone-pequeno" data-tipo-marcacao="sublinhar" title="Sublinhar - ative e arraste o dedo sobre o texto" style="width:32px;height:32px;border-radius:8px">
           <svg viewBox="0 0 24 24" width="20" height="20"><text x="12" y="16" font-family="serif" font-size="16" font-weight="700" text-anchor="middle" fill="#232426">A</text><line x1="5" y1="20" x2="19" y2="20" stroke="#B23A34" stroke-width="2.5" stroke-linecap="round"/></svg>
         </button>
-        <button onclick="vfAplicarMarcacaoTextoVF('riscar')" class="btn-icone-pequeno" title="Riscar o texto selecionado" style="width:32px;height:32px;border-radius:8px">
+        <button onclick="vfAtivarModoMarcacaoTextoVF('riscar')" class="vf-btn-marcacao-texto btn-icone-pequeno" data-tipo-marcacao="riscar" title="Riscar - ative e arraste o dedo sobre o texto" style="width:32px;height:32px;border-radius:8px">
           <svg viewBox="0 0 24 24" width="20" height="20"><text x="12" y="16" font-family="serif" font-size="16" font-weight="700" text-anchor="middle" fill="#232426">A</text><line x1="5" y1="12.5" x2="19" y2="12.5" stroke="#B23A34" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </button>
+        <button onclick="abrirPainelMarcacaoTextoVF()" style="width:22px;height:22px;border-radius:50%;padding:0;margin-left:4px;border:none;cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none;outline:none;box-shadow:none;-webkit-tap-highlight-color:transparent">
+          <span id="vf-swatch-cor-marcacao-texto" style="width:22px;height:22px;border-radius:50%;background:#F08080;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15)"></span>
         </button>
       </div>
       <div style="width:1px;height:22px;background:#eee"></div>
@@ -806,7 +814,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 </svg>
         </button>
         <button id="vf-circulo-destaque-btn" onclick="abrirPainelDestaqueVF()" style="width:0px;height:20px;border-radius:50%;opacity:0;overflow:hidden;transition:width 0.25s ease, opacity 0.25s ease;background:none;border:none;padding:0;margin:0;cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none;outline:none;box-shadow:none;-webkit-tap-highlight-color:transparent">
-          <span style="width:20px;height:20px;border-radius:50%;background:#FFD84D;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15)"></span>
+          <span id="vf-swatch-destaque-atual" style="width:20px;height:20px;border-radius:50%;background:#FFD84D;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15)"></span>
         </button>
       </div>
       <div style="width:1px;height:22px;background:#eee"></div>
@@ -938,6 +946,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
           <button class="vf-cor-destaque" data-cor="#FFD84D" onclick="selecionarCorDestaqueVF('#FFD84D')" style="width:26px;height:26px;border-radius:50%;background:#FFD84D;border:2px solid #fff;box-shadow:0 0 0 2px #5B9BD5;cursor:pointer;padding:0"></button>
           <button class="vf-cor-destaque" data-cor="#34C759" onclick="selecionarCorDestaqueVF('#34C759')" style="width:26px;height:26px;border-radius:50%;background:#34C759;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
           <button class="vf-cor-destaque" data-cor="#5B9BD5" onclick="selecionarCorDestaqueVF('#5B9BD5')" style="width:26px;height:26px;border-radius:50%;background:#5B9BD5;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+          <div style="position:relative;width:26px;height:26px;flex-shrink:0">
+            <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:2px solid #fff;box-shadow:0 0 0 1px #ddd;pointer-events:none"></div>
+            <input type="color" id="vf-input-cor-nativo-destaque" value="#FFD84D" oninput="corNativaDestaqueEscolhidaVF(this.value)" ontouchstart="vfMarcarSeletorCorAbertoVF()" onfocus="vfMarcarSeletorCorAbertoVF()" onblur="vfDesmarcarSeletorCorAbertoVF()" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none">
+          </div>
         </div>
       </div>
 
@@ -954,21 +966,36 @@ input,select,textarea{font-family:inherit;font-size:16px}
         <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Opacidade</div>
         <div style="display:flex;gap:8px">
           <button class="vf-opacidade-destaque" data-opacidade="0.25" onclick="selecionarOpacidadeDestaqueVF(0.25)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:12px;color:#333">
-            <span style="width:22px;height:22px;border-radius:5px;background-image:repeating-conic-gradient(#e0e0e0 0% 25%, #fff 0% 50%);background-size:8px 8px;position:relative;display:block"><span style="position:absolute;inset:0;background:#FFD84D;opacity:0.25;border-radius:5px"></span></span>
+            <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0px"><span class="vf-bolinha-opacidade-preview" style="width:15px;height:15px;border-radius:50%;background:#FFD84D;opacity:0.25;display:block"></span></span>
             25%
           </button>
           <button class="vf-opacidade-destaque" data-opacidade="0.45" onclick="selecionarOpacidadeDestaqueVF(0.45)" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:12px;color:#333">
-            <span style="width:22px;height:22px;border-radius:5px;background-image:repeating-conic-gradient(#e0e0e0 0% 25%, #fff 0% 50%);background-size:8px 8px;position:relative;display:block"><span style="position:absolute;inset:0;background:#FFD84D;opacity:0.45;border-radius:5px"></span></span>
+            <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0px"><span class="vf-bolinha-opacidade-preview" style="width:15px;height:15px;border-radius:50%;background:#FFD84D;opacity:0.45;display:block"></span></span>
             50%
           </button>
           <button class="vf-opacidade-destaque" data-opacidade="0.7" onclick="selecionarOpacidadeDestaqueVF(0.7)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:12px;color:#333">
-            <span style="width:22px;height:22px;border-radius:5px;background-image:repeating-conic-gradient(#e0e0e0 0% 25%, #fff 0% 50%);background-size:8px 8px;position:relative;display:block"><span style="position:absolute;inset:0;background:#FFD84D;opacity:0.7;border-radius:5px"></span></span>
+            <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0px"><span class="vf-bolinha-opacidade-preview" style="width:15px;height:15px;border-radius:50%;background:#FFD84D;opacity:0.7;display:block"></span></span>
             75%
           </button>
           <button class="vf-opacidade-destaque" data-opacidade="1" onclick="selecionarOpacidadeDestaqueVF(1)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:12px;color:#333">
-            <span style="width:22px;height:22px;border-radius:5px;background:#FFD84D;display:block"></span>
+            <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0px"><span class="vf-bolinha-opacidade-preview" style="width:15px;height:15px;border-radius:50%;background:#FFD84D;opacity:1;display:block"></span></span>
             100%
           </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="vf-painel-marcacao-texto" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:10000;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
+      <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Cor</div>
+      <div style="display:flex;gap:0;align-items:center;justify-content:space-between;flex-wrap:wrap">
+        <button class="vf-cor-marcacao-texto" data-cor="#F08080" onclick="selecionarCorMarcacaoTextoVF('#F08080')" style="width:26px;height:26px;border-radius:50%;background:#F08080;border:2px solid #fff;box-shadow:0 0 0 2px #5B9BD5;cursor:pointer;padding:0"></button>
+        <button class="vf-cor-marcacao-texto" data-cor="#FFB84D" onclick="selecionarCorMarcacaoTextoVF('#FFB84D')" style="width:26px;height:26px;border-radius:50%;background:#FFB84D;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+        <button class="vf-cor-marcacao-texto" data-cor="#FFD84D" onclick="selecionarCorMarcacaoTextoVF('#FFD84D')" style="width:26px;height:26px;border-radius:50%;background:#FFD84D;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+        <button class="vf-cor-marcacao-texto" data-cor="#8FD97A" onclick="selecionarCorMarcacaoTextoVF('#8FD97A')" style="width:26px;height:26px;border-radius:50%;background:#8FD97A;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+        <button class="vf-cor-marcacao-texto" data-cor="#8FCBEE" onclick="selecionarCorMarcacaoTextoVF('#8FCBEE')" style="width:26px;height:26px;border-radius:50%;background:#8FCBEE;border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0"></button>
+        <div style="position:relative;width:26px;height:26px;flex-shrink:0">
+          <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:2px solid #fff;box-shadow:0 0 0 1px #ddd;pointer-events:none"></div>
+          <input type="color" id="vf-input-cor-marcacao-texto" value="#F08080" oninput="corNativaMarcacaoTextoEscolhidaVF(this.value)" ontouchstart="vfMarcarSeletorCorAbertoVF()" onfocus="vfMarcarSeletorCorAbertoVF()" onblur="vfDesmarcarSeletorCorAbertoVF()" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none">
         </div>
       </div>
     </div>
@@ -1406,7 +1433,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-247';
+const VERSAO_APP = '2026-07-25-250';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3247,14 +3274,24 @@ function formatarTextoItemVF(texto){
 // Fable na análise do algoritmo)
 async function buscarTudoPaginadoVF(queryBuilder){
   const TAMANHO_PAGINA = 1000;
+  // cobre até 15.000 registros de uma vez, bem acima do que existe hoje —
+  // as páginas além do fim dos dados reais só voltam vazias (sem custo de
+  // tempo, já que rodam em paralelo com as outras, não uma depois da
+  // outra). Isso é o que estava deixando o Flash lento pra carregar: com
+  // ~7.700 questões, eram 8 páginas esperando uma a outra terminar antes
+  // de pedir a próxima — agora todas saem ao mesmo tempo
+  const MAX_PAGINAS_PARALELAS = 15;
+  const promessas = [];
+  for(let pagina = 0; pagina < MAX_PAGINAS_PARALELAS; pagina++){
+    promessas.push(queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1));
+  }
+  const resultados = await Promise.all(promessas);
+
   let todosOsDados = [];
-  let pagina = 0;
-  while(true){
-    const {data, error} = await queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1);
+  for(const {data, error} of resultados){
     if(error) return {data: null, error};
-    todosOsDados = todosOsDados.concat(data || []);
-    if(!data || data.length < TAMANHO_PAGINA) break;
-    pagina++;
+    if(!data || !data.length) break; // chegou no fim dos dados reais, o resto são páginas vazias
+    todosOsDados = todosOsDados.concat(data);
   }
   return {data: todosOsDados, error: null};
 }
@@ -3432,6 +3469,7 @@ let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual
 let vfCtxDesenho = null;
 let vfCanvasTracoTemp = null; // canvas à parte só durante um traço de destaque, funde no final
 let vfCtxTracoTemp = null;
+let vfCtxPreviewDestaque = null; // canvas visível por cima, mostra o resultado final em tempo real enquanto desenha
 let vfDesenhandoAgora = false;
 let vfSeletorCorNativoAberto = false; // true enquanto o seletor de cor nativo (roda-viva) está aberto
 // checagem GERAL - qualquer pop-up (modal de anotação, notas, explicação,
@@ -3481,6 +3519,7 @@ let vfModoDestaque = false; // highlighter - traço translúcido, tipo marca-tex
 let vfCorDestaqueAtual = '#FFD84D';
 let vfEspessuraDestaqueAtual = 20;
 let vfOpacidadeDestaqueAtual = 0.45;
+let vfCorMarcacaoTextoAtual = '#F08080'; // compartilhada pelos 3 (grifar/sublinhar/riscar)
 let vfUltimoPontoDesenho = null;
 let vfPontoMedioAnterior = null;
 
@@ -3523,6 +3562,15 @@ function redimensionarCanvasDesenhoVF(){
     img.onload = () => { ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.drawImage(img, 0, 0, rect.width, rect.height); };
     img.src = vfHistoricoDesenho[vfIndiceHistoricoVF];
   }
+  // canvas de prévia do destaque - mesmo tamanho/resolução, sempre em
+  // branco (só recebe conteúdo durante um traço de destaque em andamento)
+  const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
+  if(canvasPreview){
+    canvasPreview.width = rect.width * dpr;
+    canvasPreview.height = rect.height * dpr;
+    vfCtxPreviewDestaque = canvasPreview.getContext('2d');
+    vfCtxPreviewDestaque.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
 }
 
 function vfDentroDaAreaDesenho(clientX, clientY){
@@ -3553,8 +3601,12 @@ function vfEhToqueDeCaneta(touch){
   return touch && touch.touchType === 'stylus';
 }
 
-let vfBotaoPendenteToqueInfo = null; // {x, y, identifier} - toque começou num ícone pequeno, decisão adiada até ver se vira arrasto
+let vfBotaoPendenteToqueInfo = null; // {x, y, identifier, limiar} - toque começou num ícone pequeno, decisão adiada até ver se vira arrasto
 const VF_LIMIAR_ARRASTO_BOTAO_PX = 18;
+// menu lateral/de baixo usa um limiar bem mais generoso - a Apple Pencil
+// tem um tremor natural mesmo parada (documentado antes), e isso fazia
+// clicar no menu com a caneta falhar com mais frequência que com o dedo
+const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 40;
 
 document.addEventListener('touchstart', (e) => {
   if(!vfEstaVisivelAgora()) return;
@@ -3569,9 +3621,10 @@ document.addEventListener('touchstart', (e) => {
   // funcionar normal (trocar de aba, abrir perfil), mas se virar ARRASTO
   // de verdade, continua como traço - dá liberdade total pra desenhar em
   // cima de qualquer coisa, sem perder a navegação normal com toque rápido
-  const botaoIcone = e.target.closest('.btn-icone-pequeno, .nav-item, .topbar button, .topbar [onclick]');
+  const itemMenu = e.target.closest('.nav-item');
+  const botaoIcone = itemMenu || e.target.closest('.btn-icone-pequeno, .topbar button, .topbar [onclick]');
   if(botaoIcone){
-    vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier};
+    vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX};
     return;
   }
   if(!vfCtxDesenho) inicializarCanvasDesenhoVF();
@@ -3615,7 +3668,7 @@ document.addEventListener('touchmove', (e) => {
     const touchPendente = Array.from(e.changedTouches).find(t => t.identifier === vfBotaoPendenteToqueInfo.identifier);
     if(touchPendente){
       const dx = touchPendente.clientX - vfBotaoPendenteToqueInfo.x, dy = touchPendente.clientY - vfBotaoPendenteToqueInfo.y;
-      if(Math.hypot(dx, dy) > VF_LIMIAR_ARRASTO_BOTAO_PX){
+      if(Math.hypot(dx, dy) > vfBotaoPendenteToqueInfo.limiar){
         // virou arrasto de verdade - começa o traço retroativamente a
         // partir do ponto onde o dedo/caneta tocou primeiro, não de onde
         // está agora (senão nasceria um pedacinho de traço faltando)
@@ -3720,6 +3773,20 @@ document.addEventListener('touchmove', (e) => {
     vfPontoMedioAnterior = pontoMedio;
     vfUltimoPontoDesenho = {x: xEtapa, y: yEtapa};
   }
+
+  // mostra o resultado FINAL (com a mistura já aplicada) em tempo real no
+  // canvas de prévia por cima - recalcula do zero a cada movimento a
+  // partir do traço "puro" guardado em vfCanvasTracoTemp, nunca acumula.
+  // É por isso que o destaque não pode mais "só aparecer no final": agora
+  // ele já mostra com a qualidade certa desde o primeiro toque
+  if(vfModoDestaque && vfCanvasTracoTemp && vfCtxPreviewDestaque){
+    const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
+    const dpr = (window.devicePixelRatio || 1) * 1.5;
+    vfCtxPreviewDestaque.clearRect(0, 0, canvasPreview.width/dpr, canvasPreview.height/dpr);
+    vfCtxPreviewDestaque.globalCompositeOperation = 'multiply';
+    vfCtxPreviewDestaque.globalAlpha = vfOpacidadeDestaqueAtual;
+    vfCtxPreviewDestaque.drawImage(vfCanvasTracoTemp, 0, 0, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
+  }
 }, {passive: false});
 
 function vfFinalizarTracoDesenho(e){
@@ -3743,6 +3810,12 @@ function vfFinalizarTracoDesenho(e){
     vfCtxDesenho.globalAlpha = 1;
     vfCanvasTracoTemp = null;
     vfCtxTracoTemp = null;
+    // limpa a prévia - senão o traço ficaria "duplicado" visualmente (uma
+    // cópia ainda no preview, outra já fundida de vez no canvas principal)
+    if(vfCtxPreviewDestaque){
+      const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
+      vfCtxPreviewDestaque.clearRect(0, 0, canvasPreview.width/dpr, canvasPreview.height/dpr);
+    }
   }
   vfSalvarEstadoHistoricoVF();
 }
@@ -4272,7 +4345,10 @@ function fecharBarraDesenhoVF(){
   document.getElementById('vf-barra-desenho').classList.add('hidden');
   document.getElementById('vf-painel-caneta').classList.add('hidden');
   document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
+  document.getElementById('vf-painel-marcacao-texto').classList.add('hidden');
   document.body.classList.remove('vf-desenho-ativo');
+  vfDesativarModoMarcacaoTextoVF();
 }
 
 // abre/fecha só o painel de configuração (Cor/Espessura/Sensibilidade) —
@@ -4286,9 +4362,17 @@ function fecharBarraDesenhoVF(){
 // configuração. Igual o PDF Expert: a bolinha (cor ou tamanho) só
 // aparece DEPOIS que a ferramenta já está selecionada, e é nela que se
 // clica pra configurar
+function vfDesativarModoMarcacaoTextoVF(){
+  vfModoMarcacaoTextoAtivo = null;
+  document.querySelectorAll('.vf-btn-marcacao-texto').forEach(btn => { btn.style.background = 'none'; });
+  document.getElementById('vf-painel-marcacao-texto')?.classList.add('hidden');
+  document.body.classList.remove('vf-marcacao-texto-ativa');
+}
+
 function selecionarFerramentaCanetaVF(){
   vfModoBorracha = false;
   vfModoDestaque = false;
+  vfDesativarModoMarcacaoTextoVF();
   vfAtualizarEstiloBotaoBorracha();
   document.getElementById('vf-painel-caneta').classList.add('hidden');
   document.getElementById('vf-painel-borracha').classList.add('hidden');
@@ -4298,6 +4382,7 @@ function selecionarFerramentaCanetaVF(){
 function selecionarFerramentaBorrachaVF(){
   vfModoBorracha = true;
   vfModoDestaque = false;
+  vfDesativarModoMarcacaoTextoVF();
   vfAtualizarEstiloBotaoBorracha();
   document.getElementById('vf-painel-caneta').classList.add('hidden');
   document.getElementById('vf-painel-borracha').classList.add('hidden');
@@ -4307,61 +4392,78 @@ function selecionarFerramentaBorrachaVF(){
 function selecionarFerramentaDestaqueVF(){
   vfModoBorracha = false;
   vfModoDestaque = true;
+  vfDesativarModoMarcacaoTextoVF();
   vfAtualizarEstiloBotaoBorracha();
   document.getElementById('vf-painel-caneta').classList.add('hidden');
   document.getElementById('vf-painel-borracha').classList.add('hidden');
   document.getElementById('vf-painel-destaque').classList.add('hidden');
 }
 
-// ---- marcação de texto de verdade (grifar/sublinhar/riscar) - seleciona
-// o texto com o dedo/caneta (como selecionar pra copiar), depois toca no
-// botão certo. Só na sessão atual, não salva no banco (mesma lógica do
-// rabisco livre com a caneta) - some ao trocar de questão ou recarregar
-function vfAplicarMarcacaoTextoVF(tipo){
+// ---- marcação de texto de verdade (grifar/sublinhar/riscar) ----
+// modelo novo: toca no botão pra ATIVAR o modo (fica destacado, igual as
+// outras ferramentas), depois só arrasta o DEDO sobre as palavras - a
+// marcação se aplica sozinha ao soltar o dedo, sem precisar de mais
+// nenhum toque em botão nenhum (evita o bug de perder a seleção ao tentar
+// clicar em algo fora dela). A caneta nunca acorda esse modo - ela já tem
+// função reservada de desenho/destaque/borracha
+let vfModoMarcacaoTextoAtivo = null; // 'grifar' | 'sublinhar' | 'riscar' | null
+
+function vfAtivarModoMarcacaoTextoVF(tipo){
+  vfModoMarcacaoTextoAtivo = (vfModoMarcacaoTextoAtivo === tipo) ? null : tipo; // clicar de novo desativa
+  document.querySelectorAll('.vf-btn-marcacao-texto').forEach(btn => {
+    const ativo = btn.dataset.tipoMarcacao === vfModoMarcacaoTextoAtivo;
+    btn.style.background = ativo ? '#D2E7FA' : 'none';
+  });
+  // seleção de texto só fica disponível ENQUANTO um modo de marcação
+  // está ativo - fora disso, a tela volta a bloquear seleção normal
+  // (você só consegue marcar de propósito, nunca selecionar sem querer)
+  document.body.classList.toggle('vf-marcacao-texto-ativa', !!vfModoMarcacaoTextoAtivo);
+  // fecha os painéis de configuração das ferramentas de desenho, se
+  // algum estiver aberto - não faz sentido os dois contextos juntos
+  document.getElementById('vf-painel-caneta')?.classList.add('hidden');
+  document.getElementById('vf-painel-borracha')?.classList.add('hidden');
+  document.getElementById('vf-painel-destaque')?.classList.add('hidden');
+}
+
+document.addEventListener('touchend', (e) => {
+  if(!vfModoMarcacaoTextoAtivo) return;
+  const touch = e.changedTouches[0];
+  if(!touch || touch.touchType === 'stylus') return; // só dedo - caneta é sempre desenho
   const selecao = window.getSelection();
-  if(!selecao || selecao.rangeCount === 0 || selecao.isCollapsed){
-    alert('Selecione um trecho do texto primeiro (segure e arraste o dedo/caneta sobre as palavras).');
-    return;
-  }
+  if(!selecao || selecao.rangeCount === 0 || selecao.isCollapsed) return; // não formou seleção nesse toque
   const range = selecao.getRangeAt(0);
   const noContainer = range.commonAncestorContainer;
   const elementoContainer = noContainer.nodeType === 3 ? noContainer.parentElement : noContainer;
-  // só aplica dentro das áreas de texto permitidas do Flash - nunca em
-  // cima de botões, menu, ou qualquer outro texto da tela
   const areaValida = elementoContainer.closest('#vf-enunciado-atual, #vf-correcao-atual');
-  if(!areaValida){
-    alert('Selecione um trecho dentro do texto da questão.');
-    return;
-  }
+  if(!areaValida) return;
+  vfAplicarMarcacaoNoRangeVF(vfModoMarcacaoTextoAtivo, range);
+  selecao.removeAllRanges();
+});
 
+function vfAplicarMarcacaoNoRangeVF(tipo, range){
   const span = document.createElement('span');
-  span.className = 'vf-marcacao-texto-sessao'; // só pra identificar visualmente, não afeta nada
+  span.className = 'vf-marcacao-texto-sessao';
   if(tipo === 'grifar'){
-    span.style.backgroundColor = vfCorDestaqueAtual;
+    span.style.backgroundColor = vfCorMarcacaoTextoAtual;
     span.style.borderRadius = '2px';
     span.style.boxDecorationBreak = 'clone';
     span.style.webkitBoxDecorationBreak = 'clone';
   }else if(tipo === 'sublinhar'){
     span.style.textDecorationLine = 'underline';
-    span.style.textDecorationColor = vfCorDestaqueAtual;
+    span.style.textDecorationColor = vfCorMarcacaoTextoAtual;
     span.style.textDecorationThickness = '2.5px';
   }else if(tipo === 'riscar'){
     span.style.textDecorationLine = 'line-through';
-    span.style.textDecorationColor = vfCorDestaqueAtual;
+    span.style.textDecorationColor = vfCorMarcacaoTextoAtual;
     span.style.textDecorationThickness = '2.5px';
   }
-
   try{
-    // funciona bem quando a seleção não cruza fronteiras de outras tags
     range.surroundContents(span);
   }catch(e){
-    // seleção cruzou fronteira de outro elemento (ex: parte em negrito) -
-    // extrai o conteúdo (preserva as tags internas) e envolve no span
     const fragmento = range.extractContents();
     span.appendChild(fragmento);
     range.insertNode(span);
   }
-  selecao.removeAllRanges();
 }
 
 // clicar na BOLINHA (só existe/aparece quando a ferramenta já está
@@ -4371,6 +4473,7 @@ function abrirPainelCanetaVF(){
   const painel = document.getElementById('vf-painel-caneta');
   document.getElementById('vf-painel-borracha').classList.add('hidden');
   document.getElementById('vf-painel-destaque').classList.add('hidden');
+  document.getElementById('vf-painel-marcacao-texto').classList.add('hidden');
   painel.classList.toggle('hidden');
   if(!painel.classList.contains('hidden')) vfReposicionarPainelSobreBarraVF();
 }
@@ -4380,6 +4483,7 @@ function abrirPainelBorrachaVF(){
   const painel = document.getElementById('vf-painel-borracha');
   document.getElementById('vf-painel-caneta').classList.add('hidden');
   document.getElementById('vf-painel-destaque').classList.add('hidden');
+  document.getElementById('vf-painel-marcacao-texto').classList.add('hidden');
   painel.classList.toggle('hidden');
   if(!painel.classList.contains('hidden')) vfReposicionarPainelSobreBarraVF();
 }
@@ -4389,6 +4493,7 @@ function abrirPainelDestaqueVF(){
   const painel = document.getElementById('vf-painel-destaque');
   document.getElementById('vf-painel-caneta').classList.add('hidden');
   document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-marcacao-texto').classList.add('hidden');
   painel.classList.toggle('hidden');
   if(!painel.classList.contains('hidden')) vfReposicionarPainelSobreBarraVF();
 }
@@ -4686,6 +4791,31 @@ function selecionarTamanhoBorrachaVF(tamanho){
 }
 
 // ---- painel do Marcador/Highlight - cor, espessura, opacidade ----
+function abrirPainelMarcacaoTextoVF(){
+  const painel = document.getElementById('vf-painel-marcacao-texto');
+  document.getElementById('vf-painel-caneta').classList.add('hidden');
+  document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
+  painel.classList.toggle('hidden');
+  if(!painel.classList.contains('hidden')) vfReposicionarPainelSobreBarraVF();
+}
+
+function selecionarCorMarcacaoTextoVF(cor){
+  vfCorMarcacaoTextoAtual = cor;
+  document.querySelectorAll('.vf-cor-marcacao-texto').forEach(btn => {
+    btn.style.boxShadow = btn.dataset.cor === cor ? '0 0 0 2px #5B9BD5' : 'none';
+  });
+  document.getElementById('vf-swatch-cor-marcacao-texto').style.background = cor;
+}
+
+function corNativaMarcacaoTextoEscolhidaVF(valor){
+  selecionarCorMarcacaoTextoVF(valor.toUpperCase());
+}
+
+function corNativaDestaqueEscolhidaVF(valor){
+  selecionarCorDestaqueVF(valor.toUpperCase());
+}
+
 function selecionarCorDestaqueVF(cor){
   vfCorDestaqueAtual = cor;
   document.querySelectorAll('.vf-cor-destaque').forEach(btn => {
@@ -4693,10 +4823,9 @@ function selecionarCorDestaqueVF(cor){
   });
   document.getElementById('vf-preview-espessura-destaque').style.background = cor;
   document.getElementById('vf-slider-espessura-destaque').style.accentColor = cor;
+  document.getElementById('vf-swatch-destaque-atual').style.background = cor;
   // as prévias de opacidade mostram a cor escolhida, não fica travado no amarelo
-  document.querySelectorAll('.vf-opacidade-destaque span span').forEach(prev => { prev.style.background = cor; });
-  const swatch100 = document.querySelector('.vf-opacidade-destaque[data-opacidade="1"] span');
-  if(swatch100) swatch100.style.background = cor;
+  document.querySelectorAll('.vf-bolinha-opacidade-preview').forEach(prev => { prev.style.background = cor; });
   // o ícone da ferramenta na barrinha segue a cor escolhida de verdade,
   // mesma técnica de girar a matiz usada na caneta
   vfRecolorirIconeDestaqueVF(cor);
@@ -4745,10 +4874,13 @@ function limparCanvasDesenhoVF(){
   const barra = document.getElementById('vf-barra-desenho');
   const painel = document.getElementById('vf-painel-caneta');
   const painelBorracha = document.getElementById('vf-painel-borracha');
+  const painelDestaque = document.getElementById('vf-painel-destaque');
   if(barra) barra.classList.add('hidden');
   if(painel) painel.classList.add('hidden');
   if(painelBorracha) painelBorracha.classList.add('hidden');
+  if(painelDestaque) painelDestaque.classList.add('hidden');
   document.body.classList.remove('vf-desenho-ativo');
+  vfDesativarModoMarcacaoTextoVF();
   vfLimparHistoricoVF();
   if(!canvas || !vfCtxDesenho) return;
   const dpr = (window.devicePixelRatio || 1) * 1.5;
