@@ -782,13 +782,13 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       </div>
       <div id="vf-grupo-marcacao-texto" style="display:flex;align-items:center;gap:2px">
         <button onclick="vfAtivarModoMarcacaoTextoVF('grifar')" class="vf-btn-marcacao-texto btn-icone-pequeno" data-tipo-marcacao="grifar" title="Grifar - ative e arraste o dedo sobre o texto" style="width:32px;height:32px;border-radius:8px">
-          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="15" width="18" height="6" rx="1" fill="#FFD84D"/><text x="12" y="14" font-family="serif" font-size="15" font-weight="700" text-anchor="middle" fill="#232426">A</text></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect id="vf-icone-grifar-fundo" x="3" y="15" width="18" height="6" rx="1" fill="#F08080"/><text x="12" y="14" font-family="-apple-system,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle" fill="#1a1a1a">A</text></svg>
         </button>
         <button onclick="vfAtivarModoMarcacaoTextoVF('sublinhar')" class="vf-btn-marcacao-texto btn-icone-pequeno" data-tipo-marcacao="sublinhar" title="Sublinhar - ative e arraste o dedo sobre o texto" style="width:32px;height:32px;border-radius:8px">
-          <svg viewBox="0 0 24 24" width="20" height="20"><text x="12" y="16" font-family="serif" font-size="16" font-weight="700" text-anchor="middle" fill="#232426">A</text><line x1="5" y1="20" x2="19" y2="20" stroke="#B23A34" stroke-width="2.5" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20"><text x="12" y="16" font-family="-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#1a1a1a">A</text><line id="vf-icone-sublinhar-traco" x1="5" y1="20" x2="19" y2="20" stroke="#F08080" stroke-width="2.5" stroke-linecap="round"/></svg>
         </button>
         <button onclick="vfAtivarModoMarcacaoTextoVF('riscar')" class="vf-btn-marcacao-texto btn-icone-pequeno" data-tipo-marcacao="riscar" title="Riscar - ative e arraste o dedo sobre o texto" style="width:32px;height:32px;border-radius:8px">
-          <svg viewBox="0 0 24 24" width="20" height="20"><text x="12" y="16" font-family="serif" font-size="16" font-weight="700" text-anchor="middle" fill="#232426">A</text><line x1="5" y1="12.5" x2="19" y2="12.5" stroke="#B23A34" stroke-width="2.5" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20"><text x="12" y="16" font-family="-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#1a1a1a">A</text><line id="vf-icone-riscar-traco" x1="5" y1="12.5" x2="19" y2="12.5" stroke="#F08080" stroke-width="2.5" stroke-linecap="round"/></svg>
         </button>
         <button onclick="abrirPainelMarcacaoTextoVF()" style="width:22px;height:22px;border-radius:50%;padding:0;margin-left:4px;border:none;cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none;outline:none;box-shadow:none;-webkit-tap-highlight-color:transparent">
           <span id="vf-swatch-cor-marcacao-texto" style="width:22px;height:22px;border-radius:50%;background:#F08080;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15)"></span>
@@ -1433,7 +1433,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-250';
+const VERSAO_APP = '2026-07-25-251';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1534,7 +1534,9 @@ function formatarEnunciado(texto){
   // originais do PDF (que quebravam numa largura de página estreita),
   // fazendo o parágrafo parecer cortado antes da borda da tela, em vez de
   // fluir naturalmente até o final e quebrar só onde o navegador decidir
-  const escapedCompleto = escapeHtml(texto).replace(/\s+/g, ' ').trim()
+  let escapedCompleto = escapeHtml(texto).replace(/\s+/g, ' ').trim();
+  escapedCompleto = vfAplicarMarcacaoMatematicaVF(escapedCompleto); // gregas, operadores, sqrt, sobrescrito com chaves - mesmo padrão do V/F
+  escapedCompleto = escapedCompleto
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
@@ -3244,15 +3246,53 @@ function atualizarContadorDisponiveis(){
 // estrutura/alternativas/trechos da fonte que não se aplica aqui e
 // causava uma linha em branco sobrando no topo). Só escapa e aplica
 // sub/sobrescrito, sem nenhuma estrutura extra
+// mapas compartilhados entre V/F e Quest - letras gregas e operadores
+// matemáticos via marcação ASCII estilo LaTeX (\Delta, \approx, etc). Por
+// que ASCII e não o caractere Unicode direto: a fonte usada na geração do
+// PDF nem sempre tem o glifo - quando falta, o caractere se perde ou vira
+// outra coisa na extração. Já aconteceu de duas afirmações de uma mesma
+// família (V e F, diferindo só no expoente) virarem texto idêntico depois
+// dessa corrupção, e a UNIQUE(texto) engoliu uma em silêncio. Com
+// marcação ASCII isso nunca acontece - esses caracteres existem em
+// qualquer fonte, em qualquer etapa da extração
+const VF_LETRAS_GREGAS = {
+  'Delta':'Δ','delta':'δ','Phi':'Φ','phi':'φ','Alpha':'Α','alpha':'α',
+  'Beta':'Β','beta':'β','Gamma':'Γ','gamma':'γ','Theta':'Θ','theta':'θ',
+  'Lambda':'Λ','lambda':'λ','Mu':'Μ','mu':'μ','Nu':'Ν','nu':'ν',
+  'Pi':'Π','pi':'π','Rho':'Ρ','rho':'ρ','Sigma':'Σ','sigma':'σ',
+  'Tau':'Τ','tau':'τ','Omega':'Ω','omega':'ω'
+};
+const VF_OPERADORES_MATEMATICOS = {
+  'approx':'≈','le':'≤','ge':'≥','ne':'≠','infty':'∞','int':'∫',
+  'sum':'∑','pm':'±','times':'×','partial':'∂'
+};
+// recebe o texto JÁ escapado (depois do escapeHtml) - \, {, } não são
+// caracteres especiais de HTML, então processar essas marcações depois
+// do escape é seguro, sem conflito nenhum
+function vfAplicarMarcacaoMatematicaVF(textoEscapado){
+  return textoEscapado
+    // gregas/operadores via \nome - roda ANTES do sqrt/superscript, pra
+    // esses símbolos resolvidos poderem participar deles depois (ex:
+    // \Delta^{2} precisa que \Delta já tenha virado Δ antes do ^ agir)
+    .replace(/\\([A-Za-z]+)/g, (match, nome) => (VF_LETRAS_GREGAS[nome] || VF_OPERADORES_MATEMATICOS[nome] || match))
+    // \sqrt{...} depois das gregas (pode ter grega dentro, tipo \sqrt{\Delta})
+    .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
+    // sobrescrito com chaves: X^{Y...} - qualquer conteúdo dentro,
+    // inclusive sinal de menos e múltiplos caracteres (ex: 10^{-1})
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9)\]])\^\{([^}]+)\}/g, '$1<sup>$2</sup>');
+}
+
 function formatarTextoItemVF(texto){
   if(!texto) return '';
-  return escapeHtml(texto)
+  let resultado = escapeHtml(texto)
     // travessão longo (—) sempre vira curto (–) — o extrator às vezes
     // ainda manda o longo por engano, mesmo pedindo o curto; corrigir
     // aqui na exibição resolve de vez, sem precisar reeditar o PDF nem
     // reenviar o pedido toda vez que acontecer
     .replace(/—/g, '–')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
+  return resultado
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>');
@@ -4806,6 +4846,11 @@ function selecionarCorMarcacaoTextoVF(cor){
     btn.style.boxShadow = btn.dataset.cor === cor ? '0 0 0 2px #5B9BD5' : 'none';
   });
   document.getElementById('vf-swatch-cor-marcacao-texto').style.background = cor;
+  // os 3 ícones da barrinha (grifar/sublinhar/riscar) seguem a cor
+  // escolhida de verdade, mesmo espírito da caneta/destaque
+  document.getElementById('vf-icone-grifar-fundo').setAttribute('fill', cor);
+  document.getElementById('vf-icone-sublinhar-traco').setAttribute('stroke', cor);
+  document.getElementById('vf-icone-riscar-traco').setAttribute('stroke', cor);
 }
 
 function corNativaMarcacaoTextoEscolhidaVF(valor){
