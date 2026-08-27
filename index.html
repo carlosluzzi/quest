@@ -73,7 +73,7 @@ balão é sempre a mesma, ativo ou pausado - só o que muda é o conteúdo */
 #vf-sessao-balao.pausado #vf-sessao-balao-tempo{color:#E8B8B5}
 .vf-sessao-balao-tag{font-size:9px;letter-spacing:.08em;color:#F0C9C5;font-weight:700;margin-top:1px;height:11px}
 .vf-sessao-balao-btns{display:flex;gap:8px;margin-top:8px}
-.vf-sessao-balao-btns > div{flex:1;background:rgba(255,255,255,0.15);color:#fff;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:600;text-align:center;cursor:pointer;white-space:nowrap}
+.vf-sessao-balao-btns > div{flex:1;min-width:0;background:rgba(255,255,255,0.15);color:#fff;border-radius:8px;padding:5px 4px;font-size:11px;font-weight:600;text-align:center;cursor:pointer}
 #vf-sessao-balao.pausado #vf-sessao-balao-btn-pausar{background:rgba(255,255,255,0.9);color:#B23A34}
 /* sliders de espessura (caneta, destaque e tamanho da borracha) - MESMO
 visual nos três, pílula horizontal neutra (branca, como o thumb padrão
@@ -187,6 +187,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-barra-fixa-principal{display:flex;gap:10px}
 .vf-barra-fixa-acoes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 @media(min-width:1100px){.vf-barra-fixa{max-width:none;left:250px;right:0;transform:none;width:auto}}
+@media(min-width:1100px){.vf-overlay-sessao{left:250px !important}}
 .nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative;-webkit-tap-highlight-color:transparent}
 #nav-item-adicionar{display:none}
 .badge-notificacao{position:absolute;top:10px;right:calc(50% - 24px);background:#E24B4A;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
@@ -794,19 +795,19 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
   <div class="view-aba hidden" id="aba-vf">
     <!-- sem sessão ativa: cobre tudo, só mostra o botão de iniciar. Some
     (via vfAtualizarOverlaySessaoVF) assim que vfSessaoAtivaVF existe -->
-    <div id="vf-overlay-iniciar-sessao" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:12px">
-      <button onclick="vfIniciarSessaoFlashVF()" style="background:#B23A34;color:#fff;border:none;border-radius:12px;padding:16px 32px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit">▶ Iniciar sessão</button>
+    <div id="vf-overlay-iniciar-sessao" class="vf-overlay-sessao" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:12px">
+      <button class="btn-primario" onclick="vfIniciarSessaoFlashVF()" style="width:auto;padding:14px 32px">▶ Iniciar sessão</button>
     </div>
     <!-- havia uma sessão pausada quando o app fechou - pergunta o que
     fazer em vez de reabrir o balão sozinho -->
-    <div id="vf-overlay-retomar-sessao" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:16px">
+    <div id="vf-overlay-retomar-sessao" class="vf-overlay-sessao hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:16px">
       <div>
-        <div style="font-size:14px;color:#888;margin-bottom:4px">Você tinha uma sessão pausada</div>
-        <div id="vf-overlay-retomar-tempo" style="font-size:32px;font-weight:700;font-variant-numeric:tabular-nums;color:#B23A34"></div>
+        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Você tinha uma sessão pausada</div>
+        <div id="vf-overlay-retomar-tempo" style="font-size:var(--fs-h);font-weight:700;font-variant-numeric:tabular-nums;color:#B23A34"></div>
       </div>
       <div style="display:flex;gap:10px">
-        <button onclick="vfFinalizarSessaoFlashVF()" style="background:#f0f0ee;color:#111;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Finalizar</button>
-        <button onclick="vfRetomarSessaoRestauradaVF()" style="background:#B23A34;color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Retomar</button>
+        <button class="btn-secundario" onclick="vfConfirmarFinalizarSessaoFlashVF()" style="width:auto;padding:12px 24px">Finalizar</button>
+        <button class="btn-primario" onclick="vfRetomarSessaoRestauradaVF()" style="width:auto;padding:12px 24px">Retomar</button>
       </div>
     </div>
     <div id="vf-filtros" style="margin-bottom:16px;background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:14px 16px">
@@ -940,7 +941,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   <div id="vf-sessao-balao-tag" class="vf-sessao-balao-tag"></div>
   <div class="vf-sessao-balao-btns">
     <div id="vf-sessao-balao-btn-pausar" onclick="vfTogglePausarSessaoFlashVF(event)">Pausar</div>
-    <div onclick="vfFinalizarSessaoFlashVF(event)">Finalizar</div>
+    <div onclick="vfConfirmarFinalizarSessaoFlashVF(event)">Finalizar</div>
   </div>
 </div>
 <div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:9999;background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.12);padding:6px 8px;display:flex;align-items:center;gap:14px">
@@ -1244,7 +1245,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="modal-escolha-motivo-salvar-vf" onclick="if(event.target===this) fecharModal('modal-escolha-motivo-salvar-vf')">
+<div class="modal-overlay hidden" id="modal-escolha-motivo-salvar-vf" onclick="if(event.target===this) vfFecharModalMotivoSalvarVF()">
   <div class="modal-conteudo">
     <h3 class="config-title">Salvar esse Flash</h3>
     <input type="hidden" id="vf-escolha-motivo-questao-id">
@@ -1262,7 +1263,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div id="pagina-favoritos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:40;display:flex;flex-direction:column;overflow:hidden">
   <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
     <h2 style="margin:0;font-size:20px;font-weight:700;color:#111">Flashes favoritos</h2>
-    <button onclick="document.getElementById('pagina-favoritos-vf').classList.add('hidden')" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
+    <button onclick="vfFecharFavoritosVF()" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
@@ -1272,7 +1273,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div id="pagina-flash-salvos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:40;display:flex;flex-direction:column;overflow:hidden">
   <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
     <h2 style="margin:0;font-size:20px;font-weight:700;color:#111">Flashes salvos</h2>
-    <button onclick="document.getElementById('pagina-flash-salvos-vf').classList.add('hidden')" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
+    <button onclick="vfFecharFlashSalvosVF()" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
@@ -1328,6 +1329,17 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     <div style="display:flex;gap:8px">
       <button class="btn-secundario" style="flex:1" onclick="fecharModalExclusaoVF()">Cancelar</button>
       <button class="btn-primario" style="flex:1" onclick="confirmarExclusaoVF()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-confirmar-finalizar-vf">
+  <div class="modal-conteudo popup-formulario">
+    <h3 class="config-title">Finalizar sessão?</h3>
+    <p>Isso encerra a sessão de vez — o tempo é registrado e a fila para até você iniciar de novo.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-finalizar-vf')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="vfFinalizarSessaoFlashVF()">Finalizar</button>
     </div>
   </div>
 </div>
@@ -1493,7 +1505,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-300';
+const VERSAO_APP = '2026-07-25-307';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2852,7 +2864,7 @@ async function coletarNotificacaoForum(){
 /* 7. PDF novo no banco – questões de outras pessoas desde a última vez
    que você viu esse aviso, agrupadas por módulo */
 async function coletarNotificacaoPdfNovo(){
-  const {data} = await sb.from('questoes').select('id, criado_em, modulo_pscpp, capitulo, bibliografia_id, autor_id').neq('autor_id', usuarioAtual.id);
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('questoes').select('id, criado_em, modulo_pscpp, capitulo, bibliografia_id, autor_id', {count: 'exact'}).neq('autor_id', usuarioAtual.id).order('id'));
   const total = (data||[]).length;
   if(!total) return [];
 
@@ -3060,7 +3072,7 @@ let temasCache = [];
 async function carregarBibliografia(){
   const [{data}, {data: dadosQuestoes}, {data: dadosTemas}] = await Promise.all([
     sb.from('bibliografia').select('*'),
-    sb.from('questoes').select('modulo_pscpp, bibliografia_id').eq('anulada', false),
+    buscarTudoPaginadoVF(() => sb.from('questoes').select('modulo_pscpp, bibliografia_id', {count: 'exact'}).eq('anulada', false).order('id')),
     sb.from('temas').select('*, tema_bibliografia(bibliografia_id)')
   ]);
   bibliografiaCache = data || [];
@@ -3182,9 +3194,12 @@ async function selecionarFiltroSelect(nivel, valor){
     document.getElementById('filtro-capitulo').disabled = true;
     document.getElementById('filtro-modulo').value = '';
 
-    let query = sb.from('questoes').select('modulo_pscpp, bibliografia_id');
-    if(filtroSelecionado.usuario) query = query.eq('autor_id', filtroSelecionado.usuario);
-    const {data} = await query;
+    let montarQuery = () => {
+      let q = sb.from('questoes').select('modulo_pscpp, bibliografia_id', {count: 'exact'});
+      if(filtroSelecionado.usuario) q = q.eq('autor_id', filtroSelecionado.usuario);
+      return q.order('id');
+    };
+    const {data} = await buscarTudoPaginadoVF(montarQuery);
     modulosComQuestao = new Set((data||[]).map(q=>q.modulo_pscpp));
     publicacoesComQuestao = new Set((data||[]).map(q=>q.bibliografia_id));
     renderizarFiltroModulo();
@@ -3223,7 +3238,7 @@ async function selecionarFiltroSelect(nivel, valor){
       const temaId = valor.slice(5);
       const tema = temasCache.find(t=>t.id===temaId);
       const idsPublicacoes = tema?.bibliografiaIds || [];
-      sb.from('questoes').select('capitulo').in('bibliografia_id', idsPublicacoes).then(({data})=>{
+      buscarTudoPaginadoVF(() => sb.from('questoes').select('capitulo', {count: 'exact'}).in('bibliografia_id', idsPublicacoes).order('id')).then(({data})=>{
         const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
         // tema junta publicações relacionadas, normalmente do mesmo
         // idioma - usa o rótulo da primeira como aproximação razoável
@@ -3235,7 +3250,7 @@ async function selecionarFiltroSelect(nivel, valor){
       });
     }else if(valor){
       // capítulos vêm das próprias questões já cadastradas com essa bibliografia (campo livre por questão)
-      sb.from('questoes').select('capitulo').eq('bibliografia_id', valor).then(({data})=>{
+      buscarTudoPaginadoVF(() => sb.from('questoes').select('capitulo', {count: 'exact'}).eq('bibliografia_id', valor).order('id')).then(({data})=>{
         const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a-b);
         const livro = bibliografiaCache.find(b=>b.id===valor);
         const rotulo = rotuloCapituloDoLivro(livro?.titulo);
@@ -3262,28 +3277,35 @@ function selecionarQuantidade(botao, valor){
 // busca as questões que batem com os filtros atuais, sem criar caderno – reaproveitada
 // pelo contador ao vivo e pelo montarCaderno de verdade, pra nunca ficarem dessincronizados
 async function buscarQuestoesFiltradas(apenasContagem = false){
-  let query = sb.from('questoes').select(apenasContagem ? 'id' : '*').eq('anulada', false);
-  if(filtroSelecionado.usuario) query = query.eq('autor_id', filtroSelecionado.usuario);
-  if(filtroSelecionado.origem === 'usuarios') query = query.is('concurso_origem', null);
-  else if(filtroSelecionado.origem === 'marinha'){
-    query = query.not('concurso_origem', 'is', null);
-    if(filtroSelecionado.concurso) query = query.eq('concurso_origem', filtroSelecionado.concurso);
-    if(filtroSelecionado.ano) query = query.eq('ano_prova', filtroSelecionado.ano);
-  }
-  // 'todas' não filtra por origem nenhuma – mistura tudo de propósito
-  if(filtroSelecionado.modulo) query = query.eq('modulo_pscpp', filtroSelecionado.modulo);
-  if(filtroSelecionado.publicacao){
-    if(filtroSelecionado.publicacao.startsWith('tema:')){
-      const tema = temasCache.find(t=>t.id===filtroSelecionado.publicacao.slice(5));
-      query = query.in('bibliografia_id', tema?.bibliografiaIds || []);
-    }else{
-      query = query.eq('bibliografia_id', filtroSelecionado.publicacao);
+  const montarQuery = () => {
+    let query = sb.from('questoes').select(apenasContagem ? 'id' : '*', {count: 'exact'}).eq('anulada', false);
+    if(filtroSelecionado.usuario) query = query.eq('autor_id', filtroSelecionado.usuario);
+    if(filtroSelecionado.origem === 'usuarios') query = query.is('concurso_origem', null);
+    else if(filtroSelecionado.origem === 'marinha'){
+      query = query.not('concurso_origem', 'is', null);
+      if(filtroSelecionado.concurso) query = query.eq('concurso_origem', filtroSelecionado.concurso);
+      if(filtroSelecionado.ano) query = query.eq('ano_prova', filtroSelecionado.ano);
     }
-  }
-  if(filtroSelecionado.capitulo) query = query.eq('capitulo', filtroSelecionado.capitulo);
-  if(filtroSelecionado.tipoQuestao) query = query.eq('tipo_questao', filtroSelecionado.tipoQuestao);
+    // 'todas' não filtra por origem nenhuma – mistura tudo de propósito
+    if(filtroSelecionado.modulo) query = query.eq('modulo_pscpp', filtroSelecionado.modulo);
+    if(filtroSelecionado.publicacao){
+      if(filtroSelecionado.publicacao.startsWith('tema:')){
+        const tema = temasCache.find(t=>t.id===filtroSelecionado.publicacao.slice(5));
+        query = query.in('bibliografia_id', tema?.bibliografiaIds || []);
+      }else{
+        query = query.eq('bibliografia_id', filtroSelecionado.publicacao);
+      }
+    }
+    if(filtroSelecionado.capitulo) query = query.eq('capitulo', filtroSelecionado.capitulo);
+    if(filtroSelecionado.tipoQuestao) query = query.eq('tipo_questao', filtroSelecionado.tipoQuestao);
+    return query.order('id'); // obrigatório pra paginação com .range() ser estável
+  };
 
-  const {data: todasQuestoes, error} = await query;
+  // paginado - sem isso, com mais de 1000 questões no banco (chegando em
+  // semanas, ~460/mês entrando), essa busca truncava silenciosamente e
+  // tanto o contador de disponíveis quanto o sorteio do caderno ficavam
+  // errados, ignorando questões que existem de verdade
+  const {data: todasQuestoes, error} = await buscarTudoPaginadoVF(montarQuery);
   if(error){ console.error(error); return []; }
 
   const {data: exclusoes} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).is('resolvido_em', null);
@@ -3699,6 +3721,12 @@ let vfConteudoCompletoCache = new Map(); // id -> {texto, resposta, explicacao, 
 let vfTotalAfirmacoesNoBanco = null; // total geral no banco, buscado uma vez só ao entrar na sessão
 let flashsSalvosVF = new Map(); // questao_vf_id -> motivo ('estudar' ou 'corrigir')
 let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual que o banco, enquanto o upsert está em voo
+// questao_vf_id -> promise do upsert da resposta ainda em voo. Usado pra
+// evitar corrida (C2): favoritar uma questão logo após respondê-la podia
+// disparar um segundo update (encolhimento de intervalo) que competia com
+// o upsert original ainda não confirmado - quem chegasse por último no
+// banco vencia, não necessariamente o mais recente
+let vfRespostasEmVooVF = new Map();
 
 // ---- desenho com a caneta (Apple Pencil) por cima da questão ----
 // Reescrito usando Touch Events nativos (não Pointer Events) — pesquisa
@@ -4434,41 +4462,10 @@ function vfAbrirAnotacaoSalvaVF(){
   abrirModal('modal-anotacao-sessao-vf');
 }
 
-// timer da sessão - escondido por padrão, só aparece quando clica no
-// relógio. Atualiza ao vivo a cada segundo, mas só enquanto está visível.
-// O estado (visível ou não) é global e sobrevive a trocar de questão -
-// senão a tela redesenhando escondia ele de novo toda vez sem querer
-let vfTimerSessaoVisivelVF = false;
-let vfIntervaloTimerSessaoVF = null;
-function vfToggleTimerSessaoVF(){
-  vfTimerSessaoVisivelVF = !vfTimerSessaoVisivelVF;
-  vfAplicarEstadoTimerSessaoVF();
-}
-function vfAplicarEstadoTimerSessaoVF(){
-  const span = document.getElementById('vf-tempo-sessao-texto');
-  if(!span) return;
-  clearInterval(vfIntervaloTimerSessaoVF); // nunca deixa 2 intervalos rodando ao mesmo tempo
-  vfIntervaloTimerSessaoVF = null;
-  if(vfTimerSessaoVisivelVF){
-    span.classList.remove('hidden');
-    vfAtualizarTextoTimerSessaoVF();
-    vfIntervaloTimerSessaoVF = setInterval(vfAtualizarTextoTimerSessaoVF, 1000);
-  }else{
-    span.classList.add('hidden');
-  }
-}
-function vfAtualizarTextoTimerSessaoVF(){
-  const span = document.getElementById('vf-tempo-sessao-texto');
-  if(!span || !vfSessaoAtivaVF) return;
-  // mesma fonte de verdade do balão flutuante (vfCalcularElapsedMsVF) -
-  // antes esse relógio calculava por conta própria a partir de
-  // estadoVF.inicioSessaoVFMs (que nunca pausava e resetava toda vez que
-  // a aba V/F era reaberta), causando os dois relógios divergirem entre
-  // si. Agora os dois sempre leem exatamente o mesmo número
-  span.textContent = vfFormatarTempoSessaoVF(vfCalcularElapsedMsVF());
-}
+
 
 async function vfAbrirFavoritosVF(){
+  pausarTimerVF(); // a pendente continua rodando em background senão - agora alcança ela certo, seja qual for a posição de visualização
   const el = document.getElementById('vf-lista-favoritos');
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
   document.getElementById('pagina-favoritos-vf').classList.remove('hidden');
@@ -4503,10 +4500,28 @@ async function vfAbrirFavoritosVF(){
 async function vfDesfavoritarDaListaVF(questaoVfId){
   await sb.from('favoritos_vf').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
   favoritosVF.delete(questaoVfId);
+  // atualiza o ícone na barra de ações se a questão desfavoritada for a
+  // mesma sendo exibida agora - sem isso, o coração continuava "aceso"
+  // atrás do modal até a página recarregar do zero
+  const entradaAtual = estadoVF?.historico[estadoVF.posicao];
+  if(entradaAtual && entradaAtual.item.id === questaoVfId){
+    const botaoFavoritar = document.querySelector('.banco-acao-btn[onclick*="toggleFavoritoVF"]');
+    if(botaoFavoritar){
+      botaoFavoritar.classList.remove('favoritada');
+      const svg = botaoFavoritar.querySelector('svg');
+      if(svg) svg.setAttribute('fill', 'none');
+    }
+  }
   vfAbrirFavoritosVF(); // recarrega a lista
 }
 
+function vfFecharFavoritosVF(){
+  document.getElementById('pagina-favoritos-vf').classList.add('hidden');
+  retomarOuDescartarPendenteVF(); // retoma a pendente (ou descarta se passou de 30 min parada)
+}
+
 async function vfAbrirFlashSalvosVF(){
+  pausarTimerVF();
   const el = document.getElementById('vf-lista-flash-salvos');
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
   document.getElementById('pagina-flash-salvos-vf').classList.remove('hidden');
@@ -4557,15 +4572,22 @@ async function vfAbrirFlashSalvosVF(){
 }
 
 function vfIrParaQuestaoSalvaVF(questaoVfId){
+  pausarTimerVF(); // pausa a pendente ANTES de sair dela - senão continuava rodando escondida em background
   document.getElementById('pagina-flash-salvos-vf').classList.add('hidden');
   document.getElementById('pagina-favoritos-vf').classList.add('hidden');
   const indice = estadoVF.historico.findIndex(h => h.item.id === questaoVfId);
   if(indice >= 0){
+    limparCanvasDesenhoVF(); // sem isso, o rascunho da questão anterior ficava desenhado por cima da nova
     estadoVF.posicao = indice;
     renderizarItemVF();
   }
   // se não estiver no histórico da sessão atual, só fecha a página mesmo -
   // não força a entrada de uma questão fora da fila de repetição espaçada
+}
+
+function vfFecharFlashSalvosVF(){
+  document.getElementById('pagina-flash-salvos-vf').classList.add('hidden');
+  retomarOuDescartarPendenteVF();
 }
 
 async function vfExcluirFlashSalvoVF(salvoId, questaoVfId){
@@ -4624,13 +4646,20 @@ function vfCancelarPressionarSalvar(evento){
 
 function vfAbrirEscolhaMotivoSalvarVF(questaoId){
   if(vfFoiToqueLongoSalvar) return; // já virou toque longo (abriu a lista) - não também salva
+  pausarTimerVF(); // a pendente continua rodando escondida atrás do modal senão
   document.getElementById('vf-escolha-motivo-questao-id').value = questaoId;
   abrirModal('modal-escolha-motivo-salvar-vf');
+}
+
+function vfFecharModalMotivoSalvarVF(){
+  fecharModal('modal-escolha-motivo-salvar-vf');
+  retomarOuDescartarPendenteVF(); // fechou sem escolher motivo - retoma a pendente (ou descarta se passou de 30 min)
 }
 
 async function vfSalvarFlashComMotivoVF(motivo){
   const questaoId = document.getElementById('vf-escolha-motivo-questao-id').value;
   fecharModal('modal-escolha-motivo-salvar-vf');
+  retomarOuDescartarPendenteVF(); // retoma a pendente (ou descarta se passou de 30 min parada no modal)
   if(!questaoId) return;
   // captura o que estiver marcado (highlight + caneta, os dois vivem no
   // mesmo canvas) - só faz sentido guardar aqui porque é uma decisão
@@ -4641,11 +4670,21 @@ async function vfSalvarFlashComMotivoVF(motivo){
   // só inclui a imagem se tiver uma nova de verdade - senão o upsert ia
   // sobrescrever com null uma imagem que já estava salva de um save anterior
   if(imagemAnotacao) dadosParaSalvar.imagem_anotacao = imagemAnotacao;
-  const {error} = await sb.from('flashs_salvos_vf')
-    .upsert(dadosParaSalvar, {onConflict: 'usuario_id,questao_vf_id'});
-  if(error){ alert('Erro ao salvar: '+error.message); return; }
+  // otimista: o ícone muda JÁ, o upsert acontece em segundo plano - "meio
+  // lento" antes era esperar o banco confirmar antes de sequer mudar o
+  // ícone na tela
+  const motivoAnterior = flashsSalvosVF.get(questaoId); // pra desfazer certo se a escrita falhar
   flashsSalvosVF.set(questaoId, motivo);
   renderizarItemVF(); // atualiza o ícone preenchido na hora
+  sb.from('flashs_salvos_vf').upsert(dadosParaSalvar, {onConflict: 'usuario_id,questao_vf_id'}).then(({error}) => {
+    if(error){
+      // escrita falhou de verdade - desfaz o otimismo
+      if(motivoAnterior === undefined) flashsSalvosVF.delete(questaoId);
+      else flashsSalvosVF.set(questaoId, motivoAnterior);
+      renderizarItemVF();
+      alert('Erro ao salvar: '+error.message);
+    }
+  });
 }
 
 // reforço: dentro da barra/painel, dispara o clique manualmente no
@@ -5790,10 +5829,23 @@ const LIMITE_PAUSA_MS_VF = 30 * 60 * 1000; // pausa maior que isso numa pendente
 // olhos; ativoDesdeMs é o instante em que a contagem atual começou (null =
 // pausado agora). apareceuEmMs nunca muda, é só pro tempo bruto do log.
 
+// a questão PENDENTE de verdade é sempre a última do histórico ainda sem
+// resposta - independente de onde o usuário esteja "olhando" agora
+// (Salvos, Favoritos, um modal, ou até "Anterior" revendo uma questão já
+// respondida). Antes, pausarTimerVF/retomarTimerVF usavam
+// historico[posicao] (a posição de VISUALIZAÇÃO atual) - assim que o
+// usuário navegava pra qualquer lugar que mudasse posicao sem responder,
+// a pendente ficava "imortal": nenhum ponto de pausa conseguia mais
+// alcançar ela, e o cronômetro dela continuava contando pra sempre
+function vfUltimaEntradaPendenteVF(){
+  if(!estadoVF || !estadoVF.historico.length) return null;
+  const ultima = estadoVF.historico[estadoVF.historico.length - 1];
+  return (ultima && ultima.resposta === null) ? ultima : null;
+}
+
 function pausarTimerVF(){
-  if(!estadoVF || estadoVF.posicao < 0) return;
-  const entrada = estadoVF.historico[estadoVF.posicao];
-  if(!entrada || entrada.resposta !== null) return; // nada pendente, nada a pausar
+  const entrada = vfUltimaEntradaPendenteVF();
+  if(!entrada) return; // nada pendente, nada a pausar
   if(entrada.ativoDesdeMs != null){
     const agoraMs = agoraCorrigidoVF();
     entrada.tempoAtivoMs = (entrada.tempoAtivoMs||0) + (agoraMs - entrada.ativoDesdeMs);
@@ -5805,9 +5857,8 @@ function pausarTimerVF(){
 // arma o cronômetro de novo — só deve ser chamada depois da questão já
 // estar renderizada na tela, nunca antes
 function retomarTimerVF(){
-  if(!estadoVF || estadoVF.posicao < 0) return;
-  const entrada = estadoVF.historico[estadoVF.posicao];
-  if(!entrada || entrada.resposta !== null) return;
+  const entrada = vfUltimaEntradaPendenteVF();
+  if(!entrada) return;
   if(entrada.ativoDesdeMs == null) entrada.ativoDesdeMs = agoraCorrigidoVF();
 }
 
@@ -5815,16 +5866,19 @@ function retomarTimerVF(){
 // pausada por mais de 30 min — mesma regra da entrada órfã: descarta sem
 // registrar nada (questão não respondida não gerou estado) e avança
 async function retomarOuDescartarPendenteVF(){
-  if(!estadoVF || estadoVF.posicao < 0) return;
-  const entrada = estadoVF.historico[estadoVF.posicao];
-  if(!entrada || entrada.resposta !== null) return;
+  const entrada = vfUltimaEntradaPendenteVF();
+  if(!entrada) return;
   if(entrada.ativoDesdeMs != null) return; // já ativa, nada a fazer
 
   const agoraMs = agoraCorrigidoVF();
   const pausadoDesdeMs = entrada.pausadoEmMs != null ? entrada.pausadoEmMs : (entrada.apareceuEmMs != null ? entrada.apareceuEmMs : agoraMs);
   if(agoraMs - pausadoDesdeMs > LIMITE_PAUSA_MS_VF){
+    // só ajusta a posição de visualização se o usuário estava mesmo
+    // olhando pra essa pendente (senão bagunçaria quem está vendo uma
+    // questão anterior via "Anterior", ou numa tela tipo Salvos/Favoritos)
+    const usuarioEstavaVendoEla = estadoVF.posicao === estadoVF.historico.length - 1;
     estadoVF.historico.pop();
-    estadoVF.posicao--;
+    if(usuarioEstavaVendoEla) estadoVF.posicao--;
     await avancarParaProximaVF();
     return;
   }
@@ -6133,7 +6187,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     }
   } : undefined;
 
-  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, , ...resultadosEntradaVF] = await Promise.all([
+  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, , ...resultadosEntradaVF] = await Promise.all([
     buscarTudoPaginadoVF(montarQueryQuestoesVF, aoCarregarRestanteQuestoesVF),
     buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
@@ -6143,6 +6197,15 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     vfCarregarBibliografiaCacheVF(), // idempotente - só busca de verdade na primeira vez da sessão
     ...consultasEntradaVF
   ]);
+  // se a busca do progresso (estado de cada questão) falhar, NUNCA degrada
+  // silenciosamente pra "todas são novas" - isso faria uma resposta
+  // subsequente gravar por cima do progresso real que já existia no
+  // banco, só porque o cliente não conseguiu buscá-lo dessa vez (F2 do
+  // relatório da Fable). Aborta com aviso claro em vez disso
+  if(erroEstados){
+    document.getElementById('vf-conteudo').innerHTML = `<p style="padding:24px 4px;color:#A32D2D">Não consegui carregar seu progresso no Flash agora (${escapeHtml(erroEstados.message||'erro de rede')}). Tenta de novo — responder assim, sem isso, arriscaria apagar seu progresso real.</p>`;
+    throw new Error('Falha ao buscar repeticao_vf: ' + erroEstados.message);
+  }
   favoritosVF = new Set((favData||[]).map(f=>f.questao_vf_id));
   notasVF = new Set((notaData||[]).map(n=>n.questao_vf_id));
   flashsSalvosVF = new Map((salvosData||[]).map(s=>[s.questao_vf_id, s.motivo]));
@@ -6168,6 +6231,12 @@ async function carregarPoolVF(incluirDadosEntradaVF){
       totalGeralQuestoesVF // só faz sentido como "total geral" aqui porque a entrada roda sem filtro nenhum ativo ainda
     };
   }
+  // token dessa carga específica - quem chama compara com o valor global
+  // atual depois do await, pra saber se essa resposta ainda é a mais
+  // recente ou se já ficou velha (F1 do relatório da Fable: dois toques
+  // rápidos em filtros disparavam duas cargas concorrentes, e a mais
+  // lenta podia escrever por cima com dados do filtro ANTERIOR)
+  poolPronto.tokenDestaCargaVF = tokenDestaCargaVF;
   return poolPronto;
 }
 
@@ -6218,6 +6287,7 @@ function vfIniciarSessaoFlashVF(){
   vfSalvarSessaoNoStorageVF();
   vfMostrarBalaoSessaoFlashVF();
   vfAtualizarOverlaySessaoVF();
+  if(!estadoVF || estadoVF.posicao < 0) vfCarregarPoolInicialVF(); // só agora carrega de verdade - antes disso não fazia sentido nenhum trabalho pesado rodar
 }
 
 function vfTogglePausarSessaoFlashVF(e){
@@ -6250,17 +6320,22 @@ function vfMontarRetratoParaTrackerVF(inicioSessaoMs, fimSessaoMs){
   };
 }
 
+function vfConfirmarFinalizarSessaoFlashVF(e){
+  if(e) e.stopPropagation();
+  abrirModal('modal-confirmar-finalizar-vf');
+}
+
 function vfFinalizarSessaoFlashVF(e){
   if(e) e.stopPropagation();
   if(!vfSessaoAtivaVF) return;
+  fecharModal('modal-confirmar-finalizar-vf'); // fecha se veio desse caminho - inofensivo se já estava fechado
   const iniciadoEmMs = vfSessaoAtivaVF.iniciadoEm;
   const finalizadoEmMs = Date.now();
   const tempoTotalMs = vfCalcularElapsedMsVF();
-  // total de questões respondidas nessa sessão - aproximação por
-  // contagem do histórico da aba (não existe um timestamp de resposta
-  // por entrada pra filtrar com precisão total caso hajam múltiplas
-  // sessões dentro da mesma abertura da aba, mas cobre o caso normal
-  // de "abre a aba, inicia, estuda, finaliza" corretamente
+  // total de questões respondidas nessa sessão - agora é exato, não uma
+  // aproximação: como estadoVF reseta por completo ao finalizar (ver
+  // abaixo), o histórico contado aqui É de fato só dessa sessão, nunca
+  // mistura com uma sessão anterior que tenha rodado na mesma aba
   const totalRespondidas = estadoVF?.historico?.filter(h => h.resposta !== null).length || 0;
   sb.from('sessoes_vf').insert({
     usuario_id: usuarioAtual.id,
@@ -6275,6 +6350,12 @@ function vfFinalizarSessaoFlashVF(e){
   limparCanvasDesenhoVF(); // finalizar é finalizar tudo - o risco que estava na tela some junto, não fica "esquecido" por cima do resultado
   vfSessaoAtivaVF = null;
   vfSessaoRestauradaAguardandoDecisaoVF = false;
+  // o pool/histórico/fila inteiros são dessa sessão que acabou de
+  // terminar - reseta pra null, pra que a PRÓXIMA sessão (quando "Iniciar"
+  // for clicado de novo) comece de um pool fresco, não continue de onde
+  // essa parou. O Flash não é mais "eterno" - cada sessão é um bloco
+  // delimitado, o estado não deveria vazar de uma pra outra
+  estadoVF = null;
   vfSalvarSessaoNoStorageVF();
   if(vfIntervalSessaoVF){ clearInterval(vfIntervalSessaoVF); vfIntervalSessaoVF = null; }
   clearTimeout(vfSessaoBalaoEscondidoTimeoutVF);
@@ -6343,6 +6424,7 @@ function vfRetomarSessaoRestauradaVF(){
   vfSessaoRestauradaAguardandoDecisaoVF = false;
   vfMostrarBalaoSessaoFlashVF();
   vfAtualizarOverlaySessaoVF();
+  if(!estadoVF || estadoVF.posicao < 0) vfCarregarPoolInicialVF();
 }
 
 // ---- arraste do balão (mesmo padrão já usado pros paineis: limiar de
@@ -6464,6 +6546,18 @@ async function entrarNoModoVF(){
     renderizarItemVF();
     return;
   }
+  // sem pool carregado ainda - o Flash não é mais "eterno" (não carrega
+  // sozinho assim que a aba abre). Só busca o pool de verdade se já
+  // existe uma sessão ativa E não há decisão de Retomar/Finalizar
+  // pendente (senão carregava tudo por baixo do overlay de escolha, sem
+  // o Carlos ter decidido nada ainda). Sem sessão ativa, quem dispara
+  // isso é vfIniciarSessaoFlashVF ou vfRetomarSessaoRestauradaVF, só
+  // quando o Carlos realmente decidir começar - carregar aqui à toa
+  // seria trabalho desperdiçado se ele nunca apertar Iniciar/Retomar
+  if(vfSessaoAtivaVF && !vfSessaoRestauradaAguardandoDecisaoVF) await vfCarregarPoolInicialVF();
+}
+
+async function vfCarregarPoolInicialVF(){
   const el = document.getElementById('vf-conteudo');
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
   document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
@@ -6477,9 +6571,8 @@ async function entrarNoModoVF(){
     posicao: -1,
     acertosSessao: 0,
     respondidasSessao: 0,
-    inicioSessaoVFMs: Date.now(),
-    respostasDesdeUltimaNova: 0, // Regra 1 (fluxo garantido de novas) - não persiste, zera por sessão
-    familiasRecentesVF: [] // Regra 2 (anti-irmãs) - buffer das últimas GAP_FAMILIA famílias respondidas, não persiste
+    respostasDesdeUltimaNova: 0, // Regra 1 (fluxo garantido de novas) - zera a cada SESSÃO de verdade agora, não mais a cada abertura de aba
+    familiasRecentesVF: [] // Regra 2 (anti-irmãs) - idem, zera por sessão de verdade
   };
   // userRow/now_ms/total geral agora entram NO MESMO Promise.all da busca
   // do pool (dentro de carregarPoolVF) - antes eram uma rodada sequencial
@@ -6497,6 +6590,11 @@ async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
   document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
 
   const pool = await carregarPoolVF(ehEntradaInicialVF);
+  // se outra chamada mais recente já rodou nesse meio tempo (dois toques
+  // rápidos em filtros diferentes, por exemplo), essa resposta já está
+  // velha - descarta sem escrever nada, pra não sobrescrever o pool
+  // certo (do filtro mais recente) com dados do filtro anterior (F1)
+  if(pool.tokenDestaCargaVF !== vfTokenGeracaoPoolVF) return;
   estadoVF.pool = pool;
   if(ehEntradaInicialVF && pool.dadosEntradaVF){
     const {userRow, horarioServidorMs, totalGeralQuestoesVF} = pool.dadosEntradaVF;
@@ -6719,12 +6817,6 @@ function renderizarItemVF(){
     <div style="display:flex;flex-direction:column;gap:2px;padding:2px 2px 14px;color:#888;font-size:var(--fs-c)">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="display:flex;align-items:center;gap:6px">${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao} certas nessa sessão <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
-        <span style="display:flex;align-items:center;gap:6px">
-          <span id="vf-tempo-sessao-texto" class="hidden" style="font-variant-numeric:tabular-nums;color:#666"></span>
-          <button class="btn-icone-pequeno" onclick="vfToggleTimerSessaoVF()" title="Tempo nessa sessão">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          </button>
-        </span>
       </div>
     </div>
     <div class="card-questao">
@@ -6740,7 +6832,6 @@ function renderizarItemVF(){
     </div>
   `;
 
-  vfAplicarEstadoTimerSessaoVF(); // mantém o timer mostrado/escondido do jeito que já estava, não reseta ao trocar de questão
   renderizarBarraFixaVF(item, jaRespondida);
 }
 
@@ -6792,7 +6883,7 @@ function vfSoltarPressionarEnunciado(){
   vfTimerPressionarEnunciado = null;
   const div = document.getElementById('vf-enunciado-atual');
   if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueEnunciado){
-    vfCopiarTextoElementoVF(div, div.textContent);
+    vfCopiarTextoElementoVF(div);
   }
 }
 
@@ -6846,10 +6937,20 @@ async function vfSalvarEdicaoEnunciadoVF(questaoId, textoOriginal){
   // atualiza local imediatamente (sensação instantânea), salva no banco
   // em seguida
   const entrada = estadoVF.historico[estadoVF.posicao];
-  if(entrada && entrada.item && entrada.item.id === questaoId) entrada.item.texto = textoNovo;
+  const novoNPalavras = textoNovo.trim().split(/\s+/).filter(Boolean).length;
+  if(entrada && entrada.item && entrada.item.id === questaoId){
+    entrada.item.texto = textoNovo;
+    entrada.item.n_palavras = novoNPalavras; // senão o algoritmo continua estimando tempo de leitura com base no texto antigo
+  }
   div.innerHTML = formatarTextoItemVF(textoNovo);
   retomarTimerVF();
-  const {error} = await sb.from('questoes_vf').update({texto: textoNovo}).eq('id', questaoId);
+  // sem isso, a próxima vez que essa questão for buscada de novo (por
+  // exemplo depois de trocar de filtro) vfGarantirConteudoCompletoVF
+  // serviria o texto ANTIGO direto do cache, e a edição "sumia" da tela
+  // pelo resto da sessão mesmo já estando salva certinho no banco (D1)
+  const cacheAtualEnunciado = vfConteudoCompletoCache.get(questaoId) || {};
+  vfConteudoCompletoCache.set(questaoId, {...cacheAtualEnunciado, texto: textoNovo});
+  const {error} = await sb.from('questoes_vf').update({texto: textoNovo, n_palavras: novoNPalavras}).eq('id', questaoId);
   if(error){
     alert('Erro ao salvar a edição da afirmação: '+error.message);
   }
@@ -6860,7 +6961,12 @@ async function vfSalvarEdicaoEnunciadoVF(questaoId, textoOriginal){
 // copia o texto exato passado (não precisa mais buscar "afirmação
 // verdadeira" com lógica própria - agora cada bloco de texto copia
 // exatamente o que está escrito nele mesmo)
-async function vfCopiarTextoElementoVF(elemento, texto){
+async function vfCopiarTextoElementoVF(elemento){
+  // remove qualquer selinho "Copiado" que ainda esteja lá (de um clique
+  // duplo rápido, antes do anterior sumir) ANTES de ler o texto - senão
+  // o textContent incluía a palavra "Copiado" junto no texto copiado
+  elemento.querySelector(':scope > .vf-selinho-copiado')?.remove();
+  const texto = elemento.textContent;
   try{
     await navigator.clipboard.writeText(texto.trim());
     vfMostrarSelinhoCopiadoVF(elemento);
@@ -6919,7 +7025,7 @@ function vfSoltarPressionarCorrecao(){
   vfTimerPressionarCorrecao = null;
   const div = document.getElementById('vf-correcao-atual');
   if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueCorrecao){
-    vfCopiarTextoElementoVF(div, div.textContent);
+    vfCopiarTextoElementoVF(div);
   }
 }
 
@@ -6956,6 +7062,8 @@ async function vfSalvarEdicaoCorrecaoVF(questaoId, textoOriginal){
   const entrada = estadoVF.historico[estadoVF.posicao];
   if(entrada && entrada.item && entrada.item.id === questaoId) entrada.item.correcao = textoNovo;
   div.innerHTML = formatarTextoItemVF(textoNovo);
+  const cacheAtualCorrecao = vfConteudoCompletoCache.get(questaoId) || {};
+  vfConteudoCompletoCache.set(questaoId, {...cacheAtualCorrecao, correcao: textoNovo});
   const {error} = await sb.from('questoes_vf').update({correcao: textoNovo}).eq('id', questaoId);
   if(error){
     alert('Erro ao salvar a edição da correção: '+error.message);
@@ -7062,11 +7170,19 @@ async function responderVF(resposta){
   vfSalvarEClimparAnotacaoVF(entrada); // guarda o que foi desenhado como imagem e limpa o canvas, senão fica em cima do resultado
   renderizarItemVF(); // mostra o resultado na hora, sem esperar o banco
 
-  const [rpcResultado] = await Promise.all([
-    sb.rpc('incrementar_contador_vf', {p_usuario_id: usuarioAtual.id}),
-    sb.from('repeticao_vf').upsert({
-      usuario_id: usuarioAtual.id, questao_vf_id: item.id,
-      estado: item.estado, intervalo_horas: item.intervalo_horas, fator: item.fator,
+  // registra a promise do upsert dessa questão, acessível de fora - se o
+  // usuário favoritar ESSA MESMA questão rapidamente (antes do upsert
+  // terminar), o favoritar precisa esperar esse upsert original completar
+  // antes de aplicar o encolhimento de intervalo por cima, senão os dois
+  // updates competem e o mais lento (não necessariamente o mais recente)
+  // vence, podendo deixar o intervalo cheio no banco mesmo a tela
+  // mostrando encolhido (C2 do relatório da Fable)
+  const promiseRespostaVF = (async () => {
+    const [rpcResultado] = await Promise.all([
+      sb.rpc('incrementar_contador_vf', {p_usuario_id: usuarioAtual.id}),
+      sb.from('repeticao_vf').upsert({
+        usuario_id: usuarioAtual.id, questao_vf_id: item.id,
+        estado: item.estado, intervalo_horas: item.intervalo_horas, fator: item.fator,
       ultima_resposta_em: item.ultima_resposta_em, degrau: item.degrau,
       total_degraus: item.total_degraus, intervalo_pendente: item.intervalo_pendente,
       marca_contador: item.marca_contador, total_respostas: item.total_respostas, total_erros: item.total_erros
@@ -7084,6 +7200,12 @@ async function responderVF(resposta){
   // regrediria nesse instante e uma terceira resposta pegaria marca_contador
   // duplicado
   if(rpcResultado?.data != null) estadoVF.contadorGlobal = Math.max(estadoVF.contadorGlobal, rpcResultado.data);
+  })();
+  vfRespostasEmVooVF.set(item.id, promiseRespostaVF);
+  promiseRespostaVF.finally(() => {
+    if(vfRespostasEmVooVF.get(item.id) === promiseRespostaVF) vfRespostasEmVooVF.delete(item.id);
+  });
+  await promiseRespostaVF;
 }
 
 // toque longo no botão Favoritar abre a lista de favoritos - toque normal
@@ -7123,16 +7245,33 @@ async function toggleFavoritoVF(questaoVfId){
     return;
   }
   if(favoritosVF.has(questaoVfId)){
-    await sb.from('favoritos_vf').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
+    // otimista: a tela muda JÁ, a escrita no banco acontece em segundo
+    // plano - "meio lento" antes era esperar o banco confirmar antes de
+    // sequer mudar o ícone na tela
     favoritosVF.delete(questaoVfId);
+    renderizarItemVF();
     // o boost de fila (VF_ALGO.BOOST_FAVORITO) já some sozinho ao checar
     // favoritosVF.has() de novo - não precisa desfazer nada aqui. O
     // encolhimento de intervalo (efeito imediato de quando favoritou)
     // também NUNCA é desfeito - vira só uma revisão a mais que aconteceu,
     // inofensivo, o Fable foi claro nisso
+    const {error} = await sb.from('favoritos_vf').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
+    if(error){
+      // escrita falhou de verdade - desfaz o otimismo
+      favoritosVF.add(questaoVfId);
+      renderizarItemVF();
+      console.error('erro ao desfavoritar:', error);
+    }
   }else{
-    await sb.from('favoritos_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoVfId});
     favoritosVF.add(questaoVfId);
+    renderizarItemVF();
+    sb.from('favoritos_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoVfId}).then(({error}) => {
+      if(error){
+        favoritosVF.delete(questaoVfId);
+        renderizarItemVF();
+        console.error('erro ao favoritar:', error);
+      }
+    });
     // efeito imediato, uma vez só: "acertei, mas fiquei ressabiado" - se
     // está em revisão com intervalo > 24h, encolhe pra 24h (equivalente ao
     // botão "Hard" do Anki). NÃO mexe em fator nem em degraus, só puxa a
@@ -7141,11 +7280,25 @@ async function toggleFavoritoVF(questaoVfId){
     const item = entrada?.item;
     if(item && item.estado === 'revisao' && item.intervalo_horas > 24){
       item.intervalo_horas = 24;
-      const {error} = await sb.from('repeticao_vf').update({intervalo_horas: 24}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
-      if(error) console.error('erro ao encolher intervalo do favorito:', error);
+      renderizarItemVF(); // já reflete "vence mais cedo" na tela, antes do banco confirmar
+      (async () => {
+        // se a RESPOSTA dessa mesma questão ainda está em voo (upsert
+        // original ainda não confirmou no banco), espera ele terminar
+        // primeiro - senão os dois updates competem, e o mais lento vence
+        // no banco mesmo não sendo o mais recente (C2 do relatório da Fable)
+        const respostaEmVoo = vfRespostasEmVooVF.get(questaoVfId);
+        if(respostaEmVoo) await respostaEmVoo;
+        // se ainda tinha um snapshot pendente pra essa questão (troca de
+        // filtro no meio, por exemplo), atualiza ele também com o valor
+        // encolhido - senão o snapshot ficava com o intervalo cheio,
+        // desatualizado em relação ao que a tela e o banco já têm agora
+        const pendente = escritasPendentesVF.get(questaoVfId);
+        if(pendente) escritasPendentesVF.set(questaoVfId, {...pendente, intervalo_horas: 24});
+        const {error} = await sb.from('repeticao_vf').update({intervalo_horas: 24}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
+        if(error) console.error('erro ao encolher intervalo do favorito:', error);
+      })();
     }
   }
-  renderizarItemVF();
 }
 
 let questaoNotaVfAtual = null;
@@ -7258,6 +7411,8 @@ async function vfSalvarEdicaoExplicacaoVF(questaoId, textoOriginal){
   const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
   if(entrada) entrada.item.explicacao = textoNovo || null;
   div.innerHTML = textoNovo ? formatarTextoItemVF(textoNovo) : 'Sem explicação cadastrada — segure aqui pra adicionar.';
+  const cacheAtualExplicacao = vfConteudoCompletoCache.get(questaoId) || {};
+  vfConteudoCompletoCache.set(questaoId, {...cacheAtualExplicacao, explicacao: textoNovo || null});
   const {error} = await sb.from('questoes_vf').update({explicacao: textoNovo || null}).eq('id', questaoId);
   if(error){
     alert('Erro ao salvar a edição da explicação: '+error.message);
@@ -7379,7 +7534,7 @@ const QUANTIDADE_SUPERQUEST = 70;
 
 async function gerarSuperQuest(){
   const [{data: todasQuestoes, error}, {data: exclusoes}] = await Promise.all([
-    sb.from('questoes').select('*').eq('anulada', false),
+    buscarTudoPaginadoVF(() => sb.from('questoes').select('*', {count: 'exact'}).eq('anulada', false).order('id')),
     sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).is('resolvido_em', null)
   ]);
   if(error){ alert('Erro ao buscar questões: '+error.message); return; }
@@ -7638,11 +7793,14 @@ async function retomarCadernoEspecifico(cadernoId){
     (qs||[]).forEach(q => { mapaQuestoes[q.id] = q; });
     questoes = filtros.questao_ids.map(id => mapaQuestoes[id]).filter(Boolean);
   }else{
-    let query = sb.from('questoes').select('*');
-    if(filtros.modulo) query = query.eq('modulo_pscpp', filtros.modulo);
-    if(filtros.publicacao) query = query.eq('bibliografia_id', filtros.publicacao);
-    if(filtros.capitulo) query = query.eq('capitulo', filtros.capitulo);
-    const {data: qs} = await query;
+    const montarQuery = () => {
+      let q = sb.from('questoes').select('*', {count: 'exact'});
+      if(filtros.modulo) q = q.eq('modulo_pscpp', filtros.modulo);
+      if(filtros.publicacao) q = q.eq('bibliografia_id', filtros.publicacao);
+      if(filtros.capitulo) q = q.eq('capitulo', filtros.capitulo);
+      return q.order('id');
+    };
+    const {data: qs} = await buscarTudoPaginadoVF(montarQuery);
     questoes = qs;
   }
 
@@ -7711,9 +7869,10 @@ async function confirmarExclusaoCaderno(){
   const {data: cadernoInfo} = await sb.from('cadernos').select('id_atividade_tracker').eq('id', cadernoParaExcluir).maybeSingle();
   if(cadernoInfo?.id_atividade_tracker){
     try{
-      const resp = await fetch(`${TRACKER_URL}?id_atividade=${encodeURIComponent(cadernoInfo.id_atividade_tracker)}`, {
+      const {data: {session}} = await sb.auth.getSession();
+      const resp = await fetch(`${TRACKER_INTERMEDIARIA_URL}?id_atividade=${encodeURIComponent(cadernoInfo.id_atividade_tracker)}`, {
         method: 'DELETE',
-        headers: {'x-pilotquest-secret': TRACKER_SEGREDO}
+        headers: {'Authorization': `Bearer ${session?.access_token}`}
       });
       const resultado = await resp.json().catch(()=>({ok:false, erro:'resposta inválida'}));
       if(!resultado.ok && resp.status !== 404){
@@ -8344,13 +8503,15 @@ async function finalizarCaderno(){
 }
 
 /* ============================================================
-   Integração com o PSCPP Tracker — só pro Carlos (usuarioAtual.email),
-   via Edge Function do lado do Tracker (a chave sensível do banco dele
-   nunca fica no código do Pilotquest, só um segredo compartilhado com
-   escopo bem restrito, específico dessa função)
+   Integração com o PSCPP Tracker — só pro Carlos (usuarioAtual.email).
+   Chama uma Edge Function DO PRÓPRIO Pilotquest (enviar-tracker), que
+   por sua vez chama a Edge Function do lado do Tracker. O segredo
+   compartilhado com o Tracker fica só no servidor dessa function
+   intermediária - nunca mais trafega nem fica visível no código do
+   cliente (correção do item A4: antes TRACKER_SEGREDO ficava direto
+   aqui no HTML, visível pra qualquer um que abrisse "ver código-fonte")
    ============================================================ */
-const TRACKER_URL = 'https://sdqhwsmuldsmyvwqlsuh.supabase.co/functions/v1/pilotquest-caderno';
-const TRACKER_SEGREDO = 'pq_aexlNkl5FjQoyty6cZIafBXLW9Db3WZlwsSDC0GK';
+const TRACKER_INTERMEDIARIA_URL = 'https://jenzxycerdtjpkrzesia.supabase.co/functions/v1/enviar-tracker';
 
 let retratoTrackerAtual = null;
 
@@ -8457,9 +8618,10 @@ async function confirmarEnvioTracker(){
 
   const elResultado = document.getElementById('texto-resultado-envio-tracker');
   try{
-    const resp = await fetch(TRACKER_URL, {
+    const {data: {session}} = await sb.auth.getSession();
+    const resp = await fetch(TRACKER_INTERMEDIARIA_URL, {
       method: 'POST',
-      headers: {'Content-Type':'application/json', 'x-pilotquest-secret': TRACKER_SEGREDO},
+      headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${session?.access_token}`},
       body: JSON.stringify(payload)
     });
     const resultado = await resp.json();
@@ -8988,10 +9150,17 @@ async function verificarMaioriaTopico(topicoId){
     if(proposta){
       let erroAplicacao = null;
       if(proposta.tipo==='anulacao'){
-        const [{error: e1}, {error: e2}] = await Promise.all([
-          sb.from('questoes').update({anulada:true, atualizado_em: new Date().toISOString()}).eq('id', proposta.questao_id),
-          sb.from('respostas').update({correta:true, foi_anulada:true, anulacao_vista:false}).eq('questao_id', proposta.questao_id)
-        ]);
+        // sequencial de propósito (não Promise.all): a RPC de baixo exige
+        // que a questão já esteja marcada como anulada antes de aplicar
+        // em respostas - roda em paralelo quebraria essa garantia
+        const {error: e1} = await sb.from('questoes').update({anulada:true, atualizado_em: new Date().toISOString()}).eq('id', proposta.questao_id);
+        // update direto em respostas nunca funcionou (a tabela nunca teve
+        // policy de UPDATE, só INSERT/SELECT - falhava silenciosamente
+        // sempre, e a anulação inteira era desfeita por causa disso). RPC
+        // SECURITY DEFINER resolve isso com segurança: só dá o ponto de
+        // volta se a questão realmente estiver anulada, sem abrir UPDATE
+        // direto em respostas pra qualquer usuário
+        const {error: e2} = e1 ? {error: e1} : await sb.rpc('aplicar_anulacao_questao', {p_questao_id: proposta.questao_id});
         erroAplicacao = e1 || e2;
       }else{
         const {error} = await sb.from('questoes').update({
@@ -9438,10 +9607,10 @@ async function carregarMetricasPessoais(viaPullToRefresh){
   }
 
   const [{data: respostasBrutas}, {data: minhasNotas}, {data: meusFavoritos}, {data: todasQuestoesBanco}, {data: minhasExclusoes}] = await Promise.all([
-    sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em').eq('usuario_id', usuarioAtual.id),
+    buscarTudoPaginadoVF(() => sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_id')),
     sb.from('notas').select('id, questao_id, texto, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
     sb.from('favoritos').select('id, questao_id, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
-    sb.from('questoes').select('id, modulo_pscpp, tipo_questao').eq('anulada', false),
+    buscarTudoPaginadoVF(() => sb.from('questoes').select('id, modulo_pscpp, tipo_questao', {count: 'exact'}).eq('anulada', false).order('id')),
     sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).is('resolvido_em', null)
   ]);
 
@@ -9456,7 +9625,7 @@ async function carregarMetricasPessoais(viaPullToRefresh){
   metricasFavoritosCache.forEach(f=>idsQuestoes.add(f.questao_id));
   const idsQuestoesArr = [...idsQuestoes];
   const {data: questoesInfo} = idsQuestoesArr.length
-    ? await sb.from('questoes').select('id, modulo_pscpp, tipo_questao, bibliografia_id, capitulo, enunciado').in('id', idsQuestoesArr)
+    ? await buscarTudoPaginadoVF(() => sb.from('questoes').select('id, modulo_pscpp, tipo_questao, bibliografia_id, capitulo, enunciado', {count: 'exact'}).in('id', idsQuestoesArr).order('id'))
     : {data: []};
   metricasQuestoesInfoCache = {};
   (questoesInfo||[]).forEach(q=>{ metricasQuestoesInfoCache[q.id] = q; });
@@ -11718,7 +11887,7 @@ function trocarAbaAdmin(aba){
     });
   }
   if(aba==='malformadas'){
-    sb.from('questoes').select('*').or('gabarito.is.null,alternativas.is.null').then(({data})=>{
+    sb.from('questoes').select('*').or('gabarito.is.null,alternativas.is.null').limit(500).then(({data})=>{
       el.innerHTML = (data||[]).map(q=>`<div class="card-questao"><p>${escapeHtml((q.enunciado||'(vazio)').slice(0,100))}</p></div>`).join('') || '<p style="color:#888;font-size:var(--fs-d)">Nenhuma questão malformada encontrada.</p>';
     });
   }
