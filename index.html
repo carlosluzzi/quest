@@ -27,8 +27,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --fs-a:11px; --fs-b:12px; --fs-c:13px; --fs-d:14px;
-  --fs-e:16px; --fs-f:18px; --fs-h:24px;
+  /* Escala tipográfica: razão consistente Major Second (1.125), mesma
+     usada pelo Material Design - a base (--fs-d) é o tamanho do enunciado
+     do Flash, todos os outros degraus sobem/descem dessa base na mesma
+     proporção, arredondados pro pixel mais próximo. Antes a escala tinha
+     razões inconsistentes entre 1.06 e 1.32 dependendo do degrau - agora
+     ficam todas entre 1.08 e 1.16, sem nenhum tamanho "solto" no meio */
+  --fs-a:10px; --fs-b:11px; --fs-c:12px; --fs-d:14px;
+  --fs-e:16px; --fs-f:18px; --fs-g:20px; --fs-h:22px; --fs-i:25px;
   --azul-marca:#202A45;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -42,6 +48,9 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .section-title{font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:14px;margin-top:32px;display:flex;align-items:center;gap:6px}
 .section-title:first-child{margin-top:0}
 .config-title{font-size:var(--fs-f);font-weight:500;margin:0 0 16px 0;color:#111}
+/* variante menor - título de topico dentro de uma tela (não é o título
+   principal de um modal/página) */
+.config-title-menor{font-size:var(--fs-e)}
 .modal-conteudo p{margin:0 0 20px 0;line-height:1.5}
 .textarea-padrao{width:100%;min-height:100px;font-size:16px;padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;font-family:inherit;color:#111;resize:vertical;line-height:1.5;margin-bottom:14px}
 button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none;-webkit-tap-highlight-color:transparent}
@@ -67,13 +76,13 @@ classe do timer do PSCPP Tracker, cor adaptada pra marca do Pilotquest
 /* pausado NÃO troca o fundo (igual o Tracker) - só o tempo fica
 acinzentado e a tag "PAUSADO" aparece em destaque. Cor de fundo do
 balão é sempre a mesma, ativo ou pausado - só o que muda é o conteúdo */
-#vf-sessao-balao-fechar{position:absolute;top:2px;right:6px;font-size:13px;color:#E8B8B5;padding:6px;cursor:pointer}
-#vf-sessao-balao-nome{font-size:11px;color:#E8B8B5;text-transform:uppercase;letter-spacing:.03em;padding-right:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
-#vf-sessao-balao-tempo{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+#vf-sessao-balao-fechar{position:absolute;top:2px;right:6px;font-size:var(--fs-b);color:#E8B8B5;padding:6px;cursor:pointer}
+#vf-sessao-balao-nome{font-size:var(--fs-a);color:#E8B8B5;text-transform:uppercase;letter-spacing:.03em;padding-right:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+#vf-sessao-balao-tempo{font-size:var(--fs-g);font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
 #vf-sessao-balao.pausado #vf-sessao-balao-tempo{color:#E8B8B5}
-.vf-sessao-balao-tag{font-size:9px;letter-spacing:.08em;color:#F0C9C5;font-weight:700;margin-top:1px;height:11px}
+.vf-sessao-balao-tag{font-size:var(--fs-a);letter-spacing:.08em;color:#F0C9C5;font-weight:700;margin-top:1px;height:11px}
 .vf-sessao-balao-btns{display:flex;gap:8px;margin-top:8px}
-.vf-sessao-balao-btns > div{flex:1;min-width:0;background:rgba(255,255,255,0.15);color:#fff;border-radius:8px;padding:5px 4px;font-size:11px;font-weight:600;text-align:center;cursor:pointer}
+.vf-sessao-balao-btns > div{flex:1;min-width:0;background:rgba(255,255,255,0.15);color:#fff;border-radius:8px;padding:5px 4px;font-size:var(--fs-a);font-weight:600;text-align:center;cursor:pointer}
 #vf-sessao-balao.pausado #vf-sessao-balao-btn-pausar{background:rgba(255,255,255,0.9);color:#B23A34}
 /* sliders de espessura (caneta, destaque e tamanho da borracha) - MESMO
 visual nos três, pílula horizontal neutra (branca, como o thumb padrão
@@ -97,9 +106,15 @@ trocando a custom property de cada slider individualmente */
 .btn-primario{background:#B23A34;color:#fff;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;width:100%;border:none;cursor:pointer;font-family:inherit}
 .btn-primario:disabled{background:#f0f0ee;color:#888;cursor:not-allowed}
 .btn-secundario{background:#f0f0ee;color:#111;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;border:none;cursor:pointer;font-family:inherit}
+/* variante pequena - botões administrativos discretos, não o fluxo principal */
+.btn-secundario-pequeno{font-size:var(--fs-b)}
 .filter-btn{font-size:var(--fs-c);padding:4px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;margin:4px}
 .filter-btn.active{background:#111;color:#fff;border-color:#111}
-#metricas-filtro-periodo .filter-btn{flex:1 1 auto;text-align:center;margin:0;height:32px;font-size:14px;padding:0 6px;white-space:nowrap;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+/* variante maior - botões de navegação/seleção principal (escolher PDF vs
+   planilha, tipo de tópico, abas de admin), diferente dos filtros
+   secundários (módulo/publicação/capítulo) que usam o tamanho padrão */
+.filter-btn-grande{font-size:var(--fs-e)}
+#metricas-filtro-periodo .filter-btn{flex:1 1 auto;text-align:center;margin:0;height:32px;padding:0 6px;white-space:nowrap;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
 @media(min-width:768px){
   #metricas-filtro-periodo .filter-btn{flex:1 1 0%}
 }
@@ -190,6 +205,8 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 @media(min-width:1100px){.vf-overlay-sessao{left:250px !important}}
 .nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative;-webkit-tap-highlight-color:transparent}
 #nav-item-adicionar{display:none}
+/* tamanho fixo (não entra na escala de texto) - é um numerozinho dentro
+   de um círculo pequeno (16px), proporcional ao container, não texto de leitura */
 .badge-notificacao{position:absolute;top:10px;right:calc(50% - 24px);background:#E24B4A;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
 .nav-item.active{background:#f0f0ee}
 .nav-icon{width:24px;height:24px;color:#888;display:flex;align-items:center;justify-content:center}
@@ -200,8 +217,8 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 
 @media(min-width:768px) and (max-width:1099px){
   :root{
-    --fs-a:13px; --fs-b:14px; --fs-c:16px; --fs-d:17px;
-    --fs-e:19px; --fs-f:22px; --fs-h:29px;
+    --fs-a:12px; --fs-b:13px; --fs-c:15px; --fs-d:17px;
+    --fs-e:19px; --fs-f:22px; --fs-g:24px; --fs-h:27px; --fs-i:31px;
   }
   #app-shell{max-width:100%}
   .topbar{max-width:100%}
@@ -215,8 +232,8 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 }
 @media(min-width:1100px){
   :root{
-    --fs-a:13px; --fs-b:14px; --fs-c:16px; --fs-d:17px;
-    --fs-e:19px; --fs-f:22px; --fs-h:29px;
+    --fs-a:12px; --fs-b:13px; --fs-c:15px; --fs-d:17px;
+    --fs-e:19px; --fs-f:22px; --fs-g:24px; --fs-h:27px; --fs-i:31px;
   }
   body{display:flex;background:#f5f5f3}
   #app-shell{max-width:100%}
@@ -550,7 +567,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
   <div class="topbar">
     <img src="assets2/logo.png" alt="Pilotquest" width="430" height="88" style="height:34px;width:auto;display:block">
     <div style="display:flex;align-items:center;gap:10px">
-      <button class="btn-secundario hidden" id="btn-abrir-admin" style="width:auto;padding:6px 12px;font-size:var(--fs-b);font-weight:700;text-transform:uppercase;letter-spacing:0.03em" onclick="abrirModal('modal-admin')">Admin</button>
+      <button class="btn-secundario btn-secundario-pequeno hidden" id="btn-abrir-admin" style="width:auto;padding:6px 12px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em" onclick="abrirModal('modal-admin')">Admin</button>
       <button class="avatar-btn" onclick="abrirModalPerfil()" id="avatar-inicial">?</button>
     </div>
   </div>
@@ -638,12 +655,12 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
           <option value="Identificação">Identificação</option>
         </select>
 
-        <label style="display:flex;align-items:center;gap:8px;font-size:16px;color:#111;padding:6px 2px;cursor:pointer">
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#111;padding:6px 2px;cursor:pointer">
           <input type="checkbox" id="toggle-priorizar-erro" onchange="atualizarContadorDisponiveis()">
           Priorizar questões que mais erro
           <button class="btn-icone-pequeno" onclick="event.preventDefault();event.stopPropagation();abrirModal('modal-info-wilson')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
         </label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:16px;color:#111;padding:6px 2px 14px;cursor:pointer">
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#111;padding:6px 2px 14px;cursor:pointer">
           <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões inéditas
         </label>
 
@@ -680,7 +697,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     </div>
 
     <div id="quests-resolucao" class="hidden">
-      <div style="color:#444;cursor:pointer;margin-bottom:16px;font-size:16px" onclick="fecharCadernoResolucao()">← Quest</div>
+      <div style="color:#444;cursor:pointer;margin-bottom:16px;font-size:var(--fs-d)" onclick="fecharCadernoResolucao()">← Quest</div>
       <div id="pills-nav-caderno" class="pills-nav"></div>
       <div id="questao-atual"></div>
     </div>
@@ -854,8 +871,8 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       <div class="card-questao" id="card-adicionar-questoes">
 
       <div style="display:flex;gap:8px;margin-bottom:14px">
-        <div class="filter-btn active" id="toggle-upload-pdf" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="alternarTipoUpload('pdf')">PDF</div>
-        <div class="filter-btn" id="toggle-upload-planilha" style="flex:1;text-align:center;font-size:var(--fs-e);padding:10px" onclick="alternarTipoUpload('planilha')">Planilha</div>
+        <div class="filter-btn filter-btn-grande active" id="toggle-upload-pdf" style="flex:1;text-align:center;padding:10px" onclick="alternarTipoUpload('pdf')">PDF</div>
+        <div class="filter-btn filter-btn-grande" id="toggle-upload-planilha" style="flex:1;text-align:center;padding:10px" onclick="alternarTipoUpload('planilha')">Planilha</div>
       </div>
 
       <div id="bloco-upload-marinha" class="hidden">
@@ -874,7 +891,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         <p style="color:#666;font-size:var(--fs-d)">Selecione o PDF com as questões que você deseja adicionar ao banco.</p>
         <input type="file" id="upload-arquivo" accept="application/pdf" multiple class="hidden" onchange="atualizarNomeArquivoSelecionado()">
         <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 6px" onclick="document.getElementById('upload-arquivo').click()">Escolher arquivo</button>
-        <div id="nome-arquivo-selecionado" style="color:#888;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhum arquivo selecionado</div>
+        <div id="nome-arquivo-selecionado" style="color:#888;font-size:var(--fs-d);display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhum arquivo selecionado</div>
         <div id="upload-status" style="margin:14px 0"></div>
         <button class="btn-primario" onclick="enviarUpload()">Cadastrar questões</button>
       </div>
@@ -884,7 +901,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 10px;white-space:nowrap" onclick="baixarModeloPlanilha()">Baixar planilha-modelo</button>
         <input type="file" id="upload-planilha" accept=".xlsx" class="hidden" onchange="atualizarNomePlanilhaSelecionada()">
         <button type="button" class="btn-secundario" style="width:100%;margin-bottom:6px;white-space:nowrap" onclick="document.getElementById('upload-planilha').click()">Escolher planilha preenchida</button>
-        <div id="nome-planilha-selecionada" style="color:#888;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhuma planilha selecionada</div>
+        <div id="nome-planilha-selecionada" style="color:#888;font-size:var(--fs-d);display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhuma planilha selecionada</div>
         <div id="upload-planilha-status" style="margin:14px 0"></div>
         <button class="btn-primario" onclick="enviarPlanilha()">Cadastrar questões</button>
       </div>
@@ -1023,34 +1040,34 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     barra fina, fecha sozinho ao tocar de novo ou ao tocar fora dele -->
     <div id="vf-painel-caneta" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:600;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
       <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
-      <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Caneta</div>
+      <div style="text-align:center;font-weight:600;font-size:var(--fs-e);color:#111;margin-bottom:14px">Caneta</div>
 
       <div>
-        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
         <!-- renderizado dinamicamente por vfRenderizarGradeCoresVF - sempre
         7 posições, espaçadas de ponta a ponta (justify-content:space-between) -->
         <div id="vf-grade-cores-caneta" style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;justify-items:center"></div>
       </div>
 
       <div style="margin-top:16px">
-        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Espessura</div>
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Espessura</div>
         <div style="display:flex;align-items:center;gap:10px">
           <span id="vf-preview-espessura" style="width:8px;height:8px;border-radius:50%;background:#1A40A1;flex-shrink:0"></span>
           <input type="range" id="vf-slider-espessura" min="1" max="10" step="0.5" value="4.5" oninput="mudarEspessuraSliderVF(this.value)" style="flex:1;min-width:0">
-          <span id="vf-espessura-valor" style="font-size:14px;color:#333;flex-shrink:0;white-space:nowrap">4,5 pt</span>
+          <span id="vf-espessura-valor" style="font-size:var(--fs-d);color:#333;flex-shrink:0;white-space:nowrap">4,5 pt</span>
         </div>
       </div>
 
       <div style="margin-top:16px">
-        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Sensibilidade da ponta</div>
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Sensibilidade da ponta</div>
         <div style="display:flex;gap:8px">
-          <button id="vf-btn-persistente" onclick="selecionarSensibilidadeVF('persistente')" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:13px">
+          <button id="vf-btn-persistente" onclick="selecionarSensibilidadeVF('persistente')" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-c)">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1099 1092" width="26" height="18">	
 <path d="M366.59 3.47C391.99 1.82 415.67 16.56 436.85 28.64C464.12 44.18 489.57 63.85 513.67 83.87C538.34 104.36 562.71 125.42 585.54 147.96C603.49 165.69 621.57 183.26 638.85 201.66C718.94 286.93 789.21 381.01 858.09 475.36C906.4 541.52 953.11 609.25 992.07 681.42C1006.51 708.18 1020.7 735.2 1032.13 763.41C1052.09 812.66 1069.75 862.46 1081.22 914.44C1087.21 941.61 1093.06 968.77 1095.71 996.5C1097.68 1017.01 1098.89 1039.48 1092.92 1059.47C1089.9 1069.58 1085.23 1079.7 1075.91 1085.41C1057.81 1096.51 1035.65 1082.82 1019.95 1073.55C976.31 1047.79 937.01 1014.69 898.49 982.01C858.91 948.44 820.52 913.38 783.1 877.41C764.91 859.93 747.41 841.76 729.53 823.96C697.8 792.37 665.87 760.95 633.81 729.68C605.47 702.05 577.14 674.28 547.64 647.89C517.52 620.95 487.49 594 456.69 567.84C448.72 561.07 440.54 554.42 431.74 548.74C428.47 546.63 424.51 543.55 420.46 543.41C416.24 543.27 414.6 546.83 414.37 550.54C413.98 556.92 417.14 564.26 419.44 570.12C429.92 596.89 443.95 622.49 457.99 647.52C478.17 683.52 500.38 718.17 522.55 752.95C541.23 782.25 560.94 811.1 575.92 842.54C586.2 864.12 596.27 889.27 585.01 912.52C582.37 917.96 579.03 922.93 574.25 926.73C543.33 951.23 498.32 924.76 469.46 909.03C438.82 892.33 409.7 872.72 379.9 854.59C359.69 842.28 339.19 830.57 318.62 818.89C287.81 801.39 254.63 784.5 219.91 776.56C202.93 772.67 174.21 768.72 171.04 792.5C170.57 796.06 170.62 799.94 171.07 803.5C175.57 838.79 207.59 888.07 170.91 916.43C166.45 919.88 161.54 922.72 156.23 924.64C149.25 927.15 141.94 928.91 134.5 929.18C103.1 930.34 79.85 908.8 62.42 885.09C38.26 852.22 21.46 814.54 9.95 775.55C2.59 750.6 -1.47 723.34 3.19 697.54C5.33 685.68 8.96 674.51 14.14 663.63C17.11 657.39 21.07 651.34 25.63 646.14C51.94 616.12 89.63 615.66 126.5 620.1C146.29 622.48 165.95 626.04 185.51 629.92C196.46 632.09 207.46 634.24 218.5 635.98C236.91 638.89 255.81 643.57 274.5 643.7C282.17 643.76 291.67 643.83 297.43 637.94C303.66 631.56 302.02 622.31 299.81 614.56C294.9 597.31 286.94 581.37 279.33 565.2C275.2 556.43 270.73 547.83 266.36 539.19C250.52 507.85 231.47 469.4 233.31 433.53C234 420.17 238.74 407.4 245.46 395.96C249.01 389.91 253.48 384.84 258.65 380.13C266.05 373.39 274.83 368.84 284.34 365.79C295.84 362.1 308.51 361.44 320.5 361.93C341.7 362.78 362.43 369.14 382.25 376.31C423.44 391.22 465.09 419.35 500.19 445.33C575.98 501.44 642.3 569.24 711.57 632.93C749.91 668.17 787.41 704.98 828.91 736.57C838.45 743.83 847.96 751.41 858.77 756.7C863.27 758.9 869.88 760.74 872.91 755.35C875.09 751.45 874.2 746.5 873.36 742.39C871.02 730.86 866.18 719.88 861.23 709.27C842.53 669.2 817.55 628.65 791.75 592.74C773.91 567.91 756.85 542.53 738.41 518.11C683.97 445.98 625.83 377.16 565.99 309.51C523.18 261.11 479.07 213.78 432.34 169.16C410.82 148.61 388.32 129.18 366.28 109.19C353.24 97.37 337.86 85.59 330.24 69.28C325.89 59.98 323.17 48.78 324.86 38.5C328.13 18.6 347.03 4.74 366.59 3.47Z" class="vf-tinta-marcador" data-cor-original="#f60101" fill="#f60101" fill-rule="evenodd" stroke="#f60101" stroke-width="0.25" stroke-linejoin="round"/>	
 </svg>
             Persistente
           </button>
-          <button id="vf-btn-variavel" onclick="selecionarSensibilidadeVF('variavel')" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:13px">
+          <button id="vf-btn-variavel" onclick="selecionarSensibilidadeVF('variavel')" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-c)">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 1053" width="26" height="18">	
 <path d="M84.87 785.5C79.78 786.63 76.25 782 73.08 778.38C65.58 769.8 58.31 761.05 51.73 751.74C33.51 725.91 9.62 698.37 22.72 664.27C24.63 659.29 27.25 655.25 30.79 651.28C34.56 647.06 39.38 643.44 44.54 641.07C68.87 629.94 96.67 630.77 122.73 633.57C160.66 637.63 197.34 646.68 234.44 655.23C249.66 658.74 264.93 663.37 280.55 664.65C287.2 665.19 295.8 664.28 298.86 657.35C301.75 650.81 299.21 642.76 297.36 636.25C292.32 618.49 285.02 600.98 277.32 584.22C260.92 548.54 244.07 513.19 226.38 478.14C216.44 458.44 202.19 439.35 198.4 417.25C197.1 409.68 197.15 402.1 198 394.5C203.04 349.31 243.23 329.35 284.5 327.29C353.3 323.85 410.11 366.38 463.1 404.41C481.41 417.54 498.4 432.47 516.09 446.43C534.84 461.22 553.31 476.51 571.47 492.02C630.44 542.4 690.77 591.22 748.56 642.93C784.45 675.04 820.12 707.32 855.62 739.89C864.78 748.3 873.59 757.43 883.27 765.24C887.49 768.65 890.82 772.23 896.5 771.93C899.78 767.8 898.31 762.25 897.26 757.43C894.52 744.82 890.11 732.27 885.14 720.38C865.02 672.23 841.02 625.86 814.64 580.83C785.45 530.99 753.79 482.41 719.97 435.56C698.19 405.4 675.56 375.88 653.64 345.84C604.35 278.31 550.87 213.49 496.88 149.66C467.75 115.22 437.95 81.32 406.97 48.53C399.23 40.34 391.23 32.15 383.96 23.55C380.93 19.97 377.5 16.85 378.5 11.99C384.14 9.57 391.47 16.17 395.97 19.52C409.17 29.36 422.53 38.94 435.67 48.88C492.48 91.84 544.44 140.51 595.65 189.84C632.69 225.5 667.42 263.5 702 301.49C755.78 360.55 807.44 421.17 855.41 485.12C882.64 521.4 907.46 559.33 932.04 597.44C954.73 632.62 976.28 668.88 995.36 706.16C1009.7 734.19 1022.17 762.91 1034.7 791.78C1042.14 808.92 1048.28 826.58 1054.31 844.26C1068.42 885.63 1079.84 928.16 1085.99 971.5C1088.07 986.08 1088.97 1000.79 1088.11 1015.5C1087.68 1022.87 1086.17 1031.67 1080.48 1036.99C1075.07 1042.04 1067.34 1041.98 1060.5 1040.99C1047.11 1039.04 1034.4 1034.16 1022.36 1028.16C1008.02 1021.03 994.77 1011.02 981.82 1001.66C949.09 978.02 918.96 951.58 889.23 924.32C852.2 890.37 816.7 854.75 779.96 820.53C768.07 809.45 756.72 797.74 744.72 786.8C700.57 746.58 656.53 706.31 612.08 666.43C583.83 641.08 555.58 615.36 526.17 591.34C510.4 578.46 495.22 564.88 479.33 552.13C457.3 534.43 435.15 516.96 412.71 499.8C401.19 490.98 389.5 481.87 376.97 474.51C371.33 471.19 365.64 467.16 359.28 465.31C342.82 460.52 340.47 473.03 342.43 486.21C345.74 508.6 355.88 535.5 365.47 556.04C372.04 570.14 378.16 584.43 385.25 598.27C400.61 628.3 417.4 657.65 435.12 686.35C453.59 716.26 474.73 744.48 493 774.5C502.71 790.47 512.36 807.27 517.03 825.5C519.47 835 518.94 845.91 511.7 853.2C504.15 860.8 492.63 862.09 482.5 861.09C462.27 859.09 441.06 844.35 425.16 832.36C379.15 797.64 331.68 765.33 281.23 737.31C247.8 718.75 214.17 700.82 177.79 688.63C151.03 679.65 122.95 672.39 94.5 672.92C81.55 673.16 65.3 676.68 59.41 689.84C55.6 698.36 56.79 707.82 58.74 716.61C62.27 732.55 69.49 747.55 76.17 762.35C79.29 769.27 85.55 777.86 84.87 785.5Z" class="vf-tinta-marcador" data-cor-original="#ec0c02" fill="#ec0c02" fill-rule="evenodd" stroke="#ec0c02" stroke-width="0.25" stroke-linejoin="round"/>	
 </svg>
@@ -1064,18 +1081,18 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     selecionar a borracha, fecha ao tocar fora -->
     <div id="vf-painel-borracha" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:600;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
       <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
-      <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Borracha</div>
+      <div style="text-align:center;font-weight:600;font-size:var(--fs-e);color:#111;margin-bottom:14px">Borracha</div>
 
       <div>
-        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Modo</div>
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Modo</div>
         <div style="display:flex;gap:8px">
-          <button id="vf-btn-borracha-total" onclick="selecionarModoBorrachaVF('total')" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:13px">
+          <button id="vf-btn-borracha-total" onclick="selecionarModoBorrachaVF('total')" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-c)">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1212 990" width="20" height="14">	
 <path d="M1178.77 1.45C1197.59 -0.57 1213.43 16.95 1210.66 35.36C1209.78 41.21 1207.8 47.04 1206.4 52.79C1202.72 67.9 1198.52 82.85 1194.44 97.86C1185.56 130.51 1176.01 163.39 1164.74 195.3C1155.88 220.37 1147.28 245.48 1137.81 270.34C1130.12 290.52 1121.22 310.22 1112.51 329.96C1097.98 362.86 1080.61 394.53 1061.51 424.99C1016.62 496.55 954.34 560.97 869.45 580.86C848.15 585.85 826.33 587.28 804.5 586.78C786.52 586.37 768.88 583.35 751.45 579.17C638.54 552.13 573.32 452.52 502.05 370.45C480.52 345.66 456.72 320.78 427.54 304.97C370.77 274.22 301.22 279.49 248.19 315.65C202.35 346.91 169.06 394.45 145.47 443.97C109.05 520.39 90.85 603.03 79.26 686.54C75.24 715.52 72.86 744.67 69.42 773.71C68.09 784.9 67.66 796.26 66.83 807.5C64.47 839.45 62.76 871.46 62.09 903.5C61.81 916.84 61.4 930.16 61.25 943.5C61.17 950.4 61.89 957.66 60.9 964.5C57.4 988.67 26.18 997.74 10.25 979.26C-0.18 967.16 3.8 937.09 4.19 921.5C5.43 872.39 7.67 823.45 11.88 774.5C14.95 738.81 18.97 703.26 24.46 667.87C28.79 639.93 33.69 612.06 40.01 584.5C44.85 563.43 49.93 542.36 56.24 521.68C92.38 403.08 159.53 268.47 289.88 234.46C311.29 228.87 333.86 226.63 355.96 227.5C373.84 228.21 391.82 230.67 409.08 235.48C485.11 256.67 530.35 311.93 578.68 369.82C599.75 395.07 620.68 420.29 643.39 444.1C679.37 481.82 722.66 515.7 774.73 526.61C794.31 530.72 814.68 530.8 834.5 528.9C851.11 527.32 867.97 523.39 883.36 516.83C933.04 495.64 969.83 456.27 1000.33 412.8C1052.01 339.14 1085.43 249.82 1113.44 164.89C1126.69 124.72 1137.14 83.47 1146.64 42.27C1150.89 23.81 1156.46 3.85 1178.77 1.45Z" fill="#232324" fill-rule="evenodd" stroke="#232324" stroke-width="0.25" stroke-linejoin="round"/>	
 </svg>
             Total
           </button>
-          <button id="vf-btn-borracha-parcial" onclick="selecionarModoBorrachaVF('parcial')" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:13px">
+          <button id="vf-btn-borracha-parcial" onclick="selecionarModoBorrachaVF('parcial')" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-c)">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1215 988" width="20" height="14">	
 <path d="M1178.71 2.33C1193.59 -0.86 1209.38 9.24 1212.02 24.5C1214.07 36.31 1211.42 49.67 1210.3 61.5C1208.29 82.65 1205.07 103.65 1201.13 124.51C1199.95 130.74 1199.37 137.24 1197.79 143.37C1194.48 156.23 1181.86 166.02 1168.5 165.25C1154.35 164.43 1144.39 153.26 1143.25 139.48C1142.81 134.11 1144.19 128.8 1144.88 123.5C1146.62 110.12 1148.94 96.84 1150.68 83.45C1152.28 71.18 1153.78 58.84 1154.77 46.5C1155.39 38.69 1155.08 30.12 1157.15 22.56C1159.91 12.5 1168.55 4.5 1178.71 2.33ZM1090.6 249.24C1110.56 244.76 1127.12 261.88 1124.8 281.48C1123.09 295.97 1116.14 313.8 1111.24 327.68C1100.85 357.1 1089.05 386.3 1074.41 413.88C1065.25 431.15 1054.39 451.11 1030.69 443.73C1017.13 439.51 1008.89 425.48 1011.3 411.58C1013.48 399.06 1025.7 380.22 1031.4 367.88C1043.78 341.05 1054.84 313.88 1064.44 285.92C1069.75 270.41 1071.47 253.54 1090.6 249.24ZM347.78 273.49C423.88 271.21 491.26 314.2 542.05 367.45C556.58 382.68 569.86 399.03 583.07 415.4C594.72 429.83 606.16 444.55 616.6 459.88C620.37 465.42 624.98 470.59 627.83 476.68C632.34 486.3 631.64 497.94 624.74 506.25C614.01 519.17 595.53 517.19 584.67 505.82C581.54 502.54 579.42 498.4 576.88 494.65C571.64 486.94 566.39 479.17 560.79 471.72C541.15 445.62 520.91 419.83 498.02 396.48C470.16 368.05 436.05 340.68 397.2 329.4C385.93 326.13 374.24 323.64 362.5 323.14C299.11 320.41 245.54 358.36 206.66 405.17C178.09 439.56 156.06 480.22 138.7 521.24C102.4 607.04 85.11 699.23 72.53 791.1C67.06 831.04 63.48 871.32 60.27 911.5C58.95 928.08 58.99 945.01 56.91 961.5C54.75 978.56 35.93 988.9 20.22 982.33C-2.15 972.97 5.16 944.12 6.57 925.4C10.65 870.94 16.08 816.57 23.84 762.5C28.71 728.62 34.51 694.91 41.88 661.49C47.87 634.3 54.59 607.45 62.3 580.7C68.4 559.55 75.76 538.72 83.6 518.18C89.83 501.86 97.12 485.97 104.75 470.27C151.42 374.27 232.29 276.96 347.78 273.49ZM894.79 533.44C922.53 528.71 942.65 561.7 921.93 582.43C912.64 591.72 898.75 593.53 886.65 597.26C855.55 606.85 822.03 611.41 789.5 610.14C772.13 609.46 752.3 609.9 745.37 590.2C740.24 575.63 747.17 558.94 761.75 553.29C769.43 550.32 776.57 551.63 784.5 551.88C795.5 552.22 806.55 551.89 817.5 550.84C835.37 549.13 853.01 545.56 870.27 540.66C878.38 538.36 886.46 534.86 894.79 533.44Z" fill="#303030" fill-rule="evenodd" stroke="#303030" stroke-width="0.25" stroke-linejoin="round"/>	
 </svg>
@@ -1085,7 +1102,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       </div>
 
       <div style="margin-top:16px">
-        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Tamanho</div>
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Tamanho</div>
         <div style="display:flex;align-items:center;gap:10px;height:40px">
           <input type="range" id="vf-slider-tamanho-borracha" min="10" max="40" step="1" value="28" oninput="mudarTamanhoBorrachaVF(this.value)" style="flex:1;min-width:0">
           <span id="vf-preview-tamanho-borracha" style="width:28px;height:28px;border-radius:50%;background:#999;flex-shrink:0;display:block"></span>
@@ -1095,38 +1112,38 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 
     <div id="vf-painel-destaque" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:600;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
       <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
-      <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Marcador</div>
+      <div style="text-align:center;font-weight:600;font-size:var(--fs-e);color:#111;margin-bottom:14px">Marcador</div>
 
       <div>
-        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
         <div id="vf-grade-cores-destaque" style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;justify-items:center"></div>
       </div>
 
       <div style="margin-top:16px">
-        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Espessura</div>
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Espessura</div>
         <div style="display:flex;align-items:center;gap:10px">
           <span id="vf-preview-espessura-destaque" style="width:8px;height:8px;border-radius:50%;background:#FFD84D;flex-shrink:0"></span>
           <input type="range" id="vf-slider-espessura-destaque" min="8" max="30" step="1" value="20" oninput="mudarEspessuraSliderDestaqueVF(this.value)" style="flex:1;min-width:0">
-          <span id="vf-espessura-valor-destaque" style="font-size:14px;color:#333;flex-shrink:0;white-space:nowrap">20 pt</span>
+          <span id="vf-espessura-valor-destaque" style="font-size:var(--fs-d);color:#333;flex-shrink:0;white-space:nowrap">20 pt</span>
         </div>
       </div>
 
       <div style="margin-top:16px">
-        <div style="font-size:11px;letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Opacidade</div>
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Opacidade</div>
         <div style="display:flex;gap:8px">
-          <button class="vf-opacidade-destaque" data-opacidade="0.25" onclick="selecionarOpacidadeDestaqueVF(0.25)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:12px;color:#333">
+          <button class="vf-opacidade-destaque" data-opacidade="0.25" onclick="selecionarOpacidadeDestaqueVF(0.25)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-b);color:#333">
             <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0px"><span class="vf-bolinha-opacidade-preview" style="width:15px;height:15px;border-radius:50%;background:#FFD84D;opacity:0.25;display:block"></span></span>
             25%
           </button>
-          <button class="vf-opacidade-destaque" data-opacidade="0.45" onclick="selecionarOpacidadeDestaqueVF(0.45)" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:12px;color:#333">
+          <button class="vf-opacidade-destaque" data-opacidade="0.45" onclick="selecionarOpacidadeDestaqueVF(0.45)" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-b);color:#333">
             <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0px"><span class="vf-bolinha-opacidade-preview" style="width:15px;height:15px;border-radius:50%;background:#FFD84D;opacity:0.45;display:block"></span></span>
             50%
           </button>
-          <button class="vf-opacidade-destaque" data-opacidade="0.7" onclick="selecionarOpacidadeDestaqueVF(0.7)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:12px;color:#333">
+          <button class="vf-opacidade-destaque" data-opacidade="0.7" onclick="selecionarOpacidadeDestaqueVF(0.7)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-b);color:#333">
             <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0px"><span class="vf-bolinha-opacidade-preview" style="width:15px;height:15px;border-radius:50%;background:#FFD84D;opacity:0.7;display:block"></span></span>
             75%
           </button>
-          <button class="vf-opacidade-destaque" data-opacidade="1" onclick="selecionarOpacidadeDestaqueVF(1)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:12px;color:#333">
+          <button class="vf-opacidade-destaque" data-opacidade="1" onclick="selecionarOpacidadeDestaqueVF(1)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-b);color:#333">
             <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0px"><span class="vf-bolinha-opacidade-preview" style="width:15px;height:15px;border-radius:50%;background:#FFD84D;opacity:1;display:block"></span></span>
             100%
           </button>
@@ -1136,7 +1153,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 
     <div id="vf-painel-marcacao-texto" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:600;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
       <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
-      <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Cor</div>
+      <div style="text-align:center;font-weight:600;font-size:var(--fs-e);color:#111;margin-bottom:14px">Cor</div>
       <div id="vf-grade-cores-marcacao-texto" style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;justify-items:center"></div>
     </div>
 
@@ -1267,7 +1284,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 
 <div id="pagina-favoritos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden">
   <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
-    <h2 style="margin:0;font-size:20px;font-weight:700;color:#111">Flashes favoritos</h2>
+    <h2 style="margin:0;font-size:var(--fs-f);font-weight:700;color:#111">Flashes favoritos</h2>
     <button onclick="vfFecharFavoritosVF()" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
@@ -1277,7 +1294,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 
 <div id="pagina-flash-salvos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden">
   <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
-    <h2 style="margin:0;font-size:20px;font-weight:700;color:#111">Flashes salvos</h2>
+    <h2 style="margin:0;font-size:var(--fs-f);font-weight:700;color:#111">Flashes salvos</h2>
     <button onclick="vfFecharFlashSalvosVF()" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
@@ -1452,7 +1469,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 
 <div id="view-topico-detalhe" class="hidden">
   <div class="topbar-voltar">
-    <button onclick="fecharViewTopico()" style="color:#444;font-size:16px;cursor:pointer;background:none;border:none;padding:0">← <span id="texto-voltar-topico">Fórum</span></button>
+    <button onclick="fecharViewTopico()" style="color:#444;font-size:var(--fs-d);cursor:pointer;background:none;border:none;padding:0">← <span id="texto-voltar-topico">Fórum</span></button>
   </div>
   <div id="conteudo-topico-detalhe" style="position:relative"></div>
 </div>
@@ -1480,8 +1497,8 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title" id="titulo-modal-novo-topico">Nova discussão</h3>
     <div style="display:flex;gap:8px;margin-bottom:12px">
-      <div class="filter-btn" id="toggle-tipo-geral" style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:var(--fs-e);padding:10px" onclick="selecionarTipoNovoTopico('geral')">Abrir discussão</div>
-      <div class="filter-btn" id="toggle-tipo-erro" style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:var(--fs-e);padding:10px" onclick="selecionarTipoNovoTopico('erro')">Reportar erro</div>
+      <div class="filter-btn filter-btn-grande" id="toggle-tipo-geral" style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px" onclick="selecionarTipoNovoTopico('geral')">Abrir discussão</div>
+      <div class="filter-btn filter-btn-grande" id="toggle-tipo-erro" style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px" onclick="selecionarTipoNovoTopico('erro')">Reportar erro</div>
     </div>
     <input type="text" id="novo-topico-titulo" class="filter-select" placeholder="Resumo curto do que você quer discutir">
     <textarea id="novo-topico-mensagem" class="textarea-padrao" placeholder="Escreve aqui o que você quer falar"></textarea>
@@ -1506,10 +1523,10 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-admin">
   <div class="modal-conteudo">
     <h3 class="config-title">Painel admin</h3>
-    <div class="filter-btn active" style="font-size:var(--fs-e);padding:10px" onclick="trocarAbaAdmin('erros')">Erros técnicos</div>
-    <div class="filter-btn" style="font-size:var(--fs-e);padding:10px" onclick="trocarAbaAdmin('malformadas')">Questões malformadas</div>
-    <div class="filter-btn" style="font-size:var(--fs-e);padding:10px" onclick="trocarAbaAdmin('caderno')">Buscar caderno</div>
-    <div class="filter-btn" style="font-size:var(--fs-e);padding:10px" onclick="trocarAbaAdmin('convites')">Convites</div>
+    <div class="filter-btn filter-btn-grande active" style="padding:10px" onclick="trocarAbaAdmin('erros')">Erros técnicos</div>
+    <div class="filter-btn filter-btn-grande" style="padding:10px" onclick="trocarAbaAdmin('malformadas')">Questões malformadas</div>
+    <div class="filter-btn filter-btn-grande" style="padding:10px" onclick="trocarAbaAdmin('caderno')">Buscar caderno</div>
+    <div class="filter-btn filter-btn-grande" style="padding:10px" onclick="trocarAbaAdmin('convites')">Convites</div>
     <div id="admin-conteudo" style="margin-top:14px"></div>
     <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-admin')">Fechar</button>
   </div>
@@ -1534,7 +1551,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-328';
+const VERSAO_APP = '2026-07-25-329';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7068,7 +7085,7 @@ function renderizarItemVF(){
       <div style="height:1px;background:#eee;margin:14px 0"></div>
       <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:34px">
         ${botaoAnotacao}
-        <span style="font-weight:700;font-size:16px;text-align:center;color:${cor};letter-spacing:.02em">${textoResultado}</span>
+        <span style="font-weight:700;font-size:var(--fs-e);text-align:center;color:${cor};letter-spacing:.02em">${textoResultado}</span>
         <button class="btn-icone-pequeno" style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="abrirExplicacaoVF('${item.id}')" title="Ver explicação">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
@@ -7078,9 +7095,9 @@ function renderizarItemVF(){
   }
 
   const tagsPublicacao = [
-    item.eh_numero ? `<span style="background:#B23A34;color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap">NÚMERO</span>` : '',
-    item.eh_lista ? `<span style="background:#B23A34;color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap">LISTA</span>` : '',
-    item.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''
+    item.eh_numero ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap">NÚMERO</span>` : '',
+    item.eh_lista ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap">LISTA</span>` : '',
+    item.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''
   ].filter(Boolean).join('');
 
   // tags customizadas (livres, criadas pelo usuário) - sem fundo colorido
@@ -7088,7 +7105,7 @@ function renderizarItemVF(){
   // contorno pontilhado. Clicar em qualquer uma abre o popup de gerenciar
   const tagsDaQuestao = vfTagsPorQuestaoVF.get(item.id) || [];
   const tagsCustomizadasHtml = tagsDaQuestao.map(t =>
-    `<span onclick="vfAbrirPopupTagsVF('${item.id}')" style="color:#333;font-weight:600;font-size:12px;border:1.5px dashed #ccc;border-radius:8px;padding:3px 8px;white-space:nowrap;cursor:pointer">${escapeHtml(t.nome)}</span>`
+    `<span onclick="vfAbrirPopupTagsVF('${item.id}')" style="color:#333;font-weight:600;font-size:var(--fs-b);border:1.5px dashed #ccc;border-radius:8px;padding:3px 8px;white-space:nowrap;cursor:pointer">${escapeHtml(t.nome)}</span>`
   ).join('');
   // ícone de tag + "+" combinados - botão só de adicionar quando ainda
   // não tem nenhuma tag customizada nessa questão
@@ -7275,7 +7292,7 @@ function vfMostrarSelinhoCopiadoVF(elemento){
   const selinho = document.createElement('span');
   selinho.className = 'vf-selinho-copiado';
   selinho.textContent = 'Copiado';
-  selinho.style.cssText = 'position:absolute;top:-8px;left:50%;transform:translate(-50%,-100%);background:#111;color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.15s ease;z-index:2';
+  selinho.style.cssText = 'position:absolute;top:-8px;left:50%;transform:translate(-50%,-100%);background:#111;color:#fff;font-size:var(--fs-a);font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.15s ease;z-index:2';
   elemento.appendChild(selinho);
   requestAnimationFrame(() => { selinho.style.opacity = '1'; });
   setTimeout(() => {
@@ -7539,7 +7556,7 @@ function vfRenderizarListaTagsAtualVF(){
   if(!container || !vfQuestaoIdTagsAtualVF) return;
   const tags = vfTagsPorQuestaoVF.get(vfQuestaoIdTagsAtualVF) || [];
   container.innerHTML = tags.length
-    ? tags.map(t => `<span style="color:#333;font-weight:600;font-size:13px;border:1.5px dashed #ccc;border-radius:8px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px">${escapeHtml(t.nome)}<span onclick="vfRemoverTagVF('${t.id}')" style="cursor:pointer;color:#999;font-weight:700">✕</span></span>`).join('')
+    ? tags.map(t => `<span style="color:#333;font-weight:600;font-size:var(--fs-b);border:1.5px dashed #ccc;border-radius:8px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px">${escapeHtml(t.nome)}<span onclick="vfRemoverTagVF('${t.id}')" style="cursor:pointer;color:#999;font-weight:700">✕</span></span>`).join('')
     : '<p style="color:#999;font-size:var(--fs-c)">Nenhuma tag ainda.</p>';
 }
 
@@ -7732,7 +7749,7 @@ async function renderizarListaNotasVF(){
   el.innerHTML = `<div style="margin-bottom:14px">` + data.map(n => `
     <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
       <p style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${formatarTextoItemVF(n.texto)}</p>
-      <button onclick="excluirNotaVF('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
+      <button onclick="excluirNotaVF('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
     </div>`).join('') + `</div>`;
   // altura grande o bastante pra caber qualquer lista realista de notas -
   // a transição CSS só precisa de um valor-alvo maior que o conteúdo real
@@ -8108,7 +8125,7 @@ async function carregarCadernosExistentes(){
     <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;cursor:pointer" onclick="modoRevisaoCaderno=false;retomarCadernoEspecifico('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
-        <span class="tx" style="font-size:16px;padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+        <span class="tx" style="font-size:var(--fs-e);padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
       </div>
       <span style="color:#888;font-size:var(--fs-b)">${progresso}</span>
     </div>`;
@@ -8123,7 +8140,7 @@ async function carregarCadernosExistentes(){
     <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;opacity:0.85;cursor:pointer" onclick="abrirDetalheCadernoConcluido('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
-        <span class="tx" style="font-size:16px;padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="finalizado" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+        <span class="tx" style="font-size:var(--fs-e);padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="finalizado" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
       </div>
       <span style="color:#888;font-size:var(--fs-d)">${stats.total} questões · ${pct}% de acerto</span>
     </div>`;
@@ -8452,7 +8469,7 @@ async function renderizarListaNotasQuestao(){
   el.innerHTML = `<div style="margin-bottom:14px">` + data.map(n => `
     <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
       <p style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${formatarEnunciado(n.texto)}</p>
-      <button onclick="excluirNotaQuestao('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
+      <button onclick="excluirNotaQuestao('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
     </div>`).join('') + `</div>`;
 }
 
@@ -8693,9 +8710,9 @@ function renderizarQuestaoAtual(){
         <span style="display:flex;align-items:center;gap:6px">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length} <button class="btn-icone-pequeno" onclick="abrirInfoQuestao('${q.id}')" title="Sobre essa questão"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
         <span style="display:flex;align-items:center;gap:6px;flex-shrink:0">
         ${souCarlos() ? `<button class="btn-icone-pequeno" onclick="abrirEdicaoDiretaAdmin('${q.id}')" title="Editar questão"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>` : ''}
-        ${q.concurso_origem ? `<span style="background:#202A45;color:#fff;font-size:11px;font-weight:700;padding:4px 8px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="${escapeHtml(q.concurso_origem)}${q.ano_prova?' '+q.ano_prova:''}">MB</span>` : ''}
-        ${q.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:11px;font-weight:700;padding:4px 8px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''}
-        ${foiCorrigidaAntesDeResponder ? '<span class="selo-correcao" style="display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;text-transform:none;letter-spacing:normal;padding:2px 6px;flex-shrink:0;white-space:nowrap"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Corrigida recentemente</span>' : ''}
+        ${q.concurso_origem ? `<span style="background:#202A45;color:#fff;font-size:var(--fs-a);font-weight:700;padding:4px 8px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="${escapeHtml(q.concurso_origem)}${q.ano_prova?' '+q.ano_prova:''}">MB</span>` : ''}
+        ${q.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:4px 8px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''}
+        ${foiCorrigidaAntesDeResponder ? '<span class="selo-correcao" style="display:flex;align-items:center;gap:3px;font-weight:600;text-transform:none;letter-spacing:normal;padding:2px 6px;flex-shrink:0;white-space:nowrap"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Corrigida recentemente</span>' : ''}
         </span>
       </div>
       <div class="enunciado">${(() => {
@@ -9506,7 +9523,7 @@ async function renderizarTopico(topicoId){
 
   const html = `
     ${badgeTipoTopico(topico.tipo)}
-    <h3 class="config-title" style="margin-top:8px;text-transform:uppercase;font-size:var(--fs-e)">${escapeHtml(topico.titulo)}</h3>
+    <h3 class="config-title config-title-menor" style="margin-top:8px;text-transform:uppercase">${escapeHtml(topico.titulo)}</h3>
     ${topico.questoes ? `
     <div style="background:#F7F7F5;border-left:3px solid #ccc;border-radius:8px;padding:14px 16px;margin-bottom:16px">
       <div style="font-size:var(--fs-b);color:#999;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;font-weight:600">Questão desta discussão</div>
@@ -9977,7 +9994,7 @@ function mostrarInfoModulo(event, nome, textoInfo){
   if(!popup){
     popup = document.createElement('div');
     popup.id = 'popup-info-modulo';
-    popup.style.cssText = 'position:fixed;background:#111;color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.7;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.25);max-width:280px';
+    popup.style.cssText = 'position:fixed;background:#111;color:#fff;padding:10px 14px;border-radius:8px;font-size:var(--fs-b);line-height:1.7;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.25);max-width:280px';
     document.body.appendChild(popup);
   }
   popup.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${nome}</div>${textoInfo}`;
@@ -10066,7 +10083,7 @@ function barraFina(valor, maximo, cor, sufixo=''){
       <div style="flex:1;background:#F0F0EE;border-radius:3px;height:7px;overflow:hidden">
         <div style="width:${largura}%;background:${cor};height:100%;border-radius:3px"></div>
       </div>
-      <span style="width:36px;flex-shrink:0;text-align:right;font-size:11px;line-height:11px;color:#666">${valor}${sufixo}</span>
+      <span style="width:36px;flex-shrink:0;text-align:right;font-size:var(--fs-a);line-height:11px;color:#666">${valor}${sufixo}</span>
     </div>`;
 }
 function linhaComparativa(nome, acertos, total, pct, maximo, corPct){
@@ -10081,7 +10098,7 @@ function linhaComparativa(nome, acertos, total, pct, maximo, corPct){
     </div>`;
 }
 function legendaBarras(){
-  return `<div style="display:flex;gap:14px;margin-bottom:8px;font-size:11px;color:#888">
+  return `<div style="display:flex;gap:14px;margin-bottom:8px;font-size:var(--fs-a);color:#888">
     <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#8FA878;border-radius:2px"></span>Acertos</span>
     <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#B5B5B0;border-radius:2px"></span>Respondidas</span>
     <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#C9A165;border-radius:2px"></span>% de acertos</span>
@@ -10984,19 +11001,19 @@ function renderizarMetricasPessoais(){
   elResumo.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
       <div class="card-questao" style="text-align:left;margin-bottom:0">
-        <div style="font-size:24px;font-weight:500">${totalQuestoesUnicas} / ${totalDisponivel}</div>
+        <div style="font-size:var(--fs-g);font-weight:500">${totalQuestoesUnicas} / ${totalDisponivel}</div>
         <div style="color:#888;font-size:var(--fs-b)">Questões respondidas</div>
       </div>
       <div class="card-questao" style="text-align:left;margin-bottom:0">
-        <div style="font-size:24px;font-weight:500">${totalQuestoesRepetidas}</div>
+        <div style="font-size:var(--fs-g);font-weight:500">${totalQuestoesRepetidas}</div>
         <div style="color:#888;font-size:var(--fs-b)">Questões repetidas</div>
       </div>
       <div class="card-questao" style="text-align:left;margin-bottom:0">
-        <div style="font-size:24px;font-weight:500"><span style="color:#3B6D11">${totalAcertos}</span> / <span style="color:#A32D2D">${totalErros}</span></div>
+        <div style="font-size:var(--fs-g);font-weight:500"><span style="color:#3B6D11">${totalAcertos}</span> / <span style="color:#A32D2D">${totalErros}</span></div>
         <div style="color:#888;font-size:var(--fs-b)">Acertos / Erros</div>
       </div>
       <div class="card-questao" style="text-align:left;margin-bottom:0">
-        <div style="font-size:24px;font-weight:500;color:${corAproveitamento}">${aproveitamento}%</div>
+        <div style="font-size:var(--fs-g);font-weight:500;color:${corAproveitamento}">${aproveitamento}%</div>
         <div style="color:#888;font-size:var(--fs-b)">Aproveitamento médio</div>
       </div>
     </div>
@@ -11108,7 +11125,7 @@ function renderizarFavoritosMetricas(elFavoritos, infoPorQuestao){
       if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
       if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
       return `<div style="cursor:pointer;position:relative;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${f.questao_id}')">
-        <button onclick="event.stopPropagation();desfavoritarDaListaMetricas('${f.id}','${f.questao_id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px" title="Desfavoritar">✕</button>
+        <button onclick="event.stopPropagation();desfavoritarDaListaMetricas('${f.id}','${f.questao_id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px" title="Desfavoritar">✕</button>
         <div style="font-size:var(--fs-d);color:#888;margin-right:24px">${partes.length ? partes.join(' · ') : 'Questão'}</div>
         <div style="color:#888;font-size:var(--fs-b);margin-top:6px">Favoritada em ${new Date(f.criado_em).toLocaleDateString('pt-BR')}</div>
       </div>`;
@@ -11138,7 +11155,7 @@ function renderizarNotasMetricas(elNotas, infoPorQuestao){
       if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
       partes.push(new Date(n.criado_em).toLocaleDateString('pt-BR'));
       return `<div style="cursor:pointer;position:relative;padding:12px 0;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${n.questao_id}')">
-        <button onclick="event.stopPropagation();excluirNotaDaListaMetricas('${n.id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px" title="Excluir nota">✕</button>
+        <button onclick="event.stopPropagation();excluirNotaDaListaMetricas('${n.id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px" title="Excluir nota">✕</button>
         <p style="font-size:var(--fs-d);color:#111;margin:0 24px 8px 0">${formatarEnunciado(n.texto)}</p>
         <div style="font-size:var(--fs-b);color:#888">${partes.join(' · ')}</div>
       </div>`;
@@ -11198,7 +11215,7 @@ async function abrirDetalheCadernoConcluido(cadernoId){
   el.innerHTML = `
     <h3 class="config-title">${escapeHtml(caderno?.nome||'Caderno')}</h3>
     <div style="text-align:center;margin-bottom:20px">
-      <div style="font-size:32px;font-weight:700;color:${corGeral}">${pctGeral}%</div>
+      <div style="font-size:var(--fs-i);font-weight:700;color:${corGeral}">${pctGeral}%</div>
       <div style="color:#888;font-size:var(--fs-b)">${totalGeral} questões respondidas</div>
     </div>
     <div class="section-title" style="margin-top:0">Por módulo</div>
@@ -11266,10 +11283,10 @@ function atualizarNomeArquivoSelecionado(manterStatus){
   const el = document.getElementById('nome-arquivo-selecionado');
   if(!manterStatus) document.getElementById('upload-status').innerHTML = '';
   if(input.files.length === 1){
-    el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${escapeHtml(input.files[0].name)}</span><button type="button" onclick="limparArquivoSelecionado()" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px;flex-shrink:0" title="Remover arquivo">✕</button>`;
+    el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${escapeHtml(input.files[0].name)}</span><button type="button" onclick="limparArquivoSelecionado()" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px;flex-shrink:0" title="Remover arquivo">✕</button>`;
   }else if(input.files.length > 1){
     const nomes = Array.from(input.files).map(f=>f.name).join(', ');
-    el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${escapeHtml(nomes)}">${input.files.length} arquivos selecionados</span><button type="button" onclick="limparArquivoSelecionado()" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px;flex-shrink:0" title="Remover arquivos">✕</button>`;
+    el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${escapeHtml(nomes)}">${input.files.length} arquivos selecionados</span><button type="button" onclick="limparArquivoSelecionado()" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px;flex-shrink:0" title="Remover arquivos">✕</button>`;
   }else{
     el.textContent = 'Nenhum arquivo selecionado';
   }
@@ -11802,7 +11819,7 @@ async function enviarUpload(){
     : (totalRascunho ? `<p style="color:#555;text-align:center;margin-top:8px">Lido com sucesso – ${totalRascunho} questão(ões) precisam de revisão manual antes de entrar no banco. Veja a notificação no Início.</p>` : '');
 
   if(comErro.length){
-    htmlFinal += `<div style="margin-top:10px">${comErro.map(r => `<p style="color:#B00020;font-size:var(--fs-c)">${escapeHtml(r.erro)}</p>${r.trecho ? `<textarea readonly style="width:100%;height:100px;font-size:11px;font-family:monospace;margin:4px 0 8px;padding:6px;border:0.5px solid #ddd;border-radius:6px;color:#444" onclick="this.select()">${escapeHtml(r.trecho) || '(vazio)'}</textarea>` : ''}`).join('')}</div>`;
+    htmlFinal += `<div style="margin-top:10px">${comErro.map(r => `<p style="color:#B00020;font-size:var(--fs-c)">${escapeHtml(r.erro)}</p>${r.trecho ? `<textarea readonly style="width:100%;height:100px;font-size:var(--fs-a);font-family:monospace;margin:4px 0 8px;padding:6px;border:0.5px solid #ddd;border-radius:6px;color:#444" onclick="this.select()">${escapeHtml(r.trecho) || '(vazio)'}</textarea>` : ''}`).join('')}</div>`;
   }
 
   status.innerHTML = htmlFinal || '<p style="color:#B00020">Nada foi cadastrado.</p>';
@@ -12349,7 +12366,7 @@ function atualizarNomePlanilhaSelecionada(manterStatus){
   const el = document.getElementById('nome-planilha-selecionada');
   if(!manterStatus) document.getElementById('upload-planilha-status').innerHTML = '';
   if(input.files.length){
-    el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${escapeHtml(input.files[0].name)}</span><button type="button" onclick="limparPlanilhaSelecionada()" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:4px;flex-shrink:0" title="Remover planilha">✕</button>`;
+    el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${escapeHtml(input.files[0].name)}</span><button type="button" onclick="limparPlanilhaSelecionada()" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px;flex-shrink:0" title="Remover planilha">✕</button>`;
   }else{
     el.textContent = 'Nenhuma planilha selecionada';
   }
