@@ -1529,7 +1529,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-317';
+const VERSAO_APP = '2026-07-25-318';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2583,7 +2583,15 @@ function trocarAba(nome){
   }
 }
 
-function abrirModal(id){ document.getElementById(id).classList.remove('hidden'); }
+function abrirModal(id){
+  // fecha qualquer outro modal que já esteja aberto antes de abrir este -
+  // sem essa garantia, se algum caminho do código chamar abrirModal()
+  // enquanto outro modal ainda está visível (por esquecer de fechar o
+  // anterior antes), os dois ficavam sobrepostos na mesma camada (mesmo
+  // z-index), misturando as duas telas visualmente
+  document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => { if(m.id !== id) m.classList.add('hidden'); });
+  document.getElementById(id).classList.remove('hidden');
+}
 function fecharModal(id){ document.getElementById(id).classList.add('hidden'); }
 // Discussão de uma questão pode abrir de 2 jeitos, dependendo de onde a
 // pessoa clicou:
@@ -6940,11 +6948,11 @@ function renderizarItemVF(){
           <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0;line-height:1.25">${escapeHtml(publicacao)}</p>
           ${item.capitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:1px 0 0 0;line-height:1.25">${rotuloCapituloDoLivro(publicacao)} ${escapeHtml(String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))}</p>` : ''}
         </div>
-        ${tagsPublicacao ? `<div style="display:flex;gap:6px;flex-shrink:0">${tagsPublicacao}</div>` : ''}
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 0">
-        ${tagsCustomizadasHtml}
-        ${iconeTagAdicionar}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0;max-width:60%">
+          ${tagsPublicacao}
+          ${tagsCustomizadasHtml}
+          ${iconeTagAdicionar}
+        </div>
       </div>
       <div class="enunciado" id="vf-enunciado-atual" style="margin-top:10px;position:relative" data-editavel-vf="1" ontouchstart="vfIniciarPressionarEnunciado(event)" ontouchend="vfSoltarPressionarEnunciado(event)" ontouchmove="vfCancelarPressionarEnunciadoSilencioso(event)" onmousedown="vfIniciarPressionarEnunciado(event)" onmouseup="vfSoltarPressionarEnunciado()" onmouseleave="vfCancelarPressionarEnunciadoSilencioso()">${formatarTextoItemVF(item.texto)}</div>
       ${blocoResultado}
