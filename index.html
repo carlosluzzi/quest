@@ -62,7 +62,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* balão flutuante da sessão do Flash - mesma técnica de estados via
 classe do timer do PSCPP Tracker, cor adaptada pra marca do Pilotquest
 (B23A34 em vez do azul-marinho de lá) */
-#vf-sessao-balao{position:fixed;z-index:35;background:#B23A34;color:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.35);width:180px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 16px)}
+#vf-sessao-balao{position:fixed;z-index:150;background:#B23A34;color:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.35);width:180px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 16px)}
 #vf-sessao-balao.hidden{display:none}
 /* pausado NÃO troca o fundo (igual o Tracker) - só o tempo fica
 acinzentado e a tag "PAUSADO" aparece em destaque. Cor de fundo do
@@ -273,13 +273,13 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
 /* --- Placar --- */
 
 /* --- Modal genérico --- */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
-#overlay-arrastar-arquivo{position:fixed;inset:0;background:rgba(217,119,87,0.08);z-index:200;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px}
+#overlay-arrastar-arquivo{position:fixed;inset:0;background:rgba(217,119,87,0.08);z-index:700;display:flex;align-items:center;justify-content:center;pointer-events:none}
 #overlay-arrastar-arquivo.hidden{display:none}
 #overlay-arrastar-arquivo>div{background:#fff;border:2px dashed #B23A34;border-radius:16px;padding:32px 40px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
 #overlay-arrastar-arquivo svg{margin-bottom:12px}
 #overlay-arrastar-arquivo p{color:#111;font-size:var(--fs-e);font-weight:600;margin:0}
-#view-topico-detalhe{position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:40;display:flex;flex-direction:column;overflow:hidden}
+#view-topico-detalhe{position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden}
 #view-topico-detalhe .topbar-voltar{display:flex;align-items:center;gap:10px;padding:14px 16px;flex-shrink:0;background:#FBFBFA;border-bottom:0.5px solid rgba(224,224,224,0.6)}
 #conteudo-topico-detalhe{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px}
 .modal-overlay.hidden{display:none}
@@ -289,7 +289,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
    modal (popup por cima de tudo); a partir do desktop (1100px, onde o menu
    vira lateral) vira uma página normal, igual as outras abas – sem overlay,
    sem fundo escurecido, ocupando a área de conteúdo normalmente */
-#aba-adicionar{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+#aba-adicionar{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:250;padding:20px}
 #aba-adicionar.hidden{display:none}
 @media(min-width:1100px){
   #aba-adicionar{position:static;inset:auto;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;overflow-y:auto;padding:0;z-index:auto}
@@ -795,12 +795,12 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
   <div class="view-aba hidden" id="aba-vf">
     <!-- sem sessão ativa: cobre tudo, só mostra o botão de iniciar. Some
     (via vfAtualizarOverlaySessaoVF) assim que vfSessaoAtivaVF existe -->
-    <div id="vf-overlay-iniciar-sessao" class="vf-overlay-sessao" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:12px">
+    <div id="vf-overlay-iniciar-sessao" class="vf-overlay-sessao" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:12px">
       <button class="btn-primario" onclick="vfIniciarSessaoFlashVF()" style="width:auto;padding:14px 32px">▶ Iniciar sessão</button>
     </div>
     <!-- havia uma sessão pausada quando o app fechou - pergunta o que
     fazer em vez de reabrir o balão sozinho -->
-    <div id="vf-overlay-retomar-sessao" class="vf-overlay-sessao hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:16px">
+    <div id="vf-overlay-retomar-sessao" class="vf-overlay-sessao hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:16px">
       <div>
         <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Você tinha uma sessão pausada</div>
         <div id="vf-overlay-retomar-tempo" style="font-size:var(--fs-h);font-weight:700;font-variant-numeric:tabular-nums;color:#B23A34"></div>
@@ -927,8 +927,8 @@ Fora do app-shell, sem overflow:hidden no caminho, cobre a viewport de
 verdade sem esse recorte. Como não é mais filho de #aba-vf, a
 visibilidade é controlada manualmente em trocarAba(), não mais herdada
 automaticamente da classe .hidden do app-shell -->
-<canvas id="vf-canvas-desenho" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:150;pointer-events:none;touch-action:none"></canvas>
-<canvas id="vf-canvas-preview-destaque" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:151;pointer-events:none;touch-action:none"></canvas>
+<canvas id="vf-canvas-desenho" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:400;pointer-events:none;touch-action:none"></canvas>
+<canvas id="vf-canvas-preview-destaque" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:401;pointer-events:none;touch-action:none"></canvas>
 
 <!-- balão flutuante da sessão do Flash - painel de controle da sessão
 manual (iniciar/pausar/retomar/finalizar). HTML mínimo de propósito,
@@ -944,7 +944,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     <div onclick="vfConfirmarFinalizarSessaoFlashVF(event)">Finalizar</div>
   </div>
 </div>
-<div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:9999;background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.12);padding:6px 8px;display:flex;align-items:center;gap:14px">
+<div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:500;background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.12);padding:6px 8px;display:flex;align-items:center;gap:14px">
       <div id="vf-alca-arrastar" style="display:flex;flex-direction:column;gap:3px;padding:14px 12px;margin:-8px -8px;cursor:grab;touch-action:none">
         <div style="display:flex;gap:3px"><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span></div>
         <div style="display:flex;gap:3px"><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span></div>
@@ -1016,7 +1016,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 
     <!-- painel "Caneta" - só aparece ao tocar no grupo marcador+cor da
     barra fina, fecha sozinho ao tocar de novo ou ao tocar fora dele -->
-    <div id="vf-painel-caneta" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:10000;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
+    <div id="vf-painel-caneta" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:600;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
       <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
       <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Caneta</div>
 
@@ -1057,7 +1057,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 
     <!-- painel "Borracha" - mesmo padrão do painel Caneta, só aparece ao
     selecionar a borracha, fecha ao tocar fora -->
-    <div id="vf-painel-borracha" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:10000;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
+    <div id="vf-painel-borracha" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:600;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
       <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
       <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Borracha</div>
 
@@ -1088,7 +1088,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       </div>
     </div>
 
-    <div id="vf-painel-destaque" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:10000;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
+    <div id="vf-painel-destaque" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:600;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
       <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
       <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Marcador</div>
 
@@ -1129,7 +1129,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       </div>
     </div>
 
-    <div id="vf-painel-marcacao-texto" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:10000;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
+    <div id="vf-painel-marcacao-texto" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:600;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
       <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
       <div style="text-align:center;font-weight:600;font-size:16px;color:#111;margin-bottom:14px">Cor</div>
       <div id="vf-grade-cores-marcacao-texto" style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;justify-items:center"></div>
@@ -1260,7 +1260,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
-<div id="pagina-favoritos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:40;display:flex;flex-direction:column;overflow:hidden">
+<div id="pagina-favoritos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden">
   <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
     <h2 style="margin:0;font-size:20px;font-weight:700;color:#111">Flashes favoritos</h2>
     <button onclick="vfFecharFavoritosVF()" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
@@ -1270,7 +1270,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   <div id="vf-lista-favoritos" style="flex:1;overflow-y:auto;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px"></div>
 </div>
 
-<div id="pagina-flash-salvos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:40;display:flex;flex-direction:column;overflow:hidden">
+<div id="pagina-flash-salvos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden">
   <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
     <h2 style="margin:0;font-size:20px;font-weight:700;color:#111">Flashes salvos</h2>
     <button onclick="vfFecharFlashSalvosVF()" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
@@ -1529,7 +1529,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-318';
+const VERSAO_APP = '2026-07-25-320';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
