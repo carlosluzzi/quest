@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -59,6 +58,22 @@ button:active{transform:scale(0.96)}
 input,select,textarea{font-family:inherit;font-size:16px}
 
 .hidden{display:none !important}
+
+/* balão flutuante da sessão do Flash - mesma técnica de estados via
+classe do timer do PSCPP Tracker, cor adaptada pra marca do Pilotquest
+(B23A34 em vez do azul-marinho de lá) */
+#vf-sessao-balao{position:fixed;z-index:200000;background:#B23A34;color:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.35);min-width:160px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;right:16px;bottom:calc(var(--nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 16px)}
+#vf-sessao-balao.hidden{display:none}
+#vf-sessao-balao.pausado{background:#7A2823}
+#vf-sessao-balao-fechar{position:absolute;top:2px;right:6px;font-size:13px;color:#E8B8B5;padding:6px;cursor:pointer}
+#vf-sessao-balao-nome{font-size:10px;color:#E8B8B5;text-transform:uppercase;letter-spacing:.03em;padding-right:12px}
+#vf-sessao-balao.pausado #vf-sessao-balao-nome{color:#C9A19E}
+#vf-sessao-balao-tempo{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+#vf-sessao-balao.pausado #vf-sessao-balao-tempo{color:#D9B5B2}
+.vf-sessao-balao-tag{font-size:8px;letter-spacing:.08em;color:#F0C9C5;font-weight:700;margin-top:1px;height:10px}
+.vf-sessao-balao-btns{display:flex;gap:8px;margin-top:8px}
+.vf-sessao-balao-btns > div{flex:1;background:rgba(255,255,255,0.15);color:#fff;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:600;text-align:center;cursor:pointer;white-space:nowrap}
+#vf-sessao-balao.pausado #vf-sessao-balao-btn-pausar{background:rgba(255,255,255,0.9);color:#7A2823}
 /* sliders de espessura (caneta, destaque e tamanho da borracha) - MESMO
 visual nos três, pílula horizontal neutra (branca, como o thumb padrão
 nativo da Apple), não mais colorida - accent-color mostrou comportamento
@@ -256,7 +271,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
 /* --- Placar --- */
 
 /* --- Modal genérico --- */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
 #overlay-arrastar-arquivo{position:fixed;inset:0;background:rgba(217,119,87,0.08);z-index:200;display:flex;align-items:center;justify-content:center;pointer-events:none}
 #overlay-arrastar-arquivo.hidden{display:none}
 #overlay-arrastar-arquivo>div{background:#fff;border:2px dashed #B23A34;border-radius:16px;padding:32px 40px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
@@ -776,6 +791,12 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
 
   <!-- ===== V/F (beta, só Carlos por enquanto) ===== -->
   <div class="view-aba hidden" id="aba-vf">
+    <!-- sem sessão ativa: cobre tudo, só mostra o botão de iniciar. Some
+    (via vfAtualizarOverlaySessaoVF) assim que vfSessaoAtivaVF existe -->
+    <div id="vf-overlay-iniciar-sessao" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:12px">
+      <button onclick="vfIniciarSessaoFlashVF()" style="background:#B23A34;color:#fff;border:none;border-radius:12px;padding:16px 32px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit">▶ Iniciar sessão</button>
+      <span style="font-size:13px;color:#999">Toque duplo em qualquer lugar reabre o balão se ele estiver escondido</span>
+    </div>
     <div id="vf-filtros" style="margin-bottom:16px;background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:14px 16px">
       <button class="btn-icone-pequeno" onclick="alternarFiltrosVF()" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:4px 2px;cursor:pointer;font-family:inherit;color:#B23A34;font-size:var(--fs-d);font-weight:700;-webkit-appearance:none;appearance:none;outline:none;-webkit-tap-highlight-color:transparent;transform:none !important">
         <span>Filtros</span>
@@ -895,6 +916,21 @@ visibilidade é controlada manualmente em trocarAba(), não mais herdada
 automaticamente da classe .hidden do app-shell -->
 <canvas id="vf-canvas-desenho" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:150;pointer-events:none;touch-action:none"></canvas>
 <canvas id="vf-canvas-preview-destaque" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:151;pointer-events:none;touch-action:none"></canvas>
+
+<!-- balão flutuante da sessão do Flash - painel de controle da sessão
+manual (iniciar/pausar/retomar/finalizar). HTML mínimo de propósito,
+igual ao padrão já usado no timer do PSCPP Tracker: os estados (rodando/
+pausado) trocam só via classList, sem reescrever HTML nenhum -->
+<div id="vf-sessao-balao" class="hidden">
+  <span id="vf-sessao-balao-fechar" onclick="vfEsconderBalaoSessaoFlashVF(event)">✕</span>
+  <div id="vf-sessao-balao-nome">Flash</div>
+  <div id="vf-sessao-balao-tempo"></div>
+  <div id="vf-sessao-balao-tag" class="vf-sessao-balao-tag"></div>
+  <div class="vf-sessao-balao-btns">
+    <div id="vf-sessao-balao-btn-pausar" onclick="vfTogglePausarSessaoFlashVF(event)">Pausar</div>
+    <div onclick="vfFinalizarSessaoFlashVF(event)">Finalizar</div>
+  </div>
+</div>
 <div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:9999;background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.12);padding:6px 8px;display:flex;align-items:center;gap:14px">
       <div id="vf-alca-arrastar" style="display:flex;flex-direction:column;gap:3px;padding:14px 12px;margin:-8px -8px;cursor:grab;touch-action:none">
         <div style="display:flex;gap:3px"><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span></div>
@@ -1445,7 +1481,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-290';
+const VERSAO_APP = '2026-07-25-297';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3062,10 +3098,15 @@ async function carregarFiltroUsuarioAdmin(){
 let filtroSelecionado = {usuario:null, origem:'usuarios', concurso:null, ano:null, modulo:null, publicacao:null, capitulo:null, tipoQuestao:null};
 let quantidadeSelecionada = 15;
 
-// decide se o livro cita capítulos em português ou inglês, baseado no
-// próprio título — usado só pra rotular o filtro (ex: "Chapter 6" em vez
-// de só "6"), sem mexer no número em si, que já é 100% numérico
+// consulta o campo real do banco (bibliografia.rotulo_capitulo) primeiro -
+// a versão antiga tentava ADIVINHAR isso com regex de palavras-chave no
+// título, mesma fragilidade já corrigida antes em ehFonteCapituloUnico
+// (fica desatualizado sempre que uma publicação nova não bate com essas
+// palavras). O regex some só como fallback defensivo, se por algum
+// motivo a bibliografia não estiver na cache ainda
 function rotuloCapituloDoLivro(titulo){
+  const bib = (bibliografiaCache || []).find(b => b.titulo === titulo);
+  if(bib?.rotulo_capitulo) return bib.rotulo_capitulo;
   if(/resistance and flow/i.test(titulo || '')) return 'Section';
   const palavrasInglesas = /\b(the|of|and|for|in|on|ship|guide|practice|practices|principles|design|resistance|flow|hydrodynamics|dimensions|data|infrastructure|channels|approach)\b/i;
   return palavrasInglesas.test(titulo || '') ? 'Chapter' : 'Capítulo';
@@ -3171,7 +3212,11 @@ async function selecionarFiltroSelect(nivel, valor){
       const idsPublicacoes = tema?.bibliografiaIds || [];
       sb.from('questoes').select('capitulo').in('bibliografia_id', idsPublicacoes).then(({data})=>{
         const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
-        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+        // tema junta publicações relacionadas, normalmente do mesmo
+        // idioma - usa o rótulo da primeira como aproximação razoável
+        const primeiraPubDoTema = bibliografiaCache.find(b => idsPublicacoes.includes(b.id));
+        const rotuloTema = rotuloCapituloDoLivro(primeiraPubDoTema?.titulo);
+        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotuloTema + ' ' + c)}</option>`).join('');
         elCap.disabled = false;
         atualizarContadorDisponiveis();
       });
@@ -3181,7 +3226,7 @@ async function selecionarFiltroSelect(nivel, valor){
         const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a-b);
         const livro = bibliografiaCache.find(b=>b.id===valor);
         const rotulo = rotuloCapituloDoLivro(livro?.titulo);
-        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${rotulo} ${escapeHtml(c)}</option>`).join('');
+        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + ' ' + c)}</option>`).join('');
         elCap.disabled = false;
         atualizarContadorDisponiveis();
       });
@@ -3427,7 +3472,9 @@ const VF_ALGO = {
   TETO_H: 2160,
   FUZZ: 0.05,
   JITTER_FILA: 0.02,
-  BOOST_FAVORITO: 1.25 // favorita "vence" a fila mais cedo (~80% do intervalo em vez de 100%) - calibrado pelo Fable pra não virar spam nem dominar o topo
+  BOOST_FAVORITO: 1.25, // favorita "vence" a fila mais cedo (~80% do intervalo em vez de 100%) - calibrado pelo Fable pra não virar spam nem dominar o topo
+  NOVA_A_CADA: 3, // Regra 1 - fluxo garantido de novas (1 a cada 3 respostas), evita represar novas atrás de um backlog de revisões vencidas
+  GAP_FAMILIA: 15 // Regra 2 - anti-irmãs, intervalo mínimo (em respostas) entre duas questões da mesma família (mesmo fato gerador)
 };
 
 function clampVF(v, min, max){ return Math.max(min, Math.min(max, v)); }
@@ -3513,12 +3560,52 @@ function pseudoAleatorioVF(semente, id){
   return (Math.abs(h) % 10000) / 10000;
 }
 
+// ---- Regra 2 (anti-irmãs): família de questões geradas do mesmo fato ----
+// a normalização (lowercase, remover pontuação, colapsar espaços) e o
+// recorte (120 chars do trecho / 10 primeiras palavras do texto) agora
+// acontecem no banco, via coluna gerada (chave_familia_trecho,
+// chave_familia_texto - hashes md5 prontos). O JS só recebe os hashes e
+// faz o union-find em cima deles - nada de texto bruto trafega mais aqui
+function vfCalcularFamiliasNoPoolVF(pool){
+  // proteção: md5('') = hash de string vazia. Hoje nenhuma questão tem
+  // trechos_fonte vazio (confirmado no banco), mas se um upload futuro
+  // vier sem esse campo preenchido, todas as questões vazias
+  // compartilhariam esse MESMO hash e virariam uma família gigante falsa
+  // - questões sem nenhuma relação real se adiando mutuamente por causa
+  // de um campo em branco. Ignorar esse hash específico deixa o sistema
+  // imune a isso, sem custo nenhum nos casos normais
+  const HASH_STRING_VAZIA_VF = 'd41d8cd98f00b204e9800998ecf8427e';
+  const pai = new Map();
+  function encontrar(id){
+    if(!pai.has(id)) pai.set(id, id);
+    let raiz = id;
+    while(pai.get(raiz) !== raiz) raiz = pai.get(raiz);
+    let atual = id;
+    while(pai.get(atual) !== raiz){ const prox = pai.get(atual); pai.set(atual, raiz); atual = prox; }
+    return raiz;
+  }
+  function unir(a, b){
+    const ra = encontrar(a), rb = encontrar(b);
+    if(ra !== rb) pai.set(ra, rb);
+  }
+  const primeiroPorTrecho = new Map(), primeiroPorTexto = new Map();
+  pool.forEach(q => {
+    encontrar(q.id);
+    const ct = q.chave_familia_trecho === HASH_STRING_VAZIA_VF ? null : q.chave_familia_trecho;
+    const ctx = q.chave_familia_texto === HASH_STRING_VAZIA_VF ? null : q.chave_familia_texto;
+    if(ct){ if(primeiroPorTrecho.has(ct)) unir(q.id, primeiroPorTrecho.get(ct)); else primeiroPorTrecho.set(ct, q.id); }
+    if(ctx){ if(primeiroPorTexto.has(ctx)) unir(q.id, primeiroPorTexto.get(ctx)); else primeiroPorTexto.set(ctx, q.id); }
+  });
+  pool.forEach(q => { q.familiaId = encontrar(q.id); });
+}
+
 // escolhe a próxima questão do pool
-function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendizado, sementeSessao){
+function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendizado, sementeSessao, respostasDesdeUltimaNova, familiasRecentesVF){
   const aprendendo = pool.filter(q => q.estado === 'aprendendo' && elegibilidadeAprendendoVF(q, agoraMs, contadorGlobal, pool.length));
   aprendendo.sort((a,b) => (a.marca_contador||0) - (b.marca_contador||0));
 
   const rn = [];
+  const novas = [];
   pool.forEach(q => {
     if(q.estado === 'revisao'){
       const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
@@ -3533,16 +3620,44 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
       // favorita nova fica em 1.0 normal (na prática nem acontece, só dá
       // pra favoritar o que já foi visto) - sem boost aqui de propósito
       const jitter = 1 + (pseudoAleatorioVF(sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
-      rn.push({score: 1.0 * jitter, item: q});
+      const entrada = {score: 1.0 * jitter, item: q};
+      rn.push(entrada);
+      novas.push(entrada);
     }
   });
   rn.sort((a,b) => b.score - a.score);
+  novas.sort((a,b) => b.score - a.score);
+
+  // Regra 2 (anti-irmãs): acha a melhor candidata pulando quem tem
+  // família presente no buffer das últimas GAP_FAMILIA respostas. Regra
+  // suave - se TODAS estiverem no buffer (pool esgotado/filtro estreito),
+  // devolve a melhor mesmo assim, nunca trava/devolve null por causa disso
+  function melhorForaDaFamiliaVF(candidatosOrdenados){
+    if(!candidatosOrdenados.length) return null;
+    for(const c of candidatosOrdenados){
+      if(!c.item.familiaId || !familiasRecentesVF.includes(c.item.familiaId)) return c;
+    }
+    return candidatosOrdenados[0];
+  }
 
   if(aprendendo.length && !(anteriorVeioDeAprendizado && rn.length)){
+    // fila de aprendizado ignora a família DE PROPÓSITO - questão
+    // voltando pelos degraus é o mesmo cartão se reforçando, isso é
+    // intencional e não pode ser bloqueado pela Regra 2
     return {item: aprendendo[0], veioDeAprendizado: true};
   }
+
+  // Regra 1 (fluxo garantido de novas): se já faz tempo sem servir uma
+  // nova e existe alguma disponível no pool, prioriza ela - ainda
+  // respeitando a Regra 2 dentro do grupo de novas
+  if(respostasDesdeUltimaNova >= VF_ALGO.NOVA_A_CADA - 1 && novas.length){
+    const escolhida = melhorForaDaFamiliaVF(novas);
+    if(escolhida) return {item: escolhida.item, veioDeAprendizado: false};
+  }
+
   if(rn.length){
-    return {item: rn[0].item, veioDeAprendizado: false};
+    const escolhida = melhorForaDaFamiliaVF(rn);
+    return {item: escolhida.item, veioDeAprendizado: false};
   }
   const todosAprendendo = pool.filter(q => q.estado === 'aprendendo');
   if(todosAprendendo.length){
@@ -3747,6 +3862,7 @@ const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 40;
 
 document.addEventListener('touchstart', (e) => {
   if(!vfEstaVisivelAgora()) return;
+  if(!vfSessaoAtivaVF) return; // sem sessão ativa, a tela está bloqueada pelo overlay de "Iniciar sessão" - a caneta não desenha por cima dele
   if(vfAlgumModalAbertoVF()) return; // nenhum pop-up (modal, seletor de cor nativo, etc) deixa desenhar através dele
   if(vfModoMarcacaoTextoAtivo) return; // marcação de texto ativa = a caneta também marca texto, não desenha livre
   const touch = e.changedTouches[0];
@@ -3938,7 +4054,7 @@ document.addEventListener('touchmove', (e) => {
   // desenhar, suavizando exatamente onde a suavização por si só não
   // ajuda (ela já roda em cima desses pontos extras também)
   const distancia = Math.hypot(x - vfUltimoPontoDesenho.x, y - vfUltimoPontoDesenho.y);
-  const LIMIAR_INTERPOLACAO_PX = 10;
+  const LIMIAR_INTERPOLACAO_PX = 14;
   let numEtapas = distancia > LIMIAR_INTERPOLACAO_PX ? Math.ceil(distancia / LIMIAR_INTERPOLACAO_PX) : 1;
   // curvas MUITO fechadas (mudança de direção grande, tipo o topo de um
   // laço de caligrafia) precisam de mais pontos intermediários mesmo com
@@ -5789,7 +5905,7 @@ async function vfCarregarBibliografiaCacheVF(){
 // conteúdo (seja porque já foi mostrada, seja porque foi pré-buscada em
 // segundo plano), não busca de novo
 async function vfGarantirConteudoCompletoVF(item){
-  if(item.texto !== undefined) return; // já carregado nesse próprio objeto
+  if(item.explicacao !== undefined) return; // já carregado nesse próprio objeto (explicacao é o sinal certo agora - texto já vem preenchido desde o pool leve, por causa da Regra 2/família)
   const emCache = vfConteudoCompletoCache.get(item.id);
   if(emCache){ Object.assign(item, emCache); return; }
   const {data, error} = await sb.from('questoes_vf').select('texto, resposta, explicacao, correcao, dificuldade, inconsistente').eq('id', item.id).single();
@@ -5804,7 +5920,7 @@ async function vfGarantirConteudoCompletoVF(item){
 // vez - virar 8 queries separadas seria o oposto do que a otimização
 // inteira está tentando resolver)
 async function vfBuscarConteudoEmLoteVF(itens){
-  const pendentes = itens.filter(item => item.texto === undefined && !vfConteudoCompletoCache.has(item.id));
+  const pendentes = itens.filter(item => item.explicacao === undefined && !vfConteudoCompletoCache.has(item.id));
   if(!pendentes.length) return;
   const ids = pendentes.map(item => item.id);
   const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente').in('id', ids);
@@ -5833,20 +5949,27 @@ function vfPreBuscarProximasVF(){
   const agoraMs = agoraCorrigidoVF();
   const idAtual = estadoVF.historico[estadoVF.posicao]?.item?.id;
   const jaCarregadosOuAtual = new Set([idAtual]);
+  // mesmo filtro de família (Regra 2) que o algoritmo real usa em
+  // escolherProximaVF - sem isso, a pré-busca podia preparar o conteúdo
+  // de uma questão que o algoritmo de verdade nunca ia escolher por
+  // causa do intervalo mínimo entre irmãs, desperdiçando a viagem de rede
+  const familiasRecentesParaPreBuscaVF = estadoVF.familiasRecentesVF || [];
+  const foraDoGapFamiliaVF = (q) => !q.familiaId || !familiasRecentesParaPreBuscaVF.includes(q.familiaId);
 
   // 'aprendendo' tem PRIORIDADE MÁXIMA no algoritmo real (escolherProximaVF
   // sempre pega dali primeiro, quando tem alguma elegível) - toda vez que
   // uma questão recém-respondida volta pouco depois (é assim que
-  // aprendendo funciona, por natureza), o conteúdo precisa estar pronto
+  // aprendendo funciona, por natureza), o conteúdo precisa estar pronto.
+  // IGNORA o filtro de família de propósito, igual o algoritmo real faz
   const aprendendoElegiveis = estadoVF.pool
-    .filter(q => q.id !== idAtual && q.estado === 'aprendendo' && q.texto === undefined
+    .filter(q => q.id !== idAtual && q.estado === 'aprendendo' && q.explicacao === undefined
       && elegibilidadeAprendendoVF(q, agoraMs, estadoVF.contadorGlobal, estadoVF.pool.length))
     .sort((a,b) => (a.marca_contador||0) - (b.marca_contador||0))
     .slice(0, 3);
   aprendendoElegiveis.forEach(q => jaCarregadosOuAtual.add(q.id));
 
   const revisaoPorScore = estadoVF.pool
-    .filter(q => !jaCarregadosOuAtual.has(q.id) && q.estado === 'revisao' && q.intervalo_horas && q.ultima_resposta_em && q.texto === undefined)
+    .filter(q => !jaCarregadosOuAtual.has(q.id) && q.estado === 'revisao' && q.intervalo_horas && q.ultima_resposta_em && q.explicacao === undefined && foraDoGapFamiliaVF(q))
     .map(q => {
       const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
       const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
@@ -5863,7 +5986,7 @@ function vfPreBuscarProximasVF(){
   // escolherProximaVF usa (1.0 × jitter da semente), então dá pra saber
   // com certeza quais ela escolheria, não é um chute
   const novasPorScore = estadoVF.pool
-    .filter(q => !jaCarregadosOuAtual.has(q.id) && (!q.estado || q.estado === 'nova') && q.texto === undefined)
+    .filter(q => !jaCarregadosOuAtual.has(q.id) && (!q.estado || q.estado === 'nova') && q.explicacao === undefined && foraDoGapFamiliaVF(q))
     .map(q => {
       const jitter = 1 + (pseudoAleatorioVF(estadoVF.sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
       return {q, score: 1.0 * jitter};
@@ -5926,7 +6049,13 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     // TODAS as 7.700+ questões toda vez que entrava no Flash, mesmo só
     // mostrando uma de cada vez. O conteúdo pesado é buscado sob demanda,
     // só da questão que realmente vai aparecer (vfGarantirConteudoCompletoVF)
-    let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, capitulo, n_palavras, bibliografia_id', {count: 'exact'}).eq('anulada', false);
+    // trechos_fonte e texto NÃO entram mais aqui - a chave de família
+    // (Regra 2, anti-irmãs) agora é calculada no banco via coluna gerada
+    // (chave_familia_trecho, chave_familia_texto - dois hashes md5 de 32
+    // caracteres cada), então só esses dois hashes prontos entram na
+    // query, não o conteúdo pesado inteiro. Ideia do Fable: evita trazer
+    // de volta os ~10MB que a otimização original tinha eliminado
+    let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, capitulo, n_palavras, bibliografia_id, chave_familia_trecho, chave_familia_texto', {count: 'exact'}).eq('anulada', false);
     if(filtroVF.publicacao) q = q.eq('bibliografia_id', filtroVF.publicacao);
     if(filtroVF.capitulo) q = q.eq('capitulo', filtroVF.capitulo);
     // Número + Lista juntos = UNIÃO (ou uma coisa ou outra), não interseção —
@@ -5971,7 +6100,10 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     const idsJaNoPool = new Set(estadoVF.pool.map(q => q.id));
     const processadas = vfProcessarQuestoesCruasVF(questoesCruasExtras, estadoPorIdParaCallbackVF, idsExcluidosParaCallbackVF)
       .filter(q => !idsJaNoPool.has(q.id));
-    if(processadas.length) estadoVF.pool = estadoVF.pool.concat(processadas);
+    if(processadas.length){
+      estadoVF.pool = estadoVF.pool.concat(processadas);
+      vfCalcularFamiliasNoPoolVF(estadoVF.pool); // recalcula pro pool inteiro - as recém-chegadas podem formar família com quem já estava lá
+    }
   } : undefined;
 
   const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, , ...resultadosEntradaVF] = await Promise.all([
@@ -5998,6 +6130,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   estadoPorIdParaCallbackVF = estadoPorId;
 
   const poolPronto = vfProcessarQuestoesCruasVF(questoes, estadoPorId, idsExcluidos);
+  vfCalcularFamiliasNoPoolVF(poolPronto);
   // anexa os dados de entrada como propriedades extras no próprio array
   // (arrays são objetos em JS) - preserva a assinatura de retorno pra
   // quem já chama sem esse parâmetro (recarga por filtro, por exemplo)
@@ -6014,6 +6147,205 @@ async function carregarPoolVF(incluirDadosEntradaVF){
 // entrada na aba — se já tem uma sessão em andamento NESSA aba do
 // navegador (trocou pra Quest e voltou, por exemplo), só re-renderiza,
 // sem perder nada. Só busca do zero na primeira vez
+// ---- sessão manual do Flash: iniciar/pausar/retomar/finalizar ----
+// tempo calculado a partir de timestamps reais (Date.now()), não por
+// incremento ingênuo a cada tick - isso é o que garante que o tempo
+// continua certo mesmo se o app ficar em segundo plano um tempão sem
+// nenhum tick de setInterval rodar de verdade (testado isoladamente
+// antes de aplicar: perder ticks intermediários não afeta o resultado)
+const VF_SESSAO_LOCALSTORAGE_KEY = 'vf_sessao_ativa';
+let vfSessaoAtivaVF = null; // {iniciadoEm, pausado, tempoAcumuladoMs, ultimoResumeEm} ou null
+let vfIntervalSessaoVF = null;
+let vfSessaoBalaoEscondidoTimeoutVF = null;
+
+function vfCarregarSessaoDoStorageVF(){
+  try{
+    const bruto = localStorage.getItem(VF_SESSAO_LOCALSTORAGE_KEY);
+    return bruto ? JSON.parse(bruto) : null;
+  }catch(e){ return null; }
+}
+function vfSalvarSessaoNoStorageVF(){
+  try{
+    if(vfSessaoAtivaVF) localStorage.setItem(VF_SESSAO_LOCALSTORAGE_KEY, JSON.stringify(vfSessaoAtivaVF));
+    else localStorage.removeItem(VF_SESSAO_LOCALSTORAGE_KEY);
+  }catch(e){}
+}
+function vfCalcularElapsedMsVF(){
+  if(!vfSessaoAtivaVF) return 0;
+  if(vfSessaoAtivaVF.pausado) return vfSessaoAtivaVF.tempoAcumuladoMs;
+  return vfSessaoAtivaVF.tempoAcumuladoMs + (Date.now() - vfSessaoAtivaVF.ultimoResumeEm);
+}
+function vfFormatarTempoSessaoVF(ms){
+  const totalSegundos = Math.floor(ms / 1000);
+  const h = Math.floor(totalSegundos / 3600);
+  const min = Math.floor((totalSegundos % 3600) / 60);
+  const seg = totalSegundos % 60;
+  return h > 0
+    ? `${h}:${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}`
+    : `${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}`;
+}
+
+function vfIniciarSessaoFlashVF(){
+  const agora = Date.now();
+  vfSessaoAtivaVF = {iniciadoEm: agora, pausado: false, tempoAcumuladoMs: 0, ultimoResumeEm: agora};
+  vfSalvarSessaoNoStorageVF();
+  vfMostrarBalaoSessaoFlashVF();
+  vfAtualizarOverlaySessaoVF();
+}
+
+function vfTogglePausarSessaoFlashVF(e){
+  if(e) e.stopPropagation();
+  if(!vfSessaoAtivaVF) return;
+  const agora = Date.now();
+  if(vfSessaoAtivaVF.pausado){
+    vfSessaoAtivaVF.pausado = false;
+    vfSessaoAtivaVF.ultimoResumeEm = agora;
+  }else{
+    vfSessaoAtivaVF.tempoAcumuladoMs += (agora - vfSessaoAtivaVF.ultimoResumeEm);
+    vfSessaoAtivaVF.pausado = true;
+  }
+  vfSalvarSessaoNoStorageVF();
+  vfAtualizarDisplayBalaoSessaoVF();
+}
+
+function vfFinalizarSessaoFlashVF(e){
+  if(e) e.stopPropagation();
+  if(!vfSessaoAtivaVF) return;
+  const tempoTotalMs = vfCalcularElapsedMsVF();
+  // PENDENTE: onde/como registrar tempoTotalMs de forma permanente ainda
+  // não foi decidido com o Carlos - por enquanto só loga no console pra
+  // não perder a informação enquanto isso não é combinado, sem inventar
+  // uma tabela/campo novo no banco sem confirmação
+  console.log('[Flash] Sessão finalizada. Tempo total (ms):', tempoTotalMs, '-> ' + vfFormatarTempoSessaoVF(tempoTotalMs));
+  vfSessaoAtivaVF = null;
+  vfSalvarSessaoNoStorageVF();
+  if(vfIntervalSessaoVF){ clearInterval(vfIntervalSessaoVF); vfIntervalSessaoVF = null; }
+  clearTimeout(vfSessaoBalaoEscondidoTimeoutVF);
+  const balao = document.getElementById('vf-sessao-balao');
+  if(balao) balao.classList.add('hidden');
+  vfAtualizarOverlaySessaoVF();
+}
+
+function vfMostrarBalaoSessaoFlashVF(){
+  const balao = document.getElementById('vf-sessao-balao');
+  if(!balao) return;
+  balao.classList.remove('hidden');
+  vfAtualizarDisplayBalaoSessaoVF();
+  if(vfIntervalSessaoVF) clearInterval(vfIntervalSessaoVF);
+  vfIntervalSessaoVF = setInterval(vfAtualizarDisplayBalaoSessaoVF, 1000);
+}
+
+function vfAtualizarDisplayBalaoSessaoVF(){
+  if(!vfSessaoAtivaVF) return;
+  const balao = document.getElementById('vf-sessao-balao');
+  if(!balao) return;
+  balao.classList.toggle('pausado', vfSessaoAtivaVF.pausado);
+  document.getElementById('vf-sessao-balao-tempo').textContent = vfFormatarTempoSessaoVF(vfCalcularElapsedMsVF());
+  document.getElementById('vf-sessao-balao-tag').textContent = vfSessaoAtivaVF.pausado ? 'PAUSADO' : '';
+  document.getElementById('vf-sessao-balao-btn-pausar').textContent = vfSessaoAtivaVF.pausado ? 'Retomar' : 'Pausar';
+}
+
+// "✕" nunca fecha de vez - some por 30s e volta sozinho já atualizado.
+// Mesma ideia do timer do Tracker: nunca deixa a sessão "órfã" sem
+// nenhum controle acessível na tela
+function vfEsconderBalaoSessaoFlashVF(e){
+  if(e) e.stopPropagation();
+  const balao = document.getElementById('vf-sessao-balao');
+  if(balao) balao.classList.add('hidden');
+  clearTimeout(vfSessaoBalaoEscondidoTimeoutVF);
+  vfSessaoBalaoEscondidoTimeoutVF = setTimeout(() => {
+    if(vfSessaoAtivaVF) vfMostrarBalaoSessaoFlashVF();
+  }, 30000);
+}
+
+// mostra o botão "Iniciar sessão" quando não tem sessão ativa, esconde
+// o conteúdo normal do Flash até o Carlos apertar iniciar
+function vfAtualizarOverlaySessaoVF(){
+  const overlay = document.getElementById('vf-overlay-iniciar-sessao');
+  if(overlay) overlay.classList.toggle('hidden', !!vfSessaoAtivaVF);
+}
+
+// ---- arraste do balão (mesmo padrão já usado pros paineis: limiar de
+// 6px antes de soltar a âncora do canto; toque simples sem arrastar
+// reabre a aba do Flash de onde estiver) ----
+let vfBalaoArrastoInfoVF = null; // {xInicio, yInicio, leftInicio, topInicio, moveu}
+function vfIniciarArrastoBalaoVF(clientX, clientY){
+  const balao = document.getElementById('vf-sessao-balao');
+  const rect = balao.getBoundingClientRect();
+  vfBalaoArrastoInfoVF = {xInicio: clientX, yInicio: clientY, leftInicio: rect.left, topInicio: rect.top, moveu: false};
+}
+function vfMoverArrastoBalaoVF(clientX, clientY){
+  if(!vfBalaoArrastoInfoVF) return;
+  const dx = clientX - vfBalaoArrastoInfoVF.xInicio, dy = clientY - vfBalaoArrastoInfoVF.yInicio;
+  if(!vfBalaoArrastoInfoVF.moveu && Math.hypot(dx,dy) < 6) return;
+  vfBalaoArrastoInfoVF.moveu = true;
+  const balao = document.getElementById('vf-sessao-balao');
+  balao.style.right = 'auto';
+  balao.style.bottom = 'auto';
+  balao.style.left = (vfBalaoArrastoInfoVF.leftInicio + dx) + 'px';
+  balao.style.top = (vfBalaoArrastoInfoVF.topInicio + dy) + 'px';
+}
+function vfFinalizarArrastoBalaoVF(){
+  if(vfBalaoArrastoInfoVF && !vfBalaoArrastoInfoVF.moveu){
+    trocarAba('vf'); // toque simples, sem arrastar - reabre o Flash
+  }
+  vfBalaoArrastoInfoVF = null;
+}
+(function vfConfigurarArrastoBalaoSessaoVF(){
+  const balao = document.getElementById('vf-sessao-balao');
+  if(!balao) return;
+  const alvoEhControleInterno = (target) => target.id === 'vf-sessao-balao-fechar' || !!target.closest('.vf-sessao-balao-btns');
+  balao.addEventListener('touchstart', (e) => {
+    if(alvoEhControleInterno(e.target)) return;
+    const t = e.touches[0];
+    vfIniciarArrastoBalaoVF(t.clientX, t.clientY);
+  }, {passive: true});
+  balao.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    vfMoverArrastoBalaoVF(t.clientX, t.clientY);
+  }, {passive: true});
+  balao.addEventListener('touchend', vfFinalizarArrastoBalaoVF);
+  balao.addEventListener('mousedown', (e) => {
+    if(alvoEhControleInterno(e.target)) return;
+    vfIniciarArrastoBalaoVF(e.clientX, e.clientY);
+    const onMove = (ev) => vfMoverArrastoBalaoVF(ev.clientX, ev.clientY);
+    const onUp = () => { vfFinalizarArrastoBalaoVF(); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();
+
+// ao carregar o app, restaura a sessão se o Carlos tinha uma ativa e
+// fechou o app no meio (localStorage sobrevive fechar/abrir de verdade)
+(function vfRestaurarSessaoFlashAoAbrirVF(){
+  const salva = vfCarregarSessaoDoStorageVF();
+  if(salva){
+    vfSessaoAtivaVF = salva;
+    document.addEventListener('DOMContentLoaded', () => { vfMostrarBalaoSessaoFlashVF(); vfAtualizarOverlaySessaoVF(); });
+    if(document.readyState !== 'loading'){ vfMostrarBalaoSessaoFlashVF(); vfAtualizarOverlaySessaoVF(); }
+  }
+})();
+
+// duplo toque em qualquer lugar da aba V/F reabre o balão da sessão, se
+// ele estiver escondido (depois do "✕", ou se a pessoa nunca reparou que
+// ele existia). Detecção simples por intervalo entre toques - não achei
+// um sistema de duplo toque já pronto no código pra reaproveitar aqui
+let vfUltimoToqueParaReabrirBalaoVF = 0;
+document.addEventListener('touchend', (e) => {
+  if(!vfSessaoAtivaVF) return;
+  if(!vfEstaVisivelAgora()) return; // só dentro da aba do Flash
+  const balao = document.getElementById('vf-sessao-balao');
+  if(!balao || !balao.classList.contains('hidden')) return; // já visível, nada a fazer
+  if(e.target.closest('#vf-sessao-balao')) return; // toque no próprio balão não conta
+  const agora = Date.now();
+  if(agora - vfUltimoToqueParaReabrirBalaoVF < 400){
+    vfMostrarBalaoSessaoFlashVF();
+    vfUltimoToqueParaReabrirBalaoVF = 0;
+  }else{
+    vfUltimoToqueParaReabrirBalaoVF = agora;
+  }
+}, {passive: true});
+
 async function entrarNoModoVF(){
   popularFiltroModuloVF();
   inicializarCanvasDesenhoVF(); // mede o canvas agora que a aba ficou visível de verdade
@@ -6040,7 +6372,9 @@ async function entrarNoModoVF(){
     posicao: -1,
     acertosSessao: 0,
     respondidasSessao: 0,
-    inicioSessaoVFMs: Date.now()
+    inicioSessaoVFMs: Date.now(),
+    respostasDesdeUltimaNova: 0, // Regra 1 (fluxo garantido de novas) - não persiste, zera por sessão
+    familiasRecentesVF: [] // Regra 2 (anti-irmãs) - buffer das últimas GAP_FAMILIA famílias respondidas, não persiste
   };
   // userRow/now_ms/total geral agora entram NO MESMO Promise.all da busca
   // do pool (dentro de carregarPoolVF) - antes eram uma rodada sequencial
@@ -6103,7 +6437,7 @@ function dispararSincronizacaoEmSegundoPlanoVF(){
 async function avancarParaProximaVF(){
   dispararSincronizacaoEmSegundoPlanoVF(); // não bloqueia mais o avanço
   const agoraMs = agoraCorrigidoVF();
-  const pick = escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao);
+  const pick = escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao, estadoVF.respostasDesdeUltimaNova, estadoVF.familiasRecentesVF);
   if(!pick){
     document.getElementById('vf-conteudo').innerHTML = `<p style="padding:24px 4px;color:#888">Nada disponível agora.</p>`;
     document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
@@ -6166,11 +6500,13 @@ async function mudarFiltroPublicacaoVF(){
     elCap.innerHTML = '<option value="">Todos os capítulos</option>';
     elCap.disabled = true;
   }else{
+    const bib = bibliografiaCache.find(b => b.id === publicacao);
+    const rotulo = bib?.capitulo_unico ? '' : rotuloCapituloDoLivro(bib?.titulo) + ' ';
     const {data} = await sb.from('questoes_vf').select('capitulo').eq('bibliografia_id', publicacao).eq('anulada', false);
     const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
       .sort((a,b) => (parseFloat(a)||0) - (parseFloat(b)||0) || a.localeCompare(b,'pt'));
     elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
-      `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`
+      `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
     ).join('');
     elCap.disabled = false;
   }
@@ -6224,7 +6560,7 @@ function renderizarItemVF(){
   const entrada = estadoVF.historico[estadoVF.posicao];
   if(!entrada) return;
   const item = entrada.item;
-  if(item.texto === undefined){
+  if(item.explicacao === undefined){
     // conteúdo pesado (texto/explicação/correção) ainda não chegou - busca
     // agora e re-renderiza assim que tiver. Na prática isso quase nunca
     // aparece de verdade: avancarParaProximaVF já espera o conteúdo antes
@@ -6570,6 +6906,21 @@ async function responderVF(resposta){
 
   const estadoAntes = item.estado;
   const intervaloAntes = item.intervalo_horas;
+
+  // Regra 1 (fluxo garantido de novas): reseta o contador toda vez que a
+  // questão SERVIDA (não a resultante) era 'nova', não importa o caminho
+  // que a trouxe até aqui
+  if(!estadoAntes || estadoAntes === 'nova') estadoVF.respostasDesdeUltimaNova = 0;
+  else estadoVF.respostasDesdeUltimaNova = (estadoVF.respostasDesdeUltimaNova || 0) + 1;
+
+  // Regra 2 (anti-irmãs): registra a família dessa questão no buffer das
+  // últimas GAP_FAMILIA respondidas (fila - descarta a mais antiga)
+  if(item.familiaId){
+    if(!estadoVF.familiasRecentesVF) estadoVF.familiasRecentesVF = [];
+    estadoVF.familiasRecentesVF.push(item.familiaId);
+    if(estadoVF.familiasRecentesVF.length > VF_ALGO.GAP_FAMILIA) estadoVF.familiasRecentesVF.shift();
+  }
+
   const contadorNoMomento = estadoVF.contadorGlobal;
   const novoEstadoItem = registrarRespostaAlgoritmoVF(item, acertou, tempoS, agoraMs, contadorNoMomento);
   Object.assign(item, novoEstadoItem);
