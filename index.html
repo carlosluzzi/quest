@@ -62,7 +62,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* balão flutuante da sessão do Flash - mesma técnica de estados via
 classe do timer do PSCPP Tracker, cor adaptada pra marca do Pilotquest
 (B23A34 em vez do azul-marinho de lá) */
-#vf-sessao-balao{position:fixed;z-index:10001;background:#B23A34;color:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.35);min-width:130px;max-width:200px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 16px)}
+#vf-sessao-balao{position:fixed;z-index:10001;background:#B23A34;color:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.35);width:180px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 16px)}
 #vf-sessao-balao.hidden{display:none}
 /* pausado NÃO troca o fundo (igual o Tracker) - só o tempo fica
 acinzentado e a tag "PAUSADO" aparece em destaque. Cor de fundo do
@@ -1447,6 +1447,16 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-revisao-rascunho-vf" onclick="if(event.target===this) fecharModal('modal-revisao-rascunho-vf')">
+  <div class="modal-conteudo" style="max-width:600px;display:flex;flex-direction:column">
+    <h3 class="config-title" style="flex-shrink:0">Revisar afirmações V/F pendentes</h3>
+    <p style="color:#666;font-size:var(--fs-d);margin-bottom:14px;flex-shrink:0">Essas afirmações foram extraídas, mas o app não conseguiu identificar a bibliografia sozinho. Escolhe entre o que já existe – nada de digitar um livro novo.</p>
+    <div id="lista-rascunhos-pendentes-vf" style="flex:1;min-height:0;overflow-y:auto"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:10px;flex-shrink:0" onclick="fecharModal('modal-revisao-rascunho-vf')">Fechar</button>
+  </div>
+</div>
+
+
 <div class="modal-overlay hidden" id="modal-novo-topico" onclick="if(event.target===this) fecharModal('modal-novo-topico')">
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title" id="titulo-modal-novo-topico">Nova discussão</h3>
@@ -1505,7 +1515,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-307';
+const VERSAO_APP = '2026-07-25-312';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2619,7 +2629,7 @@ let atualizacaoNotificacoesEmAndamento = null;
 async function atualizarNotificacoesOrdenadas(){
   if(atualizacaoNotificacoesEmAndamento) return atualizacaoNotificacoesEmAndamento;
   atualizacaoNotificacoesEmAndamento = (async () => {
-    const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum, itensPropostaNova, itensRascunho, itensFormatacao] = await Promise.all([
+    const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum, itensPropostaNova, itensRascunho, itensRascunhoVF, itensFormatacao] = await Promise.all([
       coletarNotificacaoAnulacao(),
       coletarNotificacaoRespostaDiscussao(),
       coletarNotificacaoQuestaoCorrigida(),
@@ -2627,9 +2637,10 @@ async function atualizarNotificacoesOrdenadas(){
       coletarNotificacaoForum(),
       coletarNotificacaoPropostaNova(),
       coletarNotificacaoRascunhoPendente(),
+      coletarNotificacaoRascunhoPendenteVF(),
       coletarNotificacaoRelatoFormatacao()
     ]);
-    const todos = [...itensAnulacao, ...itensDiscussao, ...itensCorrigida, ...itensPdfNovo, ...itensForum, ...itensPropostaNova, ...itensRascunho, ...itensFormatacao];
+    const todos = [...itensAnulacao, ...itensDiscussao, ...itensCorrigida, ...itensPdfNovo, ...itensForum, ...itensPropostaNova, ...itensRascunho, ...itensRascunhoVF, ...itensFormatacao];
     todos.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
     document.getElementById('container-notificacoes-ordenadas').innerHTML = todos.map(item=>item.html).join('');
   })();
@@ -3006,6 +3017,28 @@ async function coletarNotificacaoRascunhoPendente(){
     <div>
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirRevisaoRascunho()">
         <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B8860B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg> ${total} ${total>1?'questões':'questão'} esperando revisão</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">Bibliografia não identificada automaticamente${textoArquivos}</div>
+      </button>
+    </div>`;
+  return [{timestamp, html}];
+}
+
+// 9b. Mesma coisa, pro rascunho do V/F (questoes_vf_rascunho) - card
+// separado, já que os dois fluxos são independentes e podem ter
+// pendências ao mesmo tempo
+async function coletarNotificacaoRascunhoPendenteVF(){
+  let query = sb.from('questoes_vf_rascunho').select('id, criado_em, nome_arquivo_origem, usuarios(nome)');
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  const {data} = await query;
+  const total = (data||[]).length;
+  if(!total) return [];
+  const timestamp = data.reduce((max,r)=> r.criado_em > max ? r.criado_em : max, data[0].criado_em);
+  const arquivos = [...new Set(data.map(r=>r.nome_arquivo_origem).filter(Boolean))];
+  const textoArquivos = arquivos.length ? ` (${arquivos.slice(0,2).map(a=>escapeHtml(a)).join(', ')}${arquivos.length>2?'...':''})` : '';
+  const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirRevisaoRascunhoVF()">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B8860B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg> ${total} ${total>1?'afirmação(ões) V/F':'afirmação V/F'} esperando revisão</div>
         <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">Bibliografia não identificada automaticamente${textoArquivos}</div>
       </button>
     </div>`;
@@ -6276,9 +6309,9 @@ function vfFormatarTempoSessaoVF(ms){
   const h = Math.floor(totalSegundos / 3600);
   const min = Math.floor((totalSegundos % 3600) / 60);
   const seg = totalSegundos % 60;
-  return h > 0
-    ? `${h}:${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}`
-    : `${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}`;
+  // sempre HH:MM:SS, igual o Tracker faz sempre - não alterna formato
+  // dependendo de ter ou não hora (o que eu fazia antes, errado)
+  return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}`;
 }
 
 function vfIniciarSessaoFlashVF(){
@@ -6422,6 +6455,7 @@ function vfAtualizarOverlaySessaoVF(){
 // de vez é decidido dentro do próprio balão, que já tem esse botão
 function vfRetomarSessaoRestauradaVF(){
   vfSessaoRestauradaAguardandoDecisaoVF = false;
+  if(vfSessaoAtivaVF && vfSessaoAtivaVF.pausado) vfTogglePausarSessaoFlashVF(); // "Retomar" tem que retomar de verdade - despausa, não só mostra o balão ainda parado
   vfMostrarBalaoSessaoFlashVF();
   vfAtualizarOverlaySessaoVF();
   if(!estadoVF || estadoVF.posicao < 0) vfCarregarPoolInicialVF();
@@ -6789,7 +6823,7 @@ function renderizarItemVF(){
   if(jaRespondida){
     const cor = entrada.acertou ? '#3B6D11' : '#A32D2D';
     const textoResultado = `${entrada.acertou ? 'Acertou!' : 'Errou!'} É ${item.resposta ? 'VERDADEIRO' : 'FALSO'}`;
-    const atributosEdicaoCorrecao = `id="vf-correcao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarCorrecao(event)" ontouchend="vfSoltarPressionarCorrecao()" ontouchmove="vfCancelarPressionarCorrecaoSilencioso(event)" onmousedown="vfIniciarPressionarCorrecao(event)" onmouseup="vfSoltarPressionarCorrecao()" onmouseleave="vfCancelarPressionarCorrecaoSilencioso()"`;
+    const atributosEdicaoCorrecao = `id="vf-correcao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarCorrecao(event)" ontouchend="vfSoltarPressionarCorrecao(event)" ontouchmove="vfCancelarPressionarCorrecaoSilencioso(event)" onmousedown="vfIniciarPressionarCorrecao(event)" onmouseup="vfSoltarPressionarCorrecao()" onmouseleave="vfCancelarPressionarCorrecaoSilencioso()"`;
     const botaoAnotacao = entrada.anotacaoDataUrl ? `
         <button class="btn-icone-pequeno" style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="vfAbrirAnotacaoSalvaVF()" title="Ver o que você escreveu">
           <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -6827,7 +6861,7 @@ function renderizarItemVF(){
         </div>
         ${tagsPublicacao ? `<div style="display:flex;gap:6px;flex-shrink:0">${tagsPublicacao}</div>` : ''}
       </div>
-      <div class="enunciado" id="vf-enunciado-atual" style="margin-top:10px;position:relative" ${jaRespondida ? `data-editavel-vf="1" ontouchstart="vfIniciarPressionarEnunciado(event)" ontouchend="vfSoltarPressionarEnunciado()" ontouchmove="vfCancelarPressionarEnunciadoSilencioso(event)" onmousedown="vfIniciarPressionarEnunciado(event)" onmouseup="vfSoltarPressionarEnunciado()" onmouseleave="vfCancelarPressionarEnunciadoSilencioso()"` : ''}>${formatarTextoItemVF(item.texto)}</div>
+      <div class="enunciado" id="vf-enunciado-atual" style="margin-top:10px;position:relative" data-editavel-vf="1" ontouchstart="vfIniciarPressionarEnunciado(event)" ontouchend="vfSoltarPressionarEnunciado(event)" ontouchmove="vfCancelarPressionarEnunciadoSilencioso(event)" onmousedown="vfIniciarPressionarEnunciado(event)" onmouseup="vfSoltarPressionarEnunciado()" onmouseleave="vfCancelarPressionarEnunciadoSilencioso()">${formatarTextoItemVF(item.texto)}</div>
       ${blocoResultado}
     </div>
   `;
@@ -6850,7 +6884,11 @@ function vfIniciarPressionarEnunciado(evento){
   clearTimeout(vfTimerPressionarEnunciado);
   const ponto = evento && (evento.touches ? evento.touches[0] : evento);
   vfPosicaoInicialPressionarEnunciadoVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
-  if(souCarlos()){
+  // editar (segurar) continua só depois de responder - copiar (toque
+  // rápido, sem virar edição) funciona em qualquer momento agora
+  const entradaAtual = estadoVF && estadoVF.posicao >= 0 ? estadoVF.historico[estadoVF.posicao] : null;
+  const jaRespondida = entradaAtual && entradaAtual.resposta !== null;
+  if(souCarlos() && jaRespondida){
     vfTimerPressionarEnunciado = setTimeout(() => {
       vfTimerPressionarEnunciado = null;
       vfIniciarEdicaoEnunciadoVF();
@@ -6878,11 +6916,12 @@ function vfCancelarPressionarEnunciadoSilencioso(evento){
 // toque limpo -> copia. Funciona tanto pro Carlos (toque rápido) quanto
 // pra qualquer outro usuário (nunca vira edição, então qualquer toque
 // limpo copia)
-function vfSoltarPressionarEnunciado(){
+function vfSoltarPressionarEnunciado(evento){
   clearTimeout(vfTimerPressionarEnunciado);
   vfTimerPressionarEnunciado = null;
   const div = document.getElementById('vf-enunciado-atual');
   if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueEnunciado){
+    if(evento) evento.preventDefault(); // evita o mouseup sintético que o Safari gera após um toque real - sem isso, a cópia disparava 2x e o selinho "Copiado" piscava (reiniciava a animação no meio)
     vfCopiarTextoElementoVF(div);
   }
 }
@@ -7020,11 +7059,12 @@ function vfCancelarPressionarCorrecaoSilencioso(evento){
   clearTimeout(vfTimerPressionarCorrecao);
   vfTimerPressionarCorrecao = null;
 }
-function vfSoltarPressionarCorrecao(){
+function vfSoltarPressionarCorrecao(evento){
   clearTimeout(vfTimerPressionarCorrecao);
   vfTimerPressionarCorrecao = null;
   const div = document.getElementById('vf-correcao-atual');
   if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueCorrecao){
+    if(evento) evento.preventDefault();
     vfCopiarTextoElementoVF(div);
   }
 }
@@ -9708,7 +9748,7 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Conhecimentos Gerais", autorBusca:["livingstone"], autor:"LIVINGSTONE, G. H.; LIVINGSTONE, G. H.", titulo:"Shiphandling the Beautiful Game, v.1", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["stbg"], autor:"LIVINGSTONE, G. H.; LIVINGSTONE, G. H.", titulo:"Shiphandling the Beautiful Game, v.1", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["sbg"], autor:"LIVINGSTONE, G. H.; LIVINGSTONE, G. H.", titulo:"Shiphandling the Beautiful Game, v.1", capitulos:null},
-  {modulo:"Conhecimentos Gerais", autorBusca:["normam-224", "normam 224"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-224/DPC", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["normam-224"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-224/DPC", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["declaração universal", "direitos humanos"], autor:"ONU", titulo:"Declaração Universal dos Direitos Humanos", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["pianc 121"], autor:"PIANC", titulo:"Harbour Approach Channels: Design Guidelines", capitulos:null},
   {modulo:"Conhecimentos Gerais", autorBusca:["pimenta"], autor:"PIMENTA, M. G.", titulo:"Direito Processual Marítimo", capitulos:null},
@@ -9729,15 +9769,15 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Legislação", autorBusca:["2.180", "tribunal marítimo"], autor:"BRASIL", titulo:"Lei nº 2.180/1954 – Tribunal Marítimo", capitulos:null},
   {modulo:"Legislação", autorBusca:["carta 12.000"], autor:"DHN", titulo:"Publicações Náuticas (Cartas Náuticas, Carta 12.000, Avisos aos Navegantes, Roteiro, Lista de Faróis, Lista de Auxílios-Rádio, Tábuas das Marés, Cartas de Correntes de Maré, Cartas Piloto)", capitulos:null},
   {modulo:"Legislação", autorBusca:["960", "certification for maritime pilots"], autor:"IMO", titulo:"Recommendations on Training and Certification for Maritime Pilots (Resolution A.960(23))", capitulos:null},
-  {modulo:"Legislação", autorBusca:["normam-601", "normam 601"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-601/DHN", capitulos:null},
-  {modulo:"Legislação", autorBusca:["normam-311", "normam 311"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-311/DPC", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-601"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-601/DHN", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-311"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-311/DPC", capitulos:null},
   {modulo:"Legislação", autorBusca:["busca e salvamento", "sar"], autor:"MARINHA DO BRASIL", titulo:"Serviço de Busca e Salvamento Marítimo (SAR) no Brasil", capitulos:null},
-  {modulo:"Legislação", autorBusca:["normam-602", "normam 602"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-602/DHN", capitulos:null},
-  {modulo:"Legislação", autorBusca:["normam-112", "normam 112"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-112/DPC", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-602"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-602/DHN", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-112"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-112/DPC", capitulos:null},
   {modulo:"Legislação", autorBusca:["portaria", "37/mb"], autor:"MARINHA DO BRASIL", titulo:"Portaria nº 37/MB/2022 – Estrutura da Autoridade Marítima", capitulos:null},
-  {modulo:"Legislação", autorBusca:["normam-204", "normam 204"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-204/DPC", capitulos:null},
-  {modulo:"Legislação", autorBusca:["normam-302", "normam 302"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-302/DPC", capitulos:null},
-  {modulo:"Legislação", autorBusca:["normam-201", "normam 201"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-201/DPC (cap. 7, arts. 7.1-7.3 e 7.10-7.14)", capitulos:[7]},
+  {modulo:"Legislação", autorBusca:["normam-204"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-204/DPC", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-302"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-302/DPC", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-201"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-201/DPC (cap. 7, arts. 7.1-7.3 e 7.10-7.14)", capitulos:[7]},
   {modulo:"Legislação", autorBusca:["política nacional de defesa"], autor:"MINISTÉRIO DA DEFESA", titulo:"Política Nacional de Defesa", capitulos:null},
   {modulo:"Legislação", autorBusca:["md35"], autor:"MINISTÉRIO DA DEFESA", titulo:"Glossário das Forças Armadas (MD35-G-01)", capitulos:null},
   {modulo:"Legislação", autorBusca:["glossário", "forças armadas"], autor:"MINISTÉRIO DA DEFESA", titulo:"Glossário das Forças Armadas (MD35-G-01)", capitulos:null},
@@ -9763,7 +9803,7 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Manobrabilidade", autorBusca:["mesquita", "hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-6)", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["lobo", "soares"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["valgas"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
-  {modulo:"Meteorologia e Oceanografia", autorBusca:["normam-701", "normam 701"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-701/DHN", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["normam-701"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-701/DHN", capitulos:null},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["ciência e a arte", "45"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["miguens", "45"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
   {modulo:"Meteorologia e Oceanografia", autorBusca:["noções de meteorologia para navegantes"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
@@ -9790,9 +9830,9 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Navegação em Águas Restritas", autorBusca:["imo", "radar"], autor:"IMO", titulo:"Adoption of the Revised Performance Standards for Radar Equipment (Resolution MSC.192(79))", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["bridge procedures"], autor:"INTERNATIONAL CHAMBER OF SHIPPING", titulo:"Bridge Procedures Guide", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["bpg"], autor:"INTERNATIONAL CHAMBER OF SHIPPING", titulo:"Bridge Procedures Guide", capitulos:null},
-  {modulo:"Navegação em Águas Restritas", autorBusca:["normam-501", "normam 501"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-501/DHN", capitulos:null},
-  {modulo:"Navegação em Águas Restritas", autorBusca:["normam-511", "normam 511"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-511/DHN", capitulos:null},
-  {modulo:"Navegação em Águas Restritas", autorBusca:["normam-202", "normam 202"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-202/DPC", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["normam-501"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-501/DHN", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["normam-511"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-511/DHN", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["normam-202"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-202/DPC", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["miguens"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte (v.1 e v.3, exceto cap. 45)", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["ciência e a arte"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte (v.1 e v.3, exceto cap. 45)", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["nayak", "pilotage"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6, 13)", capitulos:[5, 6, 13]},
@@ -10984,6 +11024,18 @@ function parsearArquivoVF(textoCompleto){
   // vale pra todas as questões desse upload, não repete por afirmação
   const capituloMatch = texto.match(/Cap[ií]tulo\s+(\S+)/i);
   const capituloDoArquivo = capituloMatch ? capituloMatch[1].replace(/[.,;:]$/, '') : null;
+  // título do cabeçalho geral do arquivo (a parte depois do "·") - usado
+  // na identificação de bibliografia EM VEZ do texto completo do campo
+  // BIBLIOGRAFIA: de cada bloco. O campo BIBLIOGRAFIA: é uma citação ABNT
+  // completa e pode mencionar outras leis/decretos de passagem (ex: "Lei
+  // nº 9.432, de que trata..."), causando ambiguidade e derrubando a
+  // identificação. O título do cabeçalho é a referência única e direta
+  // que o próprio arquivo já usa pra se identificar - testado contra 5
+  // PDFs reais (2 NORMAM, o Decreto, os 2 capítulos de Hidrodinâmica)
+  // antes de aplicar, confirmando que não regride nenhum caso que já
+  // funcionava e resolve os que travavam
+  const tituloMatch = texto.match(/PSCPP\s*[–-]\s*VERDADEIRO OU FALSO\s*[·•]\s*([^\r\n]+)/i);
+  const tituloCabecalhoArquivo = tituloMatch ? tituloMatch[1].trim() : null;
 
   const blocos = texto.split(/GABARITO\s*[–-]\s*AFIRMAÇÃO\s*\d+/).slice(1);
   const questoes = [];
@@ -11044,68 +11096,11 @@ function parsearArquivoVF(textoCompleto){
     }
   });
 
-  return {questoes, erros, capituloDoArquivo};
-}
-
-// resolve bibliografia de questão V/F direto na tela de upload — pedido
-// explícito do Carlos, pra não precisar ir até o Início como o rascunho
-// normal exige. Cada linha tem seu próprio par de selects (módulo →
-// publicação em cascata) e um botão de salvar, tudo isolado pelo id da
-// questão nos elementos, então resolver uma não mexe nas outras
-function renderizarResolucaoVF(pendente){
-  const trecho = escapeHtml(pendente.texto.slice(0, 140)) + (pendente.texto.length > 140 ? '…' : '');
-  return `<div id="vf-resolver-${pendente.id}" style="border:0.5px solid #eee;border-radius:10px;padding:12px;margin-bottom:10px">
-    <p style="font-size:var(--fs-c);color:#555;margin-bottom:10px">${trecho}</p>
-    <select id="vf-resolver-modulo-${pendente.id}" class="filter-select" style="margin-bottom:8px" onchange="popularPublicacaoResolucaoVF('${pendente.id}')">
-      <option value="">Escolha o módulo</option>
-    </select>
-    <select id="vf-resolver-publicacao-${pendente.id}" class="filter-select" style="margin-bottom:8px" disabled>
-      <option value="">Escolha a publicação</option>
-    </select>
-    <button class="btn-primario" style="width:100%" onclick="salvarResolucaoVF('${pendente.id}')">Salvar</button>
-    <p id="vf-resolver-status-${pendente.id}" style="font-size:var(--fs-c);margin-top:6px"></p>
-  </div>`;
-}
-
-function popularModuloResolucaoVF(pendenteId){
-  const el = document.getElementById('vf-resolver-modulo-'+pendenteId);
-  if(!el) return;
-  el.innerHTML = '<option value="">Escolha o módulo</option>' + modulosPscpp.map(m=>
-    `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`
-  ).join('');
-}
-
-function popularPublicacaoResolucaoVF(pendenteId){
-  const modulo = document.getElementById('vf-resolver-modulo-'+pendenteId).value;
-  const elPub = document.getElementById('vf-resolver-publicacao-'+pendenteId);
-  if(!modulo){ elPub.innerHTML = '<option value="">Escolha a publicação</option>'; elPub.disabled = true; return; }
-  const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
-  elPub.innerHTML = '<option value="">Escolha a publicação</option>' + pubs.map(p=>
-    `<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`
-  ).join('');
-  elPub.disabled = false;
-}
-
-async function salvarResolucaoVF(pendenteId){
-  const bibliografiaId = document.getElementById('vf-resolver-publicacao-'+pendenteId).value;
-  const statusEl = document.getElementById('vf-resolver-status-'+pendenteId);
-  if(!bibliografiaId){
-    statusEl.innerHTML = '<span style="color:#B00020">Escolhe módulo e publicação antes.</span>';
-    return;
-  }
-  const {error} = await sb.from('questoes_vf').update({bibliografia_id: bibliografiaId}).eq('id', pendenteId);
-  if(error){
-    statusEl.innerHTML = '<span style="color:#B00020">Não consegui salvar. Tenta de novo.</span>';
-    return;
-  }
-  const bloco = document.getElementById('vf-resolver-'+pendenteId);
-  bloco.style.transition = 'opacity 0.4s';
-  bloco.style.opacity = '0';
-  setTimeout(() => bloco.remove(), 400);
+  return {questoes, erros, capituloDoArquivo, tituloCabecalhoArquivo};
 }
 
 async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
-  const {questoes, erros, capituloDoArquivo} = parsearArquivoVF(textoBruto);
+  const {questoes, erros, capituloDoArquivo, tituloCabecalhoArquivo} = parsearArquivoVF(textoBruto);
   if(!questoes.length){
     return {erro: `"${nomeArquivoAtual}": código #VF# encontrado, mas não consegui extrair nenhuma questão do formato esperado.`, cadastradas:0, puladas:0, rascunho:0};
   }
@@ -11116,7 +11111,20 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
   // uma variável local só de dentro do fluxo normal de upload — usar ela
   // aqui é a causa exata do travamento em 75% que aconteceu de verdade)
   const resultados = await Promise.all(questoes.map(async q => {
-    const bibEncontrada = identificarBibliografia(q.bibliografiaTextoOriginal, q.bibliografiaTextoOriginal);
+    // usa o título do cabeçalho geral do arquivo pra identificar a
+    // bibliografia, EM VEZ do texto completo do campo BIBLIOGRAFIA: de
+    // cada bloco. O campo BIBLIOGRAFIA: é uma citação ABNT completa e
+    // pode mencionar outras leis/decretos de passagem (ex: um decreto que
+    // regulamenta uma lei, citando "Lei nº 9.432, de que trata..."),
+    // fazendo duas entradas diferentes baterem ao mesmo tempo e a
+    // identificação travar em ambiguidade. O título do cabeçalho é único
+    // por arquivo e direto - testado contra 5 PDFs reais antes de aplicar
+    // (2 NORMAM, o Decreto, os 2 capítulos de Hidrodinâmica), sem
+    // regredir nenhum caso que já funcionava
+    const textoParaIdentificar = capituloDoArquivo && tituloCabecalhoArquivo
+      ? `${tituloCabecalhoArquivo} Capítulo ${capituloDoArquivo}`
+      : (tituloCabecalhoArquivo || q.bibliografiaTextoOriginal);
+    const bibEncontrada = identificarBibliografia(textoParaIdentificar, textoParaIdentificar);
     let bibliografiaId = null;
     let bibCapituloUnico = false;
     if(bibEncontrada){
@@ -11136,22 +11144,13 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     const {data: existente} = await sb.from('questoes_vf').select('id').eq('texto', q.texto).maybeSingle();
     if(existente) return {ok: false, pulada: true, texto: q.texto};
 
-    // publicação marcada como capítulo único (bibliografia.capitulo_unico) -
-    // NUNCA usa o que foi extraído do cabeçalho do arquivo, mesmo que o
-    // cabeçalho mencione capítulos específicos (ex: "Capítulos I, IV e
-    // VIII") - o capítulo sempre é 'Único' nesse caso. Tentar extrair um
-    // capítulo real do texto pra essas publicações foi a causa de um bug
-    // sistemático que gerou lixo (fragmentos de palavra, números soltos)
-    // em milhares de afirmações - ver regra fixa no histórico do projeto
-    const {data: inserida, error} = await sb.from('questoes_vf').insert({
+    const camposComuns = {
       texto: q.texto,
       resposta: q.resposta,
       explicacao: q.explicacao,
       correcao: q.correcao,
       trechos_fonte: q.trechos_fonte,
       fonte: q.fonte,
-      bibliografia_id: bibliografiaId,
-      capitulo: bibCapituloUnico ? 'Único' : capituloDoArquivo,
       n_palavras: q.texto.trim().split(/\s+/).filter(Boolean).length,
       eh_numero: q.ehNumero,
       eh_lista: q.ehLista,
@@ -11160,6 +11159,31 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
       autor_id: usuarioAtual.id,
       lote_upload_id: loteUploadId,
       nome_arquivo_origem: nomeArquivoAtual
+    };
+
+    if(!bibliografiaId){
+      // sem bibliografia identificada - NÃO entra no banco real. Fica no
+      // rascunho até alguém (autor ou admin) resolver manualmente, mesmo
+      // padrão já usado pro upload normal (Quest) - decisão explícita do
+      // Carlos: "enquanto não colocar tudo certinho não entra no banco"
+      const {data: rascunhoInserido, error: erroRascunho} = await sb.from('questoes_vf_rascunho').insert({
+        ...camposComuns,
+        capitulo: capituloDoArquivo // melhor palpite disponível - confirmado/corrigido na revisão manual
+      }).select('id').single();
+      return {ok: !erroRascunho, erro: erroRascunho?.message, viraRascunho: true, id: rascunhoInserido?.id, texto: q.texto};
+    }
+
+    // publicação marcada como capítulo único (bibliografia.capitulo_unico) -
+    // NUNCA usa o que foi extraído do cabeçalho do arquivo, mesmo que o
+    // cabeçalho mencione capítulos específicos (ex: "Capítulos I, IV e
+    // VIII") - o capítulo sempre é 'Único' nesse caso. Tentar extrair um
+    // capítulo real do texto pra essas publicações foi a causa de um bug
+    // sistemático que gerou lixo (fragmentos de palavra, números soltos)
+    // em milhares de afirmações - ver regra fixa no histórico do projeto
+    const {data: inserida, error} = await sb.from('questoes_vf').insert({
+      ...camposComuns,
+      bibliografia_id: bibliografiaId,
+      capitulo: bibCapituloUnico ? 'Único' : capituloDoArquivo
     }).select('id').single();
 
     // segunda camada — se duas rotinas checaram ao mesmo tempo e as duas
@@ -11168,20 +11192,19 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     // Trata isso como "pulada", não como erro de verdade
     if(error?.code === '23505') return {ok: false, pulada: true, texto: q.texto};
 
-    return {ok: !error, erro: error?.message, semBibliografia: !bibliografiaId, id: inserida?.id, texto: q.texto};
+    return {ok: !error, erro: error?.message, id: inserida?.id, texto: q.texto};
   }));
 
-  const cadastradas = resultados.filter(r => r.ok).length;
+  const cadastradas = resultados.filter(r => r.ok && !r.viraRascunho).length;
   const puladas = resultados.filter(r => r.pulada).length;
-  const pendentesVF = resultados.filter(r => r.ok && r.semBibliografia).map(r => ({id: r.id, texto: r.texto}));
+  const quantasRascunho = resultados.filter(r => r.ok && r.viraRascunho).length;
   const falhas = resultados.filter(r => !r.ok && !r.pulada);
 
   return {
     cadastradas,
     puladas,
-    rascunho: 0,
-    erro: falhas.length ? `"${nomeArquivoAtual}": ${falhas.length} questão(ões) V/F falharam ao cadastrar (${falhas[0].erro}).` : null,
-    pendentesVF
+    rascunho: quantasRascunho,
+    erro: falhas.length ? `"${nomeArquivoAtual}": ${falhas.length} questão(ões) V/F falharam ao cadastrar (${falhas[0].erro}).` : null
   };
 }
 
@@ -11374,31 +11397,19 @@ async function enviarUpload(){
   const totalPuladas = resultados.reduce((s,r)=>s+r.puladas, 0);
   const totalRascunho = resultados.reduce((s,r)=>s+r.rascunho, 0);
   const comErro = resultados.filter(r => r.erro);
-  const pendentesVF = resultados.flatMap(r => r.pendentesVF || []);
 
   mostrarBarraProgresso(status, 100, 'Concluído!');
   const textoPuladas = totalPuladas ? ` (${totalPuladas} já existia${totalPuladas>1?'m':''} igual e ${totalPuladas>1?'foram puladas':'foi pulada'})` : '';
   const textoRascunho = totalRascunho ? ` <span style="color:#B8860B">${totalRascunho} precisam de revisão manual (bibliografia não identificada) – veja a notificação no Início.</span>` : '';
   let htmlFinal = totalCadastradas || totalPuladas
     ? `<p style="color:#1B5E20;text-align:center;margin-top:8px">${totalCadastradas} questões cadastradas!${textoPuladas}</p>${textoRascunho ? `<p style="text-align:center;margin-top:6px">${textoRascunho}</p>` : ''}`
-    : '';
+    : (totalRascunho ? `<p style="color:#555;text-align:center;margin-top:8px">Lido com sucesso — ${totalRascunho} questão(ões) precisam de revisão manual antes de entrar no banco. Veja a notificação no Início.</p>` : '');
 
   if(comErro.length){
     htmlFinal += `<div style="margin-top:10px">${comErro.map(r => `<p style="color:#B00020;font-size:var(--fs-c)">${escapeHtml(r.erro)}</p>${r.trecho ? `<textarea readonly style="width:100%;height:100px;font-size:11px;font-family:monospace;margin:4px 0 8px;padding:6px;border:0.5px solid #ddd;border-radius:6px;color:#444" onclick="this.select()">${escapeHtml(r.trecho) || '(vazio)'}</textarea>` : ''}`).join('')}</div>`;
   }
 
-  // pendentes V/F: resolve ali mesmo, na tela de upload — não manda pra
-  // notificação do Início como o fluxo normal faz. Pedido explícito do
-  // Carlos, já que o V/F ainda não tem as travas extras do upload normal
-  if(pendentesVF.length){
-    htmlFinal += `<div style="margin-top:14px;border-top:1px solid #eee;padding-top:14px">
-      <p style="font-weight:600;color:#B8860B;margin-bottom:10px">${pendentesVF.length} questão(ões) V/F sem publicação identificada — escolhe abaixo:</p>
-      ${pendentesVF.map(p => renderizarResolucaoVF(p)).join('')}
-    </div>`;
-  }
-
   status.innerHTML = htmlFinal || '<p style="color:#B00020">Nada foi cadastrado.</p>';
-  if(pendentesVF.length) pendentesVF.forEach(p => popularModuloResolucaoVF(p.id));
   input.value = '';
   atualizarNomeArquivoSelecionado(true);
   // some sozinha depois de um tempo, com fade suave — só quando não tem
@@ -11743,6 +11754,180 @@ async function descartarGrupoRascunho(nomeArquivo){
   if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
   await query;
   await abrirRevisaoRascunho();
+  await atualizarNotificacoesOrdenadas();
+}
+
+// ---- mesmo padrão acima, adaptado pro rascunho do V/F (texto/resposta
+// em vez de enunciado/alternativas/gabarito, sem tipo_questao nem
+// concurso/ano - o V/F ainda não tem essas travas extras) ----
+async function abrirRevisaoRascunhoVF(){
+  abrirModal('modal-revisao-rascunho-vf');
+  const container = document.getElementById('lista-rascunhos-pendentes-vf');
+  container.innerHTML = '<p style="text-align:center;color:#888">Carregando...</p>';
+
+  let query = sb.from('questoes_vf_rascunho').select('*, usuarios(nome)').order('criado_em', {ascending:false});
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  const {data} = await query;
+
+  if(!data || !data.length){
+    container.innerHTML = '<p style="text-align:center;color:#888">Nenhuma pendência no momento.</p>';
+    return;
+  }
+
+  // agrupa por arquivo de origem — na prática, questões do mesmo PDF são
+  // quase sempre do mesmo livro, então resolve o grupo inteiro de uma vez
+  const grupos = {};
+  data.forEach(r => {
+    const chave = r.nome_arquivo_origem || `sem-nome-${r.id}`;
+    if(!grupos[chave]) grupos[chave] = [];
+    grupos[chave].push(r);
+  });
+
+  if(!bibliografiaCache || !bibliografiaCache.length) await carregarBibliografia();
+
+  container.innerHTML = Object.entries(grupos).map(([nomeArquivo, itens]) => {
+    const idGrupo = 'grupovf-' + btoa(unescape(encodeURIComponent(nomeArquivo))).replace(/[^a-zA-Z0-9]/g,'');
+    const autorNome = itens[0].usuarios?.nome || 'Alguém';
+    const opcoesModulo = modulosPscpp.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+    return `
+    <div style="border:0.5px solid #ddd;border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-weight:600;font-size:var(--fs-e)">${escapeHtml(nomeArquivo === `sem-nome-${itens[0].id}` ? 'Upload sem nome de arquivo' : nomeArquivo)}</div>
+      <div style="color:#888;font-size:var(--fs-b);margin-bottom:10px">${itens.length} ${itens.length>1?'afirmações':'afirmação'} · enviado por ${escapeHtml(autorNome)}</div>
+      <details style="margin-bottom:10px">
+        <summary style="cursor:pointer;color:#666;font-size:var(--fs-b)">Ver afirmações</summary>
+        <div style="margin-top:8px;max-height:150px;overflow-y:auto;font-size:var(--fs-b);color:#555">
+          ${itens.map(q => `<p style="margin-bottom:6px">${escapeHtml(q.texto.slice(0,150))}${q.texto.length>150?'...':''}</p>`).join('')}
+        </div>
+      </details>
+      <select id="${idGrupo}-modulo" class="filter-select" style="margin-bottom:8px" onchange="atualizarPublicacoesRevisao('${idGrupo}')">
+        <option value="">Escolhe o módulo...</option>
+        ${opcoesModulo}
+      </select>
+      <select id="${idGrupo}-publicacao" class="filter-select" style="margin-bottom:8px" disabled onchange="preencherCapituloUnicoSeAplicavel('${idGrupo}')">
+        <option value="">Escolhe o módulo primeiro</option>
+      </select>
+      <input type="text" id="${idGrupo}-capitulo" class="filter-select" style="margin-bottom:8px" placeholder="Capítulo (opcional)" value="${escapeHtml(itens[0].capitulo || '')}">
+      <div style="display:flex;gap:8px">
+        <button class="btn-secundario" style="flex:1" onclick="descartarGrupoRascunhoVF('${nomeArquivo.replace(/'/g,"\\'")}')">Descartar</button>
+        <button class="btn-primario" style="flex:1" onclick="resolverGrupoRascunhoVF('${nomeArquivo.replace(/'/g,"\\'")}', '${idGrupo}')">Cadastrar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let gruposRascunhoVFEmProcessamento = new Set();
+async function resolverGrupoRascunhoVF(nomeArquivo, idGrupo){
+  const chave = nomeArquivo + '|' + idGrupo;
+  if(gruposRascunhoVFEmProcessamento.has(chave)) return;
+  gruposRascunhoVFEmProcessamento.add(chave);
+  try{
+    const modulo = document.getElementById(idGrupo+'-modulo').value;
+    const bibliografiaId = document.getElementById(idGrupo+'-publicacao').value;
+    const capituloDigitado = document.getElementById(idGrupo+'-capitulo').value.trim();
+    const bibEscolhida = bibliografiaId ? bibliografiaCache.find(b => b.id === bibliografiaId) : null;
+    const capituloEhAutomatico = ehFonteCapituloUnico(bibEscolhida?.titulo);
+    if(!modulo || !bibliografiaId || (!capituloDigitado && !capituloEhAutomatico)){
+      alert('Escolhe o módulo, a publicação e o capítulo antes de cadastrar — capítulo é obrigatório.');
+      return;
+    }
+
+    let query = sb.from('questoes_vf_rascunho').select('*').eq('nome_arquivo_origem', nomeArquivo);
+    if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+    const {data: itens} = await query;
+    if(!itens || !itens.length) return;
+
+    // mesma confirmação dupla do fluxo normal: a publicação escolhida à
+    // mão bate de verdade com o texto das afirmações?
+    if(bibEscolhida){
+      const entradasDessaPublicacao = BIBLIOGRAFIA_FECHADA.filter(e => e.modulo === modulo && e.titulo === bibEscolhida.titulo);
+      if(entradasDessaPublicacao.length){
+        const termosValidos = [...new Set(entradasDessaPublicacao.flatMap(e => e.autorBusca))];
+        const bateComAlgum = itens.some(q => {
+          const textoNorm = normalizarBusca([q.explicacao, q.texto].filter(Boolean).join(' '));
+          return termosValidos.some(termo => textoContemTermo(textoNorm, normalizarBusca(termo)));
+        });
+        if(!bateComAlgum){
+          const confirmar = confirm(`Nenhuma afirmação desse grupo menciona termos esperados de "${bibEscolhida.titulo}" (ex: ${termosValidos.slice(0,3).join(', ')}). Confirma que essa é a publicação certa mesmo assim?`);
+          if(!confirmar) return;
+        }
+      }
+    }
+
+    // de-duplica DENTRO do mesmo lote antes de processar - mesmo motivo
+    // do fluxo normal (checar-depois-inserir não é atômico em paralelo)
+    const vistos = new Map();
+    const itensUnicos = [];
+    const idsDuplicadosNoLote = [];
+    itens.forEach(q => {
+      if(vistos.has(q.texto)) idsDuplicadosNoLote.push(q.id);
+      else { vistos.set(q.texto, true); itensUnicos.push(q); }
+    });
+    if(idsDuplicadosNoLote.length){
+      await Promise.all(idsDuplicadosNoLote.map(id => sb.from('questoes_vf_rascunho').delete().eq('id', id)));
+    }
+
+    const falhas = [];
+    let quantasDuplicadas = idsDuplicadosNoLote.length;
+    await Promise.all(itensUnicos.map(async q => {
+      const {data: existente} = await sb.from('questoes_vf').select('id').eq('texto', q.texto).maybeSingle();
+      if(existente){
+        quantasDuplicadas++;
+        await sb.from('questoes_vf_rascunho').delete().eq('id', q.id);
+        return;
+      }
+
+      const {error: erroInsert} = await sb.from('questoes_vf').insert({
+        texto: q.texto,
+        resposta: q.resposta,
+        explicacao: q.explicacao,
+        correcao: q.correcao,
+        trechos_fonte: q.trechos_fonte,
+        fonte: q.fonte,
+        bibliografia_id: bibliografiaId,
+        capitulo: capituloEhAutomatico ? 'Único' : (capituloDigitado || q.capitulo),
+        n_palavras: q.n_palavras,
+        eh_numero: q.eh_numero,
+        eh_lista: q.eh_lista,
+        inconsistente: q.inconsistente,
+        dificuldade: q.dificuldade,
+        autor_id: q.autor_id,
+        lote_upload_id: q.lote_upload_id,
+        nome_arquivo_origem: q.nome_arquivo_origem
+      }).select('id').single();
+      if(erroInsert){
+        if(erroInsert.code === '23505'){
+          quantasDuplicadas++;
+          await sb.from('questoes_vf_rascunho').delete().eq('id', q.id);
+          return;
+        }
+        falhas.push(erroInsert.message);
+        return; // não apaga o rascunho — fica lá pra tentar de novo
+      }
+      const {error: erroDelete} = await sb.from('questoes_vf_rascunho').delete().eq('id', q.id);
+      if(erroDelete){
+        falhas.push(`Afirmação cadastrada, mas não consegui remover do rascunho: ${erroDelete.message}`);
+      }
+    }));
+
+    if(falhas.length || quantasDuplicadas){
+      const textoDuplicadas = quantasDuplicadas ? `${quantasDuplicadas} já existia${quantasDuplicadas>1?'m':''} igual e ${quantasDuplicadas>1?'foram puladas':'foi pulada'}. ` : '';
+      const textoFalhas = falhas.length ? `${falhas.length} tiveram problema:\n\n${falhas.slice(0,5).join('\n')}${falhas.length>5?'\n...':''}` : '';
+      alert(`${itens.length - falhas.length - quantasDuplicadas} de ${itens.length} afirmações cadastradas. ${textoDuplicadas}${textoFalhas}`);
+    }
+
+    await abrirRevisaoRascunhoVF(); // recarrega a lista
+    await atualizarNotificacoesOrdenadas();
+  }finally{
+    gruposRascunhoVFEmProcessamento.delete(chave);
+  }
+}
+
+async function descartarGrupoRascunhoVF(nomeArquivo){
+  if(!confirm('Descartar essas afirmações de vez? Isso não pode ser desfeito.')) return;
+  let query = sb.from('questoes_vf_rascunho').delete().eq('nome_arquivo_origem', nomeArquivo);
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  await query;
+  await abrirRevisaoRascunhoVF();
   await atualizarNotificacoesOrdenadas();
 }
 
