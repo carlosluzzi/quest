@@ -62,18 +62,19 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* balão flutuante da sessão do Flash - mesma técnica de estados via
 classe do timer do PSCPP Tracker, cor adaptada pra marca do Pilotquest
 (B23A34 em vez do azul-marinho de lá) */
-#vf-sessao-balao{position:fixed;z-index:200000;background:#B23A34;color:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.35);min-width:160px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;right:16px;bottom:calc(var(--nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 16px)}
+#vf-sessao-balao{position:fixed;z-index:10001;background:#B23A34;color:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.35);min-width:130px;max-width:200px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 16px)}
 #vf-sessao-balao.hidden{display:none}
-#vf-sessao-balao.pausado{background:#7A2823}
+/* pausado NÃO troca o fundo (igual o Tracker) - só o tempo fica
+acinzentado e a tag "PAUSADO" aparece em destaque. Cor de fundo do
+balão é sempre a mesma, ativo ou pausado - só o que muda é o conteúdo */
 #vf-sessao-balao-fechar{position:absolute;top:2px;right:6px;font-size:13px;color:#E8B8B5;padding:6px;cursor:pointer}
-#vf-sessao-balao-nome{font-size:10px;color:#E8B8B5;text-transform:uppercase;letter-spacing:.03em;padding-right:12px}
-#vf-sessao-balao.pausado #vf-sessao-balao-nome{color:#C9A19E}
-#vf-sessao-balao-tempo{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
-#vf-sessao-balao.pausado #vf-sessao-balao-tempo{color:#D9B5B2}
-.vf-sessao-balao-tag{font-size:8px;letter-spacing:.08em;color:#F0C9C5;font-weight:700;margin-top:1px;height:10px}
+#vf-sessao-balao-nome{font-size:11px;color:#E8B8B5;text-transform:uppercase;letter-spacing:.03em;padding-right:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+#vf-sessao-balao-tempo{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+#vf-sessao-balao.pausado #vf-sessao-balao-tempo{color:#E8B8B5}
+.vf-sessao-balao-tag{font-size:9px;letter-spacing:.08em;color:#F0C9C5;font-weight:700;margin-top:1px;height:11px}
 .vf-sessao-balao-btns{display:flex;gap:8px;margin-top:8px}
 .vf-sessao-balao-btns > div{flex:1;background:rgba(255,255,255,0.15);color:#fff;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:600;text-align:center;cursor:pointer;white-space:nowrap}
-#vf-sessao-balao.pausado #vf-sessao-balao-btn-pausar{background:rgba(255,255,255,0.9);color:#7A2823}
+#vf-sessao-balao.pausado #vf-sessao-balao-btn-pausar{background:rgba(255,255,255,0.9);color:#B23A34}
 /* sliders de espessura (caneta, destaque e tamanho da borracha) - MESMO
 visual nos três, pílula horizontal neutra (branca, como o thumb padrão
 nativo da Apple), não mais colorida - accent-color mostrou comportamento
@@ -795,7 +796,18 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     (via vfAtualizarOverlaySessaoVF) assim que vfSessaoAtivaVF existe -->
     <div id="vf-overlay-iniciar-sessao" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:12px">
       <button onclick="vfIniciarSessaoFlashVF()" style="background:#B23A34;color:#fff;border:none;border-radius:12px;padding:16px 32px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit">▶ Iniciar sessão</button>
-      <span style="font-size:13px;color:#999">Toque duplo em qualquer lugar reabre o balão se ele estiver escondido</span>
+    </div>
+    <!-- havia uma sessão pausada quando o app fechou - pergunta o que
+    fazer em vez de reabrir o balão sozinho -->
+    <div id="vf-overlay-retomar-sessao" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:16px">
+      <div>
+        <div style="font-size:14px;color:#888;margin-bottom:4px">Você tinha uma sessão pausada</div>
+        <div id="vf-overlay-retomar-tempo" style="font-size:32px;font-weight:700;font-variant-numeric:tabular-nums;color:#B23A34"></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="vfFinalizarSessaoFlashVF()" style="background:#f0f0ee;color:#111;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Finalizar</button>
+        <button onclick="vfRetomarSessaoRestauradaVF()" style="background:#B23A34;color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Retomar</button>
+      </div>
     </div>
     <div id="vf-filtros" style="margin-bottom:16px;background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:14px 16px">
       <button class="btn-icone-pequeno" onclick="alternarFiltrosVF()" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:4px 2px;cursor:pointer;font-family:inherit;color:#B23A34;font-size:var(--fs-d);font-weight:700;-webkit-appearance:none;appearance:none;outline:none;-webkit-tap-highlight-color:transparent;transform:none !important">
@@ -1271,7 +1283,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   <div class="modal-conteudo">
     <div id="confirmacao-envio-tracker">
       <h3 class="config-title">Enviar para o PSCPP Tracker?</h3>
-      <p>Isso registra esse caderno (tempo, acertos e as questões) no PSCPP Tracker.</p>
+      <p id="texto-confirmacao-envio-tracker">Isso registra esse caderno (tempo, acertos e as questões) no PSCPP Tracker.</p>
       <div style="display:flex;gap:8px">
         <button class="btn-secundario" style="flex:1" onclick="naoEnviarTracker()">Não enviar</button>
         <button class="btn-primario" style="flex:1" id="btn-confirmar-envio-tracker" onclick="confirmarEnvioTracker()">Enviar</button>
@@ -1481,7 +1493,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-297';
+const VERSAO_APP = '2026-07-25-300';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2352,6 +2364,7 @@ async function mostrarAppShell(){
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança
   document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
   iniciarRealtimeForum();
+  try{ if(souCarlos()) vfRestaurarSessaoFlashVF(); }catch(e){ console.error('Erro ao restaurar sessão do Flash:', e); } // só depois do login confirmado - nunca antes
 }
 
 function medirAlturaNav(){
@@ -3854,7 +3867,7 @@ function vfEhToqueDeCaneta(touch){
 }
 
 let vfBotaoPendenteToqueInfo = null; // {x, y, identifier, limiar} - toque começou num ícone pequeno, decisão adiada até ver se vira arrasto
-const VF_LIMIAR_ARRASTO_BOTAO_PX = 18;
+const VF_LIMIAR_ARRASTO_BOTAO_PX = 40; // igualado ao limiar de nav-item - mesmo motivo (tremor da Apple Pencil "parada"), afeta qualquer botão pequeno igualmente
 // menu lateral/de baixo usa um limiar bem mais generoso - a Apple Pencil
 // tem um tremor natural mesmo parada (documentado antes), e isso fazia
 // clicar no menu com a caneta falhar com mais frequência que com o dedo
@@ -4446,14 +4459,13 @@ function vfAplicarEstadoTimerSessaoVF(){
 }
 function vfAtualizarTextoTimerSessaoVF(){
   const span = document.getElementById('vf-tempo-sessao-texto');
-  if(!span || !estadoVF?.inicioSessaoVFMs) return;
-  const decorridoMs = Date.now() - estadoVF.inicioSessaoVFMs;
-  const totalSegundos = Math.floor(decorridoMs / 1000);
-  const h = Math.floor(totalSegundos / 3600);
-  const m = Math.floor((totalSegundos % 3600) / 60);
-  const s = totalSegundos % 60;
-  const pad = n => String(n).padStart(2, '0');
-  span.textContent = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+  if(!span || !vfSessaoAtivaVF) return;
+  // mesma fonte de verdade do balão flutuante (vfCalcularElapsedMsVF) -
+  // antes esse relógio calculava por conta própria a partir de
+  // estadoVF.inicioSessaoVFMs (que nunca pausava e resetava toda vez que
+  // a aba V/F era reaberta), causando os dois relógios divergirem entre
+  // si. Agora os dois sempre leem exatamente o mesmo número
+  span.textContent = vfFormatarTempoSessaoVF(vfCalcularElapsedMsVF());
 }
 
 async function vfAbrirFavoritosVF(){
@@ -4580,9 +4592,12 @@ async function vfExcluirFlashSalvoVF(salvoId, questaoVfId){
 // escolha rápida Estudar depois / Corrigir depois) ----
 let vfTimerPressionarSalvar = null;
 let vfFoiToqueLongoSalvar = false;
-function vfIniciarPressionarSalvar(){
+let vfPosicaoInicialPressionarSalvarVF = null;
+function vfIniciarPressionarSalvar(evento){
   vfFoiToqueLongoSalvar = false;
   clearTimeout(vfTimerPressionarSalvar);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarSalvarVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
   vfTimerPressionarSalvar = setTimeout(() => {
     vfTimerPressionarSalvar = null;
     vfFoiToqueLongoSalvar = true;
@@ -4590,9 +4605,21 @@ function vfIniciarPressionarSalvar(){
     vfAbrirFlashSalvosVF();
   }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
 }
-function vfCancelarPressionarSalvar(){
+// tolerância generosa pro tremor natural da Apple Pencil "parada" (mesma
+// razão documentada em VF_LIMIAR_ARRASTO_NAV_ITEM_PX) - sem isso, segurar
+// esse botão com a caneta cancelava o toque longo quase sempre antes dos
+// 500ms completarem
+function vfCancelarPressionarSalvar(evento){
+  if(evento && vfPosicaoInicialPressionarSalvarVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarSalvarVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarSalvarVF.y;
+      if(Math.hypot(dx, dy) < 25) return;
+    }
+  }
   clearTimeout(vfTimerPressionarSalvar);
   vfTimerPressionarSalvar = null;
+  vfPosicaoInicialPressionarSalvarVF = null;
 }
 
 function vfAbrirEscolhaMotivoSalvarVF(questaoId){
@@ -6208,22 +6235,53 @@ function vfTogglePausarSessaoFlashVF(e){
   vfAtualizarDisplayBalaoSessaoVF();
 }
 
+// monta o "retrato" da sessão do Flash pro Tracker, no mesmo espírito do
+// que já existe pro caderno do Quest - reaproveita o MESMO modal de
+// confirmação e a mesma edge function, só o formato da questão muda
+// (V/F não tem alternativas múltiplas)
+function vfMontarRetratoParaTrackerVF(inicioSessaoMs, fimSessaoMs){
+  const respondidas = estadoVF?.historico?.filter(h => h.resposta !== null) || [];
+  if(!respondidas.length) return null;
+  return {
+    origemFlash: true,
+    criadoEm: new Date(inicioSessaoMs).toISOString(),
+    finalizadoEm: new Date(fimSessaoMs).toISOString(),
+    entradas: respondidas.map(h => ({...h}))
+  };
+}
+
 function vfFinalizarSessaoFlashVF(e){
   if(e) e.stopPropagation();
   if(!vfSessaoAtivaVF) return;
+  const iniciadoEmMs = vfSessaoAtivaVF.iniciadoEm;
+  const finalizadoEmMs = Date.now();
   const tempoTotalMs = vfCalcularElapsedMsVF();
-  // PENDENTE: onde/como registrar tempoTotalMs de forma permanente ainda
-  // não foi decidido com o Carlos - por enquanto só loga no console pra
-  // não perder a informação enquanto isso não é combinado, sem inventar
-  // uma tabela/campo novo no banco sem confirmação
-  console.log('[Flash] Sessão finalizada. Tempo total (ms):', tempoTotalMs, '-> ' + vfFormatarTempoSessaoVF(tempoTotalMs));
+  // total de questões respondidas nessa sessão - aproximação por
+  // contagem do histórico da aba (não existe um timestamp de resposta
+  // por entrada pra filtrar com precisão total caso hajam múltiplas
+  // sessões dentro da mesma abertura da aba, mas cobre o caso normal
+  // de "abre a aba, inicia, estuda, finaliza" corretamente
+  const totalRespondidas = estadoVF?.historico?.filter(h => h.resposta !== null).length || 0;
+  sb.from('sessoes_vf').insert({
+    usuario_id: usuarioAtual.id,
+    iniciado_em: new Date(iniciadoEmMs).toISOString(),
+    finalizado_em: new Date(finalizadoEmMs).toISOString(),
+    tempo_efetivo_ms: tempoTotalMs,
+    total_questoes_respondidas: totalRespondidas
+  }).then(({error}) => { if(error) console.error('[Flash] Erro ao salvar sessão:', error); });
+  // retrato pro Tracker montado ANTES de zerar a sessão - precisa do
+  // início real dela (vfSessaoAtivaVF.iniciadoEm), que se perde depois
+  const retratoParaTracker = podeUsarIntegracaoTracker() ? vfMontarRetratoParaTrackerVF(iniciadoEmMs, finalizadoEmMs) : null;
+  limparCanvasDesenhoVF(); // finalizar é finalizar tudo - o risco que estava na tela some junto, não fica "esquecido" por cima do resultado
   vfSessaoAtivaVF = null;
+  vfSessaoRestauradaAguardandoDecisaoVF = false;
   vfSalvarSessaoNoStorageVF();
   if(vfIntervalSessaoVF){ clearInterval(vfIntervalSessaoVF); vfIntervalSessaoVF = null; }
   clearTimeout(vfSessaoBalaoEscondidoTimeoutVF);
   const balao = document.getElementById('vf-sessao-balao');
   if(balao) balao.classList.add('hidden');
   vfAtualizarOverlaySessaoVF();
+  if(retratoParaTracker) abrirConfirmacaoEnvioTracker(retratoParaTracker); // mesmo modal/fluxo já usado no Quest
 }
 
 function vfMostrarBalaoSessaoFlashVF(){
@@ -6259,10 +6317,32 @@ function vfEsconderBalaoSessaoFlashVF(e){
 }
 
 // mostra o botão "Iniciar sessão" quando não tem sessão ativa, esconde
-// o conteúdo normal do Flash até o Carlos apertar iniciar
+// o conteúdo normal do Flash até o Carlos apertar iniciar. Quando uma
+// sessão foi restaurada do fechamento anterior (pausada), mostra um
+// overlay diferente - Retomar/Finalizar - em vez de reabrir o balão
+// sozinho (nada acontece automaticamente, é sempre uma escolha)
+let vfSessaoRestauradaAguardandoDecisaoVF = false;
 function vfAtualizarOverlaySessaoVF(){
-  const overlay = document.getElementById('vf-overlay-iniciar-sessao');
-  if(overlay) overlay.classList.toggle('hidden', !!vfSessaoAtivaVF);
+  const overlayIniciar = document.getElementById('vf-overlay-iniciar-sessao');
+  const overlayRetomar = document.getElementById('vf-overlay-retomar-sessao');
+  if(vfSessaoRestauradaAguardandoDecisaoVF && vfSessaoAtivaVF){
+    if(overlayIniciar) overlayIniciar.classList.add('hidden');
+    if(overlayRetomar){
+      overlayRetomar.classList.remove('hidden');
+      const spanTempo = document.getElementById('vf-overlay-retomar-tempo');
+      if(spanTempo) spanTempo.textContent = vfFormatarTempoSessaoVF(vfCalcularElapsedMsVF());
+    }
+    return;
+  }
+  if(overlayRetomar) overlayRetomar.classList.add('hidden');
+  if(overlayIniciar) overlayIniciar.classList.toggle('hidden', !!vfSessaoAtivaVF);
+}
+// "Retomar" nesse overlay só reabre o balão (ainda pausado) - despausar
+// de vez é decidido dentro do próprio balão, que já tem esse botão
+function vfRetomarSessaoRestauradaVF(){
+  vfSessaoRestauradaAguardandoDecisaoVF = false;
+  vfMostrarBalaoSessaoFlashVF();
+  vfAtualizarOverlaySessaoVF();
 }
 
 // ---- arraste do balão (mesmo padrão já usado pros paineis: limiar de
@@ -6315,16 +6395,41 @@ function vfFinalizarArrastoBalaoVF(){
   });
 })();
 
-// ao carregar o app, restaura a sessão se o Carlos tinha uma ativa e
-// fechou o app no meio (localStorage sobrevive fechar/abrir de verdade)
-(function vfRestaurarSessaoFlashAoAbrirVF(){
+// restaura a sessão do Flash se havia uma ativa quando o app foi fechado -
+// chamada de dentro de mostrarAppShell(), NUNCA automaticamente na carga
+// do script (isso causava o balão aparecer até na tela de login, antes
+// do usuário ter feito qualquer autenticação). Ao restaurar, a sessão
+// sempre volta PAUSADA - fechar o app de verdade e voltar depois não
+// continua contando o tempo que ficou fechado, precisa retomar de
+// propósito. NÃO mostra o balão sozinho - fica esperando o Carlos entrar
+// na aba Flash e decidir "Retomar" ou "Finalizar" explicitamente (nada
+// acontece automaticamente, mesma filosofia do resto desse sistema)
+function vfRestaurarSessaoFlashVF(){
   const salva = vfCarregarSessaoDoStorageVF();
-  if(salva){
-    vfSessaoAtivaVF = salva;
-    document.addEventListener('DOMContentLoaded', () => { vfMostrarBalaoSessaoFlashVF(); vfAtualizarOverlaySessaoVF(); });
-    if(document.readyState !== 'loading'){ vfMostrarBalaoSessaoFlashVF(); vfAtualizarOverlaySessaoVF(); }
+  if(!salva) return;
+  const agora = Date.now();
+  if(!salva.pausado){
+    salva.tempoAcumuladoMs += (agora - salva.ultimoResumeEm);
+    salva.pausado = true;
   }
-})();
+  vfSessaoAtivaVF = salva;
+  vfSalvarSessaoNoStorageVF();
+  vfSessaoRestauradaAguardandoDecisaoVF = true;
+  vfAtualizarOverlaySessaoVF();
+}
+
+// pausa automaticamente quando a página é DESCARREGADA de verdade (fechar
+// a aba/app) - pagehide é mais confiável que visibilitychange pra esse
+// fim específico. visibilitychange dispara até numa simples troca rápida
+// de app (que NÃO deve pausar, só fechar de verdade deve)
+window.addEventListener('pagehide', () => {
+  if(vfSessaoAtivaVF && !vfSessaoAtivaVF.pausado){
+    const agora = Date.now();
+    vfSessaoAtivaVF.tempoAcumuladoMs += (agora - vfSessaoAtivaVF.ultimoResumeEm);
+    vfSessaoAtivaVF.pausado = true;
+    vfSalvarSessaoNoStorageVF();
+  }
+});
 
 // duplo toque em qualquer lugar da aba V/F reabre o balão da sessão, se
 // ele estiver escondido (depois do "✕", ou se a pessoa nunca reparou que
@@ -6586,7 +6691,7 @@ function renderizarItemVF(){
   if(jaRespondida){
     const cor = entrada.acertou ? '#3B6D11' : '#A32D2D';
     const textoResultado = `${entrada.acertou ? 'Acertou!' : 'Errou!'} É ${item.resposta ? 'VERDADEIRO' : 'FALSO'}`;
-    const atributosEdicaoCorrecao = `id="vf-correcao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarCorrecao()" ontouchend="vfSoltarPressionarCorrecao()" ontouchmove="vfCancelarPressionarCorrecaoSilencioso()" onmousedown="vfIniciarPressionarCorrecao()" onmouseup="vfSoltarPressionarCorrecao()" onmouseleave="vfCancelarPressionarCorrecaoSilencioso()"`;
+    const atributosEdicaoCorrecao = `id="vf-correcao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarCorrecao(event)" ontouchend="vfSoltarPressionarCorrecao()" ontouchmove="vfCancelarPressionarCorrecaoSilencioso(event)" onmousedown="vfIniciarPressionarCorrecao(event)" onmouseup="vfSoltarPressionarCorrecao()" onmouseleave="vfCancelarPressionarCorrecaoSilencioso()"`;
     const botaoAnotacao = entrada.anotacaoDataUrl ? `
         <button class="btn-icone-pequeno" style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="vfAbrirAnotacaoSalvaVF()" title="Ver o que você escreveu">
           <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -6630,7 +6735,7 @@ function renderizarItemVF(){
         </div>
         ${tagsPublicacao ? `<div style="display:flex;gap:6px;flex-shrink:0">${tagsPublicacao}</div>` : ''}
       </div>
-      <div class="enunciado" id="vf-enunciado-atual" style="margin-top:10px;position:relative" ${jaRespondida ? `data-editavel-vf="1" ontouchstart="vfIniciarPressionarEnunciado()" ontouchend="vfSoltarPressionarEnunciado()" ontouchmove="vfCancelarPressionarEnunciadoSilencioso()" onmousedown="vfIniciarPressionarEnunciado()" onmouseup="vfSoltarPressionarEnunciado()" onmouseleave="vfCancelarPressionarEnunciadoSilencioso()"` : ''}>${formatarTextoItemVF(item.texto)}</div>
+      <div class="enunciado" id="vf-enunciado-atual" style="margin-top:10px;position:relative" ${jaRespondida ? `data-editavel-vf="1" ontouchstart="vfIniciarPressionarEnunciado(event)" ontouchend="vfSoltarPressionarEnunciado()" ontouchmove="vfCancelarPressionarEnunciadoSilencioso(event)" onmousedown="vfIniciarPressionarEnunciado(event)" onmouseup="vfSoltarPressionarEnunciado()" onmouseleave="vfCancelarPressionarEnunciadoSilencioso()"` : ''}>${formatarTextoItemVF(item.texto)}</div>
       ${blocoResultado}
     </div>
   `;
@@ -6648,9 +6753,12 @@ let vfTimerPressionarEnunciado = null;
 const VF_DURACAO_PRESSIONAR_ENUNCIADO_MS = 500;
 
 let vfMoveuDuranteToqueEnunciado = false;
-function vfIniciarPressionarEnunciado(){
+let vfPosicaoInicialPressionarEnunciadoVF = null;
+function vfIniciarPressionarEnunciado(evento){
   vfMoveuDuranteToqueEnunciado = false;
   clearTimeout(vfTimerPressionarEnunciado);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarEnunciadoVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
   if(souCarlos()){
     vfTimerPressionarEnunciado = setTimeout(() => {
       vfTimerPressionarEnunciado = null;
@@ -6660,8 +6768,16 @@ function vfIniciarPressionarEnunciado(){
 }
 // usado no touchmove/mouseleave - moveu ou saiu = não é toque limpo, só
 // cancela a espera de edição, NÃO copia (senão um arrasto/scroll ia
-// disparar cópia sem querer)
-function vfCancelarPressionarEnunciadoSilencioso(){
+// disparar cópia sem querer). Tolerância pro tremor natural da Apple
+// Pencil "parada" (mesma razão documentada em VF_LIMIAR_ARRASTO_NAV_ITEM_PX)
+function vfCancelarPressionarEnunciadoSilencioso(evento){
+  if(evento && vfPosicaoInicialPressionarEnunciadoVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarEnunciadoVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarEnunciadoVF.y;
+      if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
+    }
+  }
   vfMoveuDuranteToqueEnunciado = true;
   clearTimeout(vfTimerPressionarEnunciado);
   vfTimerPressionarEnunciado = null;
@@ -6773,9 +6889,12 @@ function vfMostrarSelinhoCopiadoVF(elemento){
 // usado no enunciado e na explicação ----
 let vfTimerPressionarCorrecao = null;
 let vfMoveuDuranteToqueCorrecao = false;
-function vfIniciarPressionarCorrecao(){
+let vfPosicaoInicialPressionarCorrecaoVF = null;
+function vfIniciarPressionarCorrecao(evento){
   vfMoveuDuranteToqueCorrecao = false;
   clearTimeout(vfTimerPressionarCorrecao);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarCorrecaoVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
   if(souCarlos()){
     vfTimerPressionarCorrecao = setTimeout(() => {
       vfTimerPressionarCorrecao = null;
@@ -6783,7 +6902,14 @@ function vfIniciarPressionarCorrecao(){
     }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
   }
 }
-function vfCancelarPressionarCorrecaoSilencioso(){
+function vfCancelarPressionarCorrecaoSilencioso(evento){
+  if(evento && vfPosicaoInicialPressionarCorrecaoVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarCorrecaoVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarCorrecaoVF.y;
+      if(Math.hypot(dx, dy) < 25) return;
+    }
+  }
   vfMoveuDuranteToqueCorrecao = true;
   clearTimeout(vfTimerPressionarCorrecao);
   vfTimerPressionarCorrecao = null;
@@ -6853,7 +6979,7 @@ function renderizarBarraFixaVF(item, jaRespondida){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         <span>Excluir</span>
       </button>
-      <button class="banco-acao-btn btn-icone-pequeno ${favoritosVF.has(item.id)?'favoritada':''}" style="width:auto;height:auto;padding:12px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;transform:none !important" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar()" ontouchend="vfCancelarPressionarFavoritar()" ontouchmove="vfCancelarPressionarFavoritar()" onmousedown="vfIniciarPressionarFavoritar()" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
+      <button class="banco-acao-btn btn-icone-pequeno ${favoritosVF.has(item.id)?'favoritada':''}" style="width:auto;height:auto;padding:12px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;transform:none !important" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar(event)" ontouchend="vfCancelarPressionarFavoritar()" ontouchmove="vfCancelarPressionarFavoritar(event)" onmousedown="vfIniciarPressionarFavoritar(event)" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
         <svg viewBox="0 0 24 24" fill="${favoritosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
         <span>Favoritar</span>
       </button>
@@ -6862,7 +6988,7 @@ function renderizarBarraFixaVF(item, jaRespondida){
         <span>Notas</span>
         ${notasVF.has(item.id)?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
-      <button class="banco-acao-btn btn-icone-pequeno ${flashsSalvosVF.has(item.id)?'favoritada':''}" style="width:auto;height:auto;padding:12px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;transform:none !important" onclick="vfAbrirEscolhaMotivoSalvarVF('${item.id}')" ontouchstart="vfIniciarPressionarSalvar()" ontouchend="vfCancelarPressionarSalvar()" ontouchmove="vfCancelarPressionarSalvar()" onmousedown="vfIniciarPressionarSalvar()" onmouseup="vfCancelarPressionarSalvar()" onmouseleave="vfCancelarPressionarSalvar()">
+      <button class="banco-acao-btn btn-icone-pequeno ${flashsSalvosVF.has(item.id)?'favoritada':''}" style="width:auto;height:auto;padding:12px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;transform:none !important" onclick="vfAbrirEscolhaMotivoSalvarVF('${item.id}')" ontouchstart="vfIniciarPressionarSalvar(event)" ontouchend="vfCancelarPressionarSalvar()" ontouchmove="vfCancelarPressionarSalvar(event)" onmousedown="vfIniciarPressionarSalvar(event)" onmouseup="vfCancelarPressionarSalvar()" onmouseleave="vfCancelarPressionarSalvar()">
         <svg viewBox="0 0 24 24" fill="${flashsSalvosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         <span>Salvar</span>
       </button>
@@ -6964,18 +7090,29 @@ async function responderVF(resposta){
 // continua favoritando/desfavoritando como sempre foi
 let vfTimerPressionarFavoritar = null;
 let vfFoiToqueLongoFavoritar = false;
-function vfIniciarPressionarFavoritar(){
+let vfPosicaoInicialPressionarFavoritarVF = null;
+function vfIniciarPressionarFavoritar(evento){
   vfFoiToqueLongoFavoritar = false;
   clearTimeout(vfTimerPressionarFavoritar);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarFavoritarVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
   vfTimerPressionarFavoritar = setTimeout(() => {
     vfTimerPressionarFavoritar = null;
     vfFoiToqueLongoFavoritar = true;
     vfAbrirFavoritosVF();
   }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
 }
-function vfCancelarPressionarFavoritar(){
+function vfCancelarPressionarFavoritar(evento){
+  if(evento && vfPosicaoInicialPressionarFavoritarVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarFavoritarVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarFavoritarVF.y;
+      if(Math.hypot(dx, dy) < 25) return;
+    }
+  }
   clearTimeout(vfTimerPressionarFavoritar);
   vfTimerPressionarFavoritar = null;
+  vfPosicaoInicialPressionarFavoritarVF = null;
 }
 
 async function toggleFavoritoVF(questaoVfId){
@@ -7058,7 +7195,7 @@ function abrirExplicacaoVF(questaoVfId){
   const el = document.getElementById('conteudo-explicacao-vf');
   if(!entrada){ el.innerHTML = ''; abrirModal('modal-explicacao-vf'); return; }
   const explicacao = entrada.item.explicacao || '';
-  const atributosEdicao = souCarlos() ? `id="vf-explicacao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarExplicacao()" ontouchend="vfCancelarPressionarExplicacao()" ontouchmove="vfCancelarPressionarExplicacao()" onmousedown="vfIniciarPressionarExplicacao()" onmouseup="vfCancelarPressionarExplicacao()" onmouseleave="vfCancelarPressionarExplicacao()"` : `id="vf-explicacao-atual"`;
+  const atributosEdicao = souCarlos() ? `id="vf-explicacao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarExplicacao(event)" ontouchend="vfCancelarPressionarExplicacao()" ontouchmove="vfCancelarPressionarExplicacao(event)" onmousedown="vfIniciarPressionarExplicacao(event)" onmouseup="vfCancelarPressionarExplicacao()" onmouseleave="vfCancelarPressionarExplicacao()"` : `id="vf-explicacao-atual"`;
   el.innerHTML = explicacao
     ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;margin:0;line-height:1.5;color:#111;position:relative">${formatarTextoItemVF(explicacao)}</div>`
     : `<p ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;margin:0;color:#666;position:relative">${souCarlos() ? 'Sem explicação cadastrada — segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
@@ -7068,14 +7205,24 @@ function abrirExplicacaoVF(questaoVfId){
 // ---- editar a explicação segurando nela (só Carlos), mesmo sistema já
 // usado na afirmação (toque longo -> vira textarea no próprio lugar) ----
 let vfTimerPressionarExplicacao = null;
-function vfIniciarPressionarExplicacao(){
+let vfPosicaoInicialPressionarExplicacaoVF = null;
+function vfIniciarPressionarExplicacao(evento){
   clearTimeout(vfTimerPressionarExplicacao);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarExplicacaoVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
   vfTimerPressionarExplicacao = setTimeout(() => {
     vfTimerPressionarExplicacao = null;
     vfIniciarEdicaoExplicacaoVF();
   }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
 }
-function vfCancelarPressionarExplicacao(){
+function vfCancelarPressionarExplicacao(evento){
+  if(evento && vfPosicaoInicialPressionarExplicacaoVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarExplicacaoVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarExplicacaoVF.y;
+      if(Math.hypot(dx, dy) < 25) return;
+    }
+  }
   clearTimeout(vfTimerPressionarExplicacao);
   vfTimerPressionarExplicacao = null;
 }
@@ -8211,6 +8358,9 @@ function abrirConfirmacaoEnvioTracker(retrato){
   retratoTrackerAtual = retrato;
   document.getElementById('resultado-envio-tracker').classList.add('hidden');
   document.getElementById('confirmacao-envio-tracker').classList.remove('hidden');
+  document.getElementById('texto-confirmacao-envio-tracker').textContent = retrato.origemFlash
+    ? 'Isso registra essa sessão do Flash (tempo, acertos e as questões) no PSCPP Tracker.'
+    : 'Isso registra esse caderno (tempo, acertos e as questões) no PSCPP Tracker.';
   const btn = document.getElementById('btn-confirmar-envio-tracker');
   btn.disabled = false;
   btn.textContent = 'Enviar';
@@ -8226,48 +8376,84 @@ async function confirmarEnvioTracker(){
 
   const tempoMinutos = Math.max(1, Math.round((new Date(retrato.finalizadoEm) - new Date(retrato.criadoEm)) / 60000));
 
-  const questoesValidas = retrato.questoes.filter(q => !retrato.excluidas.has(q.id));
+  let payload;
+  if(retrato.origemFlash){
+    // V/F não tem alternativas múltiplas - gabarito e resposta são só
+    // verdadeiro/falso, e a questão inteira já é o "enunciado completo"
+    const modulos = new Set(retrato.entradas.map(h => vfBibliografiaCache.get(h.item.bibliografia_id)?.modulo_pscpp).filter(Boolean));
+    const moduloUnico = modulos.size === 1 ? [...modulos][0] : null;
+    const publicacoes = new Set(retrato.entradas.map(h => vfBibliografiaCache.get(h.item.bibliografia_id)?.titulo).filter(Boolean));
+    const publicacaoUnica = publicacoes.size === 1 ? [...publicacoes][0] : null;
 
-  const modulos = new Set(questoesValidas.map(q=>q.modulo_pscpp).filter(Boolean));
-  const moduloUnico = modulos.size === 1 ? [...modulos][0] : null;
-
-  const mapaBibliografiaTitulo = {};
-  bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
-  const publicacoes = new Set(questoesValidas.map(q=>q.bibliografia_id ? mapaBibliografiaTitulo[q.bibliografia_id] : null).filter(Boolean));
-  const publicacaoUnica = publicacoes.size === 1 ? [...publicacoes][0] : null;
-
-  let acertos = 0, erros = 0, anuladas = 0;
-  const questoesPayload = [];
-  questoesValidas.forEach(q=>{
-    const resp = retrato.respostas[q.id];
-    if(!resp) return; // não respondida — não deveria acontecer num caderno finalizado, mas por segurança não manda
-    let status;
-    if(q.anulada){ status = 'Anulada'; anuladas++; }
-    else if(resp.correta){ status = 'Acertei'; acertos++; }
-    else { status = 'Errei'; erros++; }
-    const altsFormatadas = extrairAlternativas(q.alternativas).map(a=>`${a.letra}) ${a.texto}`).join('\n');
-    questoesPayload.push({
-      numero_questao: String(questoesPayload.length + 1),
-      status,
-      modulo_pscpp: q.modulo_pscpp || null,
-      publicacao: q.bibliografia_id ? (mapaBibliografiaTitulo[q.bibliografia_id] || null) : null,
-      capitulo: q.capitulo ? String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '') : null,
-      gabarito: (q.gabarito||'').toLowerCase(),
-      sua_resposta: resp.letra,
-      questao_completa: `${q.enunciado||''}\n\n${altsFormatadas}`.trim()
+    let acertos = 0, erros = 0;
+    const questoesPayload = retrato.entradas.map((h, i) => {
+      if(h.acertou) acertos++; else erros++;
+      return {
+        numero_questao: String(i + 1),
+        status: h.acertou ? 'Acertei' : 'Errei',
+        modulo_pscpp: vfBibliografiaCache.get(h.item.bibliografia_id)?.modulo_pscpp || null,
+        publicacao: vfBibliografiaCache.get(h.item.bibliografia_id)?.titulo || null,
+        capitulo: h.item.capitulo || null,
+        gabarito: h.item.resposta ? 'verdadeiro' : 'falso',
+        sua_resposta: h.resposta ? 'verdadeiro' : 'falso',
+        questao_completa: h.item.texto || ''
+      };
     });
-  });
 
-  const payload = {
-    tempo_gasto_minutos: tempoMinutos,
-    modulo: moduloUnico,
-    publicacao: publicacaoUnica,
-    total_questoes: questoesPayload.length,
-    acertos_efetivos: acertos,
-    erros_efetivos: erros,
-    anuladas,
-    questoes: questoesPayload
-  };
+    payload = {
+      tempo_gasto_minutos: tempoMinutos,
+      modulo: moduloUnico,
+      publicacao: publicacaoUnica,
+      total_questoes: questoesPayload.length,
+      acertos_efetivos: acertos,
+      erros_efetivos: erros,
+      anuladas: 0,
+      questoes: questoesPayload
+    };
+  }else{
+    const questoesValidas = retrato.questoes.filter(q => !retrato.excluidas.has(q.id));
+
+    const modulos = new Set(questoesValidas.map(q=>q.modulo_pscpp).filter(Boolean));
+    const moduloUnico = modulos.size === 1 ? [...modulos][0] : null;
+
+    const mapaBibliografiaTitulo = {};
+    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
+    const publicacoes = new Set(questoesValidas.map(q=>q.bibliografia_id ? mapaBibliografiaTitulo[q.bibliografia_id] : null).filter(Boolean));
+    const publicacaoUnica = publicacoes.size === 1 ? [...publicacoes][0] : null;
+
+    let acertos = 0, erros = 0, anuladas = 0;
+    const questoesPayload = [];
+    questoesValidas.forEach(q=>{
+      const resp = retrato.respostas[q.id];
+      if(!resp) return; // não respondida — não deveria acontecer num caderno finalizado, mas por segurança não manda
+      let status;
+      if(q.anulada){ status = 'Anulada'; anuladas++; }
+      else if(resp.correta){ status = 'Acertei'; acertos++; }
+      else { status = 'Errei'; erros++; }
+      const altsFormatadas = extrairAlternativas(q.alternativas).map(a=>`${a.letra}) ${a.texto}`).join('\n');
+      questoesPayload.push({
+        numero_questao: String(questoesPayload.length + 1),
+        status,
+        modulo_pscpp: q.modulo_pscpp || null,
+        publicacao: q.bibliografia_id ? (mapaBibliografiaTitulo[q.bibliografia_id] || null) : null,
+        capitulo: q.capitulo ? String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '') : null,
+        gabarito: (q.gabarito||'').toLowerCase(),
+        sua_resposta: resp.letra,
+        questao_completa: `${q.enunciado||''}\n\n${altsFormatadas}`.trim()
+      });
+    });
+
+    payload = {
+      tempo_gasto_minutos: tempoMinutos,
+      modulo: moduloUnico,
+      publicacao: publicacaoUnica,
+      total_questoes: questoesPayload.length,
+      acertos_efetivos: acertos,
+      erros_efetivos: erros,
+      anuladas,
+      questoes: questoesPayload
+    };
+  }
 
   const elResultado = document.getElementById('texto-resultado-envio-tracker');
   try{
