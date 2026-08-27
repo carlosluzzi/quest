@@ -62,7 +62,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* balão flutuante da sessão do Flash - mesma técnica de estados via
 classe do timer do PSCPP Tracker, cor adaptada pra marca do Pilotquest
 (B23A34 em vez do azul-marinho de lá) */
-#vf-sessao-balao{position:fixed;z-index:10001;background:#B23A34;color:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.35);width:180px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 16px)}
+#vf-sessao-balao{position:fixed;z-index:35;background:#B23A34;color:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.35);width:180px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 16px)}
 #vf-sessao-balao.hidden{display:none}
 /* pausado NÃO troca o fundo (igual o Tracker) - só o tempo fica
 acinzentado e a tag "PAUSADO" aparece em destaque. Cor de fundo do
@@ -1515,7 +1515,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-312';
+const VERSAO_APP = '2026-07-25-314';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2464,10 +2464,13 @@ window.addEventListener('focus', () => { if(vfEstaVisivelAgora()) aoVoltarParaVF
 // Só conta como "abriu teclado" campo de texto de verdade – checkbox, radio
 // e select nunca chamam teclado no celular, então nunca podem esconder o menu.
 function ehCampoDeTeclado(el){
-  // esses 2 campos de edição (enunciado/explicação do Flash) não devem
-  // esconder o menu - mesmo abrindo teclado de verdade, Carlos prefere o
-  // menu continuar visível enquanto edita esse conteúdo específico
-  if(el.id === 'vf-textarea-enunciado' || el.id === 'vf-textarea-explicacao' || el.id === 'vf-textarea-correcao') return false;
+  // esses campos de edição/anotação do Flash não devem esconder o menu -
+  // mesmo abrindo teclado de verdade, Carlos prefere o menu continuar
+  // visível enquanto edita esse conteúdo específico. Antes só 3 campos
+  // estavam aqui (enunciado/correção/explicação), motivo de exclusão e
+  // nota escondiam normalmente - causava a barra se comportar diferente
+  // dependendo de qual campo você estivesse editando
+  if(['vf-textarea-enunciado', 'vf-textarea-explicacao', 'vf-textarea-correcao', 'motivo-exclusao-vf', 'texto-nota-vf'].includes(el.id)) return false;
   if(el.tagName === 'TEXTAREA') return true;
   if(el.tagName !== 'INPUT') return false;
   // lista do que REALMENTE abre teclado, em vez de excluir só
@@ -3400,13 +3403,23 @@ const VF_LETRAS_GREGAS = {
 };
 const VF_OPERADORES_MATEMATICOS = {
   'approx':'≈','le':'≤','ge':'≥','ne':'≠','infty':'∞','int':'∫',
-  'sum':'∑','pm':'±','times':'×','partial':'∂'
+  'sum':'∑','pm':'±','times':'×','partial':'∂','equiv':'≡','cdot':'·'
 };
 // recebe o texto JÁ escapado (depois do escapeHtml) - \, {, } não são
 // caracteres especiais de HTML, então processar essas marcações depois
 // do escape é seguro, sem conflito nenhum
 function vfAplicarMarcacaoMatematicaVF(textoEscapado){
   return textoEscapado
+    // \nome{conteudo} - letra grega/operador seguido de chaves SEM
+    // expoente (ex: \delta{V_P}) - converte o símbolo e remove as
+    // chaves, deixando só o conteúdo (que ainda passa pelas outras
+    // regras depois, tipo subscrito). Roda ANTES da regra de gregas sem
+    // chaves logo abaixo, senão essa já teria consumido o \nome antes de
+    // chegar aqui, deixando as chaves sobrando literalmente no texto
+    .replace(/\\([A-Za-z]+)\{([^}]+)\}/g, (match, nome, conteudo) => {
+      const simbolo = VF_LETRAS_GREGAS[nome] || VF_OPERADORES_MATEMATICOS[nome];
+      return simbolo ? simbolo + conteudo : match;
+    })
     // gregas/operadores via \nome - roda ANTES do sqrt/superscript, pra
     // esses símbolos resolvidos poderem participar deles depois (ex:
     // \Delta^{2} precisa que \Delta já tenha virado Δ antes do ^ agir)
@@ -3787,7 +3800,11 @@ let vfSeletorCorNativoAberto = false; // true enquanto o seletor de cor nativo (
 // pop-ups de uma vez, não só o seletor de cor nativo especificamente
 function vfAlgumModalAbertoVF(){
   if(vfSeletorCorNativoAberto) return true;
-  if(document.querySelector('.modal-overlay:not(.hidden)')) return true;
+  // ':not(#modal-explicacao-vf)' - exceção específica: esse modal
+  // precisa deixar a caneta desenhar em cima dele (pedido explícito do
+  // Carlos, pra poder escrever sobre a explicação), diferente de todos
+  // os outros modais/popups, que continuam bloqueando normalmente
+  if(document.querySelector('.modal-overlay:not(.hidden):not(#modal-explicacao-vf)')) return true;
   const paginaSalvos = document.getElementById('pagina-flash-salvos-vf');
   if(paginaSalvos && !paginaSalvos.classList.contains('hidden')) return true;
   const paginaFavoritos = document.getElementById('pagina-favoritos-vf');
@@ -3949,7 +3966,7 @@ document.addEventListener('touchstart', (e) => {
   // de verdade, continua como traço - dá liberdade total pra desenhar em
   // cima de qualquer coisa, sem perder a navegação normal com toque rápido
   const itemMenu = e.target.closest('.nav-item');
-  const botaoIcone = itemMenu || e.target.closest('.btn-icone-pequeno, .topbar button, .topbar [onclick]');
+  const botaoIcone = itemMenu || e.target.closest('.btn-icone-pequeno, .topbar button, .topbar [onclick], #vf-filtro-numero, #vf-filtro-lista');
   if(botaoIcone){
     vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX};
     return;
@@ -10402,7 +10419,19 @@ function identificarBibliografia(explicacao, enunciado){
 // as que bateram como fallback pras que não bateram (assume 1 livro por
 // PDF, que é o padrão normal confirmado pelo Carlos)
 function resolverBibliografiaDoLote(questoesComTextos){
-  const identificadas = questoesComTextos.map(q => identificarBibliografia(q.explicacao, q.enunciado));
+  const identificadas = questoesComTextos.map(q => {
+    // inclui o capítulo já detectado (do bloco bruto da questão) no texto
+    // usado pra identificar - sem isso, livros que existem em mais de um
+    // módulo por faixa de capítulo (ex: Princípios de Hidrodinâmica, em
+    // Manobrabilidade caps. 3-6 E em Meteorologia/Oceanografia caps. 1-2)
+    // podiam falhar em desempatar quando a explicação/enunciado da
+    // questão não menciona capítulo explicitamente. Mesma correção já
+    // testada e aplicada no fluxo V/F
+    const textoComCapitulo = q.capituloDetectado
+      ? `${q.enunciado} Capítulo ${q.capituloDetectado}`
+      : q.enunciado;
+    return identificarBibliografia(q.explicacao, textoComCapitulo);
+  });
   const contagem = {};
   identificadas.forEach(entrada => {
     if(entrada) contagem[entrada.modulo+'|'+entrada.titulo] = (contagem[entrada.modulo+'|'+entrada.titulo]||0) + 1;
@@ -11251,7 +11280,7 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
 
   mostrarBarraProgresso(status, 82, `${prefixoProgresso}Identificando a bibliografia...`);
   const bibliografias = resolverBibliografiaDoLote(
-    questoesParsed.map(q=>({explicacao: q.explicacao, enunciado: q.textoBrutoParaBibliografia}))
+    questoesParsed.map(q=>({explicacao: q.explicacao, enunciado: q.textoBrutoParaBibliografia, capituloDetectado: q.capituloDetectado}))
   );
 
   // separa em 2 grupos: as que identificaram bibliografia vão direto pro
