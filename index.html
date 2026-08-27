@@ -63,7 +63,8 @@ dois casos */
 #vf-input-cor-nativo::-webkit-color-swatch-wrapper{padding:0;border-radius:50%}
 #vf-input-cor-nativo::-webkit-color-swatch{border:none;border-radius:50%}
 button:focus{outline:none}
-button:active{transform:scale(0.96)}
+button:active{transform:scale(0.98)}
+.banco-alt-btn:active{transform:scale(0.995)}
 input,select,textarea{font-family:inherit;font-size:16px}
 
 .hidden{display:none !important}
@@ -71,18 +72,18 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* balão flutuante da sessão do Flash - mesma técnica de estados via
 classe do timer do PSCPP Tracker, cor adaptada pra marca do Pilotquest
 (B23A34 em vez do azul-marinho de lá) */
-#vf-sessao-balao{position:fixed;z-index:150;background:#B23A34;color:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.35);width:180px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 16px)}
+#vf-sessao-balao{position:fixed;z-index:150;background:#B23A34;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.35);width:220px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 16px)}
 #vf-sessao-balao.hidden{display:none}
 /* pausado NÃO troca o fundo (igual o Tracker) - só o tempo fica
 acinzentado e a tag "PAUSADO" aparece em destaque. Cor de fundo do
 balão é sempre a mesma, ativo ou pausado - só o que muda é o conteúdo */
 #vf-sessao-balao-fechar{position:absolute;top:2px;right:6px;font-size:var(--fs-b);color:#E8B8B5;padding:6px;cursor:pointer}
-#vf-sessao-balao-nome{font-size:var(--fs-a);color:#E8B8B5;text-transform:uppercase;letter-spacing:.03em;padding-right:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+#vf-sessao-balao-nome{font-size:var(--fs-b);color:#E8B8B5;text-transform:uppercase;letter-spacing:.03em;padding-right:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
 #vf-sessao-balao-tempo{font-size:var(--fs-g);font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
 #vf-sessao-balao.pausado #vf-sessao-balao-tempo{color:#E8B8B5}
 .vf-sessao-balao-tag{font-size:var(--fs-a);letter-spacing:.08em;color:#F0C9C5;font-weight:700;margin-top:1px;height:11px}
 .vf-sessao-balao-btns{display:flex;gap:8px;margin-top:8px}
-.vf-sessao-balao-btns > div{flex:1;min-width:0;background:rgba(255,255,255,0.15);color:#fff;border-radius:8px;padding:5px 4px;font-size:var(--fs-a);font-weight:600;text-align:center;cursor:pointer}
+.vf-sessao-balao-btns > div{flex:1;min-width:0;background:rgba(255,255,255,0.15);color:#fff;border-radius:8px;padding:8px 6px;font-size:var(--fs-c);font-weight:600;text-align:center;cursor:pointer}
 #vf-sessao-balao.pausado #vf-sessao-balao-btn-pausar{background:rgba(255,255,255,0.9);color:#B23A34}
 /* sliders de espessura (caneta, destaque e tamanho da borracha) - MESMO
 visual nos três, pílula horizontal neutra (branca, como o thumb padrão
@@ -212,7 +213,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .nav-icon{width:24px;height:24px;color:#888;display:flex;align-items:center;justify-content:center}
 .nav-icon svg{width:100%;height:100%}
 .nav-item.active .nav-icon{color:#B23A34}
-.nav-label{font-size:var(--fs-a);color:#888;white-space:normal;text-align:center;line-height:1.15;max-width:100%}
+.nav-label{font-size:var(--fs-c);color:#888;white-space:normal;text-align:center;line-height:1.15;max-width:100%}
 .nav-item.active .nav-label{color:#B23A34;font-weight:500}
 
 @media(min-width:768px) and (max-width:1099px){
@@ -226,7 +227,6 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
   #wrapper-barra-adicionar{max-width:100%}
   .vf-barra-fixa{max-width:100%}
   .content{padding:24px;padding-bottom:calc(var(--nav-height, 76px) + 24px)}
-  .nav-label{font-size:var(--fs-b)}
   .section-title{margin-top:28px}
   .section-title:first-child{margin-top:0}
 }
@@ -250,7 +250,6 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
   #pagina-flash-salvos-vf{left:250px !important;width:calc(100% - 250px) !important}
   #pagina-favoritos-vf{left:250px !important;width:calc(100% - 250px) !important}
   .nav-icon{width:24px;height:24px}
-  .nav-label{font-size:var(--fs-e)}
   .badge-notificacao{top:3px;left:30px;right:auto}
   .content{grid-column:2;grid-row:3;padding:32px 48px;max-width:1320px;width:100%}
   .section-title{margin-top:28px}
@@ -1551,7 +1550,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-333';
+const VERSAO_APP = '2026-07-25-334';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4100,6 +4099,9 @@ document.addEventListener('touchstart', (e) => {
   if(!vfEhToqueDeCaneta(touch)) return; // só a caneta desenha
   if(vfTocouNaBarra(e.target)) return; // deixa o toque chegar no botão normalmente
   if(e.target.closest('.vf-btn-resposta')) return; // idem pros botões Verdadeiro/Falso - nunca viram início de traço
+  if(e.target.closest('#vf-sessao-balao')) return; // balão da sessão (arrastar, Pausar, Finalizar, fechar) - nunca vira início de traço, tem seu próprio sistema de arrasto/clique
+  if(vfBalaoArrastoInfoVF) return; // proteção redundante - nunca desenha enquanto o balão está sendo arrastado, mesmo que o toque não esteja mais fisicamente sobre ele
+  if(e.target.closest('#vf-filtro-modulo, #vf-filtro-publicacao, #vf-filtro-capitulo')) return; // <select> nativo - nunca vira início de traço (diferente de botão/ícone, não faz sentido "poder virar arrasto" aqui, e a decisão adiada podia interferir no dropdown nativo do Safari)
   // ícones pequenos, itens de menu (barra de baixo/sidebar) e botões do
   // cabeçalho: não decide na hora - um TOQUE rápido deixa o clique
   // funcionar normal (trocar de aba, abrir perfil), mas se virar ARRASTO
@@ -6750,10 +6752,14 @@ function vfFinalizarArrastoBalaoVF(){
     vfIniciarArrastoBalaoVF(t.clientX, t.clientY);
   }, {passive: true});
   balao.addEventListener('touchmove', (e) => {
+    if(alvoEhControleInterno(e.target)) return;
     const t = e.touches[0];
     vfMoverArrastoBalaoVF(t.clientX, t.clientY);
   }, {passive: true});
-  balao.addEventListener('touchend', vfFinalizarArrastoBalaoVF);
+  balao.addEventListener('touchend', (e) => {
+    if(alvoEhControleInterno(e.target)) return; // controles internos cuidam do próprio toque - não finaliza arrasto nem reabre a aba
+    vfFinalizarArrastoBalaoVF();
+  });
   balao.addEventListener('mousedown', (e) => {
     if(alvoEhControleInterno(e.target)) return;
     vfIniciarArrastoBalaoVF(e.clientX, e.clientY);
@@ -6761,6 +6767,20 @@ function vfFinalizarArrastoBalaoVF(){
     const onUp = () => { vfFinalizarArrastoBalaoVF(); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
+  });
+  // Pausar/Finalizar/Fechar não dependem do clique sintético do navegador -
+  // #vf-sessao-balao tem touch-action:none (necessário pro arrasto suave),
+  // e isso pode suprimir o "click" sintético normal em qualquer descendente
+  // com a Apple Pencil. touchend explícito garante que sempre funcione,
+  // com preventDefault pra não disparar a ação de novo quando o clique
+  // sintético eventualmente também disparar
+  const controlesInternos = balao.querySelectorAll('#vf-sessao-balao-fechar, .vf-sessao-balao-btns > [onclick]');
+  controlesInternos.forEach(el => {
+    el.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      el.click();
+    });
   });
 })();
 
