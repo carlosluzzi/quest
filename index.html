@@ -1232,7 +1232,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-info-fisher-yates-vf">
   <div class="modal-conteudo">
     <h3 class="config-title">Repetição espaçada</h3>
-    <p>A ordem não é sorteio: cada questão tem um "quanto tempo até valer a pena rever" calculado pra você, com base em quando você respondeu da última vez e se acertou ou errou. Questão que você errou volta mais cedo; questão que você domina bem se afasta mais. O sistema também leva em conta quanto tempo você levou pra responder — acerto rápido conta mais do que acerto arrastado. Nunca mostra a mesma questão errada de novo muito perto, mesmo respondendo rápido.</p>
+    <p>A ordem não é sorteio: cada questão tem um "quanto tempo até valer a pena rever" calculado pra você, com base em quando você respondeu da última vez e se acertou ou errou. Questão que você errou volta mais cedo; questão que você domina bem se afasta mais. O sistema também leva em conta quanto tempo você levou pra responder – acerto rápido conta mais do que acerto arrastado. Nunca mostra a mesma questão errada de novo muito perto, mesmo respondendo rápido.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-fisher-yates-vf')">Fechar</button>
   </div>
 </div>
@@ -1334,9 +1334,9 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 </div>
 
 <div class="modal-overlay hidden" id="modal-confirmar-finalizar-vf">
-  <div class="modal-conteudo popup-formulario">
+  <div class="modal-conteudo">
     <h3 class="config-title">Finalizar sessão?</h3>
-    <p>Isso encerra a sessão de vez — o tempo é registrado e a fila para até você iniciar de novo.</p>
+    <p>Isso encerra a sessão de vez – o tempo é registrado e a fila para até você iniciar de novo.</p>
     <div style="display:flex;gap:8px">
       <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-finalizar-vf')">Cancelar</button>
       <button class="btn-primario" style="flex:1" onclick="vfFinalizarSessaoFlashVF()">Finalizar</button>
@@ -1529,7 +1529,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-320';
+const VERSAO_APP = '2026-07-25-323';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3993,6 +3993,23 @@ function vfEhToqueDeCaneta(touch){
   return touch && touch.touchType === 'stylus';
 }
 
+// PointerEvent.getCoalescedEvents() dá acesso às amostras de toque REAIS
+// que o hardware gerou entre um touchmove e outro (não é interpolação/
+// suposição nenhuma - são pontos de verdade que o Apple Pencil reportou,
+// só "represados" pelo navegador por otimização). Suportado no Safari
+// desde a versão 18.2 (dez/2024). Guarda o pointerId mais recente de um
+// toque tipo caneta - touchstart usa ele pra saber qual pointerId
+// corresponde ao toque que acabou de iniciar o traço (pointerdown sempre
+// dispara antes do touchstart correspondente, ordem garantida pelo spec)
+const VF_SUPORTA_COALESCED_VF = typeof PointerEvent !== 'undefined' && typeof PointerEvent.prototype.getCoalescedEvents === 'function';
+let vfUltimoPointerIdCanetaVF = null;
+let vfPointerIdAtivoVF = null;
+if(VF_SUPORTA_COALESCED_VF){
+  document.addEventListener('pointerdown', (e) => {
+    if(e.pointerType === 'pen') vfUltimoPointerIdCanetaVF = e.pointerId;
+  }, {capture: true, passive: true});
+}
+
 let vfBotaoPendenteToqueInfo = null; // {x, y, identifier, limiar} - toque começou num ícone pequeno, decisão adiada até ver se vira arrasto
 const VF_LIMIAR_ARRASTO_BOTAO_PX = 40; // igualado ao limiar de nav-item - mesmo motivo (tremor da Apple Pencil "parada"), afeta qualquer botão pequeno igualmente
 // menu lateral/de baixo usa um limiar bem mais generoso - a Apple Pencil
@@ -4025,6 +4042,7 @@ document.addEventListener('touchstart', (e) => {
   e.preventDefault();
   vfDesenhandoAgora = true;
   vfTouchIdAtivo = touch.identifier;
+  vfPointerIdAtivoVF = vfUltimoPointerIdCanetaVF;
   const canvas = document.getElementById('vf-canvas-desenho');
 
   const rect = canvas.getBoundingClientRect();
@@ -4089,6 +4107,7 @@ document.addEventListener('touchmove', (e) => {
         if(vfCtxDesenho){
           vfDesenhandoAgora = true;
           vfTouchIdAtivo = vfBotaoPendenteToqueInfo.identifier;
+          vfPointerIdAtivoVF = vfUltimoPointerIdCanetaVF;
           const canvas = document.getElementById('vf-canvas-desenho');
           const rect = canvas.getBoundingClientRect();
           const ponto = {x: vfBotaoPendenteToqueInfo.x - rect.left, y: vfBotaoPendenteToqueInfo.y - rect.top};
@@ -4123,8 +4142,23 @@ document.addEventListener('touchmove', (e) => {
   const touch = Array.from(e.changedTouches).find(t => t.identifier === vfTouchIdAtivo);
   if(!touch) return;
   e.preventDefault();
+  // quando o navegador suporta coalesced events, o desenho em si é feito
+  // pelo listener de pointermove abaixo (pega os pontos reais extras que
+  // o touchmove sozinho não vê) - aqui só cuida de prevenir o scroll/
+  // gesto padrão do navegador, sem desenhar duas vezes o mesmo traço
+  if(VF_SUPORTA_COALESCED_VF) return;
   const canvas = document.getElementById('vf-canvas-desenho');
   const rect = canvas.getBoundingClientRect();
+  vfProcessarPontoDesenhoVF(touch.clientX, touch.clientY, touch.force, rect);
+}, {passive: false});
+
+// toda a lógica de desenhar UM ponto (suavização de posição, força,
+// espessura, interpolação de salto grande, curva quadrática, preview do
+// destaque) extraída pra uma função só - chamada tanto pelo touchmove
+// (fallback, navegadores sem coalesced events) quanto pelo pointermove
+// novo (com coalesced events, dados reais extras do hardware). Mesmo
+// código de desenho nos dois caminhos, só muda de onde os pontos vêm
+function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect){
   // suavização ADAPTATIVA de posição (não peso fixo) - a primeira versão
   // usava peso fixo (90% novo/10% suavizado anterior) em TODO evento de
   // toque, mas isso faz o atraso introduzido crescer junto com a
@@ -4138,7 +4172,7 @@ document.addEventListener('touchmove', (e) => {
   // perto da distância percorrida) - testado isoladamente antes de
   // aplicar: atraso ficou baixo e estável (~0.3-0.5px) em qualquer
   // velocidade, ao invés de crescer com ela
-  const xBruto = touch.clientX - rect.left, yBruto = touch.clientY - rect.top;
+  const xBruto = clientX - rect.left, yBruto = clientY - rect.top;
   let x = xBruto, y = yBruto;
   if(vfPosicaoSuavizada){
     const distanciaBruta = Math.hypot(xBruto - vfPosicaoSuavizada.x, yBruto - vfPosicaoSuavizada.y);
@@ -4162,7 +4196,7 @@ document.addEventListener('touchmove', (e) => {
     ctxAtivo.globalAlpha = 1;
   }
   let espessuraFinal = vfEspessuraDesenhoAtual;
-  const forcaBruta = typeof touch.force === 'number' && touch.force > 0 ? touch.force : 0.5;
+  const forcaBruta = typeof forcaTouch === 'number' && forcaTouch > 0 ? forcaTouch : 0.5;
   // suaviza a força entre um touchmove e outro (média móvel exponencial) -
   // evita a espessura "pulando" abrupto de um segmento pro outro se a
   // força reportada oscilar rápido, deixa a transição mais orgânica
@@ -4192,7 +4226,10 @@ document.addEventListener('touchmove', (e) => {
   // salto grande vira um segmento quase reto, com leve efeito facetado
   // na curva. Subdivide o salto em pontos intermediários antes de
   // desenhar, suavizando exatamente onde a suavização por si só não
-  // ajuda (ela já roda em cima desses pontos extras também)
+  // ajuda (ela já roda em cima desses pontos extras também). Com
+  // coalesced events, isso vira principalmente uma rede de segurança -
+  // os pontos já chegam mais densos, então essa subdivisão entra em
+  // ação com menos frequência (mas continua aqui pro fallback)
   const distancia = Math.hypot(x - vfUltimoPontoDesenho.x, y - vfUltimoPontoDesenho.y);
   const LIMIAR_INTERPOLACAO_PX = 14;
   let numEtapas = distancia > LIMIAR_INTERPOLACAO_PX ? Math.ceil(distancia / LIMIAR_INTERPOLACAO_PX) : 1;
@@ -4253,7 +4290,29 @@ document.addEventListener('touchmove', (e) => {
     vfCtxPreviewDestaque.globalAlpha = vfOpacidadeDestaqueAtual;
     vfCtxPreviewDestaque.drawImage(vfCanvasTracoTemp, 0, 0, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
   }
-}, {passive: false});
+}
+
+// novo caminho, só ativo quando o navegador suporta coalesced events:
+// pega TODAS as amostras reais que o Apple Pencil gerou entre um evento e
+// outro (getCoalescedEvents), não só a última - resolve a causa raiz do
+// "facetamento" em curvas rápidas/grandes (círculos), sem inventar nem
+// atrasar nada, ao contrário de tentar adivinhar a curvatura
+if(VF_SUPORTA_COALESCED_VF){
+  document.addEventListener('pointermove', (e) => {
+    if(!vfDesenhandoAgora) return;
+    if(e.pointerId !== vfPointerIdAtivoVF) return;
+    const canvas = document.getElementById('vf-canvas-desenho');
+    const rect = canvas.getBoundingClientRect();
+    const eventos = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    // getCoalescedEvents() pode devolver lista vazia em alguns casos raros
+    // (ex: primeiro pointermove depois do pointerdown) - usa o evento
+    // principal como fallback pra nunca perder o ponto
+    const lista = eventos.length ? eventos : [e];
+    for(const ev of lista){
+      vfProcessarPontoDesenhoVF(ev.clientX, ev.clientY, ev.pressure, rect);
+    }
+  }, {passive: true});
+}
 
 function vfFinalizarTracoDesenho(e){
   vfBotaoPendenteToqueInfo = null; // toque em cima do ícone terminou sem virar arrasto - deixa o clique nativo acontecer
@@ -4262,6 +4321,7 @@ function vfFinalizarTracoDesenho(e){
   // trava de scroll ficar presa ligada por algum caso raro do navegador)
   vfDesenhandoAgora = false;
   vfTouchIdAtivo = null;
+  vfPointerIdAtivoVF = null;
   document.body.style.touchAction = '';
   document.documentElement.style.overflow = '';
   // funde o traço de destaque (que foi desenhado em opacidade cheia no
@@ -6304,7 +6364,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   // banco, só porque o cliente não conseguiu buscá-lo dessa vez (F2 do
   // relatório da Fable). Aborta com aviso claro em vez disso
   if(erroEstados){
-    document.getElementById('vf-conteudo').innerHTML = `<p style="padding:24px 4px;color:#A32D2D">Não consegui carregar seu progresso no Flash agora (${escapeHtml(erroEstados.message||'erro de rede')}). Tenta de novo — responder assim, sem isso, arriscaria apagar seu progresso real.</p>`;
+    document.getElementById('vf-conteudo').innerHTML = `<p style="padding:24px 4px;color:#A32D2D">Não consegui carregar seu progresso no Flash agora (${escapeHtml(erroEstados.message||'erro de rede')}). Tenta de novo – responder assim, sem isso, arriscaria apagar seu progresso real.</p>`;
     throw new Error('Falha ao buscar repeticao_vf: ' + erroEstados.message);
   }
   favoritosVF = new Set((favData||[]).map(f=>f.questao_vf_id));
@@ -7587,7 +7647,7 @@ function abrirExplicacaoVF(questaoVfId){
   const atributosEdicao = souCarlos() ? `id="vf-explicacao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarExplicacao(event)" ontouchend="vfCancelarPressionarExplicacao()" ontouchmove="vfCancelarPressionarExplicacao(event)" onmousedown="vfIniciarPressionarExplicacao(event)" onmouseup="vfCancelarPressionarExplicacao()" onmouseleave="vfCancelarPressionarExplicacao()"` : `id="vf-explicacao-atual"`;
   el.innerHTML = explicacao
     ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;margin:0;line-height:1.5;color:#111;position:relative">${formatarTextoItemVF(explicacao)}</div>`
-    : `<p ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;margin:0;color:#666;position:relative">${souCarlos() ? 'Sem explicação cadastrada — segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
+    : `<p ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;margin:0;color:#666;position:relative">${souCarlos() ? 'Sem explicação cadastrada – segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
   abrirModal('modal-explicacao-vf');
 }
 
@@ -7641,12 +7701,12 @@ async function vfSalvarEdicaoExplicacaoVF(questaoId, textoOriginal){
   document.getElementById('bottom-nav')?.classList.remove('teclado-aberto');
   document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
   if(textoNovo === textoOriginal){
-    div.innerHTML = textoOriginal ? formatarTextoItemVF(textoOriginal) : (souCarlos() ? 'Sem explicação cadastrada — segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.');
+    div.innerHTML = textoOriginal ? formatarTextoItemVF(textoOriginal) : (souCarlos() ? 'Sem explicação cadastrada – segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.');
     return;
   }
   const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
   if(entrada) entrada.item.explicacao = textoNovo || null;
-  div.innerHTML = textoNovo ? formatarTextoItemVF(textoNovo) : 'Sem explicação cadastrada — segure aqui pra adicionar.';
+  div.innerHTML = textoNovo ? formatarTextoItemVF(textoNovo) : 'Sem explicação cadastrada – segure aqui pra adicionar.';
   const cacheAtualExplicacao = vfConteudoCompletoCache.get(questaoId) || {};
   vfConteudoCompletoCache.set(questaoId, {...cacheAtualExplicacao, explicacao: textoNovo || null});
   const {error} = await sb.from('questoes_vf').update({explicacao: textoNovo || null}).eq('id', questaoId);
@@ -7676,7 +7736,7 @@ async function vfCopiarExplicacaoParaClaude(botao){
     item.explicacao ? `Explicação: ${item.explicacao}` : null,
     '',
     '---',
-    'Antes de explicar: abra o livro na pasta PSCPP/Bibliografia, localize a seção citada acima e leia. Não responda de memória. A Explicação acima é meu ponto de partida, não a fonte — confira contra o livro e me avise se divergir em algo.\n\nExplique isso da forma mais clara possível, by the book: o que o autor escreveu, na ordem em que ele apresenta. Se precisar acrescentar algo que não está no texto para a explicação fechar, marque como complemento seu. Se não achar o trecho no livro, me diga — não preencha com conhecimento geral.\n\nSe ajudar a entender, desenhe o que o autor quis dizer: um desenho em HTML renderizado aqui no chat. Não publique página nem artefato.\n\nNada além disso: sem seções extras, sem tabela-resumo, sem box de revisão, sem relatório dos meus erros anteriores. Explicação + desenho, e para. Se eu tiver dúvida, eu pergunto.'
+    'Antes de explicar: abra o livro na pasta PSCPP/Bibliografia, localize a seção citada acima e leia. Não responda de memória. A Explicação acima é meu ponto de partida, não a fonte – confira contra o livro e me avise se divergir em algo.\n\nExplique isso da forma mais clara possível, by the book: o que o autor escreveu, na ordem em que ele apresenta. Se precisar acrescentar algo que não está no texto para a explicação fechar, marque como complemento seu. Se não achar o trecho no livro, me diga – não preencha com conhecimento geral.\n\nSe ajudar a entender, desenhe o que o autor quis dizer: um desenho em HTML renderizado aqui no chat. Não publique página nem artefato.\n\nNada além disso: sem seções extras, sem tabela-resumo, sem box de revisão, sem relatório dos meus erros anteriores. Explicação + desenho, e para. Se eu tiver dúvida, eu pergunto.'
   ].filter(p => p !== null).join('\n');
 
   try{
@@ -8862,7 +8922,7 @@ async function confirmarEnvioTracker(){
     });
     const resultado = await resp.json();
     if(resultado.ok){
-      elResultado.textContent = `Enviado como ${resultado.id_atividade} — ${resultado.questoes_gravadas} questões registradas no Tracker.`;
+      elResultado.textContent = `Enviado como ${resultado.id_atividade} – ${resultado.questoes_gravadas} questões registradas no Tracker.`;
       elResultado.style.color = '#27500A';
       if(retrato.cadernoId){
         await sb.from('cadernos').update({enviado_tracker_em: new Date().toISOString(), id_atividade_tracker: resultado.id_atividade}).eq('id', retrato.cadernoId);
@@ -9420,7 +9480,7 @@ async function verificarMaioriaTopico(topicoId){
         // não conseguiu aplicar a mudança de verdade — desfaz o "resolvido"
         // pra não ficar num estado inconsistente, e avisa
         await sb.from('topicos').update({status:'aberto'}).eq('id', topicoId);
-        alert('A votação bateu maioria, mas não consegui aplicar a mudança na questão: ' + erroAplicacao.message + '\n\nA discussão foi mantida aberta — tenta votar de novo depois.');
+        alert('A votação bateu maioria, mas não consegui aplicar a mudança na questão: ' + erroAplicacao.message + '\n\nA discussão foi mantida aberta – tenta votar de novo depois.');
         return;
       }
       const {error: erroProposta} = await sb.from('propostas_edicao').update({status:'aplicada'}).eq('id', proposta.id);
@@ -11611,7 +11671,7 @@ async function enviarUpload(){
   const textoRascunho = totalRascunho ? ` <span style="color:#B8860B">${totalRascunho} precisam de revisão manual (bibliografia não identificada) – veja a notificação no Início.</span>` : '';
   let htmlFinal = totalCadastradas || totalPuladas
     ? `<p style="color:#1B5E20;text-align:center;margin-top:8px">${totalCadastradas} questões cadastradas!${textoPuladas}</p>${textoRascunho ? `<p style="text-align:center;margin-top:6px">${textoRascunho}</p>` : ''}`
-    : (totalRascunho ? `<p style="color:#555;text-align:center;margin-top:8px">Lido com sucesso — ${totalRascunho} questão(ões) precisam de revisão manual antes de entrar no banco. Veja a notificação no Início.</p>` : '');
+    : (totalRascunho ? `<p style="color:#555;text-align:center;margin-top:8px">Lido com sucesso – ${totalRascunho} questão(ões) precisam de revisão manual antes de entrar no banco. Veja a notificação no Início.</p>` : '');
 
   if(comErro.length){
     htmlFinal += `<div style="margin-top:10px">${comErro.map(r => `<p style="color:#B00020;font-size:var(--fs-c)">${escapeHtml(r.erro)}</p>${r.trecho ? `<textarea readonly style="width:100%;height:100px;font-size:11px;font-family:monospace;margin:4px 0 8px;padding:6px;border:0.5px solid #ddd;border-radius:6px;color:#444" onclick="this.select()">${escapeHtml(r.trecho) || '(vazio)'}</textarea>` : ''}`).join('')}</div>`;
@@ -11811,7 +11871,7 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
   const concursoOrigem = marcadoComoMarinha ? (document.getElementById(idGrupo+'-concurso').value.trim() || null) : null;
   const anoProva = marcadoComoMarinha ? (parseInt(document.getElementById(idGrupo+'-ano').value, 10) || null) : null;
   if(!modulo || !bibliografiaId || (!capituloDigitado && !capituloEhAutomatico)){
-    alert('Escolhe o módulo, a publicação e o capítulo antes de cadastrar — capítulo é obrigatório.');
+    alert('Escolhe o módulo, a publicação e o capítulo antes de cadastrar – capítulo é obrigatório.');
     return;
   }
 
@@ -11862,7 +11922,7 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
   const misturaSuspeita = titulosDistintos.size > 1 || (identificadas.length > 0 && identificadas.length < itens.length);
   if(misturaSuspeita){
     const mensagemTitulos = titulosDistintos.size ? ` (encontrei: ${[...titulosDistintos].join(' | ')})` : '';
-    alert(`Esse grupo parece ter questões de assuntos diferentes entre si${mensagemTitulos}. Pra evitar cadastro errado, resolve cada questão separadamente em vez de tudo em lote — abre uma de cada vez pela tela de revisão.`);
+    alert(`Esse grupo parece ter questões de assuntos diferentes entre si${mensagemTitulos}. Pra evitar cadastro errado, resolve cada questão separadamente em vez de tudo em lote – abre uma de cada vez pela tela de revisão.`);
     return;
   }
 
@@ -12035,7 +12095,7 @@ async function resolverGrupoRascunhoVF(nomeArquivo, idGrupo){
     const bibEscolhida = bibliografiaId ? bibliografiaCache.find(b => b.id === bibliografiaId) : null;
     const capituloEhAutomatico = ehFonteCapituloUnico(bibEscolhida?.titulo);
     if(!modulo || !bibliografiaId || (!capituloDigitado && !capituloEhAutomatico)){
-      alert('Escolhe o módulo, a publicação e o capítulo antes de cadastrar — capítulo é obrigatório.');
+      alert('Escolhe o módulo, a publicação e o capítulo antes de cadastrar – capítulo é obrigatório.');
       return;
     }
 
