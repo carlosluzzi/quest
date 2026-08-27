@@ -1344,6 +1344,20 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-tags-vf" onclick="if(event.target===this) vfFecharPopupTagsVF()">
+  <div class="modal-conteudo popup-formulario">
+    <h3 class="config-title">Tags dessa afirmação</h3>
+    <div id="vf-tags-lista-atual" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="vf-tags-input-novo" class="filter-select" placeholder="Digite ou escolhe uma tag" list="vf-tags-datalist" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();vfAdicionarTagVF();}">
+      <datalist id="vf-tags-datalist"></datalist>
+      <button class="btn-primario" style="width:auto;padding:0 18px" onclick="vfAdicionarTagVF()">+</button>
+    </div>
+    <p id="vf-tags-status" style="font-size:var(--fs-c);margin-top:6px"></p>
+    <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="vfFecharPopupTagsVF()">Fechar</button>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-nota-questao" onclick="if(event.target===this) fecharModal('modal-nota-questao')">
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title">Suas notas nessa questão</h3>
@@ -1515,7 +1529,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-314';
+const VERSAO_APP = '2026-07-25-317';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2528,6 +2542,18 @@ function trocarAba(nome){
   // "trocar de tela dentro do próprio app" é um dos 5 pontos de pausa
   const vfEstavaAtiva = !document.getElementById('aba-vf').classList.contains('hidden');
   if(vfEstavaAtiva && nome !== 'vf') pausarTimerVF();
+
+  // #view-topico-detalhe não tem a classe .view-aba (é uma tela flutuante
+  // própria, position:fixed com z-index alto) - sem fechar ela aqui,
+  // trocar de aba enquanto um tópico do fórum estava aberto deixava ela
+  // "grudada" por cima de qualquer outra aba visitada depois, misturando
+  // as duas telas visualmente
+  // idem pras páginas flutuantes de Favoritos/Salvos do Flash - mesmo
+  // padrão de risco (position:fixed com z-index alto, sem a classe
+  // .view-aba), mesma correção
+  fecharViewTopico();
+  document.getElementById('pagina-favoritos-vf')?.classList.add('hidden');
+  document.getElementById('pagina-flash-salvos-vf')?.classList.add('hidden');
 
   document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
   document.getElementById('aba-'+nome).classList.remove('hidden');
@@ -3754,6 +3780,12 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
 let estadoVF = null;
 let filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false};
 let favoritosVF = new Set();
+// tags: cache de TODAS as tags existentes (nome + id), carregado uma vez
+// por sessão, pra a busca no popup ser instantânea sem consultar o banco
+// a cada letra digitada - mesmo espírito do vfBibliografiaCache abaixo.
+// tagsPorQuestaoVF é o mapa questao_vf_id -> array de {id, nome}
+let vfTodasTagsCacheVF = []; // [{id, nome}]
+let vfTagsPorQuestaoVF = new Map();
 // bibliografia é uma tabela pequena (dezenas/centenas de linhas, não
 // milhares) - buscar ela inteira uma vez e guardar em memória é muito
 // mais leve que fazer join em toda query de 7.700+ questões. Dá pra
@@ -3809,6 +3841,15 @@ function vfAlgumModalAbertoVF(){
   if(paginaSalvos && !paginaSalvos.classList.contains('hidden')) return true;
   const paginaFavoritos = document.getElementById('pagina-favoritos-vf');
   if(paginaFavoritos && !paginaFavoritos.classList.contains('hidden')) return true;
+  // overlay de "retomar sessão" (aparece ao voltar pro app com uma
+  // sessão pausada) também bloqueia - não usa a classe .modal-overlay,
+  // então sem essa checagem específica a caneta tentava iniciar um traço
+  // em cima dos botões Retomar/Finalizar, em vez de deixar o clique
+  // acontecer normalmente
+  const overlayRetomar = document.getElementById('vf-overlay-retomar-sessao');
+  if(overlayRetomar && !overlayRetomar.classList.contains('hidden')) return true;
+  const overlayIniciar = document.getElementById('vf-overlay-iniciar-sessao');
+  if(overlayIniciar && !overlayIniciar.classList.contains('hidden')) return true;
   // os painéis de configuração (Caneta/Borracha/Marcador/marcação de
   // texto) também bloqueiam - sem isso, a caneta continuava desenhando
   // por baixo do balãozinho quando você tentava escolher uma cor nova
@@ -6237,13 +6278,15 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     }
   } : undefined;
 
-  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, , ...resultadosEntradaVF] = await Promise.all([
+  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, {data: todasTagsData}, {data: questoesTagsData}, , ...resultadosEntradaVF] = await Promise.all([
     buscarTudoPaginadoVF(montarQueryQuestoesVF, aoCarregarRestanteQuestoesVF),
     buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('flashs_salvos_vf').select('questao_vf_id, motivo').eq('usuario_id', usuarioAtual.id),
+    sb.from('tags_vf').select('id, nome').order('nome'),
+    sb.from('questoes_vf_tags').select('questao_vf_id, tags_vf(id, nome)'),
     vfCarregarBibliografiaCacheVF(), // idempotente - só busca de verdade na primeira vez da sessão
     ...consultasEntradaVF
   ]);
@@ -6259,6 +6302,13 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   favoritosVF = new Set((favData||[]).map(f=>f.questao_vf_id));
   notasVF = new Set((notaData||[]).map(n=>n.questao_vf_id));
   flashsSalvosVF = new Map((salvosData||[]).map(s=>[s.questao_vf_id, s.motivo]));
+  vfTodasTagsCacheVF = todasTagsData || [];
+  vfTagsPorQuestaoVF = new Map();
+  (questoesTagsData||[]).forEach(r => {
+    if(!r.tags_vf) return; // tag pode ter sido apagada por outro caminho, join vem null nesse caso
+    if(!vfTagsPorQuestaoVF.has(r.questao_vf_id)) vfTagsPorQuestaoVF.set(r.questao_vf_id, []);
+    vfTagsPorQuestaoVF.get(r.questao_vf_id).push(r.tags_vf);
+  });
   const idsExcluidos = new Set((excluidas||[]).map(e=>e.questao_vf_id));
   const estadoPorId = {};
   (estados||[]).forEach(e => { estadoPorId[e.questao_vf_id] = e; });
@@ -6864,6 +6914,20 @@ function renderizarItemVF(){
     item.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''
   ].filter(Boolean).join('');
 
+  // tags customizadas (livres, criadas pelo usuário) - sem fundo colorido
+  // de propósito (diferente das automáticas acima), texto normal com
+  // contorno pontilhado. Clicar em qualquer uma abre o popup de gerenciar
+  const tagsDaQuestao = vfTagsPorQuestaoVF.get(item.id) || [];
+  const tagsCustomizadasHtml = tagsDaQuestao.map(t =>
+    `<span onclick="vfAbrirPopupTagsVF('${item.id}')" style="color:#333;font-weight:600;font-size:12px;border:1.5px dashed #ccc;border-radius:8px;padding:3px 8px;white-space:nowrap;cursor:pointer">${escapeHtml(t.nome)}</span>`
+  ).join('');
+  // ícone de tag + "+" combinados - botão só de adicionar quando ainda
+  // não tem nenhuma tag customizada nessa questão
+  const iconeTagAdicionar = `<button class="btn-icone-pequeno" onclick="vfAbrirPopupTagsVF('${item.id}')" title="Adicionar tag" style="width:auto;height:24px;padding:0 8px;gap:3px;position:relative">
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12 22l-9-9V4a1 1 0 0 1 1-1h9l7.59 7.59a2 2 0 0 1 0 2.82Z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>`;
+
   el.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:2px;padding:2px 2px 14px;color:#888;font-size:var(--fs-c)">
       <div style="display:flex;justify-content:space-between;align-items:center">
@@ -6877,6 +6941,10 @@ function renderizarItemVF(){
           ${item.capitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:1px 0 0 0;line-height:1.25">${rotuloCapituloDoLivro(publicacao)} ${escapeHtml(String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))}</p>` : ''}
         </div>
         ${tagsPublicacao ? `<div style="display:flex;gap:6px;flex-shrink:0">${tagsPublicacao}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 0">
+        ${tagsCustomizadasHtml}
+        ${iconeTagAdicionar}
       </div>
       <div class="enunciado" id="vf-enunciado-atual" style="margin-top:10px;position:relative" data-editavel-vf="1" ontouchstart="vfIniciarPressionarEnunciado(event)" ontouchend="vfSoltarPressionarEnunciado(event)" ontouchmove="vfCancelarPressionarEnunciadoSilencioso(event)" onmousedown="vfIniciarPressionarEnunciado(event)" onmouseup="vfSoltarPressionarEnunciado()" onmouseleave="vfCancelarPressionarEnunciadoSilencioso()">${formatarTextoItemVF(item.texto)}</div>
       ${blocoResultado}
@@ -7292,6 +7360,109 @@ function vfCancelarPressionarFavoritar(evento){
   clearTimeout(vfTimerPressionarFavoritar);
   vfTimerPressionarFavoritar = null;
   vfPosicaoInicialPressionarFavoritarVF = null;
+}
+
+// ---- sistema de tags customizadas (livres) por questão V/F ----
+let vfQuestaoIdTagsAtualVF = null;
+
+function vfRenderizarListaTagsAtualVF(){
+  const container = document.getElementById('vf-tags-lista-atual');
+  if(!container || !vfQuestaoIdTagsAtualVF) return;
+  const tags = vfTagsPorQuestaoVF.get(vfQuestaoIdTagsAtualVF) || [];
+  container.innerHTML = tags.length
+    ? tags.map(t => `<span style="color:#333;font-weight:600;font-size:13px;border:1.5px dashed #ccc;border-radius:8px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px">${escapeHtml(t.nome)}<span onclick="vfRemoverTagVF('${t.id}')" style="cursor:pointer;color:#999;font-weight:700">✕</span></span>`).join('')
+    : '<p style="color:#999;font-size:var(--fs-c)">Nenhuma tag ainda.</p>';
+}
+
+function vfAbrirPopupTagsVF(questaoId){
+  vfQuestaoIdTagsAtualVF = questaoId;
+  pausarTimerVF(); // mesmo padrão dos outros modais - a pendente não fica rodando escondida atrás do popup
+  document.getElementById('vf-tags-input-novo').value = '';
+  document.getElementById('vf-tags-status').textContent = '';
+  document.getElementById('vf-tags-datalist').innerHTML = vfTodasTagsCacheVF.map(t => `<option value="${escapeHtml(t.nome)}">`).join('');
+  vfRenderizarListaTagsAtualVF();
+  abrirModal('modal-tags-vf');
+}
+
+function vfFecharPopupTagsVF(){
+  fecharModal('modal-tags-vf');
+  retomarOuDescartarPendenteVF();
+  vfQuestaoIdTagsAtualVF = null;
+}
+
+async function vfAdicionarTagVF(){
+  const input = document.getElementById('vf-tags-input-novo');
+  const nomeDigitado = input.value.trim();
+  const statusEl = document.getElementById('vf-tags-status');
+  if(!nomeDigitado || !vfQuestaoIdTagsAtualVF) return;
+
+  const jaTemEssaTag = (vfTagsPorQuestaoVF.get(vfQuestaoIdTagsAtualVF) || []).some(t => t.nome.toLowerCase() === nomeDigitado.toLowerCase());
+  if(jaTemEssaTag){
+    statusEl.innerHTML = '<span style="color:#B00020">Essa questão já tem essa tag.</span>';
+    return;
+  }
+
+  // reaproveita a tag se já existir uma com esse nome (case-insensitive) -
+  // nunca cria duplicata só por causa de maiúscula/minúscula diferente
+  let tagExistente = vfTodasTagsCacheVF.find(t => t.nome.toLowerCase() === nomeDigitado.toLowerCase());
+  let tag = tagExistente;
+
+  if(!tag){
+    const {data: tagCriada, error: erroCriar} = await sb.from('tags_vf').insert({nome: nomeDigitado, criado_por: usuarioAtual.id}).select('id, nome').single();
+    if(erroCriar){
+      // corrida: outra pessoa criou a mesma tag entre o cache carregar e
+      // agora - trata como "já existe", busca ela em vez de falhar
+      if(erroCriar.code === '23505'){
+        const {data: tagJaExistente} = await sb.from('tags_vf').select('id, nome').ilike('nome', nomeDigitado).maybeSingle();
+        if(tagJaExistente) tag = tagJaExistente;
+      }
+      if(!tag){
+        statusEl.innerHTML = '<span style="color:#B00020">Não consegui criar a tag. Tenta de novo.</span>';
+        return;
+      }
+    }else{
+      tag = tagCriada;
+    }
+    vfTodasTagsCacheVF.push(tag);
+  }
+
+  // otimista: a tela muda já, a escrita acontece em segundo plano
+  const questaoId = vfQuestaoIdTagsAtualVF;
+  if(!vfTagsPorQuestaoVF.has(questaoId)) vfTagsPorQuestaoVF.set(questaoId, []);
+  vfTagsPorQuestaoVF.get(questaoId).push(tag);
+  input.value = '';
+  vfRenderizarListaTagsAtualVF();
+  renderizarItemVF();
+
+  const {error} = await sb.from('questoes_vf_tags').insert({questao_vf_id: questaoId, tag_id: tag.id, criado_por: usuarioAtual.id});
+  if(error && error.code !== '23505'){ // 23505 = já existia essa relação, inofensivo
+    // desfaz o otimismo
+    const lista = vfTagsPorQuestaoVF.get(questaoId) || [];
+    vfTagsPorQuestaoVF.set(questaoId, lista.filter(t => t.id !== tag.id));
+    vfRenderizarListaTagsAtualVF();
+    renderizarItemVF();
+    statusEl.innerHTML = '<span style="color:#B00020">Não consegui salvar. Tenta de novo.</span>';
+  }
+}
+
+async function vfRemoverTagVF(tagId){
+  const questaoId = vfQuestaoIdTagsAtualVF;
+  if(!questaoId) return;
+  const listaAntes = vfTagsPorQuestaoVF.get(questaoId) || [];
+  const tagRemovida = listaAntes.find(t => t.id === tagId);
+  // otimista
+  vfTagsPorQuestaoVF.set(questaoId, listaAntes.filter(t => t.id !== tagId));
+  vfRenderizarListaTagsAtualVF();
+  renderizarItemVF();
+
+  const {error} = await sb.from('questoes_vf_tags').delete().eq('questao_vf_id', questaoId).eq('tag_id', tagId);
+  if(error && tagRemovida){
+    // desfaz o otimismo
+    const listaAtual = vfTagsPorQuestaoVF.get(questaoId) || [];
+    vfTagsPorQuestaoVF.set(questaoId, [...listaAtual, tagRemovida]);
+    vfRenderizarListaTagsAtualVF();
+    renderizarItemVF();
+  }
 }
 
 async function toggleFavoritoVF(questaoVfId){
