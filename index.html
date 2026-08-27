@@ -120,7 +120,7 @@ trocando a custom property de cada slider individualmente */
 }
 #metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:32px;min-height:32px;max-height:32px;padding-top:0;padding-bottom:0;box-sizing:border-box}
 #aba-quests .filter-select{height:32px;box-sizing:border-box;padding-top:0;padding-bottom:0}
-.filter-select{font-size:var(--fs-e);padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%;box-sizing:border-box}
+.filter-select{font-size:var(--fs-d);padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%;box-sizing:border-box}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
@@ -269,7 +269,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 
 /* --- Questão --- */
 .card-questao{background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:18px;margin-bottom:8px}
-.item-lista-modulo{padding:9px 8px;font-size:var(--fs-e);line-height:1.3;color:#111;cursor:pointer;border-bottom:0.5px solid #eee}
+.item-lista-modulo{padding:9px 8px;font-size:var(--fs-d);line-height:1.3;color:#111;cursor:pointer;border-bottom:0.5px solid #eee}
 .item-lista-modulo:last-child{border-bottom:none}
 .item-lista-modulo:active{background:#F5F5F4}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -828,7 +828,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       </div>
     </div>
     <div id="vf-filtros" style="margin-bottom:16px;background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:14px 16px">
-      <button class="btn-icone-pequeno" onclick="alternarFiltrosVF()" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:4px 2px;cursor:pointer;font-family:inherit;color:#B23A34;font-size:var(--fs-d);font-weight:700;-webkit-appearance:none;appearance:none;outline:none;-webkit-tap-highlight-color:transparent;transform:none !important">
+      <button class="btn-icone-pequeno" onclick="alternarFiltrosVF()" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:4px 2px;cursor:pointer;font-family:inherit;color:#B23A34;font-size:var(--fs-f);font-weight:700;-webkit-appearance:none;appearance:none;outline:none;-webkit-tap-highlight-color:transparent;transform:none !important">
         <span>Filtros</span>
         <svg id="vf-chevron-filtros" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
@@ -1346,7 +1346,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-confirmar-exclusao-vf">
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title">Excluir questão</h3>
-    <p>Ao excluir essa questão V/F, ela nunca mais aparece pra você.</p>
+    <p>Ao excluir esse Flash, ele nunca mais aparece pra você.</p>
     <textarea id="motivo-exclusao-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:140px"></textarea>
     <div style="display:flex;gap:8px">
       <button class="btn-secundario" style="flex:1" onclick="fecharModalExclusaoVF()">Cancelar</button>
@@ -1551,7 +1551,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-329';
+const VERSAO_APP = '2026-07-25-331';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8993,7 +8993,8 @@ async function confirmarEnvioTracker(){
         capitulo: h.item.capitulo || null,
         gabarito: h.item.resposta ? 'verdadeiro' : 'falso',
         sua_resposta: h.resposta ? 'verdadeiro' : 'falso',
-        questao_completa: h.item.texto || ''
+        questao_completa: h.item.texto || '',
+        correcao: h.item.correcao || null
       };
     });
 
@@ -9037,7 +9038,8 @@ async function confirmarEnvioTracker(){
         capitulo: q.capitulo ? String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '') : null,
         gabarito: (q.gabarito||'').toLowerCase(),
         sua_resposta: resp.letra,
-        questao_completa: `${q.enunciado||''}\n\n${altsFormatadas}`.trim()
+        questao_completa: `${q.enunciado||''}\n\n${altsFormatadas}`.trim(),
+        correcao: q.correcao || null
       });
     });
 
