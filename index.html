@@ -927,8 +927,13 @@ Fora do app-shell, sem overflow:hidden no caminho, cobre a viewport de
 verdade sem esse recorte. Como não é mais filho de #aba-vf, a
 visibilidade é controlada manualmente em trocarAba(), não mais herdada
 automaticamente da classe .hidden do app-shell -->
-<canvas id="vf-canvas-desenho" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:400;pointer-events:none;touch-action:none"></canvas>
-<canvas id="vf-canvas-preview-destaque" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:401;pointer-events:none;touch-action:none"></canvas>
+<canvas id="vf-canvas-desenho" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:280;pointer-events:none;touch-action:none"></canvas>
+<canvas id="vf-canvas-preview-destaque" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:281;pointer-events:none;touch-action:none"></canvas>
+<!-- canvas temporário exclusivo pra rabiscar em cima do popup de explicação -
+     fica ACIMA do modal (z-index maior que .modal-overlay:300), separado do
+     canvas principal da questão. É limpo/descartado ao fechar o popup, nunca
+     persiste no desenho real da questão -->
+<canvas id="vf-canvas-desenho-explicacao" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:320;pointer-events:none;touch-action:none"></canvas>
 
 <!-- balão flutuante da sessão do Flash - painel de controle da sessão
 manual (iniciar/pausar/retomar/finalizar). HTML mínimo de propósito,
@@ -1345,13 +1350,13 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 </div>
 
 <div class="modal-overlay hidden" id="modal-tags-vf" onclick="if(event.target===this) vfFecharPopupTagsVF()">
-  <div class="modal-conteudo popup-formulario">
+  <div class="modal-conteudo">
     <h3 class="config-title">Tags dessa afirmação</h3>
     <div id="vf-tags-lista-atual" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
-    <div style="display:flex;gap:8px">
-      <input type="text" id="vf-tags-input-novo" class="filter-select" placeholder="Digite ou escolhe uma tag" list="vf-tags-datalist" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();vfAdicionarTagVF();}">
+    <div style="display:flex;gap:8px;align-items:stretch">
+      <input type="text" id="vf-tags-input-novo" class="filter-select" placeholder="Digite ou escolhe uma tag" list="vf-tags-datalist" style="flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfAdicionarTagVF();}">
       <datalist id="vf-tags-datalist"></datalist>
-      <button class="btn-primario" style="width:auto;padding:0 18px" onclick="vfAdicionarTagVF()">+</button>
+      <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfAdicionarTagVF()">+</button>
     </div>
     <p id="vf-tags-status" style="font-size:var(--fs-c);margin-top:6px"></p>
     <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="vfFecharPopupTagsVF()">Fechar</button>
@@ -1371,14 +1376,14 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-nota-vf" onclick="if(event.target===this) fecharModalNotaVF()">
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title">Suas notas nessa questão</h3>
-    <div id="lista-notas-vf"></div>
+    <div id="lista-notas-vf" style="transition:max-height 0.25s ease;overflow:hidden;max-height:0"></div>
     <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:140px"></textarea>
     <button class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
     <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModalNotaVF()">Fechar</button>
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="modal-explicacao-vf" onclick="if(event.target===this) fecharModal('modal-explicacao-vf')">
+<div class="modal-overlay hidden" id="modal-explicacao-vf" onclick="if(event.target===this) vfFecharModalExplicacaoVF()">
   <div class="modal-conteudo" style="max-width:700px;display:flex;flex-direction:column">
     <h3 class="config-title" style="flex-shrink:0">Explicação</h3>
     <div id="conteudo-explicacao-vf" style="flex:1;min-height:0;overflow-y:auto"></div>
@@ -1387,7 +1392,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         Copiar pra IA
       </button>
-      <button class="btn-primario" style="flex:1" onclick="fecharModal('modal-explicacao-vf')">Fechar</button>
+      <button class="btn-primario" style="flex:1" onclick="vfFecharModalExplicacaoVF()">Fechar</button>
     </div>
   </div>
 </div>
@@ -1529,7 +1534,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-323';
+const VERSAO_APP = '2026-07-25-328';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3829,6 +3834,27 @@ let vfRespostasEmVooVF = new Map();
 // suavizada (não linha reta simples) — é a mesma técnica usada por apps
 // de desenho de verdade.
 let vfCtxDesenho = null;
+// contexto do canvas temporário exclusivo pro popup de explicação - nunca
+// tem histórico/desfazer próprio, é sempre limpo do zero ao abrir o
+// popup e descartado ao fechar. Fica numa camada acima do modal
+// (z-index:320 > 300 dos modais), enquanto o canvas principal da questão
+// fica numa camada abaixo (z-index:280 < 300) - assim, o que já estava
+// desenhado na questão fica escondido atrás do popup quando ele abre
+// (comportamento normal de qualquer modal), e o que é desenhado NOVO
+// enquanto o popup está aberto fica visível por cima dele, sem nunca
+// persistir de volta pro desenho real da questão
+let vfCtxDesenhoExplicacaoVF = null;
+// retorna qual contexto de canvas usar AGORA pra um traço em andamento -
+// o temporário da explicação quando o popup dela está aberto, senão o
+// principal da questão. Usado só nos pontos que desenham em tempo real
+// (início de traço, processamento de cada ponto, fusão do destaque) -
+// as funções de histórico/desfazer/recortar continuam usando o principal
+// direto, já que a explicação nunca tem histórico próprio
+function vfCtxDesenhoAtivoAgoraVF(){
+  const modalExplicacao = document.getElementById('modal-explicacao-vf');
+  if(modalExplicacao && !modalExplicacao.classList.contains('hidden')) return vfCtxDesenhoExplicacaoVF;
+  return vfCtxDesenho;
+}
 let vfCanvasTracoTemp = null; // canvas à parte só durante um traço de destaque, funde no final
 let vfCanvasBaseSnapshot = null; // retrato do canvas ANTES do traço atual começar, pra multiply de verdade no preview
 let vfCtxTracoTemp = null;
@@ -3958,6 +3984,37 @@ function redimensionarCanvasDesenhoVF(){
   }
 }
 
+// mostra o canvas temporário da explicação, já limpo do zero - chamado
+// toda vez que o popup de explicação abre. Sem histórico próprio (não
+// precisa de desfazer/refazer aqui, é sempre descartado ao fechar)
+function vfAbrirCanvasExplicacaoVF(){
+  const canvas = document.getElementById('vf-canvas-desenho-explicacao');
+  if(!canvas) return;
+  // mostra ANTES de medir - com display:none, getBoundingClientRect
+  // sempre retorna 0x0, o que faria a função voltar sem nunca inicializar
+  canvas.style.display = 'block';
+  const rect = canvas.getBoundingClientRect();
+  if(rect.width === 0 || rect.height === 0) return;
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d', {desynchronized: true});
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  vfCtxDesenhoExplicacaoVF = ctx;
+}
+
+// esconde e limpa o canvas temporário da explicação - o que foi rabiscado
+// em cima do texto some, nunca persiste no desenho real da questão
+function vfFecharCanvasExplicacaoVF(){
+  const canvas = document.getElementById('vf-canvas-desenho-explicacao');
+  if(!canvas) return;
+  canvas.style.display = 'none';
+  if(vfCtxDesenhoExplicacaoVF) vfCtxDesenhoExplicacaoVF.clearRect(0, 0, canvas.width, canvas.height);
+  vfCtxDesenhoExplicacaoVF = null;
+}
+
 // NOTA: chegou a existir aqui uma checagem extra "vfDentroDaAreaDesenho"
 // (media se o toque caía dentro do retângulo do canvas via
 // getBoundingClientRect antes de aceitar o traço). Removida: o canvas
@@ -4037,8 +4094,11 @@ document.addEventListener('touchstart', (e) => {
     vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX};
     return;
   }
-  if(!vfCtxDesenho) inicializarCanvasDesenhoVF();
-  if(!vfCtxDesenho) return;
+  if(!vfCtxDesenhoAtivoAgoraVF()){
+    const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
+    if(!modalExplicacaoAberto) inicializarCanvasDesenhoVF();
+  }
+  if(!vfCtxDesenhoAtivoAgoraVF()) return;
   e.preventDefault();
   vfDesenhandoAgora = true;
   vfTouchIdAtivo = touch.identifier;
@@ -4103,8 +4163,11 @@ document.addEventListener('touchmove', (e) => {
         // virou arrasto de verdade - começa o traço retroativamente a
         // partir do ponto onde o dedo/caneta tocou primeiro, não de onde
         // está agora (senão nasceria um pedacinho de traço faltando)
-        if(!vfCtxDesenho) inicializarCanvasDesenhoVF();
-        if(vfCtxDesenho){
+        if(!vfCtxDesenhoAtivoAgoraVF()){
+          const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
+          if(!modalExplicacaoAberto) inicializarCanvasDesenhoVF();
+        }
+        if(vfCtxDesenhoAtivoAgoraVF()){
           vfDesenhandoAgora = true;
           vfTouchIdAtivo = vfBotaoPendenteToqueInfo.identifier;
           vfPointerIdAtivoVF = vfUltimoPointerIdCanetaVF;
@@ -4158,7 +4221,7 @@ document.addEventListener('touchmove', (e) => {
 // (fallback, navegadores sem coalesced events) quanto pelo pointermove
 // novo (com coalesced events, dados reais extras do hardware). Mesmo
 // código de desenho nos dois caminhos, só muda de onde os pontos vêm
-function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect){
+function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect, dentroDeLote){
   // suavização ADAPTATIVA de posição (não peso fixo) - a primeira versão
   // usava peso fixo (90% novo/10% suavizado anterior) em TODO evento de
   // toque, mas isso faz o atraso introduzido crescer junto com a
@@ -4171,12 +4234,23 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect){
   // responsividade importa mais que o ruído, que já é desprezível
   // perto da distância percorrida) - testado isoladamente antes de
   // aplicar: atraso ficou baixo e estável (~0.3-0.5px) em qualquer
-  // velocidade, ao invés de crescer com ela
+  // velocidade, ao invés de crescer com ela.
+  // Recalibrado pra densidade de amostragem dos coalesced events: o
+  // ruído físico do sensor (Apple Pencil) não muda com mais amostras,
+  // mas cada segmento entre pontos ficou muito mais curto - o mesmo
+  // ruído passou a dominar proporcionalmente cada segmento, aparecendo
+  // como pequenas "facetas"/retinhas dentro de curvas lentas e finas
+  // (tipo um "c" cursivo). Peso mínimo mais baixo (0.10, era 0.85) e
+  // raio de transição menor (8px, era 20px) cortam esse facetamento em
+  // ~47% nos traços finos, com desvio geométrico ainda imperceptível
+  // (testado: ~0.1px) e sem NENHUM efeito em gestos rápidos (círculos
+  // grandes ficaram idênticos nos testes, já que a distância sempre
+  // ultrapassa o raio de transição de qualquer forma nesses casos)
   const xBruto = clientX - rect.left, yBruto = clientY - rect.top;
   let x = xBruto, y = yBruto;
   if(vfPosicaoSuavizada){
     const distanciaBruta = Math.hypot(xBruto - vfPosicaoSuavizada.x, yBruto - vfPosicaoSuavizada.y);
-    const pesoNovo = 0.85 + Math.min(distanciaBruta / 20, 1) * (0.99 - 0.85);
+    const pesoNovo = 0.10 + Math.min(distanciaBruta / 8, 1) * (0.99 - 0.10);
     x = vfPosicaoSuavizada.x * (1 - pesoNovo) + xBruto * pesoNovo;
     y = vfPosicaoSuavizada.y * (1 - pesoNovo) + yBruto * pesoNovo;
   }
@@ -4185,7 +4259,7 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect){
   // durante o arrasto, o destaque desenha em opacidade CHEIA no canvas
   // temporário (sem multiply, sem alpha reduzido) - a mistura translúcida
   // só acontece uma vez, no final do traço inteiro
-  const ctxAtivo = (vfModoDestaque && vfCtxTracoTemp) ? vfCtxTracoTemp : vfCtxDesenho;
+  const ctxAtivo = (vfModoDestaque && vfCtxTracoTemp) ? vfCtxTracoTemp : vfCtxDesenhoAtivoAgoraVF();
   if(vfModoDestaque){
     ctxAtivo.globalCompositeOperation = 'source-over';
     ctxAtivo.strokeStyle = vfCorDestaqueAtual;
@@ -4249,6 +4323,18 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect){
     if(cosAnguloDirecao < 0.5) numEtapas = Math.max(numEtapas, 3); // virada de mais de ~60° - garante pontos suficientes pra suavizar o ápice
   }
 
+  // beginPath/moveTo/stroke só rodam aqui quando NÃO está dentro de um
+  // lote (fallback sem coalesced events, ou chamada avulsa) - dentro de
+  // um lote, o chamador já abriu o path antes do primeiro ponto e só
+  // fecha com um stroke() no final, depois de TODOS os pontos coalescidos
+  // processados. Antes, cada ponto (mesmo os extras do coalesced) gerava
+  // seu próprio beginPath+stroke - um traço rápido podia disparar 3-4x
+  // mais chamadas de stroke() que o necessário, pesando na renderização
+  // e dando uma sensação de traço "menos nítido"/mais lento
+  if(!dentroDeLote){
+    ctxAtivo.beginPath();
+    ctxAtivo.moveTo(vfPontoMedioAnterior.x, vfPontoMedioAnterior.y);
+  }
   for(let i = 1; i <= numEtapas; i++){
     const t = i / numEtapas;
     const xEtapa = vfUltimoPontoDesenho.x + (x - vfUltimoPontoDesenho.x) * t;
@@ -4258,13 +4344,11 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect){
     // controle. Evita o efeito de segmentos retos colados, mesma técnica
     // usada em apps de desenho de verdade
     const pontoMedio = {x: (vfUltimoPontoDesenho.x + xEtapa) / 2, y: (vfUltimoPontoDesenho.y + yEtapa) / 2};
-    ctxAtivo.beginPath();
-    ctxAtivo.moveTo(vfPontoMedioAnterior.x, vfPontoMedioAnterior.y);
     ctxAtivo.quadraticCurveTo(vfUltimoPontoDesenho.x, vfUltimoPontoDesenho.y, pontoMedio.x, pontoMedio.y);
-    ctxAtivo.stroke();
     vfPontoMedioAnterior = pontoMedio;
     vfUltimoPontoDesenho = {x: xEtapa, y: yEtapa};
   }
+  if(!dentroDeLote) ctxAtivo.stroke();
 
   // mostra o resultado FINAL (com a mistura já aplicada) em tempo real no
   // canvas de prévia por cima - recalcula do zero a cada movimento a
@@ -4327,29 +4411,40 @@ function vfFinalizarTracoDesenho(e){
   // funde o traço de destaque (que foi desenhado em opacidade cheia no
   // canvas temporário) no canvas de verdade - multiply + opacidade
   // escolhida aplicados UMA VEZ SÓ pro traço inteiro, garantindo que ele
-  // saia como uma coisa só, uniforme, sem as emendas mais escuras
+  // saia como uma coisa só, uniforme, sem as emendas mais escuras. Vai
+  // pro canvas certo (temporário da explicação, se ela estiver aberta -
+  // nunca mexe no canvas principal nem salva histórico nesse caso, já
+  // que a explicação não tem histórico/desfazer próprio)
   if(vfCanvasTracoTemp){
-    vfCtxDesenho.globalCompositeOperation = 'multiply';
-    vfCtxDesenho.globalAlpha = vfOpacidadeDestaqueAtual;
+    const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
+    const ctxDestino = vfCtxDesenhoAtivoAgoraVF();
+    ctxDestino.globalCompositeOperation = 'multiply';
+    ctxDestino.globalAlpha = vfOpacidadeDestaqueAtual;
     const dpr = (window.devicePixelRatio || 1) * 1.5;
-    vfCtxDesenho.drawImage(vfCanvasTracoTemp, 0, 0, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
-    vfCtxDesenho.globalAlpha = 1;
+    ctxDestino.drawImage(vfCanvasTracoTemp, 0, 0, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
+    ctxDestino.globalAlpha = 1;
     vfCanvasTracoTemp = null;
     vfCtxTracoTemp = null;
     vfCanvasBaseSnapshot = null;
     // mostra o canvas real de novo, já com o traço fundido nele - feito
     // ANTES de limpar o preview, pra não ter um instante em branco entre
     // "esconder o preview" e "mostrar o real" (as duas coisas acontecem
-    // no mesmo frame, sem intervalo perceptível)
-    document.getElementById('vf-canvas-desenho').style.opacity = '1';
+    // no mesmo frame, sem intervalo perceptível). Só mexe na opacidade
+    // do canvas principal quando é ele que está mesmo em uso
+    if(!modalExplicacaoAberto) document.getElementById('vf-canvas-desenho').style.opacity = '1';
     // limpa a prévia - senão o traço ficaria "duplicado" visualmente (uma
     // cópia ainda no preview, outra já fundida de vez no canvas principal)
     if(vfCtxPreviewDestaque){
       const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
       vfCtxPreviewDestaque.clearRect(0, 0, canvasPreview.width/dpr, canvasPreview.height/dpr);
     }
+    // histórico (desfazer/refazer) só existe pro canvas principal - a
+    // explicação nunca grava histórico, é sempre descartada ao fechar
+    if(!modalExplicacaoAberto) vfSalvarEstadoHistoricoVF();
+  }else{
+    const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
+    if(!modalExplicacaoAberto) vfSalvarEstadoHistoricoVF();
   }
-  vfSalvarEstadoHistoricoVF();
 }
 document.addEventListener('touchend', vfFinalizarTracoDesenho);
 document.addEventListener('touchcancel', vfFinalizarTracoDesenho);
@@ -6295,7 +6390,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     // caracteres cada), então só esses dois hashes prontos entram na
     // query, não o conteúdo pesado inteiro. Ideia do Fable: evita trazer
     // de volta os ~10MB que a otimização original tinha eliminado
-    let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, capitulo, n_palavras, bibliografia_id, chave_familia_trecho, chave_familia_texto', {count: 'exact'}).eq('anulada', false);
+    let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, capitulo, n_palavras, bibliografia_id, chave_familia_trecho, chave_familia_texto, anulada', {count: 'exact'}).eq('anulada', false);
     if(filtroVF.publicacao) q = q.eq('bibliografia_id', filtroVF.publicacao);
     if(filtroVF.capitulo) q = q.eq('capitulo', filtroVF.capitulo);
     // Número + Lista juntos = UNIÃO (ou uma coisa ou outra), não interseção —
@@ -6477,11 +6572,12 @@ function vfTogglePausarSessaoFlashVF(e){
 // que já existe pro caderno do Quest - reaproveita o MESMO modal de
 // confirmação e a mesma edge function, só o formato da questão muda
 // (V/F não tem alternativas múltiplas)
-function vfMontarRetratoParaTrackerVF(inicioSessaoMs, fimSessaoMs){
+function vfMontarRetratoParaTrackerVF(inicioSessaoMs, fimSessaoMs, sessaoVfId){
   const respondidas = estadoVF?.historico?.filter(h => h.resposta !== null) || [];
   if(!respondidas.length) return null;
   return {
     origemFlash: true,
+    sessaoVfId: sessaoVfId || null,
     criadoEm: new Date(inicioSessaoMs).toISOString(),
     finalizadoEm: new Date(fimSessaoMs).toISOString(),
     entradas: respondidas.map(h => ({...h}))
@@ -6493,7 +6589,7 @@ function vfConfirmarFinalizarSessaoFlashVF(e){
   abrirModal('modal-confirmar-finalizar-vf');
 }
 
-function vfFinalizarSessaoFlashVF(e){
+async function vfFinalizarSessaoFlashVF(e){
   if(e) e.stopPropagation();
   if(!vfSessaoAtivaVF) return;
   fecharModal('modal-confirmar-finalizar-vf'); // fecha se veio desse caminho - inofensivo se já estava fechado
@@ -6505,16 +6601,21 @@ function vfFinalizarSessaoFlashVF(e){
   // abaixo), o histórico contado aqui É de fato só dessa sessão, nunca
   // mistura com uma sessão anterior que tenha rodado na mesma aba
   const totalRespondidas = estadoVF?.historico?.filter(h => h.resposta !== null).length || 0;
-  sb.from('sessoes_vf').insert({
+  // espera o insert completar (antes só disparava sem esperar) - precisa
+  // do id da sessão criada pra poder marcar enviado_tracker_em/
+  // id_atividade_tracker nela depois do envio ao Tracker, mesmo padrão
+  // que já existe pra cadernos
+  const {data: sessaoInserida, error: erroInsertSessao} = await sb.from('sessoes_vf').insert({
     usuario_id: usuarioAtual.id,
     iniciado_em: new Date(iniciadoEmMs).toISOString(),
     finalizado_em: new Date(finalizadoEmMs).toISOString(),
     tempo_efetivo_ms: tempoTotalMs,
     total_questoes_respondidas: totalRespondidas
-  }).then(({error}) => { if(error) console.error('[Flash] Erro ao salvar sessão:', error); });
+  }).select('id').single();
+  if(erroInsertSessao) console.error('[Flash] Erro ao salvar sessão:', erroInsertSessao);
   // retrato pro Tracker montado ANTES de zerar a sessão - precisa do
   // início real dela (vfSessaoAtivaVF.iniciadoEm), que se perde depois
-  const retratoParaTracker = podeUsarIntegracaoTracker() ? vfMontarRetratoParaTrackerVF(iniciadoEmMs, finalizadoEmMs) : null;
+  const retratoParaTracker = podeUsarIntegracaoTracker() ? vfMontarRetratoParaTrackerVF(iniciadoEmMs, finalizadoEmMs, sessaoInserida?.id) : null;
   limparCanvasDesenhoVF(); // finalizar é finalizar tudo - o risco que estava na tela some junto, não fica "esquecido" por cima do resultado
   vfSessaoAtivaVF = null;
   vfSessaoRestauradaAguardandoDecisaoVF = false;
@@ -7614,23 +7715,28 @@ async function abrirNotaVF(questaoVfId){
   pausarTimerVF(); // abrir Notas/Excluir com questão pendente conta como sair da tela — você está escrevendo, não lendo a afirmação
   questaoNotaVfAtual = questaoVfId;
   document.getElementById('texto-nota-vf').value = '';
-  // busca e monta o conteúdo ANTES de abrir o modal — evita o "spinner
-  // aparece, depois o modal redimensiona de repente" que estava
-  // acontecendo antes (abria vazio, mostrava spinner, só depois o
-  // conteúdo real chegava e mudava a altura)
-  await renderizarListaNotasVF();
+  document.getElementById('lista-notas-vf').innerHTML = '';
+  document.getElementById('lista-notas-vf').style.maxHeight = '0px';
+  // abre o modal JÁ, sem esperar a busca no banco (mesmo padrão de
+  // Excluir/Favoritar/Salvar) - a lista de notas carrega em paralelo,
+  // logo em seguida, e expande com uma transição suave (CSS) quando
+  // chegar, em vez de segurar a abertura inteira até a resposta do banco
   abrirModal('modal-nota-vf');
+  renderizarListaNotasVF();
 }
 
 async function renderizarListaNotasVF(){
   const el = document.getElementById('lista-notas-vf');
   const {data} = await sb.from('notas_vf').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false});
-  if(!data || !data.length){ el.innerHTML = ''; return; }
+  if(!data || !data.length){ el.innerHTML = ''; el.style.maxHeight = '0px'; return; }
   el.innerHTML = `<div style="margin-bottom:14px">` + data.map(n => `
     <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
       <p style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${formatarTextoItemVF(n.texto)}</p>
       <button onclick="excluirNotaVF('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
     </div>`).join('') + `</div>`;
+  // altura grande o bastante pra caber qualquer lista realista de notas -
+  // a transição CSS só precisa de um valor-alvo maior que o conteúdo real
+  el.style.maxHeight = '2000px';
 }
 
 // mesma lógica do abrirExplicacaoQuestao (Quest normal) — a explicação já
@@ -7638,17 +7744,28 @@ async function renderizarListaNotasVF(){
 // limpa o prefixo "VERDADEIRA –"/"FALSA –" que vem do formato original,
 // já que a tela já mostra o veredito de forma clara, não precisa repetir
 let vfQuestaoIdExplicacaoAtual = null;
+// fecha o modal de explicação E descarta qualquer rabisco feito em cima
+// dele - nunca vaza pro desenho real da questão. Também finaliza um
+// traço em andamento nesse canvas, se houver (proteção pra nunca deixar
+// vfDesenhandoAgora "preso" apontando pra um canvas que já sumiu)
+function vfFecharModalExplicacaoVF(){
+  if(vfDesenhandoAgora) vfFinalizarTracoDesenho();
+  fecharModal('modal-explicacao-vf');
+  vfFecharCanvasExplicacaoVF();
+}
+
 function abrirExplicacaoVF(questaoVfId){
   vfQuestaoIdExplicacaoAtual = questaoVfId;
   const entrada = estadoVF.historico.find(h => h.item.id === questaoVfId);
   const el = document.getElementById('conteudo-explicacao-vf');
-  if(!entrada){ el.innerHTML = ''; abrirModal('modal-explicacao-vf'); return; }
+  if(!entrada){ el.innerHTML = ''; abrirModal('modal-explicacao-vf'); vfAbrirCanvasExplicacaoVF(); return; }
   const explicacao = entrada.item.explicacao || '';
   const atributosEdicao = souCarlos() ? `id="vf-explicacao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarExplicacao(event)" ontouchend="vfCancelarPressionarExplicacao()" ontouchmove="vfCancelarPressionarExplicacao(event)" onmousedown="vfIniciarPressionarExplicacao(event)" onmouseup="vfCancelarPressionarExplicacao()" onmouseleave="vfCancelarPressionarExplicacao()"` : `id="vf-explicacao-atual"`;
   el.innerHTML = explicacao
     ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;margin:0;line-height:1.5;color:#111;position:relative">${formatarTextoItemVF(explicacao)}</div>`
     : `<p ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;margin:0;color:#666;position:relative">${souCarlos() ? 'Sem explicação cadastrada – segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
   abrirModal('modal-explicacao-vf');
+  vfAbrirCanvasExplicacaoVF();
 }
 
 // ---- editar a explicação segurando nela (só Carlos), mesmo sistema já
@@ -8842,12 +8959,18 @@ async function confirmarEnvioTracker(){
     const publicacoes = new Set(retrato.entradas.map(h => vfBibliografiaCache.get(h.item.bibliografia_id)?.titulo).filter(Boolean));
     const publicacaoUnica = publicacoes.size === 1 ? [...publicacoes][0] : null;
 
-    let acertos = 0, erros = 0;
+    // status considera anulação (igual o fluxo normal já faz com
+    // q.anulada) - antes vinha sempre Acertei/Errei, e anuladas ficava
+    // fixo em 0, mesmo quando a questão realmente tinha sido anulada
+    let acertos = 0, erros = 0, anuladasVF = 0;
     const questoesPayload = retrato.entradas.map((h, i) => {
-      if(h.acertou) acertos++; else erros++;
+      let status;
+      if(h.item.anulada){ status = 'Anulada'; anuladasVF++; }
+      else if(h.acertou){ status = 'Acertei'; acertos++; }
+      else { status = 'Errei'; erros++; }
       return {
         numero_questao: String(i + 1),
-        status: h.acertou ? 'Acertei' : 'Errei',
+        status,
         modulo_pscpp: vfBibliografiaCache.get(h.item.bibliografia_id)?.modulo_pscpp || null,
         publicacao: vfBibliografiaCache.get(h.item.bibliografia_id)?.titulo || null,
         capitulo: h.item.capitulo || null,
@@ -8858,13 +8981,14 @@ async function confirmarEnvioTracker(){
     });
 
     payload = {
+      origem: 'flash',
       tempo_gasto_minutos: tempoMinutos,
       modulo: moduloUnico,
       publicacao: publicacaoUnica,
       total_questoes: questoesPayload.length,
       acertos_efetivos: acertos,
       erros_efetivos: erros,
-      anuladas: 0,
+      anuladas: anuladasVF,
       questoes: questoesPayload
     };
   }else{
@@ -8901,6 +9025,7 @@ async function confirmarEnvioTracker(){
     });
 
     payload = {
+      origem: 'quest',
       tempo_gasto_minutos: tempoMinutos,
       modulo: moduloUnico,
       publicacao: publicacaoUnica,
@@ -8926,6 +9051,9 @@ async function confirmarEnvioTracker(){
       elResultado.style.color = '#27500A';
       if(retrato.cadernoId){
         await sb.from('cadernos').update({enviado_tracker_em: new Date().toISOString(), id_atividade_tracker: resultado.id_atividade}).eq('id', retrato.cadernoId);
+      }
+      if(retrato.sessaoVfId){
+        await sb.from('sessoes_vf').update({enviado_tracker_em: new Date().toISOString(), id_atividade_tracker: resultado.id_atividade}).eq('id', retrato.sessaoVfId);
       }
     }else{
       elResultado.textContent = `Não consegui enviar: ${resultado.erro || 'erro desconhecido'}`;
