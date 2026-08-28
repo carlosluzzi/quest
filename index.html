@@ -731,6 +731,29 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     </div>
   </div>
 
+  <!-- ===== RASCUNHO LIVRE — folha de rascunho estilo prancheta de projeto,
+       pra desenhar/calcular fora do contexto de qualquer questão ===== -->
+  <div class="view-aba hidden" id="aba-rascunho-livre-vf" style="position:fixed;inset:0;z-index:150;padding:0;display:flex;flex-direction:column;background:#fff">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid #eee;flex-shrink:0;background:#fff">
+      <button onclick="fecharRascunhoLivreVF()" style="display:flex;align-items:center;gap:8px;color:#444;font-size:var(--fs-d);background:none;padding:0">
+        <svg viewBox="0 0 24 24" width="18" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Rascunho
+      </button>
+      <button onclick="vfLimparRascunhoLivreVF()" title="Apagar tudo" style="display:flex;align-items:center;gap:6px;color:#999;font-size:var(--fs-c);background:none;padding:6px 10px;border-radius:8px">
+        <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        Limpar folha
+      </button>
+    </div>
+    <div id="rascunho-livre-papel" style="flex:1;position:relative;overflow:hidden;background:#fff;background-image:radial-gradient(circle, #E3E0D2 1.1px, transparent 1.1px);background-size:22px 22px;background-position:34px 14px">
+      <div style="position:absolute;top:0;bottom:0;left:0;width:34px;background:repeating-linear-gradient(to bottom, transparent, transparent 21px, #C9A876 21px, #C9A876 22px);opacity:0.3;border-right:1px dashed #C9A876;pointer-events:none"></div>
+      <div style="position:absolute;bottom:14px;right:18px;text-align:right;pointer-events:none">
+        <div style="font-family:ui-monospace,monospace;font-size:10px;color:#8A8375;opacity:0.65;line-height:1.5;border-top:1px solid #C9A876;padding-top:5px">
+          <b style="color:#2B2620;opacity:0.85">Pilotquest</b> · Rascunho pessoal<br>não salvo no seu histórico de questões
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== FÓRUM ===== -->
   <div class="view-aba hidden" id="aba-forum">
     <div id="lista-forum"><div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div></div>
@@ -1588,7 +1611,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-377';
+const VERSAO_APP = '2026-07-25-378';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2578,6 +2601,8 @@ function vfEstaVisivelAgora(){
   if(flash && !flash.classList.contains('hidden')) return true;
   const questResolucao = document.getElementById('quests-resolucao');
   if(questResolucao && !questResolucao.classList.contains('hidden')) return true;
+  const rascunho = document.getElementById('aba-rascunho-livre-vf');
+  if(rascunho && !rascunho.classList.contains('hidden')) return true;
   return false;
 }
 
@@ -2594,6 +2619,8 @@ function vfTelaAtualVF(){
   if(flash && !flash.classList.contains('hidden')) return 'flash';
   const questResolucao = document.getElementById('quests-resolucao');
   if(questResolucao && !questResolucao.classList.contains('hidden')) return 'quest';
+  const rascunho = document.getElementById('aba-rascunho-livre-vf');
+  if(rascunho && !rascunho.classList.contains('hidden')) return 'rascunho';
   return null;
 }
 
@@ -9753,6 +9780,84 @@ function vfRestaurarDesenhoQuestaoQuestVF(questaoId){
   img.src = salvo.dataUrl;
 }
 
+// ---- Rascunho livre - folha de desenho independente, sem vínculo com
+// nenhuma questão. Reaproveita 100% do sistema de canvas/caneta/borracha/
+// destaque já existente (mesma infraestrutura do Flash e do Quest) - só
+// muda a "tela" em volta. Um único desenho persistido (não é por
+// questão como no Quest), guardado localmente até o usuário limpar -
+// não sincroniza com o Supabase de propósito, é rascunho de verdade,
+// não conteúdo de estudo pra rever depois ----
+let vfAbaAnteriorAoRascunhoVF = null; // guarda qual aba estava visível antes, pra voltar exatamente pra ela ao fechar
+
+function abrirRascunhoLivreVF(){
+  const abaVisivelAgora = document.querySelector('.view-aba:not(.hidden)');
+  vfAbaAnteriorAoRascunhoVF = abaVisivelAgora ? abaVisivelAgora.id : 'aba-inicio';
+  document.querySelectorAll('.view-aba').forEach(el => el.classList.add('hidden'));
+  document.getElementById('aba-rascunho-livre-vf').classList.remove('hidden');
+  vfAtualizarVisibilidadeCanvasVF();
+  limparCanvasDesenhoVF(); // qualquer traço da tela anterior nunca deveria "vazar" pra cá
+  inicializarCanvasDesenhoVF(); // mede o canvas já com o tamanho certo dessa tela nova
+  mostrarBarraDesenhoVF(); // aparece direto, sem precisar tocar primeiro pra "descobrir" que dá pra desenhar
+  vfRestaurarRascunhoLivreVF();
+  document.querySelectorAll('#bottom-nav .nav-item').forEach(item => item.classList.remove('active'));
+}
+
+function fecharRascunhoLivreVF(){
+  vfSalvarRascunhoLivreVF();
+  limparCanvasDesenhoVF(); // esconde barra/painéis e limpa o canvas visualmente antes de trocar de tela
+  document.getElementById('aba-rascunho-livre-vf').classList.add('hidden');
+  const idVolta = vfAbaAnteriorAoRascunhoVF || 'aba-inicio';
+  document.getElementById(idVolta)?.classList.remove('hidden');
+  vfAtualizarVisibilidadeCanvasVF();
+  document.querySelectorAll('#bottom-nav .nav-item').forEach(item => item.classList.toggle('active', 'aba-'+item.dataset.aba === idVolta));
+}
+
+function vfSalvarRascunhoLivreVF(){
+  const canvas = document.getElementById('vf-canvas-desenho');
+  if(!canvas || typeof vfIndiceHistoricoVF === 'undefined' || vfIndiceHistoricoVF < 0) return; // nada desenhado, nada a guardar
+  const papel = document.getElementById('rascunho-livre-papel');
+  try{
+    localStorage.setItem('pscpp_rascunho_livre_vf', JSON.stringify({
+      dataUrl: canvas.toDataURL(),
+      largura: papel ? papel.clientWidth : null,
+      altura: papel ? papel.clientHeight : null
+    }));
+  }catch(e){} // localStorage cheio ou indisponível - não quebra o resto do app
+}
+
+function vfRestaurarRascunhoLivreVF(){
+  if(!vfCtxDesenho) return;
+  let salvo;
+  try{
+    const bruto = localStorage.getItem('pscpp_rascunho_livre_vf');
+    if(!bruto) return;
+    salvo = JSON.parse(bruto);
+  }catch(e){ return; }
+  const canvas = document.getElementById('vf-canvas-desenho');
+  const papel = document.getElementById('rascunho-livre-papel');
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  const img = new Image();
+  img.onload = () => {
+    vfCtxDesenho.globalCompositeOperation = 'source-over';
+    vfCtxDesenho.globalAlpha = 1;
+    let larguraDestino = img.width/dpr, alturaDestino = img.height/dpr;
+    if(papel && salvo.largura && salvo.altura){
+      larguraDestino = (img.width/dpr) * (papel.clientWidth / salvo.largura);
+      alturaDestino = (img.height/dpr) * (papel.clientHeight / salvo.altura);
+    }
+    vfCtxDesenho.drawImage(img, 0, 0, larguraDestino, alturaDestino);
+    vfSalvarEstadoHistoricoVF(); // entra no histórico de desfazer, senão "Desfazer" não teria o que desfazer
+  };
+  img.src = salvo.dataUrl;
+}
+
+function vfLimparRascunhoLivreVF(){
+  limparCanvasDesenhoVF();
+  mostrarBarraDesenhoVF(); // limparCanvasDesenhoVF esconde a barra - like o rascunho continua aberto, ela deve continuar visível
+  try{ localStorage.removeItem('pscpp_rascunho_livre_vf'); }catch(e){}
+}
+
+
 function irParaQuestao(i){
   vfSalvarDesenhoQuestaoAtualQuestVF(); // guarda o que foi riscado na questão que está saindo, antes de trocar
   indiceQuestaoAtual = i;
@@ -9857,6 +9962,7 @@ function renderizarQuestaoAtual(){
       <div class="section-title" style="margin:0 0 8px 0;display:flex;justify-content:space-between;align-items:center;gap:8px">
         <span style="display:flex;align-items:center;gap:6px">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length} <button class="btn-icone-pequeno" onclick="abrirInfoQuestao('${q.id}')" title="Sobre essa questão"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
         <span style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <button class="btn-icone-pequeno" onclick="abrirRascunhoLivreVF()" title="Rascunho"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V5a2 2 0 0 1 2-2h11l3 3v13.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5Z"/><path d="M15 3v4a1 1 0 0 0 1 1h4"/><path d="M8.5 13.5 11 16l5.5-5.5"/></svg></button>
         ${souCarlos() ? `<button class="btn-icone-pequeno" onclick="abrirEdicaoDiretaAdmin('${q.id}')" title="Editar questão"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>` : ''}
         ${q.concurso_origem ? `<span style="background:#202A45;color:#fff;font-size:var(--fs-a);font-weight:700;padding:4px 8px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="${escapeHtml(q.concurso_origem)}${q.ano_prova?' '+q.ano_prova:''}">MB</span>` : ''}
         ${q.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:4px 8px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''}
