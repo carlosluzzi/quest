@@ -62,6 +62,13 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .modal-conteudo p{margin:0 0 20px 0;line-height:1.5}
 .textarea-padrao{width:100%;min-height:100px;font-size:16px;padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;font-family:inherit;color:#111;resize:vertical;line-height:1.5;margin-bottom:14px}
 button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* só nas telas onde a caneta compete com botões pelo toque (Flash e
+resolução do Quest) - evita que o navegador comece a processar um
+scroll nativo em paralelo durante a pequena janela de movimento antes
+do sistema JS decidir se foi um toque ou um traço de desenho. Global
+em todo botão do app teria efeito colateral no scroll normal com o
+dedo fora desse contexto */
+#aba-vf button, #quests-resolucao button{touch-action:none}
 label{-webkit-tap-highlight-color:transparent}
 button, [onclick]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* elementos clicáveis que não são <button> (divs com onclick, cards,
@@ -75,7 +82,7 @@ dois casos */
 button:focus{outline:none}
 button:active{transform:scale(0.98)}
 .banco-alt-btn:active{transform:scale(0.995)}
-body.vf-desenho-ativo button:active{transform:none}
+body.vf-tracando-agora button:active{transform:none}
 input,select,textarea{font-family:inherit;font-size:16px}
 
 .hidden{display:none !important}
@@ -1570,7 +1577,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-354';
+const VERSAO_APP = '2026-07-25-356';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4127,6 +4134,13 @@ let vfUltimoPontoDesenho = null;
 // espírito do gesto nativo do Apple Pencil - já que a lógica de desenho
 // mudou bastante, essa detecção precisa ser própria do app agora
 let vfPontoInicialTracoAtualVF = null;
+// rastreiam a "forma" do traço em andamento, pra detectar um gesto de
+// rasurão (várias idas e vindas cobrindo boa parte da tela) - a caixa
+// delimitadora (bounding box) e o comprimento total do caminho
+// percorrido. Um traço normal (uma linha, uma letra) tem comprimento
+// perto da diagonal da própria caixa; um rasurão tem comprimento MUITO
+// maior que a caixa, porque fica indo e voltando repetidas vezes
+let vfFormaTracoAtualVF = null; // {minX, maxX, minY, maxY, comprimento, ultimoX, ultimoY}
 let vfUltimoTapLeveCanetaVF = null; // {x, y, quando} - só o tap anterior mais recente
 let vfSnapshotRegiaoTapLeveVF = null; // {ctx, x, y, lado, imageData} - região capturada no touchstart, restaurada se o toque virar um tap leve
 let vfPontoMedioAnterior = null;
@@ -4370,9 +4384,11 @@ document.addEventListener('touchstart', (e) => {
   if(!vfCtxDesenhoAtivoAgoraVF()) return;
   e.preventDefault();
   vfDesenhandoAgora = true;
+  document.body.classList.add('vf-tracando-agora'); // desliga o efeito de toque dos botões só ENQUANTO esse traço específico dura, não a sessão de desenho inteira
   vfTouchIdAtivo = touch.identifier;
   vfPointerIdAtivoVF = vfUltimoPointerIdCanetaVF;
   vfPontoInicialTracoAtualVF = {x: touch.clientX, y: touch.clientY};
+  vfFormaTracoAtualVF = {minX: touch.clientX, maxX: touch.clientX, minY: touch.clientY, maxY: touch.clientY, comprimento: 0, ultimoX: touch.clientX, ultimoY: touch.clientY};
   const canvas = document.getElementById('vf-canvas-desenho');
 
   const rect = canvas.getBoundingClientRect();
@@ -4472,6 +4488,7 @@ document.addEventListener('touchmove', (e) => {
         }
         if(vfCtxDesenhoAtivoAgoraVF()){
           vfDesenhandoAgora = true;
+          document.body.classList.add('vf-tracando-agora');
           vfTouchIdAtivo = vfBotaoPendenteToqueInfo.identifier;
           vfPointerIdAtivoVF = vfUltimoPointerIdCanetaVF;
           const canvas = document.getElementById('vf-canvas-desenho');
@@ -4479,6 +4496,7 @@ document.addEventListener('touchmove', (e) => {
           const ponto = {x: vfBotaoPendenteToqueInfo.x - rect.left, y: vfBotaoPendenteToqueInfo.y - rect.top};
           vfUltimoPontoDesenho = ponto;
           vfPontoMedioAnterior = ponto;
+          vfFormaTracoAtualVF = {minX: vfBotaoPendenteToqueInfo.x, maxX: vfBotaoPendenteToqueInfo.x, minY: vfBotaoPendenteToqueInfo.y, maxY: vfBotaoPendenteToqueInfo.y, comprimento: 0, ultimoX: vfBotaoPendenteToqueInfo.x, ultimoY: vfBotaoPendenteToqueInfo.y};
           vfPosicaoSuavizada = ponto; // reseta - mesmo motivo do outro caminho de início de traço
           vfForcaSuavizada = typeof touchPendente.force === 'number' && touchPendente.force > 0 ? touchPendente.force : 0.5;
           if(vfModoDestaque){
@@ -4558,6 +4576,15 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect, dentroDeL
   // ultrapassa o raio de transição de qualquer forma nesses casos)
   const xBruto = clientX - rect.left, yBruto = clientY - rect.top;
   let x = xBruto, y = yBruto;
+  if(vfFormaTracoAtualVF){
+    vfFormaTracoAtualVF.minX = Math.min(vfFormaTracoAtualVF.minX, clientX);
+    vfFormaTracoAtualVF.maxX = Math.max(vfFormaTracoAtualVF.maxX, clientX);
+    vfFormaTracoAtualVF.minY = Math.min(vfFormaTracoAtualVF.minY, clientY);
+    vfFormaTracoAtualVF.maxY = Math.max(vfFormaTracoAtualVF.maxY, clientY);
+    vfFormaTracoAtualVF.comprimento += Math.hypot(clientX - vfFormaTracoAtualVF.ultimoX, clientY - vfFormaTracoAtualVF.ultimoY);
+    vfFormaTracoAtualVF.ultimoX = clientX;
+    vfFormaTracoAtualVF.ultimoY = clientY;
+  }
   if(vfPosicaoSuavizada){
     const distanciaBruta = Math.hypot(xBruto - vfPosicaoSuavizada.x, yBruto - vfPosicaoSuavizada.y);
     const pesoNovo = 0.10 + Math.min(distanciaBruta / 8, 1) * (0.99 - 0.10);
@@ -4734,7 +4761,9 @@ function vfFinalizarTracoDesenho(e){
       const tapAnterior = vfUltimoTapLeveCanetaVF;
       const virouDuploTap = tapAnterior && (agora - tapAnterior.quando) < 350 && Math.hypot(pontoAtual.x - tapAnterior.x, pontoAtual.y - tapAnterior.y) < 30;
       vfPontoInicialTracoAtualVF = null;
+      vfFormaTracoAtualVF = null;
       vfDesenhandoAgora = false;
+      document.body.classList.remove('vf-tracando-agora');
       vfTouchIdAtivo = null;
       vfPointerIdAtivoVF = null;
       document.body.style.touchAction = '';
@@ -4780,9 +4809,58 @@ function vfFinalizarTracoDesenho(e){
   }
   vfPontoInicialTracoAtualVF = null;
   vfSnapshotRegiaoTapLeveVF = null; // traço de verdade - não precisa mais do snapshot de restauração
+  // detecta um gesto de "rasurão" - a caixa que envolve o traço cobre
+  // boa parte da tela visível E o comprimento total percorrido é bem
+  // maior que a diagonal dessa caixa (só acontece com idas e vindas
+  // repetidas, tipo riscar de propósito - uma linha ou letra normal tem
+  // comprimento parecido com a própria diagonal). Se bater, limpa a tela
+  // toda em vez de salvar o rasurão como um traço normal - com
+  // segurança: o estado de antes continua acessível pelo Desfazer, caso
+  // tenha sido sem querer
+  if(vfFormaTracoAtualVF && !vfModoBorracha){
+    const larguraCaixa = vfFormaTracoAtualVF.maxX - vfFormaTracoAtualVF.minX;
+    const alturaCaixa = vfFormaTracoAtualVF.maxY - vfFormaTracoAtualVF.minY;
+    const diagonalCaixa = Math.hypot(larguraCaixa, alturaCaixa);
+    const cobreLarguraTela = larguraCaixa > window.innerWidth * 0.55;
+    const cobreAlturaTela = alturaCaixa > window.innerHeight * 0.35;
+    const temIdasEVindas = diagonalCaixa > 0 && vfFormaTracoAtualVF.comprimento > diagonalCaixa * 3;
+    if(cobreLarguraTela && cobreAlturaTela && temIdasEVindas){
+      vfFormaTracoAtualVF = null;
+      vfDesenhandoAgora = false;
+      document.body.classList.remove('vf-tracando-agora');
+      vfTouchIdAtivo = null;
+      vfPointerIdAtivoVF = null;
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+      const contentElSoltoRasurao = document.getElementById('content');
+      if(contentElSoltoRasurao) contentElSoltoRasurao.style.overflow = '';
+      const canvasRasurao = document.getElementById('vf-canvas-desenho');
+      const ctxRasurao = vfCtxDesenhoAtivoAgoraVF();
+      if(canvasRasurao && ctxRasurao){
+        const dprRasurao = (window.devicePixelRatio || 1) * 1.5;
+        ctxRasurao.globalCompositeOperation = 'source-over';
+        ctxRasurao.globalAlpha = 1;
+        ctxRasurao.clearRect(0, 0, canvasRasurao.width/dprRasurao, canvasRasurao.height/dprRasurao);
+        vfSalvarEstadoHistoricoVF();
+      }
+      canvasRasurao.style.opacity = ''; // caso o modo destaque tivesse deixado o canvas real invisível durante o traço
+      vfCanvasTracoTemp = null;
+      vfCtxTracoTemp = null;
+      vfCanvasBaseSnapshot = null;
+      const canvasPreviewRasurao = document.getElementById('vf-canvas-preview-destaque');
+      if(canvasPreviewRasurao && vfCtxPreviewDestaque){
+        const dprPreviewRasurao = (window.devicePixelRatio || 1) * 1.5;
+        vfCtxPreviewDestaque.clearRect(0, 0, canvasPreviewRasurao.width/dprPreviewRasurao, canvasPreviewRasurao.height/dprPreviewRasurao);
+      }
+      fecharBarraDesenhoVF();
+      return;
+    }
+  }
+  vfFormaTracoAtualVF = null;
   // sempre libera, mesmo que o identifier não bata exatamente (evita a
   // trava de scroll ficar presa ligada por algum caso raro do navegador)
   vfDesenhandoAgora = false;
+  document.body.classList.remove('vf-tracando-agora');
   vfTouchIdAtivo = null;
   vfPointerIdAtivoVF = null;
   document.body.style.touchAction = '';
