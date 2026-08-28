@@ -61,7 +61,9 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .config-title-menor{font-size:var(--fs-e)}
 .modal-conteudo p{margin:0 0 20px 0;line-height:1.5}
 .textarea-padrao{width:100%;min-height:100px;font-size:16px;padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;font-family:inherit;color:#111;resize:vertical;line-height:1.5;margin-bottom:14px}
-button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+label{-webkit-tap-highlight-color:transparent}
+button, [onclick]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* elementos clicáveis que não são <button> (divs com onclick, cards,
 itens de menu) - sem isso o Safari aplica seu próprio destaque nativo de
 toque, que podia se comportar diferente entre caneta e dedo. Fora da
@@ -1567,7 +1569,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-346';
+const VERSAO_APP = '2026-07-25-347';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4054,11 +4056,17 @@ function vfAlgumModalAbertoVF(){
   // sessão pausada) também bloqueia - não usa a classe .modal-overlay,
   // então sem essa checagem específica a caneta tentava iniciar um traço
   // em cima dos botões Retomar/Finalizar, em vez de deixar o clique
-  // acontecer normalmente
-  const overlayRetomar = document.getElementById('vf-overlay-retomar-sessao');
-  if(overlayRetomar && !overlayRetomar.classList.contains('hidden')) return true;
-  const overlayIniciar = document.getElementById('vf-overlay-iniciar-sessao');
-  if(overlayIniciar && !overlayIniciar.classList.contains('hidden')) return true;
+  // acontecer normalmente. Só checado DENTRO do Flash - esses overlays
+  // são exclusivos dele conceitualmente, e seu estado interno (hidden ou
+  // não) pode ficar dessincronizado entre navegações; checar isso fora
+  // do Flash bloqueava o desenho no Quest por causa de um overlay que
+  // nem estava fisicamente na tela
+  if(vfTelaAtualVF() === 'flash'){
+    const overlayRetomar = document.getElementById('vf-overlay-retomar-sessao');
+    if(overlayRetomar && !overlayRetomar.classList.contains('hidden')) return true;
+    const overlayIniciar = document.getElementById('vf-overlay-iniciar-sessao');
+    if(overlayIniciar && !overlayIniciar.classList.contains('hidden')) return true;
+  }
   // os painéis de configuração (Caneta/Borracha/Marcador/marcação de
   // texto) também bloqueiam - sem isso, a caneta continuava desenhando
   // por baixo do balãozinho quando você tentava escolher uma cor nova
@@ -4275,11 +4283,11 @@ if(VF_SUPORTA_COALESCED_VF){
 }
 
 let vfBotaoPendenteToqueInfo = null; // {x, y, identifier, limiar} - toque começou num ícone pequeno, decisão adiada até ver se vira arrasto
-const VF_LIMIAR_ARRASTO_BOTAO_PX = 14; // reduzido de 40 - com 40px era difícil demais começar a desenhar em cima de botões/menu na prática (precisava de um arrasto grande só pra "ativar")
+const VF_LIMIAR_ARRASTO_BOTAO_PX = 8; // reduzido de 14 - elementos com área de toque pequena (tipo .section-title, sem padding) ainda exigiam pressão/precisão demais pra registrar como toque simples
 // menu lateral/de baixo usa um limiar bem mais generoso - a Apple Pencil
 // tem um tremor natural mesmo parada (documentado antes), e isso fazia
 // clicar no menu com a caneta falhar com mais frequência que com o dedo
-const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 14;
+const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 8;
 
 document.addEventListener('touchstart', (e) => {
   if(!vfEstaVisivelAgora()) return;
