@@ -1569,7 +1569,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-348';
+const VERSAO_APP = '2026-07-25-349';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4133,15 +4133,25 @@ function redimensionarCanvasDesenhoVF(){
   const canvas = document.getElementById('vf-canvas-desenho');
   if(!canvas) return;
   const content = document.getElementById('content');
-  // mede a altura de #content DEPOIS de zerar a altura do canvas -
-  // achado real: o canvas (position:absolute dentro de #content, que
-  // tem overflow-y:auto) contava a própria altura na hora de medir
-  // scrollHeight, criando um ciclo que só crescia (Math.max nunca
-  // diminui) - cada rotação de tela deixava um espaço vazio extra
-  // acumulado logo abaixo do conteúdo real
+  const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
+  // mede a altura de #content DEPOIS de zerar a altura dos DOIS canvas
+  // (principal e preview) - achado real: os dois (position:absolute
+  // dentro de #content, que tem overflow-y:auto) contavam a própria
+  // altura na hora de medir scrollHeight, criando um ciclo que só
+  // crescia (Math.max nunca diminui) - cada rotação de tela deixava um
+  // espaço vazio extra acumulado logo abaixo do conteúdo real. Zerar só
+  // o canvas principal não bastava - o preview, atualizado só depois da
+  // medição, ainda carregava a altura antiga (já inflada) nesse momento
   if(content){
     canvas.style.height = '0px';
-    canvas.style.height = Math.max(content.scrollHeight, content.offsetHeight) + 'px';
+    if(canvasPreview) canvasPreview.style.height = '0px';
+    // teto de segurança: mesmo que outra causa de crescimento apareça no
+    // futuro, o canvas nunca passa de 4x a altura da viewport - um
+    // canvas gigante (buffer de pixels enorme) deixa toda operação de
+    // desenho pesada e lenta, sintoma real já visto quando esse bug
+    // ainda não tinha sido corrigido de vez
+    const alturaMaxima = window.innerHeight * 8;
+    canvas.style.height = Math.min(Math.max(content.scrollHeight, content.offsetHeight), alturaMaxima) + 'px';
   }
   const rect = canvas.getBoundingClientRect();
   if(rect.width === 0 || rect.height === 0) return; // aba ainda escondida, não tem o que medir
@@ -4180,7 +4190,6 @@ function redimensionarCanvasDesenhoVF(){
   }
   // canvas de prévia do destaque - mesmo tamanho/resolução, sempre em
   // branco (só recebe conteúdo durante um traço de destaque em andamento)
-  const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
   if(canvasPreview){
     canvasPreview.style.height = canvas.style.height;
     canvasPreview.width = rect.width * dpr;
