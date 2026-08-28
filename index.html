@@ -726,7 +726,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     </div>
 
     <div id="quests-resolucao" class="hidden">
-      <div style="color:#444;cursor:pointer;margin-bottom:16px;font-size:var(--fs-d)" onclick="fecharCadernoResolucao()">← Quest</div>
+      <div style="color:#444;cursor:pointer;margin-bottom:16px;font-size:var(--fs-d)" onclick="fecharCadernoResolucao()" ontouchend="event.preventDefault();fecharCadernoResolucao()">← Quest</div>
       <div id="pills-nav-caderno" class="pills-nav"></div>
       <div id="questao-atual"></div>
     </div>
@@ -784,7 +784,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:20px;margin-bottom:8px" onclick="toggleFiltroMateria()">
+    <div style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:20px;margin-bottom:8px" onclick="toggleFiltroMateria()" ontouchend="event.preventDefault();toggleFiltroMateria()">
       <span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
       <span style="font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em">Publicações</span>
       <span class="chev" id="chev-filtro-materia" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
@@ -822,7 +822,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       <span style="color:#888;font-size:var(--fs-d)">até</span>
       <input type="date" id="metricas-data-fim" class="filter-select" style="margin-bottom:0" onchange="aplicarFiltroDatasCustomizadas()">
     </div>
-    <div id="metricas-redefinir-datas" class="hidden" style="font-size:var(--fs-c);color:#888;text-align:right;margin-top:12px;margin-bottom:14px;cursor:pointer;text-decoration:underline" onclick="redefinirFiltroDatas()">Redefinir</div>
+    <div id="metricas-redefinir-datas" class="hidden" style="font-size:var(--fs-c);color:#888;text-align:right;margin-top:12px;margin-bottom:14px;cursor:pointer;text-decoration:underline" onclick="redefinirFiltroDatas()" ontouchend="event.preventDefault();redefinirFiltroDatas()">Redefinir</div>
 
     <div style="border-top:1px solid #eee;margin:24px 0"></div>
 
@@ -1612,7 +1612,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-385';
+const VERSAO_APP = '2026-07-25-387';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2457,7 +2457,7 @@ async function mostrarAppShell(){
   }
   if(souCarlos()){
     document.getElementById('bloco-upload-marinha').classList.remove('hidden');
-    // document.getElementById('nav-item-vf').classList.remove('hidden'); // Flash escondido temporariamente a pedido do Carlos - reverter descomentando essa linha
+    document.getElementById('nav-item-vf').classList.remove('hidden'); // Flash de volta, a pedido do Carlos
     document.getElementById('motivo-exclusao-questao').classList.remove('hidden');
     sb.rpc('concursos_disponiveis').then(({data})=>{
       document.getElementById('lista-concursos-existentes').innerHTML = (data||[]).map(c=>`<option value="${escapeHtml(c.concurso)}">`).join('');
@@ -2781,7 +2781,7 @@ async function atualizarAbaAtual(){
   // 'adicionar' é formulário de upload, não tem dado nenhum pra recarregar
 }
 
-function trocarAba(nome){
+function trocarAba(nome, pularContadorQuest){
   const abaJaEstavaAtiva = !document.getElementById('aba-'+nome).classList.contains('hidden');
   // pausa o cronômetro do V/F se estava nele e está saindo pra outra aba —
   // "trocar de tela dentro do próprio app" é um dos 5 pontos de pausa
@@ -2818,7 +2818,7 @@ function trocarAba(nome){
   document.getElementById('content').scrollTop = 0;
   if(nome==='forum'){ carregarForum(); }
   if(nome==='placar') carregarMetricasPessoais();
-  if(nome==='quests') contarDisponiveisAgora();
+  if(nome==='quests' && !pularContadorQuest) contarDisponiveisAgora();
   if(nome==='vf') entrarNoModoVF();
   if(nome==='adicionar' && !extracaoEmAndamento){
     document.getElementById('upload-status').innerHTML = '';
@@ -4224,6 +4224,13 @@ let vfPontoInicialTracoAtualVF = null;
 // perto da diagonal da própria caixa; um rasurão tem comprimento MUITO
 // maior que a caixa, porque fica indo e voltando repetidas vezes
 let vfFormaTracoAtualVF = null; // {minX, maxX, minY, maxY, comprimento, ultimoX, ultimoY}
+// região suja acumulada desde a última atualização do preview do destaque
+// - {minX, minY, maxX, maxY} em coordenadas do canvas (não da tela). Só o
+// segmento novo, não o traço inteiro - preencher uma área grande (tipo um
+// coração) gerava dezenas de redesenhos da TELA VISÍVEL INTEIRA por
+// segundo, mesmo cada segmento novo sendo pequeno - isso travava a
+// interface. Null = nada acumulado ainda desde a última atualização
+let vfRegiaoSujaDestaqueVF = null;
 let vfUltimoTapLeveCanetaVF = null; // {x, y, quando} - só o tap anterior mais recente
 let vfSnapshotRegiaoTapLeveVF = null; // {ctx, x, y, lado, imageData} - região capturada no touchstart, restaurada se o toque virar um tap leve
 let vfPontoMedioAnterior = null;
@@ -4542,6 +4549,7 @@ document.addEventListener('touchstart', (e) => {
     // a fatia visível do canvas principal, não ele inteiro
     vfCanvasBaseSnapshot = canvasPrep.baseSnapshot;
     vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, vfScrollTopNoInicioTracoVF * dpr, canvas.width, alturaBufferDestaque, 0, 0, canvas.width, alturaBufferDestaque);
+    vfRegiaoSujaDestaqueVF = null; // começo de traço novo - nunca herda região suja de um traço anterior
     // esconde o canvas REAL enquanto o traço está em andamento - ele já
     // foi copiado pro snapshot (que o preview usa por cima). Mantendo os
     // dois visíveis ao mesmo tempo, cada traço já feito (semi-transparente
@@ -4611,6 +4619,7 @@ document.addEventListener('touchmove', (e) => {
             vfCtxTracoTemp.lineJoin = 'round';
             vfCanvasBaseSnapshot = canvasPrep2.baseSnapshot;
             vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, vfScrollTopNoInicioTracoVF * dpr, canvas.width, alturaBufferDestaque2, 0, 0, canvas.width, alturaBufferDestaque2);
+            vfRegiaoSujaDestaqueVF = null; // mesma garantia no segundo caminho de início de traço
             canvas.style.opacity = '0'; // mesma correção do outro caminho - evita dupla camada semi-transparente
           }
           document.body.style.touchAction = 'none';
@@ -4787,6 +4796,20 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect, dentroDeL
     // usada em apps de desenho de verdade
     const pontoMedio = {x: (vfUltimoPontoDesenho.x + xEtapa) / 2, y: (vfUltimoPontoDesenho.y + yEtapa) / 2};
     ctxAtivo.quadraticCurveTo(vfUltimoPontoDesenho.x, vfUltimoPontoDesenho.y, pontoMedio.x, pontoMedio.y);
+    if(vfModoDestaque){
+      // acumula a região suja com margem suficiente pra cobrir a
+      // espessura da linha (e a curva do quadraticCurveTo, que pode
+      // "arquear" um pouco além da linha reta entre os dois pontos)
+      const margemLinha = espessuraFinal + 20;
+      if(!vfRegiaoSujaDestaqueVF){
+        vfRegiaoSujaDestaqueVF = {minX: pontoMedio.x - margemLinha, maxX: pontoMedio.x + margemLinha, minY: pontoMedio.y - margemLinha, maxY: pontoMedio.y + margemLinha};
+      }else{
+        vfRegiaoSujaDestaqueVF.minX = Math.min(vfRegiaoSujaDestaqueVF.minX, pontoMedio.x - margemLinha, vfUltimoPontoDesenho.x - margemLinha);
+        vfRegiaoSujaDestaqueVF.maxX = Math.max(vfRegiaoSujaDestaqueVF.maxX, pontoMedio.x + margemLinha, vfUltimoPontoDesenho.x + margemLinha);
+        vfRegiaoSujaDestaqueVF.minY = Math.min(vfRegiaoSujaDestaqueVF.minY, pontoMedio.y - margemLinha, vfUltimoPontoDesenho.y - margemLinha);
+        vfRegiaoSujaDestaqueVF.maxY = Math.max(vfRegiaoSujaDestaqueVF.maxY, pontoMedio.y + margemLinha, vfUltimoPontoDesenho.y + margemLinha);
+      }
+    }
     vfPontoMedioAnterior = pontoMedio;
     vfUltimoPontoDesenho = {x: xEtapa, y: yEtapa};
   }
@@ -4807,25 +4830,48 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect, dentroDeL
 function vfAtualizarPreviewDestaqueVF(){
   if(vfModoDestaque && vfCanvasTracoTemp && vfCtxPreviewDestaque){
     const dpr = (window.devicePixelRatio || 1) * 1.5;
-    // limpa só a fatia visível (onde o traço realmente pode aparecer),
-    // não o conteúdo inteiro - achado real: isso roda a cada movimento
-    // da caneta, então limpar uma área gigante (até 8x a altura da tela)
-    // repetidamente era o gargalo real
-    vfCtxPreviewDestaque.clearRect(0, vfScrollTopNoInicioTracoVF, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
+    const larguraTotal = vfCanvasTracoTemp.width/dpr;
+    const alturaVisivelBuffer = vfCanvasTracoTemp.height/dpr;
+    // acumulada em vfProcessarPontoDesenhoVF - a bounding box (com
+    // margem) de só o segmento novo desenhado desde a última chamada,
+    // não o traço inteiro. Achado real: preencher uma área grande (tipo
+    // um coração) gerava dezenas de redesenhos da TELA VISÍVEL INTEIRA
+    // por segundo - cada segmento é pequeno, só precisa redesenhar a
+    // vizinhança dele, não a tela toda
+    let regiao = vfRegiaoSujaDestaqueVF;
+    vfRegiaoSujaDestaqueVF = null; // consumida - a próxima chamada acumula do zero
+    if(!regiao){
+      // sem região acumulada (não deveria acontecer no fluxo normal, mas
+      // por segurança cai pro comportamento antigo - redesenha tudo)
+      regiao = {minX: 0, maxX: larguraTotal, minY: vfScrollTopNoInicioTracoVF, maxY: vfScrollTopNoInicioTracoVF + alturaVisivelBuffer};
+    }
+    // recorta pros limites reais do buffer - clamping evita desenhar fora
+    // da área alocada (o que silenciosamente não desenharia nada útil)
+    const regiaoXInicio = Math.max(0, Math.min(regiao.minX, larguraTotal));
+    const regiaoXFim = Math.max(0, Math.min(regiao.maxX, larguraTotal));
+    const regiaoYInicio = Math.max(vfScrollTopNoInicioTracoVF, Math.min(regiao.minY, vfScrollTopNoInicioTracoVF + alturaVisivelBuffer));
+    const regiaoYFim = Math.max(vfScrollTopNoInicioTracoVF, Math.min(regiao.maxY, vfScrollTopNoInicioTracoVF + alturaVisivelBuffer));
+    const larguraRegiao = regiaoXFim - regiaoXInicio;
+    const alturaRegiao = regiaoYFim - regiaoYInicio;
+    if(larguraRegiao <= 0 || alturaRegiao <= 0) return; // região vazia (traço todo fora da área visível) - nada a atualizar
+    vfCtxPreviewDestaque.clearRect(regiaoXInicio, regiaoYInicio, larguraRegiao, alturaRegiao);
     // primeiro desenha o que já existia (retrato de antes do traço
     // começar) em opacidade normal - dá ao multiply seguinte algo de
     // verdade pra misturar, não um fundo vazio. É isso que faz escurecer
     // de verdade, em tempo real, ao passar por cima de uma linha já
     // desenhada antes (sem essa base, o multiply não tinha contra o que
     // multiplicar, e só mostrava o traço novo sozinho até soltar o dedo)
+    const origemYNoBuffer = (regiaoYInicio - vfScrollTopNoInicioTracoVF) * dpr; // posição dentro do buffer (que só cobre a fatia visível), em pixels reais
+    const alturaRegiaoBuffer = alturaRegiao * dpr;
+    const larguraRegiaoBuffer = larguraRegiao * dpr;
     if(vfCanvasBaseSnapshot){
       vfCtxPreviewDestaque.globalCompositeOperation = 'source-over';
       vfCtxPreviewDestaque.globalAlpha = 1;
-      vfCtxPreviewDestaque.drawImage(vfCanvasBaseSnapshot, 0, vfScrollTopNoInicioTracoVF, vfCanvasBaseSnapshot.width/dpr, vfCanvasBaseSnapshot.height/dpr);
+      vfCtxPreviewDestaque.drawImage(vfCanvasBaseSnapshot, regiaoXInicio*dpr, origemYNoBuffer, larguraRegiaoBuffer, alturaRegiaoBuffer, regiaoXInicio, regiaoYInicio, larguraRegiao, alturaRegiao);
     }
     vfCtxPreviewDestaque.globalCompositeOperation = 'multiply';
     vfCtxPreviewDestaque.globalAlpha = vfOpacidadeDestaqueAtual;
-    vfCtxPreviewDestaque.drawImage(vfCanvasTracoTemp, 0, vfScrollTopNoInicioTracoVF, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
+    vfCtxPreviewDestaque.drawImage(vfCanvasTracoTemp, regiaoXInicio*dpr, origemYNoBuffer, larguraRegiaoBuffer, alturaRegiaoBuffer, regiaoXInicio, regiaoYInicio, larguraRegiao, alturaRegiao);
   }
 }
 
@@ -5323,7 +5369,7 @@ async function vfAbrirFavoritosVF(){
     const publicacao = f.questoes_vf?.bibliografia?.nome_exibicao || f.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
     const dataFormatada = new Date(f.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
     return `
-      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${f.questao_vf_id}')">
+      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${f.questao_vf_id}')" ontouchend="event.preventDefault();vfIrParaQuestaoSalvaVF('${f.questao_vf_id}')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div>
             <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
@@ -5380,7 +5426,7 @@ async function vfAbrirFlashSalvosVF(){
     const publicacao = s.questoes_vf?.bibliografia?.nome_exibicao || s.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
     const dataFormatada = new Date(s.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
     return `
-      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${s.questao_vf_id}')">
+      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${s.questao_vf_id}')" ontouchend="event.preventDefault();vfIrParaQuestaoSalvaVF('${s.questao_vf_id}')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div>
             <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
@@ -9209,10 +9255,10 @@ async function carregarCadernosExistentes(){
     const stats = respostasPorCaderno[c.id] || {total:0, acertos:0};
     const progresso = totalQuestoes ? `${stats.total} de ${totalQuestoes} respondidas` : `${stats.total} respondidas`;
     return `
-    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;cursor:pointer" onclick="modoRevisaoCaderno=false;retomarCadernoEspecifico('${c.id}')">
+    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;cursor:pointer" onclick="modoRevisaoCaderno=false;retomarCadernoEspecifico('${c.id}')" ontouchend="event.preventDefault();modoRevisaoCaderno=false;retomarCadernoEspecifico('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
-        <span class="tx" style="font-size:var(--fs-e);padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+        <span class="tx" style="font-size:var(--fs-e);padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)" ontouchend="event.preventDefault();event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
       </div>
       <span style="color:#888;font-size:var(--fs-b)">${progresso}</span>
     </div>`;
@@ -9224,10 +9270,10 @@ async function carregarCadernosExistentes(){
     const stats = respostasPorCaderno[c.id] || {total:0, acertos:0};
     const pct = stats.total ? Math.round((stats.acertos/stats.total)*100) : 0;
     return `
-    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;opacity:0.85;cursor:pointer" onclick="abrirDetalheCadernoConcluido('${c.id}')">
+    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;opacity:0.85;cursor:pointer" onclick="abrirDetalheCadernoConcluido('${c.id}')" ontouchend="event.preventDefault();abrirDetalheCadernoConcluido('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
-        <span class="tx" style="font-size:var(--fs-e);padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="finalizado" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+        <span class="tx" style="font-size:var(--fs-e);padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="finalizado" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)" ontouchend="event.preventDefault();event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
       </div>
       <span style="color:#888;font-size:var(--fs-d)">${stats.total} questões · ${pct}% de acerto</span>
     </div>`;
@@ -9360,7 +9406,7 @@ async function retomarCadernoEspecifico(cadernoId){
 
   const primeiraNaoRespondida = questoesCaderno.findIndex(q => !respostasPorQuestao[q.id] && !questoesExcluidasAtual.has(q.id));
   indiceQuestaoAtual = primeiraNaoRespondida !== -1 ? primeiraNaoRespondida : 0;
-  trocarAba('quests');
+  trocarAba('quests', true); // pula o contador de disponíveis - a tela de filtros nunca fica visível aqui, vai direto pra resolução do caderno
   document.getElementById('quests-filtros').classList.add('hidden');
   document.getElementById('quests-resolucao').classList.remove('hidden');
   renderizarQuestaoAtual();
@@ -10488,7 +10534,7 @@ function renderizarListaForum(){
     if(q?.bibliografia_id && mapaBibliografiaTitulo[q.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[q.bibliografia_id]));
     if(q?.capitulo) partes.push(rotuloCapituloDoLivro(q?.bibliografia_id ? mapaBibliografiaTitulo[q.bibliografia_id] : null) + ' ' + escapeHtml(String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
     return `
-    <div class="card-questao" style="cursor:pointer" onclick="abrirTopicoDoForum('${f.id}')">
+    <div class="card-questao" style="cursor:pointer" onclick="abrirTopicoDoForum('${f.id}')" ontouchend="event.preventDefault();abrirTopicoDoForum('${f.id}')">
       <div style="margin-bottom:6px">
         ${badgeTipoTopico(f.tipo)}
       </div>
@@ -10609,7 +10655,7 @@ async function renderizarDetalheQuestao(questaoId){
     <div class="section-title">Discussões dessa questão</div>
     ${(topicosDaQuestao||[]).length ? (topicosDaQuestao||[]).map(t=>{
       const resolvidoPraMim = t.status==='resolvido' && idsVotados.has(t.id);
-      return `<div class="card-questao" style="cursor:pointer${resolvidoPraMim?';opacity:0.6':''}" onclick="abrirTopico('${t.id}')">
+      return `<div class="card-questao" style="cursor:pointer${resolvidoPraMim?';opacity:0.6':''}" onclick="abrirTopico('${t.id}')" ontouchend="event.preventDefault();abrirTopico('${t.id}')">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
           ${badgeTipoTopico(t.tipo)}
           <span style="color:#888;font-size:var(--fs-b)">${t.status==='resolvido'?'Resolvido':'Aberto'}</span>
@@ -11268,7 +11314,7 @@ function linhaComparativaModulo(nome, pctAcerto, pctRecuperacao, pctRetencao, ac
   linhasInfo.push(retencaoTotal ? `% de retenção: ${retencaoSucesso} de ${retencaoTotal}` : '% de retenção: sem dado suficiente ainda');
   const textoInfo = linhasInfo.map(l=>`<div>${escapeHtml(l)}</div>`).join('');
   return `
-    <div style="padding:12px 0;cursor:pointer;border-bottom:0.5px solid #f0f0ee" onclick="mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)">
+    <div style="padding:12px 0;cursor:pointer;border-bottom:0.5px solid #f0f0ee" onclick="mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)" ontouchend="event.preventDefault();mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
         <span style="font-size:var(--fs-d);font-weight:600;color:#111">${escapeHtml(nome)}</span>
         <span style="font-size:var(--fs-b);color:#888;flex-shrink:0;margin-left:10px">${acertos}/${total} acertos</span>
@@ -12382,7 +12428,7 @@ function renderizarMetricasPessoais(){
     if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
     if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
     if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
-    return `<div style="cursor:pointer;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${p.questaoId}')">
+    return `<div style="cursor:pointer;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${p.questaoId}')" ontouchend="event.preventDefault();abrirDetalheQuestao('${p.questaoId}')">
       <div style="font-size:var(--fs-d);color:#888">${partes.length ? partes.join(' · ') : 'Questão'}</div>
       <div style="color:#888;font-size:var(--fs-b);margin-top:6px">${p.erros} ${p.erros===1?'erro':'erros'} em ${p.tentativas} ${p.tentativas===1?'tentativa':'tentativas'}</div>
     </div>`;
@@ -12414,7 +12460,7 @@ function renderizarFavoritosMetricas(elFavoritos, infoPorQuestao){
       if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
       if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
       if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
-      return `<div style="cursor:pointer;position:relative;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${f.questao_id}')">
+      return `<div style="cursor:pointer;position:relative;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${f.questao_id}')" ontouchend="event.preventDefault();abrirDetalheQuestao('${f.questao_id}')">
         <button onclick="event.stopPropagation();desfavoritarDaListaMetricas('${f.id}','${f.questao_id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px" title="Desfavoritar">✕</button>
         <div style="font-size:var(--fs-d);color:#888;margin-right:24px">${partes.length ? partes.join(' · ') : 'Questão'}</div>
         <div style="color:#888;font-size:var(--fs-b);margin-top:6px">Favoritada em ${new Date(f.criado_em).toLocaleDateString('pt-BR')}</div>
@@ -12444,7 +12490,7 @@ function renderizarNotasMetricas(elNotas, infoPorQuestao){
       if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
       if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
       partes.push(new Date(n.criado_em).toLocaleDateString('pt-BR'));
-      return `<div style="cursor:pointer;position:relative;padding:12px 0;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${n.questao_id}')">
+      return `<div style="cursor:pointer;position:relative;padding:12px 0;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${n.questao_id}')" ontouchend="event.preventDefault();abrirDetalheQuestao('${n.questao_id}')">
         <button onclick="event.stopPropagation();excluirNotaDaListaMetricas('${n.id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px" title="Excluir nota">✕</button>
         <p style="font-size:var(--fs-d);color:#111;margin:0 24px 8px 0">${formatarEnunciado(n.texto)}</p>
         <div style="font-size:var(--fs-b);color:#888">${partes.join(' · ')}</div>
