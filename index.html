@@ -1569,7 +1569,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-349';
+const VERSAO_APP = '2026-07-25-350';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4690,13 +4690,6 @@ function vfFinalizarTracoDesenho(e){
     const distanciaTotal = Math.hypot(touchFinal.clientX - vfPontoInicialTracoAtualVF.x, touchFinal.clientY - vfPontoInicialTracoAtualVF.y);
     const LIMIAR_TAP_LEVE_PX = 10;
     if(distanciaTotal < LIMIAR_TAP_LEVE_PX){
-      // desfaz qualquer marquinha que o tremor natural da mão/caneta
-      // tenha desenhado durante esse toque - um tap (com ou sem virar
-      // duplo toque) nunca deve deixar rastro visual nenhum
-      if(vfSnapshotRegiaoTapLeveVF){
-        try{ vfSnapshotRegiaoTapLeveVF.ctx.putImageData(vfSnapshotRegiaoTapLeveVF.imageData, vfSnapshotRegiaoTapLeveVF.x, vfSnapshotRegiaoTapLeveVF.y); }catch(e){}
-        vfSnapshotRegiaoTapLeveVF = null;
-      }
       const agora = Date.now();
       const pontoAtual = vfPontoInicialTracoAtualVF;
       const tapAnterior = vfUltimoTapLeveCanetaVF;
@@ -4710,12 +4703,40 @@ function vfFinalizarTracoDesenho(e){
       const contentElSolto1 = document.getElementById('content');
       if(contentElSolto1) contentElSolto1.style.overflow = '';
       if(virouDuploTap){
+        // duplo toque CONFIRMADO - agora sim desfaz as marquinhas dos dois
+        // toques (essa e a do toque anterior, que tinha ficado guardada
+        // esperando pra ver se um segundo toque chegaria)
+        if(vfSnapshotRegiaoTapLeveVF){
+          try{ vfSnapshotRegiaoTapLeveVF.ctx.putImageData(vfSnapshotRegiaoTapLeveVF.imageData, vfSnapshotRegiaoTapLeveVF.x, vfSnapshotRegiaoTapLeveVF.y); }catch(err){}
+          vfSnapshotRegiaoTapLeveVF = null;
+        }
+        if(tapAnterior.snapshot){
+          try{ tapAnterior.snapshot.ctx.putImageData(tapAnterior.snapshot.imageData, tapAnterior.snapshot.x, tapAnterior.snapshot.y); }catch(err){}
+        }
+        clearTimeout(tapAnterior.timeoutId);
         vfUltimoTapLeveCanetaVF = null; // consumido - não encadeia um terceiro tap como se fosse outro duplo toque
         if(vfModoBorracha) selecionarFerramentaCanetaVF(); else selecionarFerramentaBorrachaVF();
-        return; // tap sem movimento não desenhou nada de verdade - não salva histórico
+        return;
       }
-      vfUltimoTapLeveCanetaVF = {x: pontoAtual.x, y: pontoAtual.y, quando: agora};
-      return; // tap isolado (não virou duplo) - também não desenhou nada, não salva histórico
+      // toque isolado (ainda não virou duplo) - NÃO apaga a marquinha.
+      // Pode ser (a) uma marca pequena de propósito (um ponto, um
+      // pingo) ou (b) o primeiro dos dois toques de um duplo toque
+      // ainda em andamento - guarda o snapshot pra poder desfazer
+      // depois SE um segundo toque confirmar o duplo toque, e agenda o
+      // "compromisso" da marca no histórico se isso não acontecer
+      // dentro do prazo (achado real: apagar todo toque pequeno de
+      // propósito, sem essa espera, quebrava desenhar pontos/marcas
+      // pequenas de verdade)
+      const snapshotDesseTap = vfSnapshotRegiaoTapLeveVF;
+      vfSnapshotRegiaoTapLeveVF = null;
+      const timeoutId = setTimeout(() => {
+        if(vfUltimoTapLeveCanetaVF && vfUltimoTapLeveCanetaVF.quando === agora){
+          vfUltimoTapLeveCanetaVF = null;
+          vfSalvarEstadoHistoricoVF(); // marca pequena confirmada como traço de verdade - agora sim entra no histórico
+        }
+      }, 360);
+      vfUltimoTapLeveCanetaVF = {x: pontoAtual.x, y: pontoAtual.y, quando: agora, snapshot: snapshotDesseTap, timeoutId};
+      return;
     }
   }
   vfPontoInicialTracoAtualVF = null;
