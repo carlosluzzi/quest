@@ -1577,7 +1577,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-356';
+const VERSAO_APP = '2026-07-25-357';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4374,7 +4374,7 @@ document.addEventListener('touchstart', (e) => {
   const itemMenu = e.target.closest('.nav-item');
   const botaoIcone = itemMenu || e.target.closest('button, [onclick]');
   if(botaoIcone){
-    vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX};
+    vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX, elemento: botaoIcone};
     return;
   }
   if(!vfCtxDesenhoAtivoAgoraVF()){
@@ -4745,7 +4745,18 @@ if(VF_SUPORTA_COALESCED_VF){
 }
 
 function vfFinalizarTracoDesenho(e){
-  vfBotaoPendenteToqueInfo = null; // toque em cima do ícone terminou sem virar arrasto - deixa o clique nativo acontecer
+  // toque em cima do ícone terminou sem virar arrasto - o clique nativo
+  // não dispara mais sozinho com a Apple Pencil (touch-action:none nos
+  // botões do Flash/Quest, necessário pra caneta não competir com o
+  // scroll nativo, também suprime o clique sintético) - dispara manual
+  if(vfBotaoPendenteToqueInfo && vfBotaoPendenteToqueInfo.elemento){
+    const elementoParaClicar = vfBotaoPendenteToqueInfo.elemento;
+    vfBotaoPendenteToqueInfo = null;
+    if(e && e.preventDefault) e.preventDefault();
+    elementoParaClicar.click();
+  }else{
+    vfBotaoPendenteToqueInfo = null;
+  }
   if(!vfDesenhandoAgora) return;
   // duplo toque leve (tap, sem arrastar de verdade) com a caneta alterna
   // caneta <-> borracha - detectado aqui, antes de qualquer outra coisa,
