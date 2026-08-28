@@ -6643,6 +6643,18 @@ function vfTogglePausarSessaoFlashVF(e){
   vfAtualizarDisplayBalaoSessaoVF();
 }
 
+// despausa automaticamente se a sessão estiver pausada - chamada ao
+// responder uma questão ou avançar pra próxima. Se a pessoa está de fato
+// interagindo com a questão, ficar pausado só significava um esquecimento
+// de apertar "Retomar" antes, não uma escolha de continuar parado
+function vfDespausarSeNecessarioVF(){
+  if(!vfSessaoAtivaVF || !vfSessaoAtivaVF.pausado) return;
+  vfSessaoAtivaVF.pausado = false;
+  vfSessaoAtivaVF.ultimoResumeEm = Date.now();
+  vfSalvarSessaoNoStorageVF();
+  vfAtualizarDisplayBalaoSessaoVF();
+}
+
 // monta o "retrato" da sessão do Flash pro Tracker, no mesmo espírito do
 // que já existe pro caderno do Quest - reaproveita o MESMO modal de
 // confirmação e a mesma edge function, só o formato da questão muda
@@ -7172,7 +7184,7 @@ function renderizarItemVF(){
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
       </div>
-      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;color:#111;margin-top:14px;text-align:left;font-weight:400;position:relative" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
+      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;text-align:left;font-weight:400;position:relative" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
     `;
   }
 
@@ -7514,6 +7526,7 @@ async function responderVF(resposta){
   if(!entrada || entrada.resposta !== null) return;
   const agoraMs = agoraCorrigidoVF();
   if(agoraMs < (estadoVF.bloqueadoAteMs||0)) return; // toque duplo acidental logo após a questão aparecer — ignora
+  vfDespausarSeNecessarioVF(); // responder é sinal claro de que está ativo - esquecimento de apertar "Retomar" não deveria bloquear o progresso
   const item = entrada.item;
   // tempo ATIVO: o que já foi acumulado em pausas anteriores, mais o
   // trecho corrente se ainda estiver ativa agora — é isso que alimenta o
@@ -7660,7 +7673,7 @@ function vfFecharPopupTagsVF(){
 
 async function vfAdicionarTagVF(){
   const input = document.getElementById('vf-tags-input-novo');
-  const nomeDigitado = input.value.trim();
+  const nomeDigitado = input.value.trim().toUpperCase();
   const statusEl = document.getElementById('vf-tags-status');
   if(!nomeDigitado || !vfQuestaoIdTagsAtualVF) return;
 
@@ -7861,8 +7874,8 @@ function abrirExplicacaoVF(questaoVfId){
   const explicacao = entrada.item.explicacao || '';
   const atributosEdicao = souCarlos() ? `id="vf-explicacao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarExplicacao(event)" ontouchend="vfCancelarPressionarExplicacao()" ontouchmove="vfCancelarPressionarExplicacao(event)" onmousedown="vfIniciarPressionarExplicacao(event)" onmouseup="vfCancelarPressionarExplicacao()" onmouseleave="vfCancelarPressionarExplicacao()"` : `id="vf-explicacao-atual"`;
   el.innerHTML = explicacao
-    ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;margin:0;line-height:1.5;color:#111;position:relative">${formatarTextoItemVF(explicacao)}</div>`
-    : `<p ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:12px 14px;margin:0;color:#666;position:relative">${souCarlos() ? 'Sem explicação cadastrada – segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
+    ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;line-height:1.5;color:#111;position:relative">${formatarTextoItemVF(explicacao)}</div>`
+    : `<p ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;color:#666;position:relative">${souCarlos() ? 'Sem explicação cadastrada – segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
   abrirModal('modal-explicacao-vf');
   vfAbrirCanvasExplicacaoVF();
 }
@@ -8013,6 +8026,7 @@ async function confirmarExclusaoVF(){
 
 async function proximoVF(){
   if(!estadoVF) return;
+  vfDespausarSeNecessarioVF(); // avançar é sinal claro de que está ativo, mesmo raciocínio de responderVF
   if(estadoVF.posicao < estadoVF.historico.length - 1){
     estadoVF.posicao++;
     // se aterrissou numa entrada ainda não respondida (só pode ser a
