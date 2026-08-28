@@ -290,9 +290,9 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .item-lista-modulo:last-child{border-bottom:none}
 .item-lista-modulo:active{background:#F5F5F4}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado,body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado *,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado,body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado *,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
 #vf-correcao-atual{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf-correcao-atual *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf-correcao-atual *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
 .enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap}
 .linha-numerada{display:flex;gap:8px;margin-top:10px;align-items:flex-start}
 .linha-marcador{flex-shrink:0;font-weight:400;min-width:16px}
@@ -4067,6 +4067,26 @@ function vfCtxDesenhoAtivoAgoraVF(){
   return vfCtxDesenho;
 }
 let vfCanvasTracoTemp = null; // canvas à parte só durante um traço de destaque, funde no final
+// canvas persistentes reutilizados entre traços de destaque - antes eram
+// criados do zero (document.createElement) a cada início de traço, o que
+// tem custo real de alocação. Reaproveitar os mesmos elementos (só
+// limpando/redimensionando) evita esse custo repetido - é o que fazia o
+// desenho "esquentar"/ficar mais rápido só depois de um tempo de uso
+let vfCanvasTracoTempPersistenteVF = null;
+let vfCanvasBaseSnapshotPersistenteVF = null;
+// prepara (ou reaproveita) os dois canvas do modo destaque pro tamanho
+// atual - chamada no início de cada traço, em vez de criar elementos novos
+function vfPrepararCanvasDestaqueVF(larguraBuffer, alturaBuffer){
+  if(!vfCanvasTracoTempPersistenteVF) vfCanvasTracoTempPersistenteVF = document.createElement('canvas');
+  if(!vfCanvasBaseSnapshotPersistenteVF) vfCanvasBaseSnapshotPersistenteVF = document.createElement('canvas');
+  vfCanvasTracoTempPersistenteVF.width = larguraBuffer;
+  vfCanvasTracoTempPersistenteVF.height = alturaBuffer;
+  vfCanvasBaseSnapshotPersistenteVF.width = larguraBuffer;
+  vfCanvasBaseSnapshotPersistenteVF.height = alturaBuffer;
+  // setar width/height (mesmo pro mesmo valor) já limpa o canvas sozinho -
+  // não precisa de clearRect extra
+  return {tracoTemp: vfCanvasTracoTempPersistenteVF, baseSnapshot: vfCanvasBaseSnapshotPersistenteVF};
+}
 let vfScrollTopNoInicioTracoVF = 0; // scroll de #content quando o traço de destaque começou - usado pra desenhar os canvas temporários só do tamanho da área visível, não do conteúdo inteiro (que pode ser bem maior, causando lentidão real ao criar/copiar canvas enormes)
 let vfCanvasBaseSnapshot = null; // retrato do canvas ANTES do traço atual começar, pra multiply de verdade no preview
 let vfCtxTracoTemp = null;
@@ -4176,7 +4196,17 @@ function inicializarCanvasDesenhoVF(){
   redimensionarCanvasDesenhoVF();
 }
 
+let vfRedimensionandoCanvasAgoraVF = false; // proteção contra reentrância - impede loop cíclico caso essa função dispare o próprio observer que a chama
 function redimensionarCanvasDesenhoVF(){
+  if(vfRedimensionandoCanvasAgoraVF) return; // já está rodando - evita empilhar/repetir
+  vfRedimensionandoCanvasAgoraVF = true;
+  try{
+    vfRedimensionarCanvasDesenhoInternoVF();
+  }finally{
+    vfRedimensionandoCanvasAgoraVF = false;
+  }
+}
+function vfRedimensionarCanvasDesenhoInternoVF(){
   const canvas = document.getElementById('vf-canvas-desenho');
   if(!canvas) return;
   const content = document.getElementById('content');
@@ -4448,11 +4478,11 @@ document.addEventListener('touchstart', (e) => {
     const contentParaDestaque = document.getElementById('content');
     vfScrollTopNoInicioTracoVF = contentParaDestaque ? contentParaDestaque.scrollTop : 0;
     const alturaVisivel = contentParaDestaque ? contentParaDestaque.clientHeight : canvas.height;
-    vfCanvasTracoTemp = document.createElement('canvas');
-    vfCanvasTracoTemp.width = canvas.width;
-    vfCanvasTracoTemp.height = alturaVisivel * ((window.devicePixelRatio || 1) * 1.5);
-    vfCtxTracoTemp = vfCanvasTracoTemp.getContext('2d');
     const dpr = (window.devicePixelRatio || 1) * 1.5;
+    const alturaBufferDestaque = alturaVisivel * dpr;
+    const canvasPrep = vfPrepararCanvasDestaqueVF(canvas.width, alturaBufferDestaque);
+    vfCanvasTracoTemp = canvasPrep.tracoTemp;
+    vfCtxTracoTemp = vfCanvasTracoTemp.getContext('2d');
     // desloca a origem pelo scroll atual (negativo) - assim as MESMAS
     // coordenadas (x,y) que o resto do sistema já calcula em relação ao
     // conteúdo inteiro caem no lugar certo dentro desse canvas menor,
@@ -4465,10 +4495,8 @@ document.addEventListener('touchstart', (e) => {
     // de linhas já desenhadas (sem isso, o multiply do preview não tinha
     // nada real pra misturar, só o próprio traço novo sozinho). Copia só
     // a fatia visível do canvas principal, não ele inteiro
-    vfCanvasBaseSnapshot = document.createElement('canvas');
-    vfCanvasBaseSnapshot.width = canvas.width;
-    vfCanvasBaseSnapshot.height = alturaVisivel * dpr;
-    vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, vfScrollTopNoInicioTracoVF * dpr, canvas.width, alturaVisivel * dpr, 0, 0, canvas.width, alturaVisivel * dpr);
+    vfCanvasBaseSnapshot = canvasPrep.baseSnapshot;
+    vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, vfScrollTopNoInicioTracoVF * dpr, canvas.width, alturaBufferDestaque, 0, 0, canvas.width, alturaBufferDestaque);
     // esconde o canvas REAL enquanto o traço está em andamento - ele já
     // foi copiado pro snapshot (que o preview usa por cima). Mantendo os
     // dois visíveis ao mesmo tempo, cada traço já feito (semi-transparente
@@ -4527,18 +4555,16 @@ document.addEventListener('touchmove', (e) => {
             const contentParaDestaque2 = document.getElementById('content');
             vfScrollTopNoInicioTracoVF = contentParaDestaque2 ? contentParaDestaque2.scrollTop : 0;
             const alturaVisivel2 = contentParaDestaque2 ? contentParaDestaque2.clientHeight : canvas.height;
-            vfCanvasTracoTemp = document.createElement('canvas');
-            vfCanvasTracoTemp.width = canvas.width;
-            vfCanvasTracoTemp.height = alturaVisivel2 * ((window.devicePixelRatio || 1) * 1.5);
-            vfCtxTracoTemp = vfCanvasTracoTemp.getContext('2d');
             const dpr = (window.devicePixelRatio || 1) * 1.5;
+            const alturaBufferDestaque2 = alturaVisivel2 * dpr;
+            const canvasPrep2 = vfPrepararCanvasDestaqueVF(canvas.width, alturaBufferDestaque2);
+            vfCanvasTracoTemp = canvasPrep2.tracoTemp;
+            vfCtxTracoTemp = vfCanvasTracoTemp.getContext('2d');
             vfCtxTracoTemp.setTransform(dpr, 0, 0, dpr, 0, -vfScrollTopNoInicioTracoVF * dpr);
             vfCtxTracoTemp.lineCap = 'round';
             vfCtxTracoTemp.lineJoin = 'round';
-            vfCanvasBaseSnapshot = document.createElement('canvas');
-            vfCanvasBaseSnapshot.width = canvas.width;
-            vfCanvasBaseSnapshot.height = alturaVisivel2 * dpr;
-            vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, vfScrollTopNoInicioTracoVF * dpr, canvas.width, alturaVisivel2 * dpr, 0, 0, canvas.width, alturaVisivel2 * dpr);
+            vfCanvasBaseSnapshot = canvasPrep2.baseSnapshot;
+            vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, vfScrollTopNoInicioTracoVF * dpr, canvas.width, alturaBufferDestaque2, 0, 0, canvas.width, alturaBufferDestaque2);
             canvas.style.opacity = '0'; // mesma correção do outro caminho - evita dupla camada semi-transparente
           }
           document.body.style.touchAction = 'none';
