@@ -193,7 +193,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 #vf-barra-desenho,#vf-barra-desenho *,#vf-painel-caneta,#vf-painel-caneta *,#vf-painel-borracha,#vf-painel-borracha *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:#B23A34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0;border:none;padding:0;margin:0;-webkit-appearance:none;appearance:none;cursor:pointer;overflow:hidden}
 
-.content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
+.content{position:relative;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
 #aba-vf{overscroll-behavior-y:none;margin:-16px -16px 0 -16px;padding:6px 6px 0 6px}
 #ptr-indicator{display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height 0.2s ease;flex-shrink:0;position:relative}
 #ptr-indicator.ativo{transition:none}
@@ -211,7 +211,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-barra-fixa-principal{display:flex;gap:10px}
 .vf-barra-fixa-acoes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 @media(min-width:1100px){.vf-barra-fixa{max-width:none;left:250px;right:0;transform:none;width:auto}}
-@media(min-width:1100px){.vf-overlay-sessao{left:250px !important}}
+@media(min-width:1100px){.vf-overlay-sessao{left:242px !important}}
 .nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative;-webkit-tap-highlight-color:transparent}
 #nav-item-adicionar{display:none}
 /* tamanho fixo (não entra na escala de texto) - é um numerozinho dentro
@@ -819,12 +819,12 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
   <div class="view-aba hidden" id="aba-vf">
     <!-- sem sessão ativa: cobre tudo, só mostra o botão de iniciar. Some
     (via vfAtualizarOverlaySessaoVF) assim que vfSessaoAtivaVF existe -->
-    <div id="vf-overlay-iniciar-sessao" class="vf-overlay-sessao" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:12px">
+    <div id="vf-overlay-iniciar-sessao" class="vf-overlay-sessao" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:-8px;right:-8px;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:12px">
       <button class="btn-primario" onclick="vfIniciarSessaoFlashVF()" style="width:auto;padding:14px 32px">▶ Iniciar sessão</button>
     </div>
     <!-- havia uma sessão pausada quando o app fechou - pergunta o que
     fazer em vez de reabrir o balão sozinho -->
-    <div id="vf-overlay-retomar-sessao" class="vf-overlay-sessao hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:16px">
+    <div id="vf-overlay-retomar-sessao" class="vf-overlay-sessao hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:-8px;right:-8px;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:16px">
       <div>
         <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Você tinha uma sessão pausada</div>
         <div id="vf-overlay-retomar-tempo" style="font-size:var(--fs-h);font-weight:700;font-variant-numeric:tabular-nums;color:#B23A34"></div>
@@ -943,16 +943,13 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
   </div>
 </div>
 
-<!-- canvas de desenho da caneta (Apple Pencil) - FORA do #app-shell de
-propósito. O app-shell é position:fixed + overflow:hidden, e isso recorta
-(clip) qualquer filho position:fixed nas bordas dele - causava um
-artefato visual sutil (linha mais escura) bem em cima do cabeçalho.
-Fora do app-shell, sem overflow:hidden no caminho, cobre a viewport de
-verdade sem esse recorte. Como não é mais filho de #aba-vf, a
-visibilidade é controlada manualmente em trocarAba(), não mais herdada
-automaticamente da classe .hidden do app-shell -->
-<canvas id="vf-canvas-desenho" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:280;pointer-events:none;touch-action:none"></canvas>
-<canvas id="vf-canvas-preview-destaque" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:281;pointer-events:none;touch-action:none"></canvas>
+<!-- canvas de desenho da caneta (Apple Pencil) - definido aqui no HTML,
+mas movido pra dentro de #content via JS logo na carga da página (ver
+vfMoverCanvasParaDentroDoContentVF) - isso é o que faz o traço rolar
+junto com o conteúdo em vez de ficar "grudado na tela" -->
+<canvas id="vf-canvas-desenho" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:280;pointer-events:none;touch-action:none"></canvas>
+<canvas id="vf-canvas-preview-destaque" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:281;pointer-events:none;touch-action:none"></canvas>
+
 <!-- canvas temporário exclusivo pra rabiscar em cima do popup de explicação -
      fica ACIMA do modal (z-index maior que .modal-overlay:300), separado do
      canvas principal da questão. É limpo/descartado ao fechar o popup, nunca
@@ -1570,7 +1567,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-339';
+const VERSAO_APP = '2026-07-25-343';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2549,6 +2546,39 @@ function vfAtualizarVisibilidadeCanvasVF(){
   const el = document.getElementById('quests-resolucao');
   if(!el) return;
   new MutationObserver(vfAtualizarVisibilidadeCanvasVF).observe(el, {attributes: true, attributeFilter: ['class']});
+})();
+
+// move os canvas de desenho pra dentro de #content - antes viviam fora
+// dele (position:fixed, cobrindo a viewport toda), o que fazia qualquer
+// traço já desenhado ficar "grudado na tela" em vez de rolar junto com o
+// texto quando o conteúdo precisa de scroll (achado real: numa questão
+// longa, um risco feito em cima de uma palavra ficava parado enquanto o
+// texto rolava por baixo). Como filhos de #content (que já tem
+// position:relative), com position:absolute e o tamanho do conteúdo
+// inteiro (não só da tela visível), passam a rolar naturalmente com o
+// scroll nativo do navegador - sem precisar sincronizar nada via JS
+(function vfMoverCanvasParaDentroDoContentVF(){
+  const content = document.getElementById('content');
+  const canvasDesenho = document.getElementById('vf-canvas-desenho');
+  const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
+  if(!content || !canvasDesenho || !canvasPreview) return;
+  content.appendChild(canvasDesenho);
+  content.appendChild(canvasPreview);
+  // observa mudanças de altura do conteúdo real (nova questão mais longa/
+  // curta, abrir/fechar filtros, etc) pra manter o canvas sempre do
+  // tamanho certo - debounced com requestAnimationFrame porque
+  // ResizeObserver pode disparar em rajada durante uma sequência de
+  // mudanças de layout. Só redimensiona se não tiver um traço em
+  // andamento (redimensionar no meio de um traço reseta o ponto de
+  // referência da suavização)
+  let vfResizeCanvasRAF = null;
+  const resizeObserverCanvasVF = new ResizeObserver(() => {
+    if(vfResizeCanvasRAF) cancelAnimationFrame(vfResizeCanvasRAF);
+    vfResizeCanvasRAF = requestAnimationFrame(() => {
+      if(vfEstaVisivelAgora() && !vfDesenhandoAgora) redimensionarCanvasDesenhoVF();
+    });
+  });
+  document.querySelectorAll('#content > .view-aba').forEach(aba => resizeObserverCanvasVF.observe(aba));
 })();
 
 // ponto de entrada ÚNICO pra "voltei pra tela" — visibilitychange, pageshow
@@ -3890,7 +3920,19 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
 // TELA DE PRÁTICA — estado, filtro, fila, resposta, ações
 // ============================================================
 let estadoVF = null;
-let filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false};
+let filtroVF = (function(){
+  // restaura o filtro salvo do fechamento anterior do app - sem isso,
+  // fechar e reabrir sempre voltava sem filtro nenhum, mesmo que a
+  // sessão pausada continuasse a mesma
+  try{
+    const salvo = localStorage.getItem('pscpp_vf_filtro');
+    if(salvo) return JSON.parse(salvo);
+  }catch(e){}
+  return {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false};
+})();
+function vfSalvarFiltroNoStorageVF(){
+  try{ localStorage.setItem('pscpp_vf_filtro', JSON.stringify(filtroVF)); }catch(e){}
+}
 let favoritosVF = new Set();
 // tags: cache de TODAS as tags existentes (nome + id), carregado uma vez
 // por sessão, pra a busca no popup ser instantânea sem consultar o banco
@@ -3959,6 +4001,11 @@ let vfCanvasBaseSnapshot = null; // retrato do canvas ANTES do traço atual come
 let vfCtxTracoTemp = null;
 let vfCtxPreviewDestaque = null; // canvas visível por cima, mostra o resultado final em tempo real enquanto desenha
 let vfDesenhandoAgora = false;
+// controla o "modo de visualização" ao abrir uma questão salva que não é
+// da sessão atual - guarda de onde saiu pra poder voltar quando o usuário
+// clicar Próxima/Anterior/sair, em vez de continuar navegando a partir
+// da posição antiga da questão salva (que pode ser bem "pra trás")
+let vfVisualizandoSalvoInfoVF = null;
 let vfSeletorCorNativoAberto = false; // true enquanto o seletor de cor nativo (roda-viva) está aberto
 // checagem GERAL - qualquer pop-up (modal de anotação, notas, explicação,
 // excluir, o que for) bloqueia o início de um traço novo. Cobre todos os
@@ -4047,6 +4094,14 @@ function inicializarCanvasDesenhoVF(){
 function redimensionarCanvasDesenhoVF(){
   const canvas = document.getElementById('vf-canvas-desenho');
   if(!canvas) return;
+  const content = document.getElementById('content');
+  // o canvas cobre o CONTEÚDO INTEIRO (scrollHeight), não só a fatia
+  // visível na tela - é o que permite ele rolar naturalmente junto com o
+  // scroll do navegador, em vez de ficar "grudado na tela" enquanto o
+  // texto passa por baixo. Sempre um pouco maior que o necessário
+  // (offsetHeight como piso) evita ficar menor que a área visível numa
+  // tela momentaneamente vazia/carregando
+  if(content) canvas.style.height = Math.max(content.scrollHeight, content.offsetHeight) + 'px';
   const rect = canvas.getBoundingClientRect();
   if(rect.width === 0 || rect.height === 0) return; // aba ainda escondida, não tem o que medir
   // supersampling: renderiza em resolução MAIOR que o DPR nativo da tela
@@ -4081,6 +4136,7 @@ function redimensionarCanvasDesenhoVF(){
   // branco (só recebe conteúdo durante um traço de destaque em andamento)
   const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
   if(canvasPreview){
+    canvasPreview.style.height = canvas.style.height;
     canvasPreview.width = rect.width * dpr;
     canvasPreview.height = rect.height * dpr;
     vfCtxPreviewDestaque = canvasPreview.getContext('2d');
@@ -4414,8 +4470,17 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect, dentroDeL
   const forcaBruta = typeof forcaTouch === 'number' && forcaTouch > 0 ? forcaTouch : 0.5;
   // suaviza a força entre um touchmove e outro (média móvel exponencial) -
   // evita a espessura "pulando" abrupto de um segmento pro outro se a
-  // força reportada oscilar rápido, deixa a transição mais orgânica
-  vfForcaSuavizada = vfForcaSuavizada * 0.7 + forcaBruta * 0.3;
+  // força reportada oscilar rápido, deixa a transição mais orgânica.
+  // Peso recalibrado (era 0.3, mais fraco que a suavização posicional de
+  // 0.10) - o sensor de pressão real tem seu próprio ruído/jitter, e
+  // combinado com a faixa ampla de variação de espessura (35%-220% do
+  // valor base), isso criava uma textura sutil ao longo do traço -
+  // pontinhos de espessura levemente irregular, tipo absorção de tinta
+  // nanquim no papel. Testado: peso 0.2 corta essa variação em ~18%
+  // sem atraso perceptível pra responder a uma mudança REAL e
+  // deliberada de pressão (14 pontos pra assentar contra 9 antes, a
+  // diferença é uma fração de segundo com a amostragem densa atual)
+  vfForcaSuavizada = vfForcaSuavizada * 0.8 + forcaBruta * 0.2;
   const forca = vfForcaSuavizada;
   if(vfModoDestaque){
     // marca-texto de verdade não varia muito de espessura com a força -
@@ -4875,8 +4940,10 @@ function vfSalvarEClimparAnotacaoVF(entrada){
   if(!canvas || !vfCtxDesenho || vfIndiceHistoricoVF < 0) return; // nada desenhado, nada a fazer
   // guarda só na memória da sessão atual (nunca no banco) - dá pra rever
   // logo depois de responder, mas some ao trocar de questão/recarregar,
-  // sem virar lixo acumulado
-  entrada.anotacaoDataUrl = canvas.toDataURL();
+  // sem virar lixo acumulado. Recorte inteligente (só a área com desenho
+  // de verdade, com uma margem) - o canvas inteiro agora é do tamanho do
+  // conteúdo rolável, capturar tudo geraria uma imagem enorme e majoritariamente em branco
+  entrada.anotacaoDataUrl = vfRecortarAreaDesenhadaVF(canvas);
   const dpr = (window.devicePixelRatio || 1) * 1.5;
   vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
   vfLimparHistoricoVF();
@@ -4920,7 +4987,7 @@ async function vfAbrirFavoritosVF(){
             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
           </button>
         </div>
-        ${f.questoes_vf?.texto ? `<p style="color:#666;font-size:var(--fs-b);margin:6px 0 0 0;line-height:1.4">${escapeHtml(f.questoes_vf.texto)}</p>` : ''}
+        ${f.questoes_vf?.texto ? `<p style="color:#666;font-size:var(--fs-b);margin:6px 0 0 0;line-height:1.4">${formatarTextoItemVF(f.questoes_vf.texto)}</p>` : ''}
       </div>`;
   }).join('');
 }
@@ -4977,7 +5044,7 @@ async function vfAbrirFlashSalvosVF(){
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
           </button>
         </div>
-        ${s.questoes_vf?.texto ? `<p style="color:#666;font-size:var(--fs-b);margin:6px 0 0 0;line-height:1.4">${escapeHtml(s.questoes_vf.texto)}</p>` : ''}
+        ${s.questoes_vf?.texto ? `<p style="color:#666;font-size:var(--fs-b);margin:6px 0 0 0;line-height:1.4">${formatarTextoItemVF(s.questoes_vf.texto)}</p>` : ''}
         ${s.imagem_anotacao ? `<img src="${s.imagem_anotacao}" style="width:100%;border-radius:8px;border:0.5px solid #eee;background:#fff;margin-top:10px" alt="O que foi marcado nessa questão">` : ''}
       </div>`;
   }
@@ -4999,18 +5066,61 @@ async function vfAbrirFlashSalvosVF(){
   el.innerHTML = renderizarSecao('Estudar depois', iconeEstudar, itensEstudar) + renderizarSecao('Corrigir depois', iconeCorrigir, itensCorrigir);
 }
 
-function vfIrParaQuestaoSalvaVF(questaoVfId){
+async function vfIrParaQuestaoSalvaVF(questaoVfId){
   pausarTimerVF(); // pausa a pendente ANTES de sair dela - senão continuava rodando escondida em background
   document.getElementById('pagina-flash-salvos-vf').classList.add('hidden');
   document.getElementById('pagina-favoritos-vf').classList.add('hidden');
-  const indice = estadoVF.historico.findIndex(h => h.item.id === questaoVfId);
-  if(indice >= 0){
-    limparCanvasDesenhoVF(); // sem isso, o rascunho da questão anterior ficava desenhado por cima da nova
-    estadoVF.posicao = indice;
+  const indiceExistente = estadoVF.historico.findIndex(h => h.item.id === questaoVfId);
+  if(indiceExistente >= 0){
+    // já está no histórico da sessão atual - guarda de onde saiu, mas não
+    // precisa criar entrada nova nem buscar nada
+    vfVisualizandoSalvoInfoVF = {posicaoOriginal: estadoVF.posicao, indiceTemporario: null};
+    limparCanvasDesenhoVF();
+    estadoVF.posicao = indiceExistente;
     renderizarItemVF();
+    return;
   }
-  // se não estiver no histórico da sessão atual, só fecha a página mesmo -
-  // não força a entrada de uma questão fora da fila de repetição espaçada
+  // não está no histórico atual (foi respondida em outra sessão) - busca
+  // os dados completos da questão + a última resposta real dada a ela,
+  // monta uma entrada só pra visualização e adiciona temporariamente no
+  // fim do histórico. Isso NÃO mexe na fila de repetição espaçada de
+  // verdade (não é uma resposta nova, só uma consulta)
+  const posicaoOriginal = estadoVF.posicao;
+  document.getElementById('vf-conteudo').innerHTML = `<div style="padding:60px 20px;text-align:center;color:#999">Carregando...</div>`;
+  const [{data: questao, error: erroQuestao}, {data: ultimaResposta}] = await Promise.all([
+    sb.from('questoes_vf').select('*').eq('id', questaoVfId).single(),
+    sb.from('log_respostas_vf').select('acertou, criado_em').eq('questao_vf_id', questaoVfId).eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending: false}).limit(1).maybeSingle()
+  ]);
+  if(erroQuestao || !questao){
+    alert('Não consegui carregar essa questão agora. Tenta de novo.');
+    renderizarItemVF(); // volta a mostrar o que já estava na tela
+    return;
+  }
+  const acertou = ultimaResposta ? ultimaResposta.acertou : true; // sem log algum (raro) - assume acerto pra não colorir de vermelho à toa
+  const entradaVisualizacao = {
+    item: questao,
+    resposta: acertou ? questao.resposta : !questao.resposta, // deduz o que foi respondido a partir do gabarito + se acertou
+    acertou,
+    anotacaoDataUrl: null
+  };
+  estadoVF.historico.push(entradaVisualizacao);
+  const indiceTemporario = estadoVF.historico.length - 1;
+  vfVisualizandoSalvoInfoVF = {posicaoOriginal, indiceTemporario};
+  limparCanvasDesenhoVF();
+  estadoVF.posicao = indiceTemporario;
+  renderizarItemVF();
+}
+
+// chamada antes de qualquer navegação (Próxima/Anterior) ou saída da tela
+// do Flash - se estava em modo de visualização de um salvo, desfaz e
+// volta pra posição de onde a pessoa realmente estava na sessão, em vez
+// de deixar a navegação continuar a partir da posição antiga do salvo
+function vfSairDoModoVisualizacaoSalvoVF(){
+  if(!vfVisualizandoSalvoInfoVF) return;
+  const {posicaoOriginal, indiceTemporario} = vfVisualizandoSalvoInfoVF;
+  if(indiceTemporario !== null) estadoVF.historico.splice(indiceTemporario, 1); // remove a entrada temporária criada só pra essa visualização
+  estadoVF.posicao = posicaoOriginal;
+  vfVisualizandoSalvoInfoVF = null;
 }
 
 function vfFecharFlashSalvosVF(){
@@ -7037,6 +7147,51 @@ async function entrarNoModoVF(){
   if(vfSessaoAtivaVF && !vfSessaoRestauradaAguardandoDecisaoVF) await vfCarregarPoolInicialVF();
 }
 
+// guarda o estado essencial da sessão (histórico resumido + contadores)
+// dentro do mesmo objeto já persistido no localStorage (vfSessaoAtivaVF) -
+// leve de propósito (só id/resposta/acertou de cada questão, não o
+// conteúdo pesado inteiro), pra não pesar salvar isso a cada resposta
+function vfPersistirEstadoSessaoVF(){
+  if(!vfSessaoAtivaVF || !estadoVF) return;
+  vfSessaoAtivaVF.historicoResumido = estadoVF.historico
+    .filter(h => h.resposta !== null) // só as já respondidas - a pendente atual não precisa, o fluxo normal cria uma nova ao restaurar
+    .map(h => ({id: h.item.id, resposta: h.resposta, acertou: h.acertou}));
+  vfSessaoAtivaVF.acertosSessao = estadoVF.acertosSessao;
+  vfSessaoAtivaVF.respondidasSessao = estadoVF.respondidasSessao;
+  vfSessaoAtivaVF.sementeSessao = estadoVF.sementeSessao;
+  vfSessaoAtivaVF.respostasDesdeUltimaNova = estadoVF.respostasDesdeUltimaNova;
+  vfSessaoAtivaVF.familiasRecentesVF = estadoVF.familiasRecentesVF;
+  vfSalvarSessaoNoStorageVF();
+}
+
+// reconstrói o histórico e os contadores a partir do que foi salvo -
+// busca o conteúdo completo de cada questão já respondida (mesmo select
+// usado em vfBuscarConteudoEmLoteVF) e devolve um objeto pronto pra
+// sobrescrever os campos correspondentes do estadoVF recém-criado
+async function vfReconstruirHistoricoDaSessaoVF(){
+  const resumo = vfSessaoAtivaVF?.historicoResumido;
+  if(!resumo || !resumo.length) return null;
+  const ids = resumo.map(r => r.id);
+  const {data, error} = await sb.from('questoes_vf').select('*').in('id', ids);
+  if(error || !data) return null;
+  const porId = new Map(data.map(d => [d.id, d]));
+  const historico = resumo.map(r => {
+    const item = porId.get(r.id);
+    if(!item) return null; // questão pode ter sido excluída/anulada entre uma sessão e outra - pula sem quebrar o resto
+    return {item, resposta: r.resposta, acertou: r.acertou, tempoAtivoMs: 0, ativoDesdeMs: null, apareceuEmMs: Date.now()};
+  }).filter(Boolean);
+  if(!historico.length) return null;
+  return {
+    historico,
+    posicao: historico.length - 1,
+    acertosSessao: vfSessaoAtivaVF.acertosSessao || 0,
+    respondidasSessao: vfSessaoAtivaVF.respondidasSessao || 0,
+    sementeSessao: vfSessaoAtivaVF.sementeSessao,
+    respostasDesdeUltimaNova: vfSessaoAtivaVF.respostasDesdeUltimaNova || 0,
+    familiasRecentesVF: vfSessaoAtivaVF.familiasRecentesVF || []
+  };
+}
+
 async function vfCarregarPoolInicialVF(){
   const el = document.getElementById('vf-conteudo');
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
@@ -7054,6 +7209,11 @@ async function vfCarregarPoolInicialVF(){
     respostasDesdeUltimaNova: 0, // Regra 1 (fluxo garantido de novas) - zera a cada SESSÃO de verdade agora, não mais a cada abertura de aba
     familiasRecentesVF: [] // Regra 2 (anti-irmãs) - idem, zera por sessão de verdade
   };
+  // restaura o histórico da sessão que ficou salvo antes do app fechar -
+  // sem isso, fechar e reabrir "zerava" as questões da sessão mesmo com
+  // a sessão ainda ativa/pausada, só porque estadoVF vive em memória
+  const restaurado = await vfReconstruirHistoricoDaSessaoVF();
+  if(restaurado) Object.assign(estadoVF, restaurado);
   // userRow/now_ms/total geral agora entram NO MESMO Promise.all da busca
   // do pool (dentro de carregarPoolVF) - antes eram uma rodada sequencial
   // separada, pagando uma viagem de rede inteira a mais só na entrada
@@ -7065,6 +7225,7 @@ async function vfCarregarPoolInicialVF(){
 // contador, placar da sessão continuam): o estado de cada questão é
 // global, o filtro só re-recorta qual pool está visível agora
 async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
+  vfSalvarFiltroNoStorageVF(); // toda mudança de filtro passa por aqui - salva sempre, sem precisar duplicar a chamada em cada função de filtro específica
   const el = document.getElementById('vf-conteudo');
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
   document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
@@ -7235,6 +7396,57 @@ async function popularFiltroModuloVF(){
     `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`
   ).join('');
   el.dataset.populado = '1';
+  await vfRestaurarUIFiltroVF(); // reflete visualmente o filtro que já veio restaurado do fechamento anterior do app
+}
+
+// atualiza os controles visuais (selects em cascata + botões Número/Lista)
+// pra refletir filtroVF já restaurado do localStorage - sem isso, o
+// filtro funcionava "nos bastidores" mas a tela mostrava "Todos os
+// módulos" mesmo com um filtro ativo de verdade
+async function vfRestaurarUIFiltroVF(){
+  const {modulo, publicacao, capitulo, numero, lista} = filtroVF;
+  if(modulo){
+    document.getElementById('vf-filtro-modulo').value = modulo;
+    const elPub = document.getElementById('vf-filtro-publicacao');
+    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+    elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>
+      `<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`
+    ).join('');
+    elPub.disabled = false;
+  }
+  if(publicacao){
+    document.getElementById('vf-filtro-publicacao').value = publicacao;
+    const elCap = document.getElementById('vf-filtro-capitulo');
+    const bib = bibliografiaCache.find(b => b.id === publicacao);
+    const rotulo = bib?.capitulo_unico ? '' : rotuloCapituloDoLivro(bib?.titulo) + ' ';
+    const {data} = await sb.from('questoes_vf').select('capitulo').eq('bibliografia_id', publicacao).eq('anulada', false);
+    const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
+      .sort((a,b) => (parseFloat(a)||0) - (parseFloat(b)||0) || a.localeCompare(b,'pt'));
+    elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
+      `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
+    ).join('');
+    elCap.disabled = false;
+    if(capitulo) elCap.value = capitulo;
+  }
+  if(numero || lista){
+    ['numero', 'lista'].forEach(tipo => {
+      if(!filtroVF[tipo]) return;
+      const btn = document.getElementById('vf-filtro-'+tipo);
+      btn.style.background = '#B23A34';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#B23A34';
+    });
+  }
+  if(modulo || publicacao || capitulo || numero || lista){
+    // abre o painel de filtros já expandido - se tem filtro ativo, faz
+    // sentido a pessoa ver isso de cara, não escondido atrás do chevron
+    const conteudo = document.getElementById('vf-filtros-conteudo');
+    const chevron = document.getElementById('vf-chevron-filtros');
+    if(conteudo.classList.contains('hidden')){
+      conteudo.classList.remove('hidden');
+      chevron.style.transform = 'rotate(180deg)';
+    }
+  }
 }
 
 function renderizarItemVF(){
@@ -7643,6 +7855,7 @@ async function responderVF(resposta){
   entrada.acertou = acertou;
   estadoVF.respondidasSessao++;
   if(acertou) estadoVF.acertosSessao++;
+  vfPersistirEstadoSessaoVF(); // guarda o estado real da sessão - sem isso, fechar e reabrir o app "zerava" as questões da sessão mesmo com a sessão ainda pausada/ativa
 
   const estadoAntes = item.estado;
   const intervaloAntes = item.intervalo_horas;
@@ -7776,6 +7989,33 @@ async function vfAdicionarTagVF(){
   const nomeDigitado = input.value.trim().toUpperCase();
   const statusEl = document.getElementById('vf-tags-status');
   if(!nomeDigitado || !vfQuestaoIdTagsAtualVF) return;
+
+  // "NÚMERO"/"LISTA" (com ou sem acento) não viram tag customizada solta -
+  // isso criava duas categorias diferentes pra mesma coisa: o badge
+  // automático (eh_numero/eh_lista, o que o botão de filtro realmente
+  // usa) e uma tag solta que parecia igual mas não tinha efeito nenhum no
+  // filtro. Marcar por aqui atualiza o campo estrutural de verdade -
+  // mesmo badge, mesmo comportamento, funciona com o filtro
+  const nomeSemAcento = nomeDigitado.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const campoEstrutural = nomeSemAcento === 'NUMERO' ? 'eh_numero' : nomeSemAcento === 'LISTA' ? 'eh_lista' : null;
+  if(campoEstrutural){
+    const questaoId = vfQuestaoIdTagsAtualVF;
+    const itemNoPool = estadoVF?.pool?.find(i => i.id === questaoId) || estadoVF?.historico?.find(h => h.item.id === questaoId)?.item;
+    if(itemNoPool && itemNoPool[campoEstrutural]){
+      statusEl.innerHTML = `<span style="color:#B00020">Essa questão já está marcada como ${campoEstrutural === 'eh_numero' ? 'Número' : 'Lista'}.</span>`;
+      return;
+    }
+    const {error} = await sb.from('questoes_vf').update({[campoEstrutural]: true}).eq('id', questaoId);
+    if(error){
+      statusEl.innerHTML = '<span style="color:#B00020">Não consegui marcar agora. Tenta de novo.</span>';
+      return;
+    }
+    if(itemNoPool) itemNoPool[campoEstrutural] = true; // reflete na tela na hora, sem esperar recarregar
+    input.value = '';
+    statusEl.innerHTML = `<span style="color:#3B6D11">Marcada como ${campoEstrutural === 'eh_numero' ? 'Número' : 'Lista'} — já funciona no filtro.</span>`;
+    renderizarItemVF();
+    return;
+  }
 
   const jaTemEssaTag = (vfTagsPorQuestaoVF.get(vfQuestaoIdTagsAtualVF) || []).some(t => t.nome.toLowerCase() === nomeDigitado.toLowerCase());
   if(jaTemEssaTag){
@@ -8127,6 +8367,7 @@ async function confirmarExclusaoVF(){
 async function proximoVF(){
   if(!estadoVF) return;
   vfDespausarSeNecessarioVF(); // avançar é sinal claro de que está ativo, mesmo raciocínio de responderVF
+  if(vfVisualizandoSalvoInfoVF){ vfSairDoModoVisualizacaoSalvoVF(); renderizarItemVF(); return; } // "Próxima" a partir de uma visualização de salvo só volta pra sessão real - não avança a partir da posição antiga
   if(estadoVF.posicao < estadoVF.historico.length - 1){
     estadoVF.posicao++;
     // se aterrissou numa entrada ainda não respondida (só pode ser a
@@ -8148,6 +8389,7 @@ async function proximoVF(){
 
 function anteriorVF(){
   if(!estadoVF || estadoVF.posicao <= 0) return;
+  if(vfVisualizandoSalvoInfoVF){ vfSairDoModoVisualizacaoSalvoVF(); renderizarItemVF(); return; } // mesmo raciocínio de proximoVF - só volta pra sessão real
   estadoVF.posicao--;
   limparCanvasDesenhoVF();
   renderizarItemVF();
@@ -10447,7 +10689,7 @@ const BIBLIOGRAFIA_FECHADA = [
    cabeçalho repetido na seção de gabarito. Testado contra amostras reais
    dos PDFs enviados pelo Carlos antes de entrar em produção.
    ============================================================ */
-const REGEX_RESPOSTA = /(?:RESPOSTA|GABARITO)\b\s*(?:CORRETA\s*)?\S{0,4}\s*(?:ALTERNATIVA\s*)?([A-E])\b/g;
+const REGEX_RESPOSTA = /(?:RESPOSTA|GABARITO)\b\s*(?:CORRETA\s*)?\S{0,4}\s*(?:ALTERNATIVA\s*)?([A-E])\b/gi;
 const REGEX_INICIO_QUESTAO = /(?:GABARITO(?:\s+\w+)?\s*[–\-—]\s*)?QUEST[ÃA]O(?:\s+(\d+)\s+DE\s+\d+|\s*N?º?\s*(\d+)\b(?!\s*[–\-—]?\s*(?:GABARITO|CHAVE\s+DE\s+RESPOSTA)))/gi;
 
 function encontrarIniciosQuestao(texto){
@@ -10713,7 +10955,7 @@ function parsearQuestoesDoTexto(textoBruto){
     // repetidos tipo "QUESTÃO Nº 1 – GABARITO COMENTADO" / "GABARITO — QUESTÃO 1"
     const explicacao = limparRodapePaginaFinal(mesclarSubscritosQuebrados(zonaExplicacao)
       .replace(/\b([IVXLCDM]{1,6}[).]|[a-eA-E][).])([A-Za-zÀ-ÿ])/g, '$1 $2')
-      .replace(/(?:RESPOSTA|GABARITO)\b\s*(?:CORRETA\s*)?\S{0,4}\s*(?:ALTERNATIVA\s*)?[A-E]\b.*$/m, '')
+      .replace(/(?:RESPOSTA|GABARITO)\b\s*(?:CORRETA\s*)?\S{0,4}\s*(?:ALTERNATIVA\s*)?[A-E]\b.*$/im, '')
       .replace(/QUEST[ÃA]O\s*N?º?\s*\d+\s*[–\-—]\s*(?:GABARITO.*|CHAVE\s+DE\s+RESPOSTA)$/gim, '')
       .replace(/GABARITO(?:\s+\w+)?\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
       .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
