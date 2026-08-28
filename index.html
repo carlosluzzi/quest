@@ -1577,7 +1577,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-362';
+const VERSAO_APP = '2026-07-25-364';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2538,6 +2538,30 @@ window.addEventListener('resize', ()=>{
 // tela — cobre trocar de app no celular, bloquear tela, trocar de aba do
 // navegador, minimizar, e (desktop) clicar em outra janela sem esconder
 // a aba. Só age se a aba V/F está realmente visível no momento
+// trava o scroll de #content SEM mexer no overflow-y (auto -> hidden e
+// de volta) - achado real: trocar overflow no meio de um traço podia
+// remover/adicionar a reserva de espaço da barra de rolagem, mudando a
+// largura efetiva do conteúdo e disparando reflow do texto bem no meio
+// de uma frase, exatamente durante o desenho. Em vez disso, segura a
+// posição de scroll atual e força ela de volta se algo tentar mudar -
+// mesmo efeito prático (o scroll não anda), sem nunca tocar em overflow
+let vfScrollTopTravadoVF = null;
+function vfHandlerScrollTravadoVF(){
+  const content = document.getElementById('content');
+  if(content && vfScrollTopTravadoVF !== null) content.scrollTop = vfScrollTopTravadoVF;
+}
+function vfTravarScrollContentVF(){
+  const content = document.getElementById('content');
+  if(!content) return;
+  vfScrollTopTravadoVF = content.scrollTop;
+  content.addEventListener('scroll', vfHandlerScrollTravadoVF, {passive: true});
+}
+function vfLiberarScrollContentVF(){
+  const content = document.getElementById('content');
+  if(content) content.removeEventListener('scroll', vfHandlerScrollTravadoVF);
+  vfScrollTopTravadoVF = null;
+}
+
 function vfEstaVisivelAgora(){
   const flash = document.getElementById('aba-vf');
   if(flash && !flash.classList.contains('hidden')) return true;
@@ -4466,8 +4490,7 @@ document.addEventListener('touchstart', (e) => {
   // scroll). No Flash isso não era necessário e mexer nesse scroll ali
   // causava efeito colateral real (voltar ao comportamento de antes)
   if(vfTelaAtualVF() === 'quest'){
-    const contentElDesenho = document.getElementById('content');
-    if(contentElDesenho) contentElDesenho.style.overflow = 'hidden';
+    vfTravarScrollContentVF();
   }
   mostrarBarraDesenhoVF();
 }, {passive: false});
@@ -4521,8 +4544,7 @@ document.addEventListener('touchmove', (e) => {
           document.body.style.touchAction = 'none';
           document.documentElement.style.overflow = 'hidden';
           if(vfTelaAtualVF() === 'quest'){
-            const contentElDesenho2 = document.getElementById('content');
-            if(contentElDesenho2) contentElDesenho2.style.overflow = 'hidden';
+            vfTravarScrollContentVF();
           }
           mostrarBarraDesenhoVF();
         }
@@ -4793,8 +4815,7 @@ function vfFinalizarTracoDesenho(e){
       vfPointerIdAtivoVF = null;
       document.body.style.touchAction = '';
       document.documentElement.style.overflow = '';
-      const contentElSolto1 = document.getElementById('content');
-      if(contentElSolto1) contentElSolto1.style.overflow = '';
+      vfLiberarScrollContentVF();
       if(virouDuploTap){
         // duplo toque CONFIRMADO - agora sim desfaz as marquinhas dos dois
         // toques (essa e a do toque anterior, que tinha ficado guardada
@@ -4857,8 +4878,7 @@ function vfFinalizarTracoDesenho(e){
       vfPointerIdAtivoVF = null;
       document.body.style.touchAction = '';
       document.documentElement.style.overflow = '';
-      const contentElSoltoRasurao = document.getElementById('content');
-      if(contentElSoltoRasurao) contentElSoltoRasurao.style.overflow = '';
+      vfLiberarScrollContentVF();
       const canvasRasurao = document.getElementById('vf-canvas-desenho');
       const ctxRasurao = vfCtxDesenhoAtivoAgoraVF();
       if(canvasRasurao && ctxRasurao){
@@ -4890,8 +4910,7 @@ function vfFinalizarTracoDesenho(e){
   vfPointerIdAtivoVF = null;
   document.body.style.touchAction = '';
   document.documentElement.style.overflow = '';
-  const contentElSolto2 = document.getElementById('content');
-  if(contentElSolto2) contentElSolto2.style.overflow = '';
+  vfLiberarScrollContentVF();
   // funde o traço de destaque (que foi desenhado em opacidade cheia no
   // canvas temporário) no canvas de verdade - multiply + opacidade
   // escolhida aplicados UMA VEZ SÓ pro traço inteiro, garantindo que ele
