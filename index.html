@@ -2405,7 +2405,7 @@ async function mostrarAppShell(){
   }
   if(souCarlos()){
     document.getElementById('bloco-upload-marinha').classList.remove('hidden');
-    document.getElementById('nav-item-vf').classList.remove('hidden');
+    // document.getElementById('nav-item-vf').classList.remove('hidden'); // Flash escondido temporariamente a pedido do Carlos - reverter descomentando essa linha
     document.getElementById('motivo-exclusao-questao').classList.remove('hidden');
     sb.rpc('concursos_disponiveis').then(({data})=>{
       document.getElementById('lista-concursos-existentes').innerHTML = (data||[]).map(c=>`<option value="${escapeHtml(c.concurso)}">`).join('');
@@ -2541,6 +2541,13 @@ function vfAtualizarVisibilidadeCanvasVF(){
   if(canvasDesenho) canvasDesenho.style.display = mostrar ? 'block' : 'none';
   if(canvasPreview) canvasPreview.style.display = mostrar ? 'block' : 'none';
   if(!mostrar) fecharBarraDesenhoVF();
+  // configura o canvas de verdade (contexto 2d, dimensões) sempre que
+  // ele deve ficar visível - antes só acontecia ao entrar no Flash
+  // (entrarNoModoVF), então o Quest sozinho (sem visitar o Flash antes)
+  // nunca inicializava vfCtxDesenho, e a caneta não desenhava lá até
+  // passar pelo Flash pelo menos uma vez. Cada contexto precisa ser
+  // autossuficiente, não depender do outro ter sido visitado primeiro
+  if(mostrar && !vfDesenhandoAgora) inicializarCanvasDesenhoVF();
 }
 (function vfObservarResolucaoQuestParaCanvasVF(){
   const el = document.getElementById('quests-resolucao');
@@ -2679,6 +2686,7 @@ async function atualizarAbaAtual(){
 }
 
 function trocarAba(nome){
+  const abaJaEstavaAtiva = !document.getElementById('aba-'+nome).classList.contains('hidden');
   // pausa o cronômetro do V/F se estava nele e está saindo pra outra aba —
   // "trocar de tela dentro do próprio app" é um dos 5 pontos de pausa
   const vfEstavaAtiva = !document.getElementById('aba-vf').classList.contains('hidden');
@@ -2702,7 +2710,11 @@ function trocarAba(nome){
   // não é mais filho de #aba-vf, então precisa ser mostrado/escondido
   // manualmente aqui, não herda mais do .hidden da aba automaticamente
   vfAtualizarVisibilidadeCanvasVF();
-  limparCanvasDesenhoVF(); // troca de aba = contexto novo - sem isso, um traço feito no Flash continuava visível (só escondido) ao entrar no Quest, "vazando" de uma aba pra outra
+  // só limpa se a aba mudou de verdade - achado real: tocar no balão do
+  // Flash pra "reabrir" chama trocarAba('vf') mesmo já estando nele
+  // (toque simples sem arrastar), e limpar incondicionalmente apagava
+  // o que a pessoa tinha acabado de escrever
+  if(!abaJaEstavaAtiva) limparCanvasDesenhoVF(); // troca de aba de verdade = contexto novo - sem isso, um traço feito no Flash continuava visível (só escondido) ao entrar no Quest, "vazando" de uma aba pra outra
   document.querySelectorAll('#bottom-nav .nav-item').forEach(item=>item.classList.toggle('active', item.dataset.aba===nome));
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança, nunca fica presa escondida
   document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
@@ -4356,14 +4368,16 @@ document.addEventListener('touchstart', (e) => {
   // possível contra a tela tremendo atrás da caneta. Some ao soltar o traço
   document.body.style.touchAction = 'none';
   document.documentElement.style.overflow = 'hidden';
-  // o scroll real da tela não acontece no body/html - acontece dentro
-  // de #content, que tem seu próprio overflow-y:auto independente
-  // (achado real: a caneta ainda rolava a página em telas que
-  // precisavam de scroll, tipo uma questão longa do Quest, mesmo com
-  // essas duas linhas acima - porque elas nunca tocavam no container
-  // que de fato rola)
-  const contentElDesenho = document.getElementById('content');
-  if(contentElDesenho) contentElDesenho.style.overflow = 'hidden';
+  // o bloqueio de #content é só no Quest, de propósito - lá que o bug
+  // "a caneta rola a página" foi relatado (questão longa, precisa de
+  // scroll). No Flash isso não era necessário e mexer nesse scroll ali
+  // causava efeito colateral real (voltar ao comportamento de antes)
+  if(!document.getElementById('aba-vf').classList.contains('hidden')){
+    // está no Flash - não bloqueia #content, comportamento original
+  }else{
+    const contentElDesenho = document.getElementById('content');
+    if(contentElDesenho) contentElDesenho.style.overflow = 'hidden';
+  }
   mostrarBarraDesenhoVF();
 }, {passive: false});
 
@@ -4409,8 +4423,10 @@ document.addEventListener('touchmove', (e) => {
           }
           document.body.style.touchAction = 'none';
           document.documentElement.style.overflow = 'hidden';
-          const contentElDesenho2 = document.getElementById('content');
-          if(contentElDesenho2) contentElDesenho2.style.overflow = 'hidden';
+          if(document.getElementById('aba-vf').classList.contains('hidden')){
+            const contentElDesenho2 = document.getElementById('content');
+            if(contentElDesenho2) contentElDesenho2.style.overflow = 'hidden';
+          }
           mostrarBarraDesenhoVF();
         }
         vfBotaoPendenteToqueInfo = null;
@@ -6995,7 +7011,7 @@ function vfAplicarPreferenciaOcultarTempoBalaoVF(){
   if(!tempoEl || !btnToggle) return;
   let oculto = false;
   try{ oculto = localStorage.getItem('pscpp_vf_ocultar_tempo_balao') === '1'; }catch(e){}
-  tempoEl.style.display = oculto ? 'none' : '';
+  tempoEl.style.visibility = oculto ? 'hidden' : ''; // visibility, não display - mantém o espaço reservado, o balão não encolhe
   btnToggle.innerHTML = oculto ? VF_ICONE_OLHO_FECHADO : VF_ICONE_OLHO_ABERTO;
 }
 function vfToggleOcultarTempoBalaoVF(e){
@@ -7003,8 +7019,8 @@ function vfToggleOcultarTempoBalaoVF(e){
   const tempoEl = document.getElementById('vf-sessao-balao-tempo');
   const btnToggle = document.getElementById('vf-sessao-balao-toggle-tempo');
   if(!tempoEl || !btnToggle) return;
-  const vaiOcultar = tempoEl.style.display !== 'none';
-  tempoEl.style.display = vaiOcultar ? 'none' : '';
+  const vaiOcultar = tempoEl.style.visibility !== 'hidden';
+  tempoEl.style.visibility = vaiOcultar ? 'hidden' : '';
   btnToggle.innerHTML = vaiOcultar ? VF_ICONE_OLHO_FECHADO : VF_ICONE_OLHO_ABERTO;
   try{ localStorage.setItem('pscpp_vf_ocultar_tempo_balao', vaiOcultar ? '1' : '0'); }catch(err){}
 }
