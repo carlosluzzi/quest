@@ -709,14 +709,14 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       </div>
 
       <div id="card-cadernos-existentes" style="margin-top:28px">
-        <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0;cursor:pointer" onclick="toggleCadernosLista('andamento')">
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0;cursor:pointer" onclick="toggleCadernosLista('andamento')" ontouchend="event.preventDefault();toggleCadernosLista('andamento')">
           <span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg></span>
           <span id="titulo-cadernos-andamento">Cadernos em andamento (0)</span>
           <span class="chev" id="chev-andamento" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
         </div>
         <div id="lista-cadernos-andamento" class="conteudo-colapsavel" style="padding-left:10px"><span style="color:#888;font-size:var(--fs-d)">Nenhum caderno em andamento.</span></div>
 
-        <div class="section-title" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:16px" onclick="toggleCadernosLista('concluidos')">
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:16px" onclick="toggleCadernosLista('concluidos')" ontouchend="event.preventDefault();toggleCadernosLista('concluidos')">
           <span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M20 6 9 17l-5-5"/></svg></span>
           <span id="titulo-cadernos-concluidos">Cadernos concluídos (0)</span>
           <span class="chev" id="chev-concluidos" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
@@ -1612,7 +1612,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-384';
+const VERSAO_APP = '2026-07-25-385';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9301,18 +9301,38 @@ async function retomarCadernoEspecifico(cadernoId){
   if(!data){ alert('Caderno não encontrado.'); return; }
   cadernoAtual = data;
 
+  respostasPorQuestao = {};
+  alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
+  vfCarregarDesenhosCadernoDoStorageVF(); // abrindo/retomando um caderno - traz de volta o que foi salvo antes do app fechar
+  (respostasDoCaderno||[]).forEach(r=>{ respostasPorQuestao[r.questao_id] = {letra:r.resposta_dada, correta:r.correta}; });
+
   // usa a lista exata de questões salva na criação do caderno – não recalcula pelos filtros
   // (fallback pelos filtros só existe pra cadernos criados antes dessa correção, sem questao_ids salvo)
   const filtros = data.filtros_aplicados || {};
-  let questoes;
+  let questoes, exclusoesDoCaderno;
+  questoesExcluidasAtual = new Set();
   if(filtros.questao_ids && filtros.questao_ids.length){
-    const {data: qs} = await sb.from('questoes').select('*').in('id', filtros.questao_ids);
+    // achado real: exclusões e favoritos/notas só precisam dos IDs das
+    // questões (já conhecidos aqui, vindos do caderno) - não precisam
+    // esperar a busca das questões completas terminar primeiro. Disparar
+    // os 3 juntos elimina uma ida-e-volta de rede inteira nesse caminho
+    // (o mais comum, cadernos criados depois dessa correção)
+    const idsSalvos = filtros.questao_ids;
+    const [{data: qs}, {data: exclusoes}] = await Promise.all([
+      sb.from('questoes').select('*').in('id', idsSalvos),
+      sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsSalvos).is('resolvido_em', null),
+      carregarFavoritosENotas(idsSalvos)
+    ]);
     // .in() não garante devolver na ordem da lista passada – reordena manualmente
     // pra bater exatamente com a ordem embaralhada salva na criação do caderno
     const mapaQuestoes = {};
     (qs||[]).forEach(q => { mapaQuestoes[q.id] = q; });
-    questoes = filtros.questao_ids.map(id => mapaQuestoes[id]).filter(Boolean);
+    questoes = idsSalvos.map(id => mapaQuestoes[id]).filter(Boolean);
+    exclusoesDoCaderno = exclusoes;
   }else{
+    // caminho antigo (cadernos sem questao_ids salvo) - aqui sim as
+    // exclusões dependem de já ter buscado as questões, pra saber os IDs
     const montarQuery = () => {
       let q = sb.from('questoes').select('*', {count: 'exact'});
       if(filtros.modulo) q = q.eq('modulo_pscpp', filtros.modulo);
@@ -9322,30 +9342,20 @@ async function retomarCadernoEspecifico(cadernoId){
     };
     const {data: qs} = await buscarTudoPaginadoVF(montarQuery);
     questoes = qs;
+    const idsQuestoesCaderno = (questoes||[]).map(q=>q.id);
+    const [{data: exclusoes}] = await Promise.all([
+      idsQuestoesCaderno.length
+        ? sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoesCaderno).is('resolvido_em', null)
+        : Promise.resolve({data: []}),
+      carregarFavoritosENotas(idsQuestoesCaderno)
+    ]);
+    exclusoesDoCaderno = exclusoes;
   }
 
-  respostasPorQuestao = {};
-  alternativaSelecionadaAtual = null;
-  alternativasRiscadasAtual = new Set();
-  vfCarregarDesenhosCadernoDoStorageVF(); // abrindo/retomando um caderno - traz de volta o que foi salvo antes do app fechar
-  (respostasDoCaderno||[]).forEach(r=>{ respostasPorQuestao[r.questao_id] = {letra:r.resposta_dada, correta:r.correta}; });
-
   questoesCaderno = questoes || [];
-
   // recupera exclusões que já tinham sido feitas numa sessão anterior desse
   // mesmo caderno – pra continuar mostrando "Questão excluída" no lugar
   // certo, em vez de esquecer e mostrar a questão de novo
-  const idsQuestoesCaderno = questoesCaderno.map(q=>q.id);
-  questoesExcluidasAtual = new Set();
-
-  // exclusões e favoritos/notas também não dependem uma da outra — só das
-  // questões, que já temos nesse ponto. Rodar junto poupa mais 1 ida-e-volta
-  const [{data: exclusoesDoCaderno}] = await Promise.all([
-    idsQuestoesCaderno.length
-      ? sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoesCaderno).is('resolvido_em', null)
-      : Promise.resolve({data: []}),
-    carregarFavoritosENotas(idsQuestoesCaderno)
-  ]);
   (exclusoesDoCaderno||[]).forEach(e=>{ questoesExcluidasAtual.add(e.questao_id); });
 
   const primeiraNaoRespondida = questoesCaderno.findIndex(q => !respostasPorQuestao[q.id] && !questoesExcluidasAtual.has(q.id));
