@@ -1570,7 +1570,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-352';
+const VERSAO_APP = '2026-07-25-354';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1592,6 +1592,13 @@ let cadernoAtual = null;       // linha da tabela cadernos
 let questoesCaderno = [];      // array de questões do caderno atual
 let indiceQuestaoAtual = 0;
 let respostasPorQuestao = {};  // {questaoId: {letra, correta}} – pra colorir a navegação numerada
+// guarda o desenho de CADA questão do caderno atual, chaveado pelo id da
+// questão - sem isso, ir pra próxima e voltar apagava o que tinha sido
+// riscado, mesmo dentro do mesmo caderno ainda em aberto. Zerado sempre
+// que um caderno é carregado/aberto (não faz sentido herdar desenho de
+// outro caderno), preservado entre navegações dentro do mesmo caderno,
+// até ele ser finalizado ou excluído
+let vfDesenhosPorQuestaoQuestVF = new Map();
 
 /* ============================================================
    CÓDIGO REAPROVEITADO DO APP PESSOAL (ver dossiê)
@@ -4029,6 +4036,7 @@ function vfCtxDesenhoAtivoAgoraVF(){
   return vfCtxDesenho;
 }
 let vfCanvasTracoTemp = null; // canvas à parte só durante um traço de destaque, funde no final
+let vfScrollTopNoInicioTracoVF = 0; // scroll de #content quando o traço de destaque começou - usado pra desenhar os canvas temporários só do tamanho da área visível, não do conteúdo inteiro (que pode ser bem maior, causando lentidão real ao criar/copiar canvas enormes)
 let vfCanvasBaseSnapshot = null; // retrato do canvas ANTES do traço atual começar, pra multiply de verdade no preview
 let vfCtxTracoTemp = null;
 let vfCtxPreviewDestaque = null; // canvas visível por cima, mostra o resultado final em tempo real enquanto desenha
@@ -4113,7 +4121,7 @@ let vfModoDestaque = false; // highlighter - traço translúcido, tipo marca-tex
 let vfCorDestaqueAtual = '#FFD84D';
 let vfEspessuraDestaqueAtual = 20;
 let vfOpacidadeDestaqueAtual = 0.45;
-let vfCorMarcacaoTextoAtual = '#F08080'; // compartilhada pelos 3 (grifar/sublinhar/riscar)
+let vfCorMarcacaoTextoAtual = '#FFD84D'; // compartilhada pelos 3 (grifar/sublinhar/riscar) - amarelo como padrão, mesma cor já usada no destaque de caneta
 let vfUltimoPontoDesenho = null;
 // duplo toque leve (sem virar traço) alterna caneta <-> borracha, mesmo
 // espírito do gesto nativo do Apple Pencil - já que a lógica de desenho
@@ -4397,22 +4405,30 @@ document.addEventListener('touchstart', (e) => {
   // stroke() por movimento) empilhava opacidade nas emendas, criando
   // aquele efeito de "salsicha"/conta em vez de uma linha lisa e única
   if(vfModoDestaque){
+    const contentParaDestaque = document.getElementById('content');
+    vfScrollTopNoInicioTracoVF = contentParaDestaque ? contentParaDestaque.scrollTop : 0;
+    const alturaVisivel = contentParaDestaque ? contentParaDestaque.clientHeight : canvas.height;
     vfCanvasTracoTemp = document.createElement('canvas');
     vfCanvasTracoTemp.width = canvas.width;
-    vfCanvasTracoTemp.height = canvas.height;
+    vfCanvasTracoTemp.height = alturaVisivel * ((window.devicePixelRatio || 1) * 1.5);
     vfCtxTracoTemp = vfCanvasTracoTemp.getContext('2d');
     const dpr = (window.devicePixelRatio || 1) * 1.5;
-    vfCtxTracoTemp.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // desloca a origem pelo scroll atual (negativo) - assim as MESMAS
+    // coordenadas (x,y) que o resto do sistema já calcula em relação ao
+    // conteúdo inteiro caem no lugar certo dentro desse canvas menor,
+    // sem precisar duplicar/mudar a lógica de cálculo de coordenadas
+    vfCtxTracoTemp.setTransform(dpr, 0, 0, dpr, 0, -vfScrollTopNoInicioTracoVF * dpr);
     vfCtxTracoTemp.lineCap = 'round';
     vfCtxTracoTemp.lineJoin = 'round';
     // retrato do que já existe no canvas ANTES desse traço começar - usado
     // no preview pra escurecer de verdade em tempo real ao passar por cima
     // de linhas já desenhadas (sem isso, o multiply do preview não tinha
-    // nada real pra misturar, só o próprio traço novo sozinho)
+    // nada real pra misturar, só o próprio traço novo sozinho). Copia só
+    // a fatia visível do canvas principal, não ele inteiro
     vfCanvasBaseSnapshot = document.createElement('canvas');
     vfCanvasBaseSnapshot.width = canvas.width;
-    vfCanvasBaseSnapshot.height = canvas.height;
-    vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, 0);
+    vfCanvasBaseSnapshot.height = alturaVisivel * dpr;
+    vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, vfScrollTopNoInicioTracoVF * dpr, canvas.width, alturaVisivel * dpr, 0, 0, canvas.width, alturaVisivel * dpr);
     // esconde o canvas REAL enquanto o traço está em andamento - ele já
     // foi copiado pro snapshot (que o preview usa por cima). Mantendo os
     // dois visíveis ao mesmo tempo, cada traço já feito (semi-transparente
@@ -4466,18 +4482,21 @@ document.addEventListener('touchmove', (e) => {
           vfPosicaoSuavizada = ponto; // reseta - mesmo motivo do outro caminho de início de traço
           vfForcaSuavizada = typeof touchPendente.force === 'number' && touchPendente.force > 0 ? touchPendente.force : 0.5;
           if(vfModoDestaque){
+            const contentParaDestaque2 = document.getElementById('content');
+            vfScrollTopNoInicioTracoVF = contentParaDestaque2 ? contentParaDestaque2.scrollTop : 0;
+            const alturaVisivel2 = contentParaDestaque2 ? contentParaDestaque2.clientHeight : canvas.height;
             vfCanvasTracoTemp = document.createElement('canvas');
             vfCanvasTracoTemp.width = canvas.width;
-            vfCanvasTracoTemp.height = canvas.height;
+            vfCanvasTracoTemp.height = alturaVisivel2 * ((window.devicePixelRatio || 1) * 1.5);
             vfCtxTracoTemp = vfCanvasTracoTemp.getContext('2d');
             const dpr = (window.devicePixelRatio || 1) * 1.5;
-            vfCtxTracoTemp.setTransform(dpr, 0, 0, dpr, 0, 0);
+            vfCtxTracoTemp.setTransform(dpr, 0, 0, dpr, 0, -vfScrollTopNoInicioTracoVF * dpr);
             vfCtxTracoTemp.lineCap = 'round';
             vfCtxTracoTemp.lineJoin = 'round';
             vfCanvasBaseSnapshot = document.createElement('canvas');
             vfCanvasBaseSnapshot.width = canvas.width;
-            vfCanvasBaseSnapshot.height = canvas.height;
-            vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, 0);
+            vfCanvasBaseSnapshot.height = alturaVisivel2 * dpr;
+            vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, vfScrollTopNoInicioTracoVF * dpr, canvas.width, alturaVisivel2 * dpr, 0, 0, canvas.width, alturaVisivel2 * dpr);
             canvas.style.opacity = '0'; // mesma correção do outro caminho - evita dupla camada semi-transparente
           }
           document.body.style.touchAction = 'none';
@@ -4668,11 +4687,11 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect, dentroDeL
     if(vfCanvasBaseSnapshot){
       vfCtxPreviewDestaque.globalCompositeOperation = 'source-over';
       vfCtxPreviewDestaque.globalAlpha = 1;
-      vfCtxPreviewDestaque.drawImage(vfCanvasBaseSnapshot, 0, 0, vfCanvasBaseSnapshot.width/dpr, vfCanvasBaseSnapshot.height/dpr);
+      vfCtxPreviewDestaque.drawImage(vfCanvasBaseSnapshot, 0, vfScrollTopNoInicioTracoVF, vfCanvasBaseSnapshot.width/dpr, vfCanvasBaseSnapshot.height/dpr);
     }
     vfCtxPreviewDestaque.globalCompositeOperation = 'multiply';
     vfCtxPreviewDestaque.globalAlpha = vfOpacidadeDestaqueAtual;
-    vfCtxPreviewDestaque.drawImage(vfCanvasTracoTemp, 0, 0, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
+    vfCtxPreviewDestaque.drawImage(vfCanvasTracoTemp, 0, vfScrollTopNoInicioTracoVF, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
   }
 }
 
@@ -4783,7 +4802,7 @@ function vfFinalizarTracoDesenho(e){
     ctxDestino.globalCompositeOperation = 'multiply';
     ctxDestino.globalAlpha = vfOpacidadeDestaqueAtual;
     const dpr = (window.devicePixelRatio || 1) * 1.5;
-    ctxDestino.drawImage(vfCanvasTracoTemp, 0, 0, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
+    ctxDestino.drawImage(vfCanvasTracoTemp, 0, vfScrollTopNoInicioTracoVF, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
     ctxDestino.globalAlpha = 1;
     vfCanvasTracoTemp = null;
     vfCtxTracoTemp = null;
@@ -8556,6 +8575,7 @@ async function gerarSuperQuest(){
   questoesCaderno = pool;
   indiceQuestaoAtual = 0;
   respostasPorQuestao = {};
+  vfDesenhosPorQuestaoQuestVF = new Map(); // caderno novo - não herda desenho de outro
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
   questoesExcluidasAtual = new Set();
@@ -8631,6 +8651,7 @@ async function montarCaderno(){
   questoesCaderno = questoesFiltradas;
   indiceQuestaoAtual = 0;
   respostasPorQuestao = {};
+  vfDesenhosPorQuestaoQuestVF = new Map(); // caderno novo - não herda desenho de outro
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
   questoesExcluidasAtual = new Set();
@@ -8802,6 +8823,7 @@ async function retomarCadernoEspecifico(cadernoId){
   respostasPorQuestao = {};
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
+  vfDesenhosPorQuestaoQuestVF = new Map(); // abrindo/retomando um caderno - não herda desenho de outro
   (respostasDoCaderno||[]).forEach(r=>{ respostasPorQuestao[r.questao_id] = {letra:r.resposta_dada, correta:r.correta}; });
 
   questoesCaderno = questoes || [];
@@ -9175,12 +9197,61 @@ function renderizarPillsCaderno(){
   }).join('');
 }
 
+// salva o desenho atual (se houver algo desenhado de verdade) associado
+// à questão que está prestes a sair de cena - junto com a largura/altura
+// do conteúdo no momento, pro mesmo fator de correção de rotação já
+// usado no histórico normal também funcionar aqui
+function vfSalvarDesenhoQuestaoAtualQuestVF(){
+  const questaoAtual = questoesCaderno[indiceQuestaoAtual];
+  if(!questaoAtual) return;
+  const canvas = document.getElementById('vf-canvas-desenho');
+  if(!canvas || typeof vfIndiceHistoricoVF === 'undefined' || vfIndiceHistoricoVF < 0) return; // nada desenhado, nada a guardar
+  const content = document.getElementById('content');
+  vfDesenhosPorQuestaoQuestVF.set(questaoAtual.id, {
+    dataUrl: canvas.toDataURL(),
+    larguraConteudo: content ? content.clientWidth : null,
+    alturaConteudo: content ? content.scrollHeight : null
+  });
+}
+// restaura o desenho salvo da questão (se existir) depois que o canvas já
+// foi limpo/redimensionado pra tela atual - mesmo fator de correção de
+// rotação de vfHistoricoDesenho, já que é o mesmo tipo de situação (o
+// desenho pode ter sido salvo numa orientação diferente da atual)
+function vfRestaurarDesenhoQuestaoQuestVF(questaoId){
+  const salvo = vfDesenhosPorQuestaoQuestVF.get(questaoId);
+  if(!salvo || !vfCtxDesenho) return;
+  const canvas = document.getElementById('vf-canvas-desenho');
+  const content = document.getElementById('content');
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  const img = new Image();
+  img.onload = () => {
+    vfCtxDesenho.globalCompositeOperation = 'source-over';
+    vfCtxDesenho.globalAlpha = 1;
+    let larguraDestino = img.width/dpr, alturaDestino = img.height/dpr;
+    if(content && salvo.larguraConteudo && salvo.alturaConteudo){
+      const novaLargura = content.clientWidth;
+      const novaAltura = Math.min(Math.max(content.scrollHeight, content.offsetHeight), window.innerHeight * 8);
+      larguraDestino = (img.width/dpr) * (novaLargura / salvo.larguraConteudo);
+      alturaDestino = (img.height/dpr) * (novaAltura / salvo.alturaConteudo);
+    }
+    vfCtxDesenho.drawImage(img, 0, 0, larguraDestino, alturaDestino);
+    // esse desenho restaurado também precisa entrar no histórico de
+    // desfazer/refazer da questão nova, senão "Desfazer" não teria o que desfazer
+    vfSalvarEstadoHistoricoVF();
+  };
+  img.src = salvo.dataUrl;
+}
+
 function irParaQuestao(i){
+  vfSalvarDesenhoQuestaoAtualQuestVF(); // guarda o que foi riscado na questão que está saindo, antes de trocar
   indiceQuestaoAtual = i;
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
-  limparCanvasDesenhoVF(); // questão nova = rascunho da anterior some, mesmo raciocínio já usado no Flash
-  renderizarQuestaoAtual();
+  limparCanvasDesenhoVF(); // limpa primeiro - só fica em branco de verdade se a questão nova nunca teve desenho salvo
+  renderizarQuestaoAtual(); // muda o DOM pra questão nova - precisa acontecer ANTES de redimensionar o canvas, senão ele mede o tamanho da questão antiga
+  redimensionarCanvasDesenhoVF(); // garante que o canvas já tem o tamanho certo da questão nova antes de tentar restaurar um desenho nele
+  const questaoNova = questoesCaderno[i];
+  if(questaoNova) vfRestaurarDesenhoQuestaoQuestVF(questaoNova.id);
 }
 
 function selecionarAlternativa(letra){
