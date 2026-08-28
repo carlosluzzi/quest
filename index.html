@@ -1577,7 +1577,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-365';
+const VERSAO_APP = '2026-07-25-366';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5815,10 +5815,15 @@ document.addEventListener('touchstart', (e) => {
   const elemento = document.elementFromPoint(touch.clientX, touch.clientY);
   const areaValida = elemento && elemento.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual');
   if(!areaValida) return;
+  // bloqueia o comportamento nativo de seleção desde o toque inicial -
+  // sem isso, o Safari/iOS pode acionar a lupa de seleção de texto e
+  // reajustar zoom/layout pra facilitar a seleção precisa, causando
+  // reflow visível bem no meio da frase logo ao começar a arrastar
+  e.preventDefault();
   vfMarcacaoTextoPontoInicialVF = {x: touch.clientX, y: touch.clientY};
   vfMarcacaoTextoArrastandoVF = true;
   vfMarcacaoTextoDirecaoApagarVF = false; // reseta - até mover de verdade, assume "marcando" (mais seguro como padrão)
-}, {passive: true});
+}, {passive: false});
 
 document.addEventListener('touchmove', (e) => {
   if(!vfModoMarcacaoTextoAtivo || !vfMarcacaoTextoArrastandoVF || !vfMarcacaoTextoPontoInicialVF) return;
