@@ -242,8 +242,8 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
   #bottom-nav{grid-column:1;grid-row:2/-1;position:sticky;left:auto;bottom:auto;transform:none;width:100%;max-width:none;border-top:none;border-right:0.5px solid #e0e0e0;flex-direction:column;padding:20px 14px;gap:6px;align-self:start;top:0;height:100%}
   #ptr-indicator{grid-column:2;grid-row:2}
   .nav-item{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;border-radius:9px;width:100%}
-  #nav-item-adicionar{display:flex;gap:8px;padding-left:10px;padding-right:10px}
-  #nav-item-vf{gap:8px;padding-left:10px;padding-right:10px}
+  .nav-label{font-size:var(--fs-d)}
+  #nav-item-adicionar{display:flex}
   #nav-item-adicionar .nav-label{white-space:nowrap}
   #wrapper-barra-adicionar{display:none}
   #view-topico-detalhe{left:250px !important;width:calc(100% - 250px) !important}
@@ -866,7 +866,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
   <!-- ===== ADICIONAR QUESTÕES (popup no mobile/tablet, página no desktop) ===== -->
   <div class="view-aba hidden" id="aba-adicionar">
     <div class="modal-conteudo">
-      <h3 class="config-title" id="titulo-adicionar-questoes">Adicionar questões</h3>
+      <h3 id="titulo-adicionar-questoes">Adicionar questões</h3>
       <div class="card-questao" id="card-adicionar-questoes">
 
       <div style="display:flex;gap:8px;margin-bottom:14px">
@@ -1550,7 +1550,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-334';
+const VERSAO_APP = '2026-07-25-336';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2457,9 +2457,31 @@ window.addEventListener('resize', ()=>{
 // navegador, minimizar, e (desktop) clicar em outra janela sem esconder
 // a aba. Só age se a aba V/F está realmente visível no momento
 function vfEstaVisivelAgora(){
-  const el = document.getElementById('aba-vf');
-  return el && !el.classList.contains('hidden');
+  const flash = document.getElementById('aba-vf');
+  if(flash && !flash.classList.contains('hidden')) return true;
+  const questResolucao = document.getElementById('quests-resolucao');
+  if(questResolucao && !questResolucao.classList.contains('hidden')) return true;
+  return false;
 }
+
+// mostra/esconde o canvas de desenho global - vive fora do #app-shell,
+// não herda .hidden de nenhuma aba automaticamente. Usado tanto na troca
+// de aba principal quanto observado via MutationObserver em
+// #quests-resolucao (ver mais abaixo), cobrindo os dois contextos onde
+// a caneta pode desenhar (Flash e resolução de caderno do Quest)
+function vfAtualizarVisibilidadeCanvasVF(){
+  const mostrar = vfEstaVisivelAgora();
+  const canvasDesenho = document.getElementById('vf-canvas-desenho');
+  const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
+  if(canvasDesenho) canvasDesenho.style.display = mostrar ? 'block' : 'none';
+  if(canvasPreview) canvasPreview.style.display = mostrar ? 'block' : 'none';
+  if(!mostrar) fecharBarraDesenhoVF();
+}
+(function vfObservarResolucaoQuestParaCanvasVF(){
+  const el = document.getElementById('quests-resolucao');
+  if(!el) return;
+  new MutationObserver(vfAtualizarVisibilidadeCanvasVF).observe(el, {attributes: true, attributeFilter: ['class']});
+})();
 
 // ponto de entrada ÚNICO pra "voltei pra tela" — visibilitychange, pageshow
 // e focus disparam quase juntos (às vezes os três), e cada um chamando
@@ -2581,14 +2603,7 @@ function trocarAba(nome){
   // canvas de desenho vive FORA do #app-shell agora (ver comentário lá) -
   // não é mais filho de #aba-vf, então precisa ser mostrado/escondido
   // manualmente aqui, não herda mais do .hidden da aba automaticamente
-  const mostrarCanvasVF = nome === 'vf';
-  document.getElementById('vf-canvas-desenho').style.display = mostrarCanvasVF ? 'block' : 'none';
-  document.getElementById('vf-canvas-preview-destaque').style.display = mostrarCanvasVF ? 'block' : 'none';
-  // a barrinha de desenho e os 4 painéis de configuração também vivem
-  // fora do #app-shell agora (movidos junto com os canvas, pra competir
-  // de igual pra igual em z-index sem o app-shell atrapalhar) - saindo
-  // da aba V/F, precisam ser escondidos manualmente também
-  if(!mostrarCanvasVF) fecharBarraDesenhoVF();
+  vfAtualizarVisibilidadeCanvasVF();
   document.querySelectorAll('#bottom-nav .nav-item').forEach(item=>item.classList.toggle('active', item.dataset.aba===nome));
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança, nunca fica presa escondida
   document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
@@ -3947,6 +3962,11 @@ let vfEspessuraDestaqueAtual = 20;
 let vfOpacidadeDestaqueAtual = 0.45;
 let vfCorMarcacaoTextoAtual = '#F08080'; // compartilhada pelos 3 (grifar/sublinhar/riscar)
 let vfUltimoPontoDesenho = null;
+// duplo toque leve (sem virar traço) alterna caneta <-> borracha, mesmo
+// espírito do gesto nativo do Apple Pencil - já que a lógica de desenho
+// mudou bastante, essa detecção precisa ser própria do app agora
+let vfPontoInicialTracoAtualVF = null;
+let vfUltimoTapLeveCanetaVF = null; // {x, y, quando} - só o tap anterior mais recente
 let vfPontoMedioAnterior = null;
 let vfPosicaoSuavizada = null; // suavização leve de x,y - reseta a cada novo traço (touchstart), ver uso em touchmove
 
@@ -4092,7 +4112,8 @@ const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 40;
 
 document.addEventListener('touchstart', (e) => {
   if(!vfEstaVisivelAgora()) return;
-  if(!vfSessaoAtivaVF) return; // sem sessão ativa, a tela está bloqueada pelo overlay de "Iniciar sessão" - a caneta não desenha por cima dele
+  const noFlash = !document.getElementById('aba-vf').classList.contains('hidden');
+  if(noFlash && !vfSessaoAtivaVF) return; // sem sessão ativa NO FLASH, a tela está bloqueada pelo overlay de "Iniciar sessão" - a caneta não desenha por cima dele. No Quest não existe esse conceito, não bloqueia
   if(vfAlgumModalAbertoVF()) return; // nenhum pop-up (modal, seletor de cor nativo, etc) deixa desenhar através dele
   if(vfModoMarcacaoTextoAtivo) return; // marcação de texto ativa = a caneta também marca texto, não desenha livre
   const touch = e.changedTouches[0];
@@ -4101,14 +4122,19 @@ document.addEventListener('touchstart', (e) => {
   if(e.target.closest('.vf-btn-resposta')) return; // idem pros botões Verdadeiro/Falso - nunca viram início de traço
   if(e.target.closest('#vf-sessao-balao')) return; // balão da sessão (arrastar, Pausar, Finalizar, fechar) - nunca vira início de traço, tem seu próprio sistema de arrasto/clique
   if(vfBalaoArrastoInfoVF) return; // proteção redundante - nunca desenha enquanto o balão está sendo arrastado, mesmo que o toque não esteja mais fisicamente sobre ele
-  if(e.target.closest('#vf-filtro-modulo, #vf-filtro-publicacao, #vf-filtro-capitulo')) return; // <select> nativo - nunca vira início de traço (diferente de botão/ícone, não faz sentido "poder virar arrasto" aqui, e a decisão adiada podia interferir no dropdown nativo do Safari)
-  // ícones pequenos, itens de menu (barra de baixo/sidebar) e botões do
-  // cabeçalho: não decide na hora - um TOQUE rápido deixa o clique
-  // funcionar normal (trocar de aba, abrir perfil), mas se virar ARRASTO
-  // de verdade, continua como traço - dá liberdade total pra desenhar em
-  // cima de qualquer coisa, sem perder a navegação normal com toque rápido
+  if(e.target.closest('select')) return; // qualquer <select> nativo (filtros do Flash, e futuros) - nunca vira início de traço, o dropdown nativo do Safari precisa do toque limpo
+  // ícones pequenos, itens de menu (barra de baixo/sidebar), botões do
+  // cabeçalho, e QUALQUER botão/link clicável na tela (alternativas do
+  // Quest, Anterior/Próxima, pills de navegação, Confirmar resposta,
+  // Excluir/Favoritar/Discutir/Notas, etc): não decide na hora - um
+  // TOQUE rápido deixa o clique funcionar normal (trocar de aba, marcar
+  // alternativa, navegar), mas se virar ARRASTO de verdade, continua
+  // como traço - dá liberdade total pra desenhar em cima de qualquer
+  // coisa, sem perder a interação normal com toque rápido. Generalizado
+  // pra <button>/[onclick] em vez de listar cada classe manualmente -
+  // cobre automaticamente Flash e Quest sem precisar manter duas listas
   const itemMenu = e.target.closest('.nav-item');
-  const botaoIcone = itemMenu || e.target.closest('.btn-icone-pequeno, .topbar button, .topbar [onclick], #vf-filtro-numero, #vf-filtro-lista');
+  const botaoIcone = itemMenu || e.target.closest('button, [onclick]');
   if(botaoIcone){
     vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX};
     return;
@@ -4122,6 +4148,7 @@ document.addEventListener('touchstart', (e) => {
   vfDesenhandoAgora = true;
   vfTouchIdAtivo = touch.identifier;
   vfPointerIdAtivoVF = vfUltimoPointerIdCanetaVF;
+  vfPontoInicialTracoAtualVF = {x: touch.clientX, y: touch.clientY};
   const canvas = document.getElementById('vf-canvas-desenho');
 
   const rect = canvas.getBoundingClientRect();
@@ -4420,6 +4447,35 @@ if(VF_SUPORTA_COALESCED_VF){
 function vfFinalizarTracoDesenho(e){
   vfBotaoPendenteToqueInfo = null; // toque em cima do ícone terminou sem virar arrasto - deixa o clique nativo acontecer
   if(!vfDesenhandoAgora) return;
+  // duplo toque leve (tap, sem arrastar de verdade) com a caneta alterna
+  // caneta <-> borracha - detectado aqui, antes de qualquer outra coisa,
+  // porque precisa saber se o traço andou pouco (tap) ou muito (traço
+  // de verdade) antes de vfDesenhandoAgora virar false
+  if(vfPontoInicialTracoAtualVF && e.changedTouches && e.changedTouches[0]){
+    const touchFinal = e.changedTouches[0];
+    const distanciaTotal = Math.hypot(touchFinal.clientX - vfPontoInicialTracoAtualVF.x, touchFinal.clientY - vfPontoInicialTracoAtualVF.y);
+    const LIMIAR_TAP_LEVE_PX = 10;
+    if(distanciaTotal < LIMIAR_TAP_LEVE_PX){
+      const agora = Date.now();
+      const pontoAtual = vfPontoInicialTracoAtualVF;
+      const tapAnterior = vfUltimoTapLeveCanetaVF;
+      const virouDuploTap = tapAnterior && (agora - tapAnterior.quando) < 350 && Math.hypot(pontoAtual.x - tapAnterior.x, pontoAtual.y - tapAnterior.y) < 30;
+      vfPontoInicialTracoAtualVF = null;
+      vfDesenhandoAgora = false;
+      vfTouchIdAtivo = null;
+      vfPointerIdAtivoVF = null;
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+      if(virouDuploTap){
+        vfUltimoTapLeveCanetaVF = null; // consumido - não encadeia um terceiro tap como se fosse outro duplo toque
+        if(vfModoBorracha) selecionarFerramentaCanetaVF(); else selecionarFerramentaBorrachaVF();
+        return; // tap sem movimento não desenhou nada de verdade - não salva histórico
+      }
+      vfUltimoTapLeveCanetaVF = {x: pontoAtual.x, y: pontoAtual.y, quando: agora};
+      return; // tap isolado (não virou duplo) - também não desenhou nada, não salva histórico
+    }
+  }
+  vfPontoInicialTracoAtualVF = null;
   // sempre libera, mesmo que o identifier não bata exatamente (evita a
   // trava de scroll ficar presa ligada por algum caso raro do navegador)
   vfDesenhandoAgora = false;
@@ -6656,6 +6712,12 @@ async function vfFinalizarSessaoFlashVF(e){
 function vfMostrarBalaoSessaoFlashVF(){
   const balao = document.getElementById('vf-sessao-balao');
   if(!balao) return;
+  // volta pro local padrão (definido no CSS) sempre que reabre - não
+  // mantém a posição de um arrasto anterior à última vez que foi escondido
+  balao.style.left = '';
+  balao.style.top = '';
+  balao.style.right = '';
+  balao.style.bottom = '';
   balao.classList.remove('hidden');
   vfAtualizarDisplayBalaoSessaoVF();
   if(vfIntervalSessaoVF) clearInterval(vfIntervalSessaoVF);
