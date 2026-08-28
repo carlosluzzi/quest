@@ -9021,11 +9021,13 @@ let pressTimerAlternativa = null;
 let pressLetraAtual = null;
 let pressFoiLongo = false;
 let pressMoveu = false;
+let pressPosicaoInicial = null; // {x, y} - usado pra medir a distância real percorrida, em vez de marcar "moveu" no primeiro pixel
 let ultimaSelecaoPorToque = 0; // debounce – evita que o clique "fantasma" que o navegador dispara depois de um toque conte como um segundo clique
-function iniciarPressionarAlternativa(letra){
+function iniciarPressionarAlternativa(letra, evento){
   pressLetraAtual = letra;
   pressFoiLongo = false;
   pressMoveu = false;
+  pressPosicaoInicial = (evento && evento.touches && evento.touches[0]) ? {x: evento.touches[0].clientX, y: evento.touches[0].clientY} : null;
   clearTimeout(pressTimerAlternativa);
   pressTimerAlternativa = setTimeout(()=>{
     if(!pressMoveu){
@@ -9035,16 +9037,26 @@ function iniciarPressionarAlternativa(letra){
   }, DURACAO_PRESSIONAR_LONGO_MS);
 }
 // dedo se moveu (rolando a tela) – cancela o risco, e não bloqueia a rolagem
-// natural do navegador (por isso não usamos preventDefault aqui)
-function moverDurantePressionar(){
+// natural do navegador (por isso não usamos preventDefault aqui).
+// Limiar de distância real (não o primeiro pixel) - achado real: a
+// Apple Pencil tem um tremor natural mesmo "parada", marcar "moveu" sem
+// nenhuma tolerância impedia a seleção de funcionar quase sempre com a caneta
+const LIMIAR_MOVIMENTO_PRESSIONAR_PX = 10;
+function moverDurantePressionar(evento){
+  if(pressPosicaoInicial && evento && evento.touches && evento.touches[0]){
+    const dx = evento.touches[0].clientX - pressPosicaoInicial.x, dy = evento.touches[0].clientY - pressPosicaoInicial.y;
+    if(Math.hypot(dx, dy) < LIMIAR_MOVIMENTO_PRESSIONAR_PX) return; // dentro da tolerância - ainda não conta como "moveu" de verdade
+  }
   pressMoveu = true;
   clearTimeout(pressTimerAlternativa);
 }
 function cancelarPressionarAlternativa(){
   clearTimeout(pressTimerAlternativa);
+  pressPosicaoInicial = null;
 }
 function finalizarPressionarAlternativa(letra, viaToque){
   clearTimeout(pressTimerAlternativa);
+  pressPosicaoInicial = null;
   const foiLongo = pressFoiLongo;
   const moveu = pressMoveu;
   pressLetraAtual = null;
@@ -9410,7 +9422,7 @@ function renderizarQuestaoAtual(){
         }else if(alt.letra === alternativaSelecionadaAtual){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
-        const handlers = (jaRespondida || excluida) ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}', false)" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="iniciarPressionarAlternativa('${alt.letra}')" ontouchend="finalizarPressionarAlternativa('${alt.letra}', true)" ontouchmove="moverDurantePressionar()" ontouchcancel="cancelarPressionarAlternativa()"`;
+        const handlers = (jaRespondida || excluida) ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}', false)" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="iniciarPressionarAlternativa('${alt.letra}', event)" ontouchend="finalizarPressionarAlternativa('${alt.letra}', true)" ontouchmove="moverDurantePressionar(event)" ontouchcancel="cancelarPressionarAlternativa()"`;
         const botaoBtn = `<button class="banco-alt-btn" style="width:100%;${estilo}${mostrarBotaoSalvarNaAlternativa?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0${riscada?';text-decoration:line-through':''}">${alt.texto}</span></span></button>`;
         // botão de salvar fica FORA do <button> da alternativa de propósito —
         // um botão nativo desabilitado bloqueia clique em qualquer coisa
