@@ -931,7 +931,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       <span id="badge-forum" class="badge-notificacao hidden">0</span>
     </div>
     <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M.75 23.25h22.5M6 16.25H3a.76.76 0 0 0-.75.75v6.25h4.5V17a.76.76 0 0 0-.75-.75m7.5-4h-3a.76.76 0 0 0-.75.75v10.25h4.5V13a.76.76 0 0 0-.75-.75m7.5-4h-3a.76.76 0 0 0-.75.75v14.25h4.5V9a.76.76 0 0 0-.75-.75m-16.82.99l16.07-7.3m-1.19 3.19l1.19-3.19L17.07.75"/></svg></span><span class="nav-label">Desempenho</span>
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M18.7 8.3L13 14l-4-4-5.3 5.3"/></svg></span><span class="nav-label">Desempenho</span>
     </div>
     <div class="nav-item hidden" id="nav-item-vf" data-aba="vf" onclick="trocarAba('vf')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></span><span class="nav-label">Flash</span>
@@ -4133,13 +4133,16 @@ function redimensionarCanvasDesenhoVF(){
   const canvas = document.getElementById('vf-canvas-desenho');
   if(!canvas) return;
   const content = document.getElementById('content');
-  // o canvas cobre o CONTEÚDO INTEIRO (scrollHeight), não só a fatia
-  // visível na tela - é o que permite ele rolar naturalmente junto com o
-  // scroll do navegador, em vez de ficar "grudado na tela" enquanto o
-  // texto passa por baixo. Sempre um pouco maior que o necessário
-  // (offsetHeight como piso) evita ficar menor que a área visível numa
-  // tela momentaneamente vazia/carregando
-  if(content) canvas.style.height = Math.max(content.scrollHeight, content.offsetHeight) + 'px';
+  // mede a altura de #content DEPOIS de zerar a altura do canvas -
+  // achado real: o canvas (position:absolute dentro de #content, que
+  // tem overflow-y:auto) contava a própria altura na hora de medir
+  // scrollHeight, criando um ciclo que só crescia (Math.max nunca
+  // diminui) - cada rotação de tela deixava um espaço vazio extra
+  // acumulado logo abaixo do conteúdo real
+  if(content){
+    canvas.style.height = '0px';
+    canvas.style.height = Math.max(content.scrollHeight, content.offsetHeight) + 'px';
+  }
   const rect = canvas.getBoundingClientRect();
   if(rect.width === 0 || rect.height === 0) return; // aba ainda escondida, não tem o que medir
   // supersampling: renderiza em resolução MAIOR que o DPR nativo da tela
@@ -4164,10 +4167,15 @@ function redimensionarCanvasDesenhoVF(){
   // desenho em andamento (o histórico nunca soube desse apagão, então o
   // desfazer ficava fora de sincronia com o que estava realmente na
   // tela). Redesenha o último estado salvo, se existir, pra nunca perder
-  // o que já estava lá por causa de um resize disparado por qualquer motivo
+  // o que já estava lá por causa de um resize disparado por qualquer motivo.
+  // Desenha no tamanho ORIGINAL da imagem (não esticado pra rect.width/
+  // height) - achado real: girar a tela muda a largura disponível, e
+  // esticar a imagem salva pra preencher a nova largura deslocava/
+  // distorcia todo traço já feito. Mantendo o tamanho original, o traço
+  // fica na mesma posição/tamanho absoluto de quando foi desenhado
   if(typeof vfIndiceHistoricoVF !== 'undefined' && vfIndiceHistoricoVF >= 0 && vfHistoricoDesenho[vfIndiceHistoricoVF]){
     const img = new Image();
-    img.onload = () => { ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.drawImage(img, 0, 0, rect.width, rect.height); };
+    img.onload = () => { ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.drawImage(img, 0, 0, img.width/dpr, img.height/dpr); };
     img.src = vfHistoricoDesenho[vfIndiceHistoricoVF].dataUrl;
   }
   // canvas de prévia do destaque - mesmo tamanho/resolução, sempre em
