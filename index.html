@@ -291,6 +291,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .item-lista-modulo:active{background:#F5F5F4}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado,body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado *,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
+body.vf-marcacao-texto-ativa .vf-numeral-item-nao-marcavel,body.vf-marcacao-texto-ativa .linha-marcador{-webkit-user-select:none;user-select:none}
 #vf-correcao-atual{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf-correcao-atual *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
 .enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap}
@@ -6027,7 +6028,14 @@ function vfRangeDoOffsetGlobalVF(container, offsetInicio, offsetFim){
   let atual;
   while((atual = walker.nextNode())){
     const tamanho = atual.textContent.length;
-    if(noInicio === null && total + tamanho >= offsetInicio){ noInicio = atual; offInicio = offsetInicio - total; }
+    // prefere avançar pro INÍCIO do próximo nó em vez de ficar "colado"
+    // no FIM do nó atual quando o offset cai exatamente na fronteira
+    // entre dois nós de texto irmãos - achado real: sem isso, o range
+    // podia começar dentro de um nó de espaço em branco/quebra de linha
+    // (comum entre dois <span> irmãos no HTML gerado), e surroundContents
+    // falhava por cruzar essa fronteira de forma ambígua
+    if(noInicio === null && total + tamanho > offsetInicio){ noInicio = atual; offInicio = offsetInicio - total; }
+    if(noInicio === null && tamanho === 0 && total === offsetInicio){ noInicio = atual; offInicio = 0; }
     if(noFim === null && total + tamanho >= offsetFim){ noFim = atual; offFim = offsetFim - total; }
     total += tamanho;
     if(noInicio && noFim) break;
@@ -6067,7 +6075,7 @@ function vfColetarSegmentosRecursivoVF(elemento, inicio, fim, cursorRef, segment
   // o arrasto cruze de um item pro outro - só avança o cursor (contando
   // os caracteres dele normalmente, pra não desalinhar os offsets), mas
   // nunca cria segmento nenhum aqui dentro
-  if(elemento.classList && elemento.classList.contains('vf-numeral-item-nao-marcavel')){
+  if(elemento.classList && (elemento.classList.contains('vf-numeral-item-nao-marcavel') || elemento.classList.contains('linha-marcador'))){
     cursorRef.valor += elemento.textContent.length;
     return;
   }
@@ -6077,7 +6085,10 @@ function vfColetarSegmentosRecursivoVF(elemento, inicio, fim, cursorRef, segment
     const tamanho = elemento.textContent.length;
     const elInicio = cursorRef.valor, elFim = cursorRef.valor + tamanho;
     const segInicio = Math.max(inicio, elInicio), segFim = Math.min(fim, elFim);
-    if(segInicio < segFim) segmentos.push({inicio: segInicio, fim: segFim});
+    // nunca cria segmento pra trecho que é só espaço em branco/quebra de
+    // linha (comum entre dois <span> irmãos no HTML gerado, formatado com
+    // indentação) - evita spans de marcação vazios/invisíveis inúteis
+    if(segInicio < segFim && elemento.textContent.slice(segInicio-elInicio, segFim-elInicio).trim()) segmentos.push({inicio: segInicio, fim: segFim});
     cursorRef.valor = elFim;
     return;
   }
@@ -6088,7 +6099,7 @@ function vfColetarSegmentosRecursivoVF(elemento, inicio, fim, cursorRef, segment
       const tamanho = no.textContent.length;
       const elInicio = cursorRef.valor, elFim = cursorRef.valor + tamanho;
       const segInicio = Math.max(inicio, elInicio), segFim = Math.min(fim, elFim);
-      if(segInicio < segFim) segmentos.push({inicio: segInicio, fim: segFim});
+      if(segInicio < segFim && no.textContent.slice(segInicio-elInicio, segFim-elInicio).trim()) segmentos.push({inicio: segInicio, fim: segFim});
       cursorRef.valor = elFim;
     }else if(no.nodeType === 1){
       vfColetarSegmentosRecursivoVF(no, inicio, fim, cursorRef, segmentos);
