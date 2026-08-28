@@ -290,7 +290,9 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .item-lista-modulo:last-child{border-bottom:none}
 .item-lista-modulo:active{background:#F5F5F4}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado,body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado *,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
 #vf-correcao-atual{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf-correcao-atual *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
 .enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap}
 .linha-numerada{display:flex;gap:8px;margin-top:10px;align-items:flex-start}
 .linha-marcador{flex-shrink:0;font-weight:400;min-width:16px}
@@ -1585,7 +1587,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-372';
+const VERSAO_APP = '2026-07-25-374';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5857,6 +5859,7 @@ document.addEventListener('touchstart', (e) => {
   if(vfAlgumModalAbertoVF()) return; // painel de configuração de cor aberto - nunca interfere com toques nele
   const touch = e.touches[0];
   if(!touch) return;
+  if(!vfEhToqueDeCaneta(touch)) return; // só a caneta marca - dedo continua rolando a página normalmente, mesmo com o modo ativo
   const elemento = document.elementFromPoint(touch.clientX, touch.clientY);
   const containerValido = elemento && elemento.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual');
   if(!containerValido) return;
@@ -5915,15 +5918,15 @@ document.addEventListener('touchmove', (e) => {
     range.setStart(rangeFim.startContainer, rangeFim.startOffset);
     range.setEnd(rangeInicio.startContainer, rangeInicio.startOffset);
   }
-  // guarda o range calculado numa variável própria, e mostra o preview
-  // visual desenhando retângulos manualmente por cima do texto - NUNCA
-  // usa window.getSelection()/addRange() (API nativa de seleção). Achado
-  // real: no Safari/iOS, ativar a seleção nativa de texto pode disparar
-  // o comportamento nativo de lupa/ajuste de zoom pra facilitar seleção
-  // precisa, e isso reflui o texto no meio da frase - o preventDefault no
-  // touchstart não bastou pra evitar isso por completo
+  // seleção nativa de novo pro preview visual - já confirmado que ela
+  // não causava a quebra de linha (o culpado real era outro, já
+  // corrigido). A seleção nativa lida sozinha com estruturas complexas
+  // cruzando múltiplos elementos (como selecionar do item I até o item
+  // II), o que o sistema manual de retângulos não fazia direito
   vfMarcacaoTextoRangeAtualVF = range;
-  vfMostrarPreviewMarcacaoVF(range);
+  const selecao = window.getSelection();
+  selecao.removeAllRanges();
+  selecao.addRange(range);
 }, {passive: false});
 
 document.addEventListener('touchend', (e) => {
@@ -5932,11 +5935,11 @@ document.addEventListener('touchend', (e) => {
   vfMarcacaoTextoArrastandoVF = false;
   vfMarcacaoTextoPontoInicialVF = null;
   vfMarcacaoTextoContainerVF = null;
-  vfLimparPreviewMarcacaoVF();
   const touch = e.changedTouches[0];
   const range = vfMarcacaoTextoRangeAtualVF;
   vfMarcacaoTextoRangeAtualVF = null;
-  if(!touch || !range || range.collapsed) return; // dedo ou caneta - com marcação de texto ativa, os dois marcam agora. Sem range formado nesse toque, nada a fazer
+  window.getSelection().removeAllRanges();
+  if(!touch || !range || range.collapsed) return; // caneta apenas (dedo já é filtrado no touchstart). Sem range formado nesse toque, nada a fazer
   const noContainer = range.commonAncestorContainer;
   const elementoContainer = noContainer.nodeType === 3 ? noContainer.parentElement : noContainer;
   const areaValida = elementoContainer.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual');
@@ -5946,17 +5949,14 @@ document.addEventListener('touchend', (e) => {
 
 // sem esse handler, se o sistema cancelasse o gesto no meio (touchcancel
 // em vez de touchend - pode acontecer com Apple Pencil, interrupções do
-// sistema, etc), o preview visual nunca era limpo, ficando "preso" na
-// tela. A próxima seleção criava novos divs por cima dos antigos nunca
-// removidos - exatamente a aparência de "texto duplicado" relatada.
-// Só limpa e reseta o estado, não aplica marcação nenhuma (gesto foi cancelado)
+// sistema, etc), a seleção nativa nunca era limpa, ficando "presa" na tela
 document.addEventListener('touchcancel', (e) => {
   if(!vfModoMarcacaoTextoAtivo) return;
   vfMarcacaoTextoArrastandoVF = false;
   vfMarcacaoTextoPontoInicialVF = null;
   vfMarcacaoTextoContainerVF = null;
   vfMarcacaoTextoRangeAtualVF = null;
-  vfLimparPreviewMarcacaoVF();
+  window.getSelection().removeAllRanges();
 });
 
 // preview visual manual da seleção de texto em andamento - desenha
@@ -6063,6 +6063,14 @@ function vfSegmentosPorLinhaVF(container, inicio, fim){
 // surroundContents falhar, caindo no fallback que reorganiza/achata a
 // estrutura - e isso quebrava o layout flex do item
 function vfColetarSegmentosRecursivoVF(elemento, inicio, fim, cursorRef, segmentos){
+  // numerais de item (I., II., III.) nunca entram na marcação, mesmo que
+  // o arrasto cruze de um item pro outro - só avança o cursor (contando
+  // os caracteres dele normalmente, pra não desalinhar os offsets), mas
+  // nunca cria segmento nenhum aqui dentro
+  if(elemento.classList && elemento.classList.contains('vf-numeral-item-nao-marcavel')){
+    cursorRef.valor += elemento.textContent.length;
+    return;
+  }
   const filhosDeElemento = [...elemento.childNodes].filter(n => n.nodeType === 1);
   if(filhosDeElemento.length === 0){
     // folha - todo o texto dele é UM segmento candidato, sem dividir mais
@@ -9700,7 +9708,7 @@ function renderizarQuestaoAtual(){
           const chaveItem = q.id+'|'+item.numeral;
           const salvo = alternativasSalvasAtual.has(chaveItem);
           return `<div style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;position:relative;padding-right:32px">
-            <span style="flex-shrink:0">${escapeHtml(item.numeral)}.</span>
+            <span class="vf-numeral-item-nao-marcavel" style="flex-shrink:0">${escapeHtml(item.numeral)}.</span>
             <span style="flex:1;min-width:0">${formatarEnunciado(item.texto)}</span>
             <button onclick="toggleAlternativaSalva('${q.id}','${item.numeral}',this)" style="position:absolute;top:0;right:0;background:none;border:none;padding:4px;cursor:pointer;color:${salvo?'#B23A34':'#ccc'};display:flex" title="Salvar esse item">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
