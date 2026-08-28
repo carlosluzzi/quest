@@ -1585,7 +1585,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-369';
+const VERSAO_APP = '2026-07-25-370';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5864,6 +5864,7 @@ document.addEventListener('touchstart', (e) => {
   // reajustar zoom/layout pra facilitar a seleção precisa, causando
   // reflow visível bem no meio da frase logo ao começar a arrastar
   e.preventDefault();
+  vfLimparPreviewMarcacaoVF(); // segurança extra - nunca começa um gesto novo com resíduo visual de um anterior
   vfMarcacaoTextoPontoInicialVF = {x: touch.clientX, y: touch.clientY};
   vfMarcacaoTextoArrastandoVF = true;
   vfMarcacaoTextoDirecaoApagarVF = false; // reseta - até mover de verdade, assume "marcando" (mais seguro como padrão)
@@ -5923,6 +5924,20 @@ document.addEventListener('touchend', (e) => {
   const areaValida = elementoContainer.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual');
   if(!areaValida) return;
   vfAplicarMarcacaoNoRangeVF(vfModoMarcacaoTextoAtivo, range, apagando);
+});
+
+// sem esse handler, se o sistema cancelasse o gesto no meio (touchcancel
+// em vez de touchend - pode acontecer com Apple Pencil, interrupções do
+// sistema, etc), o preview visual nunca era limpo, ficando "preso" na
+// tela. A próxima seleção criava novos divs por cima dos antigos nunca
+// removidos - exatamente a aparência de "texto duplicado" relatada.
+// Só limpa e reseta o estado, não aplica marcação nenhuma (gesto foi cancelado)
+document.addEventListener('touchcancel', (e) => {
+  if(!vfModoMarcacaoTextoAtivo) return;
+  vfMarcacaoTextoArrastandoVF = false;
+  vfMarcacaoTextoPontoInicialVF = null;
+  vfMarcacaoTextoRangeAtualVF = null;
+  vfLimparPreviewMarcacaoVF();
 });
 
 // preview visual manual da seleção de texto em andamento - desenha
