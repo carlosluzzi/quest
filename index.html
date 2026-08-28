@@ -1570,7 +1570,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-351';
+const VERSAO_APP = '2026-07-25-352';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4179,15 +4179,34 @@ function redimensionarCanvasDesenhoVF(){
   // desfazer ficava fora de sincronia com o que estava realmente na
   // tela). Redesenha o último estado salvo, se existir, pra nunca perder
   // o que já estava lá por causa de um resize disparado por qualquer motivo.
-  // Desenha no tamanho ORIGINAL da imagem (não esticado pra rect.width/
-  // height) - achado real: girar a tela muda a largura disponível, e
-  // esticar a imagem salva pra preencher a nova largura deslocava/
-  // distorcia todo traço já feito. Mantendo o tamanho original, o traço
-  // fica na mesma posição/tamanho absoluto de quando foi desenhado
+  // Aplica um fator de correção real (não "esticar tudo pra viewport
+  // inteira", nem "não escalar nada") - a largura do conteúdo muda numa
+  // proporção exata e conhecida ao girar a tela, então escalar X por
+  // essa razão é correto. A altura não estica de verdade (o texto só
+  // reflui, quebrando diferente), mas escalar Y pela razão real entre a
+  // altura ANTIGA do conteúdo (guardada junto com o desenho) e a altura
+  // NOVA aproxima bem o quanto cada ponto "desceu" ou "subiu" por causa
+  // do reflow - testado com fotos reais lado a lado (portrait vs
+  // landscape), a posição relativa dos traços ficou bem mais próxima do
+  // texto certo do que sem nenhuma correção
   if(typeof vfIndiceHistoricoVF !== 'undefined' && vfIndiceHistoricoVF >= 0 && vfHistoricoDesenho[vfIndiceHistoricoVF]){
+    const entradaHistorico = vfHistoricoDesenho[vfIndiceHistoricoVF];
     const img = new Image();
-    img.onload = () => { ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.drawImage(img, 0, 0, img.width/dpr, img.height/dpr); };
-    img.src = vfHistoricoDesenho[vfIndiceHistoricoVF].dataUrl;
+    img.onload = () => {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      let larguraDestino = img.width/dpr, alturaDestino = img.height/dpr;
+      if(content && entradaHistorico.larguraConteudo && entradaHistorico.alturaConteudo){
+        const novaLargura = content.clientWidth;
+        const novaAltura = Math.min(Math.max(content.scrollHeight, content.offsetHeight), window.innerHeight * 8);
+        const fatorX = novaLargura / entradaHistorico.larguraConteudo;
+        const fatorY = novaAltura / entradaHistorico.alturaConteudo;
+        larguraDestino = (img.width/dpr) * fatorX;
+        alturaDestino = (img.height/dpr) * fatorY;
+      }
+      ctx.drawImage(img, 0, 0, larguraDestino, alturaDestino);
+    };
+    img.src = entradaHistorico.dataUrl;
   }
   // canvas de prévia do destaque - mesmo tamanho/resolução, sempre em
   // branco (só recebe conteúdo durante um traço de destaque em andamento)
@@ -4805,10 +4824,20 @@ const VF_LIMITE_HISTORICO = 20;
 function vfSalvarEstadoHistoricoVF(){
   const canvas = document.getElementById('vf-canvas-desenho');
   if(!canvas || !vfCtxDesenho) return;
+  const content = document.getElementById('content');
   // se o usuário tinha desfeito e desenhou algo novo, descarta o "futuro"
   // que ficou pra trás - não faz mais sentido poder refazer aquilo
   vfHistoricoDesenho = vfHistoricoDesenho.slice(0, vfIndiceHistoricoVF + 1);
-  vfHistoricoDesenho.push({dataUrl: canvas.toDataURL(), timestamp: Date.now()});
+  // guarda a largura/altura REAIS do conteúdo (não da tela toda) junto
+  // com a imagem - é o que permite calcular depois, ao girar a tela, um
+  // fator de correção proporcional (não um "não faz nada" nem um
+  // "estica pra viewport inteira", os dois já tentados e errados)
+  vfHistoricoDesenho.push({
+    dataUrl: canvas.toDataURL(),
+    timestamp: Date.now(),
+    larguraConteudo: content ? content.clientWidth : null,
+    alturaConteudo: content ? content.scrollHeight : null
+  });
   if(vfHistoricoDesenho.length > VF_LIMITE_HISTORICO) vfHistoricoDesenho.shift();
   vfIndiceHistoricoVF = vfHistoricoDesenho.length - 1;
   vfAtualizarBotoesHistoricoVF();
