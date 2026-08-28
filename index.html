@@ -290,7 +290,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .item-lista-modulo:last-child{border-bottom:none}
 .item-lista-modulo:active{background:#F5F5F4}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado,body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado,body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado *,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 #vf-correcao-atual{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf-correcao-atual *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 .enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap}
@@ -1577,7 +1577,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-361';
+const VERSAO_APP = '2026-07-25-362';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4542,6 +4542,7 @@ document.addEventListener('touchmove', (e) => {
   const canvas = document.getElementById('vf-canvas-desenho');
   const rect = canvas.getBoundingClientRect();
   vfProcessarPontoDesenhoVF(touch.clientX, touch.clientY, touch.force, rect);
+  vfAtualizarPreviewDestaqueVF();
 }, {passive: false});
 
 // toda a lógica de desenhar UM ponto (suavização de posição, força,
@@ -4697,18 +4698,25 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect, dentroDeL
   }
   if(!dentroDeLote) ctxAtivo.stroke();
 
-  // mostra o resultado FINAL (com a mistura já aplicada) em tempo real no
-  // canvas de prévia por cima - recalcula do zero a cada movimento a
-  // partir do traço "puro" guardado em vfCanvasTracoTemp, nunca acumula.
-  // É por isso que o destaque não pode mais "só aparecer no final": agora
-  // ele já mostra com a qualidade certa desde o primeiro toque
+}
+
+// mostra o resultado FINAL (com a mistura já aplicada) em tempo real no
+// canvas de prévia por cima - recalcula do zero a partir do traço "puro"
+// guardado em vfCanvasTracoTemp, nunca acumula. É por isso que o destaque
+// não pode mais "só aparecer no final": agora ele já mostra com a
+// qualidade certa desde o primeiro toque. Extraída de dentro de
+// vfProcessarPontoDesenhoVF - achado real: antes rodava uma vez POR PONTO
+// coalescido (a Apple Pencil pode entregar vários pontos reais num único
+// evento pointermove), então um redesenho completo do preview podia
+// acontecer 5-10 vezes numa única atualização de tela. Chamada só 1x
+// por evento agora, não mais 1x por ponto individual
+function vfAtualizarPreviewDestaqueVF(){
   if(vfModoDestaque && vfCanvasTracoTemp && vfCtxPreviewDestaque){
-    const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
     const dpr = (window.devicePixelRatio || 1) * 1.5;
     // limpa só a fatia visível (onde o traço realmente pode aparecer),
     // não o conteúdo inteiro - achado real: isso roda a cada movimento
-    // da caneta (dezenas de vezes por segundo), então limpar uma área
-    // gigante (até 8x a altura da tela) repetidamente era o gargalo real
+    // da caneta, então limpar uma área gigante (até 8x a altura da tela)
+    // repetidamente era o gargalo real
     vfCtxPreviewDestaque.clearRect(0, vfScrollTopNoInicioTracoVF, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
     // primeiro desenha o que já existia (retrato de antes do traço
     // começar) em opacidade normal - dá ao multiply seguinte algo de
@@ -4746,6 +4754,7 @@ if(VF_SUPORTA_COALESCED_VF){
     for(const ev of lista){
       vfProcessarPontoDesenhoVF(ev.clientX, ev.clientY, ev.pressure, rect);
     }
+    vfAtualizarPreviewDestaqueVF(); // 1x por evento, não 1x por ponto coalescido - era o gargalo real de performance
   }, {passive: true});
 }
 
