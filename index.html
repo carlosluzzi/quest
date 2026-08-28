@@ -1612,7 +1612,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-387';
+const VERSAO_APP = '2026-07-25-390';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2637,6 +2637,7 @@ function vfAtualizarVisibilidadeCanvasVF(){
   if(canvasDesenho) canvasDesenho.style.display = mostrar ? 'block' : 'none';
   if(canvasPreview) canvasPreview.style.display = mostrar ? 'block' : 'none';
   if(!mostrar) fecharBarraDesenhoVF();
+  vfAjustarPosicionamentoCanvasVF();
   // configura o canvas de verdade (contexto 2d, dimensões) sempre que
   // ele deve ficar visível - antes só acontecia ao entrar no Flash
   // (entrarNoModoVF), então o Quest sozinho (sem visitar o Flash antes)
@@ -2644,6 +2645,41 @@ function vfAtualizarVisibilidadeCanvasVF(){
   // passar pelo Flash pelo menos uma vez. Cada contexto precisa ser
   // autossuficiente, não depender do outro ter sido visitado primeiro
   if(mostrar && !vfDesenhandoAgora) inicializarCanvasDesenhoVF();
+}
+
+// achado real (relatado pelo Carlos): mover o canvas pra dentro de
+// #content (position:absolute, rolando com o scroll) resolveu o traço
+// "grudado na tela" no Quest, onde questões longas realmente precisam
+// disso - mas isso foi aplicado nos dois contextos por engano. No Flash,
+// cada questão é curta o bastante pra nunca precisar de scroll, e o
+// comportamento antigo (position:fixed, cobrindo a viewport inteira,
+// desenhando em qualquer lugar da tela sem depender de onde o conteúdo
+// termina) era o correto - só o Quest precisava da mudança
+function vfAjustarPosicionamentoCanvasVF(){
+  const canvasDesenho = document.getElementById('vf-canvas-desenho');
+  const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
+  const content = document.getElementById('content');
+  if(!canvasDesenho || !canvasPreview || !content) return;
+  const tela = vfTelaAtualVF();
+  if(tela === 'flash'){
+    // fixed, direto no body - cobre a viewport inteira, "grudado",
+    // desenha em qualquer lugar independente do scroll
+    if(canvasDesenho.style.position !== 'fixed'){
+      document.body.appendChild(canvasDesenho);
+      document.body.appendChild(canvasPreview);
+      canvasDesenho.style.position = 'fixed';
+      canvasPreview.style.position = 'fixed';
+    }
+  }else{
+    // absolute, dentro de #content - rola junto com o texto (necessário
+    // no Quest, onde a questão pode ser mais longa que a tela)
+    if(canvasDesenho.style.position !== 'absolute' || canvasDesenho.parentElement !== content){
+      content.appendChild(canvasDesenho);
+      content.appendChild(canvasPreview);
+      canvasDesenho.style.position = 'absolute';
+      canvasPreview.style.position = 'absolute';
+    }
+  }
 }
 (function vfObservarResolucaoQuestParaCanvasVF(){
   const el = document.getElementById('quests-resolucao');
@@ -3380,25 +3416,28 @@ function retomarCaderno(){
    ============================================================ */
 let modulosComQuestao = new Set();
 let publicacoesComQuestao = new Set();
+let tiposComQuestao = new Set();
 let temasCache = [];
 
 async function carregarBibliografia(){
   const [{data}, {data: dadosQuestoes}, {data: dadosTemas}] = await Promise.all([
     sb.from('bibliografia').select('*'),
-    buscarTudoPaginadoVF(() => sb.from('questoes').select('modulo_pscpp, bibliografia_id', {count: 'exact'}).eq('anulada', false).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('questoes').select('modulo_pscpp, bibliografia_id, tipo_questao', {count: 'exact'}).eq('anulada', false).order('id')),
     sb.from('temas').select('*, tema_bibliografia(bibliografia_id)')
   ]);
   bibliografiaCache = data || [];
   temasCache = (dadosTemas || []).map(t => ({...t, bibliografiaIds: (t.tema_bibliografia||[]).map(tb=>tb.bibliografia_id)}));
   modulosPscpp = [...new Set(bibliografiaCache.map(b=>b.modulo_pscpp))].sort((a,b)=>a.localeCompare(b,'pt'));
 
-  // pra saber quais módulos/publicações realmente têm pelo menos 1 questão
-  // — usado pra escurecer/desabilitar as opções vazias nos filtros, e a
-  // pessoa não ficar tentando selecionar algo que não tem nada
+  // pra saber quais módulos/publicações/tipos realmente têm pelo menos 1
+  // questão — usado pra escurecer/desabilitar as opções vazias nos
+  // filtros, e a pessoa não ficar tentando selecionar algo que não tem nada
   modulosComQuestao = new Set((dadosQuestoes||[]).map(q=>q.modulo_pscpp));
   publicacoesComQuestao = new Set((dadosQuestoes||[]).map(q=>q.bibliografia_id));
+  tiposComQuestao = new Set((dadosQuestoes||[]).map(q=>q.tipo_questao).filter(Boolean));
 
   renderizarFiltroModulo();
+  renderizarFiltroTipoQuestao();
   // independentes entre si (tabelas diferentes) – rodar em paralelo
   await Promise.all([carregarFiltroUsuarioAdmin(), carregarCadernosExistentes()]);
   atualizarContadorDisponiveis(); // mostra o total desde o início, sem esperar filtro nenhum
@@ -3414,6 +3453,25 @@ function renderizarFiltroModulo(){
     const vazio = !modulosComQuestao.has(m);
     return `<option value="${escapeHtml(m)}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(m)}</option>`;
   }).join('');
+}
+
+// mesmo padrão do módulo - tipos de questão sem nenhuma questão cadastrada
+// pro usuário filtrado ficam desabilitados/escurecidos. Preserva o valor
+// selecionado (se ainda válido) ao regenerar, já que o filtro de tipo não
+// é resetado quando outros filtros mudam, diferente de módulo/publicação
+const TIPOS_QUESTAO_FIXOS = ['Conceitual', 'Cálculo', 'Número', 'Lista', 'Identificação'];
+function renderizarFiltroTipoQuestao(){
+  const el = document.getElementById('filtro-tipo-questao');
+  const valorAtual = el.value;
+  el.innerHTML = '<option value="todos">Todos os tipos de questão</option>' + TIPOS_QUESTAO_FIXOS.map(t=>{
+    const vazio = !tiposComQuestao.has(t);
+    return `<option value="${escapeHtml(t)}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(t)}</option>`;
+  }).join('');
+  // só restaura o valor se ele ainda for uma opção válida (não vazia) -
+  // sem essa checagem, filtrar por um usuário que não tem esse tipo
+  // deixava o dropdown "preso" numa opção agora desabilitada
+  if(valorAtual === 'todos' || tiposComQuestao.has(valorAtual)) el.value = valorAtual;
+  else{ el.value = 'todos'; filtroSelecionado.tipoQuestao = null; }
 }
 
 // filtro de usuário na aba Quest — antes só pro admin, agora liberado
@@ -3508,14 +3566,16 @@ async function selecionarFiltroSelect(nivel, valor){
     document.getElementById('filtro-modulo').value = '';
 
     let montarQuery = () => {
-      let q = sb.from('questoes').select('modulo_pscpp, bibliografia_id', {count: 'exact'});
+      let q = sb.from('questoes').select('modulo_pscpp, bibliografia_id, tipo_questao', {count: 'exact'});
       if(filtroSelecionado.usuario) q = q.eq('autor_id', filtroSelecionado.usuario);
       return q.order('id');
     };
     const {data} = await buscarTudoPaginadoVF(montarQuery);
     modulosComQuestao = new Set((data||[]).map(q=>q.modulo_pscpp));
     publicacoesComQuestao = new Set((data||[]).map(q=>q.bibliografia_id));
+    tiposComQuestao = new Set((data||[]).map(q=>q.tipo_questao).filter(Boolean));
     renderizarFiltroModulo();
+    renderizarFiltroTipoQuestao();
   }
 
   if(nivel==='modulo'){
@@ -3551,7 +3611,12 @@ async function selecionarFiltroSelect(nivel, valor){
       const temaId = valor.slice(5);
       const tema = temasCache.find(t=>t.id===temaId);
       const idsPublicacoes = tema?.bibliografiaIds || [];
-      buscarTudoPaginadoVF(() => sb.from('questoes').select('capitulo', {count: 'exact'}).in('bibliografia_id', idsPublicacoes).order('id')).then(({data})=>{
+      const montarQueryCapTema = () => {
+        let q = sb.from('questoes').select('capitulo', {count: 'exact'}).in('bibliografia_id', idsPublicacoes);
+        if(filtroSelecionado.usuario) q = q.eq('autor_id', filtroSelecionado.usuario);
+        return q.order('id');
+      };
+      buscarTudoPaginadoVF(montarQueryCapTema).then(({data})=>{
         const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
         // tema junta publicações relacionadas, normalmente do mesmo
         // idioma - usa o rótulo da primeira como aproximação razoável
@@ -3563,7 +3628,12 @@ async function selecionarFiltroSelect(nivel, valor){
       });
     }else if(valor){
       // capítulos vêm das próprias questões já cadastradas com essa bibliografia (campo livre por questão)
-      buscarTudoPaginadoVF(() => sb.from('questoes').select('capitulo', {count: 'exact'}).eq('bibliografia_id', valor).order('id')).then(({data})=>{
+      const montarQueryCap = () => {
+        let q = sb.from('questoes').select('capitulo', {count: 'exact'}).eq('bibliografia_id', valor);
+        if(filtroSelecionado.usuario) q = q.eq('autor_id', filtroSelecionado.usuario);
+        return q.order('id');
+      };
+      buscarTudoPaginadoVF(montarQueryCap).then(({data})=>{
         const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a-b);
         const livro = bibliografiaCache.find(b=>b.id===valor);
         const rotulo = rotuloCapituloDoLivro(livro?.titulo);
@@ -4268,13 +4338,21 @@ function vfRedimensionarCanvasDesenhoInternoVF(){
   if(content){
     canvas.style.height = '0px';
     if(canvasPreview) canvasPreview.style.height = '0px';
-    // teto de segurança: mesmo que outra causa de crescimento apareça no
-    // futuro, o canvas nunca passa de 4x a altura da viewport - um
-    // canvas gigante (buffer de pixels enorme) deixa toda operação de
-    // desenho pesada e lenta, sintoma real já visto quando esse bug
-    // ainda não tinha sido corrigido de vez
-    const alturaMaxima = window.innerHeight * 8;
-    canvas.style.height = Math.min(Math.max(content.scrollHeight, content.offsetHeight), alturaMaxima) + 'px';
+    if(vfTelaAtualVF() === 'flash'){
+      // fixed, cobre só a viewport visível - o conteúdo do Flash nunca
+      // é grande o bastante pra precisar de scroll, então não faz
+      // sentido medir scrollHeight aqui (isso inclusive era a causa do
+      // canvas ficar "maior que a tela" sem necessidade nesse contexto)
+      canvas.style.height = window.innerHeight + 'px';
+    }else{
+      // teto de segurança: mesmo que outra causa de crescimento apareça no
+      // futuro, o canvas nunca passa de 4x a altura da viewport - um
+      // canvas gigante (buffer de pixels enorme) deixa toda operação de
+      // desenho pesada e lenta, sintoma real já visto quando esse bug
+      // ainda não tinha sido corrigido de vez
+      const alturaMaxima = window.innerHeight * 8;
+      canvas.style.height = Math.min(Math.max(content.scrollHeight, content.offsetHeight), alturaMaxima) + 'px';
+    }
   }
   const rect = canvas.getBoundingClientRect();
   if(rect.width === 0 || rect.height === 0) return; // aba ainda escondida, não tem o que medir
@@ -7631,6 +7709,21 @@ function vfMostrarBalaoSessaoFlashVF(){
   vfIntervalSessaoVF = setInterval(vfAtualizarDisplayBalaoSessaoVF, 1000);
 }
 
+// a posição do balão é salva em pixels absolutos (arrasto livre) - isso
+// nunca se recalcula sozinho quando a orientação da tela muda (retrato
+// ↔ paisagem), então um balão arrastado pro canto podia ficar fora da
+// tela nova, ou "flutuando" no meio dela. Reseta pro local padrão do CSS
+// toda vez que o tamanho da janela muda de verdade - mesmo comportamento
+// de quando o balão reabre do zero
+window.addEventListener('resize', () => {
+  const balao = document.getElementById('vf-sessao-balao');
+  if(!balao || balao.classList.contains('hidden')) return;
+  balao.style.left = '';
+  balao.style.top = '';
+  balao.style.right = '';
+  balao.style.bottom = '';
+});
+
 function vfAtualizarDisplayBalaoSessaoVF(){
   if(!vfSessaoAtivaVF) return;
   const balao = document.getElementById('vf-sessao-balao');
@@ -8179,9 +8272,9 @@ function renderizarItemVF(){
   }
 
   const tagsPublicacao = [
-    item.eh_numero ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap">NÚMERO</span>` : '',
-    item.eh_lista ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap">LISTA</span>` : '',
-    item.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''
+    item.eh_numero ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center">NÚMERO</span>` : '',
+    item.eh_lista ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center">LISTA</span>` : '',
+    item.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''
   ].filter(Boolean).join('');
 
   // tags customizadas (livres, criadas pelo usuário) - borda e texto na
@@ -8211,7 +8304,7 @@ function renderizarItemVF(){
           <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0;line-height:1.25">${escapeHtml(publicacao)}</p>
           ${item.capitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:1px 0 0 0;line-height:1.25">${rotuloCapituloDoLivro(publicacao)} ${escapeHtml(String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))}</p>` : ''}
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0;max-width:60%">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center;flex-shrink:0;max-width:60%">
           ${tagsPublicacao}
           ${tagsCustomizadasHtml}
           ${iconeTagAdicionar}
@@ -8536,6 +8629,13 @@ async function responderVF(resposta){
 
   entrada.resposta = resposta;
   entrada.acertou = acertou;
+  // os botões mudam de posição/rótulo assim que essa resposta é
+  // registrada (Verdadeiro/Falso vira Anterior/Próxima, na MESMA posição
+  // física da tela) - sem essa trava, um toque duplo rápido no mesmo
+  // lugar (ou o dedo/caneta ainda pressionando quando o botão novo
+  // aparece) acionava Próxima/Anterior sem querer, avançando ou voltando
+  // antes da pessoa ver o resultado. Checada em proximoVF/anteriorVF
+  estadoVF.bloqueadoAteMs = agoraMs + 400;
   estadoVF.respondidasSessao++;
   if(acertou) estadoVF.acertosSessao++;
   vfPersistirEstadoSessaoVF(); // guarda o estado real da sessão - sem isso, fechar e reabrir o app "zerava" as questões da sessão mesmo com a sessão ainda pausada/ativa
@@ -8656,9 +8756,35 @@ function vfRenderizarListaTagsAtualVF(){
   const container = document.getElementById('vf-tags-lista-atual');
   if(!container || !vfQuestaoIdTagsAtualVF) return;
   const tags = vfTagsPorQuestaoVF.get(vfQuestaoIdTagsAtualVF) || [];
-  container.innerHTML = tags.length
-    ? tags.map(t => `<span style="color:#B23A34;font-weight:600;font-size:var(--fs-b);border:1.5px solid #B23A34;border-radius:8px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px">${escapeHtml(t.nome)}<span onclick="vfRemoverTagVF('${t.id}')" style="cursor:pointer;color:#999;font-weight:700">✕</span></span>`).join('')
-    : '<p style="color:#999;font-size:var(--fs-c)">Nenhuma tag ainda.</p>';
+  // tags automáticas (eh_numero/eh_lista) são campos estruturais da
+  // questão, não registros na tabela de tags customizadas - por isso não
+  // apareciam aqui antes, mesmo já visíveis como badge na tela principal.
+  // Mostradas com o mesmo estilo sólido do badge (visualmente diferente
+  // das customizadas, que têm só borda), permitindo desmarcar direto daqui
+  const itemAtual = estadoVF?.pool?.find(i => i.id === vfQuestaoIdTagsAtualVF) || estadoVF?.historico?.find(h => h.item.id === vfQuestaoIdTagsAtualVF)?.item;
+  const tagsAutomaticas = [
+    itemAtual?.eh_numero ? {campo: 'eh_numero', nome: 'NÚMERO'} : null,
+    itemAtual?.eh_lista ? {campo: 'eh_lista', nome: 'LISTA'} : null
+  ].filter(Boolean);
+  const htmlAutomaticas = tagsAutomaticas.map(t =>
+    `<span style="background:#B23A34;color:#fff;font-weight:700;font-size:var(--fs-b);border-radius:8px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px;letter-spacing:.03em">${t.nome}<span onclick="vfDesmarcarTagAutomaticaVF('${t.campo}')" style="cursor:pointer;color:#F0C9C5;font-weight:700">✕</span></span>`
+  ).join('');
+  const htmlCustomizadas = tags.map(t => `<span style="color:#B23A34;font-weight:600;font-size:var(--fs-b);border:1.5px solid #B23A34;border-radius:8px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px">${escapeHtml(t.nome)}<span onclick="vfRemoverTagVF('${t.id}')" style="cursor:pointer;color:#999;font-weight:700">✕</span></span>`).join('');
+  const html = htmlAutomaticas + htmlCustomizadas;
+  container.innerHTML = html || '<p style="color:#999;font-size:var(--fs-c)">Nenhuma tag ainda.</p>';
+}
+
+// desmarca eh_numero/eh_lista direto pelo popup de tags - espelha a
+// mesma lógica de vfAdicionarTagVF, só que no sentido inverso
+async function vfDesmarcarTagAutomaticaVF(campoEstrutural){
+  if(!vfQuestaoIdTagsAtualVF) return;
+  const questaoId = vfQuestaoIdTagsAtualVF;
+  const {error} = await sb.from('questoes_vf').update({[campoEstrutural]: false}).eq('id', questaoId);
+  if(error) return;
+  const itemNoPool = estadoVF?.pool?.find(i => i.id === questaoId) || estadoVF?.historico?.find(h => h.item.id === questaoId)?.item;
+  if(itemNoPool) itemNoPool[campoEstrutural] = false; // reflete na tela na hora, sem esperar recarregar
+  vfRenderizarListaTagsAtualVF();
+  renderizarItemVF();
 }
 
 function vfAbrirPopupTagsVF(questaoId){
@@ -9059,6 +9185,7 @@ async function confirmarExclusaoVF(){
 
 async function proximoVF(){
   if(!estadoVF) return;
+  if(agoraCorrigidoVF() < (estadoVF.bloqueadoAteMs||0)) return; // toque duplo acidental logo após responder — o botão mudou de Verdadeiro/Falso pra Próxima na mesma posição física
   vfDespausarSeNecessarioVF(); // avançar é sinal claro de que está ativo, mesmo raciocínio de responderVF
   if(vfVisualizandoSalvoInfoVF){ vfSairDoModoVisualizacaoSalvoVF(); renderizarItemVF(); return; } // "Próxima" a partir de uma visualização de salvo só volta pra sessão real - não avança a partir da posição antiga
   if(estadoVF.posicao < estadoVF.historico.length - 1){
@@ -9082,6 +9209,7 @@ async function proximoVF(){
 
 function anteriorVF(){
   if(!estadoVF || estadoVF.posicao <= 0) return;
+  if(agoraCorrigidoVF() < (estadoVF.bloqueadoAteMs||0)) return; // mesma trava de toque duplo acidental logo após responder
   if(vfVisualizandoSalvoInfoVF){ vfSairDoModoVisualizacaoSalvoVF(); renderizarItemVF(); return; } // mesmo raciocínio de proximoVF - só volta pra sessão real
   estadoVF.posicao--;
   limparCanvasDesenhoVF();
