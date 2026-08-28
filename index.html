@@ -1588,7 +1588,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-374';
+const VERSAO_APP = '2026-07-25-376';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5946,6 +5946,19 @@ document.addEventListener('touchend', (e) => {
   const areaValida = elementoContainer.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual');
   if(!areaValida) return;
   vfAplicarMarcacaoNoRangeVF(vfModoMarcacaoTextoAtivo, range, apagando);
+  // Quest: marcação já vale imediatamente, vinculada ao caderno atual -
+  // diferente do Flash, que só persiste depois de responder (ver
+  // avancarParaProximaVF/registrarRespostaVF)
+  if(vfTelaAtualVF() === 'quest' && cadernoAtual && questoesCaderno[indiceQuestaoAtual]){
+    vfPersistirMarcacoesTextoVF('quest', cadernoAtual.id, questoesCaderno[indiceQuestaoAtual].id);
+  }
+  // Flash: só persiste se a questão atual JÁ foi respondida (já existe um
+  // idRespostaVF pra vincular) - grifar na tela de explicação/resultado,
+  // depois de já ter respondido, também precisa salvar
+  if(vfTelaAtualVF() === 'flash' && estadoVF){
+    const entradaAtual = estadoVF.historico[estadoVF.posicao];
+    if(entradaAtual && entradaAtual.idRespostaVF) vfPersistirMarcacoesTextoVF('flash', entradaAtual.idRespostaVF, entradaAtual.item.id);
+  }
 });
 
 // sem esse handler, se o sistema cancelasse o gesto no meio (touchcancel
@@ -6250,6 +6263,66 @@ function vfMesclarSpansAdjacentesVF(container, tipo){
       }
     }
   }
+}
+
+// ---- persistência de marcações de texto (grifar/sublinhar/riscar) no
+// Supabase - compartilhada entre Flash e Quest. Cada um identifica sua
+// própria "tentativa" (escopoId): no Flash é o id da linha em
+// log_respostas_vf daquela resposta específica, no Quest é o id do
+// caderno. Isso garante que a mesma questão aparecendo de novo numa
+// rodada/caderno diferente vem sem marcação nenhuma - só a MESMA
+// tentativa/visualização específica mantém o que foi marcado ----
+
+// lê as marcações atuais de um container (enunciado ou correção) e
+// devolve como array de {container, tipo, cor, offsetInicio, offsetFim} -
+// formato pronto pra gravar no banco
+function vfExtrairMarcacoesAtuaisVF(container, nomeContainer){
+  if(!container) return [];
+  return [...container.querySelectorAll('.vf-marcacao-texto-sessao')].map(span => {
+    const {inicio, fim} = vfOffsetDoElementoVF(container, span);
+    return {container: nomeContainer, tipo: span.dataset.tipoMarca, cor: span.dataset.corMarca, offsetInicio: inicio, offsetFim: fim};
+  });
+}
+
+// substitui todas as marcações salvas daquela tentativa específica pelo
+// estado atual da tela - mais simples e resistente a falha parcial do
+// que tentar sincronizar incrementalmente marca por marca
+async function vfPersistirMarcacoesTextoVF(origem, escopoId, questaoId){
+  if(!usuarioAtual || !escopoId || !questaoId) return;
+  const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
+  const correcao = document.getElementById('vf-correcao-atual');
+  const marcacoes = [
+    ...vfExtrairMarcacoesAtuaisVF(enunciado, 'enunciado'),
+    ...vfExtrairMarcacoesAtuaisVF(correcao, 'correcao'),
+  ];
+  await sb.from('marcacoes_texto_vf').delete().eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId).eq('questao_id', questaoId);
+  if(marcacoes.length){
+    await sb.from('marcacoes_texto_vf').insert(marcacoes.map(m => ({
+      usuario_id: usuarioAtual.id, origem, escopo_id: escopoId, questao_id: questaoId,
+      container: m.container, tipo_marca: m.tipo, cor: m.cor, offset_inicio: m.offsetInicio, offset_fim: m.offsetFim
+    })));
+  }
+}
+
+// busca e recria as marcações salvas daquela tentativa específica -
+// chamado ao exibir uma questão, antes de qualquer interação nova
+async function vfCarregarMarcacoesTextoVF(origem, escopoId, questaoId){
+  if(!usuarioAtual || !escopoId || !questaoId) return;
+  const {data, error} = await sb.from('marcacoes_texto_vf').select('*').eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId).eq('questao_id', questaoId);
+  if(error || !data || !data.length) return;
+  const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
+  const correcao = document.getElementById('vf-correcao-atual');
+  // ordena do fim pro início - aplicar marcações mexe no DOM (spans
+  // novos), o que pode alterar a contagem de nós de texto restante;
+  // aplicar de trás pra frente evita que uma marcação já aplicada
+  // desalinhe os offsets das marcações seguintes no mesmo container
+  const ordenadas = [...data].sort((a,b) => b.offset_inicio - a.offset_inicio);
+  ordenadas.forEach(m => {
+    const container = m.container === 'correcao' ? correcao : enunciado;
+    if(!container) return;
+    const range = vfRangeDoOffsetGlobalVF(container, m.offset_inicio, m.offset_fim);
+    if(range) vfCriarSpanMarcaVF(m.tipo_marca, m.cor, range);
+  });
 }
 
 // clicar na BOLINHA (só existe/aparece quando a ferramenta já está
@@ -8011,6 +8084,10 @@ function renderizarItemVF(){
   `;
 
   renderizarBarraFixaVF(item, jaRespondida);
+  // marcação de texto só existe pra recuperar se essa questão já foi
+  // respondida ANTES (idRespostaVF já foi gravado num momento anterior) -
+  // sem isso ainda, não tem o que carregar, o enunciado já vem limpo
+  if(entrada.idRespostaVF) vfCarregarMarcacoesTextoVF('flash', entrada.idRespostaVF, item.id);
 }
 
 // ---- editar a afirmação segurando nela (só Carlos, é conteúdo) ----
@@ -8364,7 +8441,7 @@ async function responderVF(resposta){
   // vence, podendo deixar o intervalo cheio no banco mesmo a tela
   // mostrando encolhido (C2 do relatório da Fable)
   const promiseRespostaVF = (async () => {
-    const [rpcResultado] = await Promise.all([
+    const [rpcResultado, logRespostaResultado] = await Promise.all([
       sb.rpc('incrementar_contador_vf', {p_usuario_id: usuarioAtual.id}),
       sb.from('repeticao_vf').upsert({
         usuario_id: usuarioAtual.id, questao_vf_id: item.id,
@@ -8377,7 +8454,7 @@ async function responderVF(resposta){
       questao_vf_id: item.id, usuario_id: usuarioAtual.id, acertou,
       tempo_ms: Math.round(tempoS*1000), tempo_bruto_ms: tempoBrutoMs, estado_antes: estadoAntes,
       intervalo_antes: intervaloAntes, intervalo_depois: item.intervalo_horas
-    })
+    }).select('id').single()
   ]);
   escritasPendentesVF.delete(item.id); // upsert confirmado — não precisa mais do valor de espera
   // Math.max, não atribuição direta — em respostas muito rápidas em
@@ -8386,6 +8463,16 @@ async function responderVF(resposta){
   // regrediria nesse instante e uma terceira resposta pegaria marca_contador
   // duplicado
   if(rpcResultado?.data != null) estadoVF.contadorGlobal = Math.max(estadoVF.contadorGlobal, rpcResultado.data);
+  // guarda o id dessa resposta específica na entrada do histórico - é essa
+  // "tentativa" (não a questão em si) que escopa a marcação de texto. Se
+  // já tinha algo marcado (grifado antes de responder), persiste agora
+  // vinculado a esse id - só a partir desse momento a marcação sobrevive
+  // a fechar o app
+  const idRespostaCriada = logRespostaResultado?.data?.id;
+  if(idRespostaCriada){
+    entrada.idRespostaVF = idRespostaCriada;
+    vfPersistirMarcacoesTextoVF('flash', idRespostaCriada, item.id);
+  }
   })();
   vfRespostasEmVooVF.set(item.id, promiseRespostaVF);
   promiseRespostaVF.finally(() => {
@@ -9773,6 +9860,7 @@ function renderizarQuestaoAtual(){
       </button>
     </div>` : ''}`;
   document.getElementById('questao-atual').innerHTML = html;
+  if(cadernoAtual && q) vfCarregarMarcacoesTextoVF('quest', cadernoAtual.id, q.id);
 }
 
 function renderizarResultado(q,resposta){
