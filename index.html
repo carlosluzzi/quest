@@ -290,9 +290,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .item-lista-modulo:last-child{border-bottom:none}
 .item-lista-modulo:active{background:#F5F5F4}
 .card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado,body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado *,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
 #vf-correcao-atual{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf-correcao-atual *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
 .enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap}
 .linha-numerada{display:flex;gap:8px;margin-top:10px;align-items:flex-start}
 .linha-marcador{flex-shrink:0;font-weight:400;min-width:16px}
@@ -1577,7 +1575,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-366';
+const VERSAO_APP = '2026-07-25-367';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4477,7 +4475,13 @@ document.addEventListener('touchstart', (e) => {
   if(vfModoDestaque){
     const contentParaDestaque = document.getElementById('content');
     vfScrollTopNoInicioTracoVF = contentParaDestaque ? contentParaDestaque.scrollTop : 0;
-    const alturaVisivel = contentParaDestaque ? contentParaDestaque.clientHeight : canvas.height;
+    const alturaVisivelBruta = contentParaDestaque ? contentParaDestaque.clientHeight : canvas.height;
+    // limita à menor dimensão da tela (não à altura visível inteira) -
+    // achado real: em retrato a altura visível é bem maior que em
+    // paisagem, deixando o canvas temporário maior e cada redesenho mais
+    // caro - só em retrato o desenho ficava mais lento. Um traço de
+    // destaque raramente precisa de mais altura que isso de qualquer forma
+    const alturaVisivel = Math.min(alturaVisivelBruta, Math.min(window.innerWidth, window.innerHeight));
     const dpr = (window.devicePixelRatio || 1) * 1.5;
     const alturaBufferDestaque = alturaVisivel * dpr;
     const canvasPrep = vfPrepararCanvasDestaqueVF(canvas.width, alturaBufferDestaque);
@@ -4554,7 +4558,8 @@ document.addEventListener('touchmove', (e) => {
           if(vfModoDestaque){
             const contentParaDestaque2 = document.getElementById('content');
             vfScrollTopNoInicioTracoVF = contentParaDestaque2 ? contentParaDestaque2.scrollTop : 0;
-            const alturaVisivel2 = contentParaDestaque2 ? contentParaDestaque2.clientHeight : canvas.height;
+            const alturaVisivel2Bruta = contentParaDestaque2 ? contentParaDestaque2.clientHeight : canvas.height;
+            const alturaVisivel2 = Math.min(alturaVisivel2Bruta, Math.min(window.innerWidth, window.innerHeight));
             const dpr = (window.devicePixelRatio || 1) * 1.5;
             const alturaBufferDestaque2 = alturaVisivel2 * dpr;
             const canvasPrep2 = vfPrepararCanvasDestaqueVF(canvas.width, alturaBufferDestaque2);
@@ -5716,6 +5721,9 @@ function fecharBarraDesenhoVF(){
 // clica pra configurar
 function vfDesativarModoMarcacaoTextoVF(){
   vfModoMarcacaoTextoAtivo = null;
+  vfLimparPreviewMarcacaoVF(); // se desativou no meio de um arrasto, não deixa o preview visual preso na tela
+  vfMarcacaoTextoArrastandoVF = false;
+  vfMarcacaoTextoRangeAtualVF = null;
   document.querySelectorAll('.vf-btn-marcacao-texto').forEach(btn => { btn.style.background = 'none'; });
   // o fundo azul do grifar fica no GRUPO PAI (vf-grupo-grifar), não no
   // próprio botão "A" - resetar só os .vf-btn-marcacao-texto não bastava,
@@ -5879,9 +5887,15 @@ document.addEventListener('touchmove', (e) => {
     range.setStart(rangeFim.startContainer, rangeFim.startOffset);
     range.setEnd(rangeInicio.startContainer, rangeInicio.startOffset);
   }
-  const selecao = window.getSelection();
-  selecao.removeAllRanges();
-  selecao.addRange(range);
+  // guarda o range calculado numa variável própria, e mostra o preview
+  // visual desenhando retângulos manualmente por cima do texto - NUNCA
+  // usa window.getSelection()/addRange() (API nativa de seleção). Achado
+  // real: no Safari/iOS, ativar a seleção nativa de texto pode disparar
+  // o comportamento nativo de lupa/ajuste de zoom pra facilitar seleção
+  // precisa, e isso reflui o texto no meio da frase - o preventDefault no
+  // touchstart não bastou pra evitar isso por completo
+  vfMarcacaoTextoRangeAtualVF = range;
+  vfMostrarPreviewMarcacaoVF(range);
 }, {passive: false});
 
 document.addEventListener('touchend', (e) => {
@@ -5889,18 +5903,50 @@ document.addEventListener('touchend', (e) => {
   const apagando = vfMarcacaoTextoDirecaoApagarVF;
   vfMarcacaoTextoArrastandoVF = false;
   vfMarcacaoTextoPontoInicialVF = null;
+  vfLimparPreviewMarcacaoVF();
   const touch = e.changedTouches[0];
-  if(!touch) return; // dedo ou caneta - com marcação de texto ativa, os dois marcam agora
-  const selecao = window.getSelection();
-  if(!selecao || selecao.rangeCount === 0 || selecao.isCollapsed) return; // não formou seleção nesse toque
-  const range = selecao.getRangeAt(0);
+  const range = vfMarcacaoTextoRangeAtualVF;
+  vfMarcacaoTextoRangeAtualVF = null;
+  if(!touch || !range || range.collapsed) return; // dedo ou caneta - com marcação de texto ativa, os dois marcam agora. Sem range formado nesse toque, nada a fazer
   const noContainer = range.commonAncestorContainer;
   const elementoContainer = noContainer.nodeType === 3 ? noContainer.parentElement : noContainer;
   const areaValida = elementoContainer.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual');
   if(!areaValida) return;
   vfAplicarMarcacaoNoRangeVF(vfModoMarcacaoTextoAtivo, range, apagando);
-  selecao.removeAllRanges();
 });
+
+// preview visual manual da seleção de texto em andamento - desenha
+// retângulos translúcidos por cima do texto correspondente ao range,
+// sem nunca acionar a API nativa de seleção do navegador (ver motivo
+// acima). Reaproveita os mesmos elementos entre atualizações, só
+// reposicionando - evita criar/destruir DOM a cada movimento
+let vfMarcacaoTextoRangeAtualVF = null;
+let vfDivsPreviewMarcacaoVF = [];
+function vfMostrarPreviewMarcacaoVF(range){
+  const retangulos = Array.from(range.getClientRects());
+  // remove divs excedentes (a seleção diminuiu)
+  while(vfDivsPreviewMarcacaoVF.length > retangulos.length){
+    const div = vfDivsPreviewMarcacaoVF.pop();
+    div.remove();
+  }
+  retangulos.forEach((rect, i) => {
+    let div = vfDivsPreviewMarcacaoVF[i];
+    if(!div){
+      div = document.createElement('div');
+      div.style.cssText = 'position:fixed;pointer-events:none;z-index:260;background:rgba(178,58,52,0.28);border-radius:2px;';
+      document.body.appendChild(div);
+      vfDivsPreviewMarcacaoVF.push(div);
+    }
+    div.style.left = rect.left + 'px';
+    div.style.top = rect.top + 'px';
+    div.style.width = rect.width + 'px';
+    div.style.height = rect.height + 'px';
+  });
+}
+function vfLimparPreviewMarcacaoVF(){
+  vfDivsPreviewMarcacaoVF.forEach(div => div.remove());
+  vfDivsPreviewMarcacaoVF = [];
+}
 
 // converte um (node, offset) do DOM pra uma posição de caractere GLOBAL
 // dentro do container - usado pra reconstruir ranges depois de mexer no
