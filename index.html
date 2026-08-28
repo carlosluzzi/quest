@@ -1567,7 +1567,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-344';
+const VERSAO_APP = '2026-07-25-346';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2527,6 +2527,22 @@ function vfEstaVisivelAgora(){
   const questResolucao = document.getElementById('quests-resolucao');
   if(questResolucao && !questResolucao.classList.contains('hidden')) return true;
   return false;
+}
+
+// a ferramenta de desenho (canvas, caneta, borracha, destaque) é a MESMA
+// nos dois lugares - qualquer melhoria nela vale pros dois. Mas a TELA
+// em volta é diferente (Flash vs Quest), e alguns comportamentos
+// precisam ser específicos de cada uma (ex: bloquear o scroll de
+// #content durante o desenho só faz sentido no Quest, onde o bug de
+// "a caneta rola a página" foi relatado - no Flash isso nunca era
+// necessário). Uma função única, chamada em todo lugar que precisa
+// dessa distinção, evita checagens repetidas e inconsistentes
+function vfTelaAtualVF(){
+  const flash = document.getElementById('aba-vf');
+  if(flash && !flash.classList.contains('hidden')) return 'flash';
+  const questResolucao = document.getElementById('quests-resolucao');
+  if(questResolucao && !questResolucao.classList.contains('hidden')) return 'quest';
+  return null;
 }
 
 // mostra/esconde o canvas de desenho global - vive fora do #app-shell,
@@ -4372,9 +4388,7 @@ document.addEventListener('touchstart', (e) => {
   // "a caneta rola a página" foi relatado (questão longa, precisa de
   // scroll). No Flash isso não era necessário e mexer nesse scroll ali
   // causava efeito colateral real (voltar ao comportamento de antes)
-  if(!document.getElementById('aba-vf').classList.contains('hidden')){
-    // está no Flash - não bloqueia #content, comportamento original
-  }else{
+  if(vfTelaAtualVF() === 'quest'){
     const contentElDesenho = document.getElementById('content');
     if(contentElDesenho) contentElDesenho.style.overflow = 'hidden';
   }
@@ -4423,7 +4437,7 @@ document.addEventListener('touchmove', (e) => {
           }
           document.body.style.touchAction = 'none';
           document.documentElement.style.overflow = 'hidden';
-          if(document.getElementById('aba-vf').classList.contains('hidden')){
+          if(vfTelaAtualVF() === 'quest'){
             const contentElDesenho2 = document.getElementById('content');
             if(contentElDesenho2) contentElDesenho2.style.overflow = 'hidden';
           }
