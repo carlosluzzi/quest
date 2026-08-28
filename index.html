@@ -402,6 +402,16 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
     // momento, então recalcular aqui só fazia o app-shell inteiro tremer
     // a cada disparo espúrio. Suspende até o traço terminar
     if(typeof vfDesenhandoAgora !== 'undefined' && vfDesenhandoAgora) return;
+    // mesma suspensão, agora também durante o arrasto de grifar/sublinhar/
+    // riscar - achado real: esse sistema tem sua própria variável de
+    // "arrastando agora" (separada da do desenho), e nunca tinha sido
+    // incluída aqui. Um disparo espúrio de scroll/resize do visualViewport
+    // durante esse arrasto (mesma causa já documentada acima pra caneta)
+    // recalculava --vv-top/--vh-real no meio do gesto, e como vários
+    // elementos usam essas variáveis pra se posicionar, isso reorganizava
+    // o layout - inclusive o texto sendo selecionado, quebrando linha no
+    // meio da frase bem na hora de arrastar
+    if(typeof vfMarcacaoTextoArrastandoVF !== 'undefined' && vfMarcacaoTextoArrastandoVF) return;
     const vv = window.visualViewport;
     const alturaNova = vv ? vv.height : window.innerHeight;
     const topoNovo = vv ? vv.offsetTop : 0;
@@ -1575,7 +1585,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-367';
+const VERSAO_APP = '2026-07-25-368';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
