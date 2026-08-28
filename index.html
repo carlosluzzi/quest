@@ -1577,7 +1577,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-364';
+const VERSAO_APP = '2026-07-25-365';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4863,7 +4863,7 @@ function vfFinalizarTracoDesenho(e){
   // toda em vez de salvar o rasurão como um traço normal - com
   // segurança: o estado de antes continua acessível pelo Desfazer, caso
   // tenha sido sem querer
-  if(vfFormaTracoAtualVF && !vfModoBorracha){
+  if(vfFormaTracoAtualVF && !vfModoBorracha && !vfModoDestaque){
     const larguraCaixa = vfFormaTracoAtualVF.maxX - vfFormaTracoAtualVF.minX;
     const alturaCaixa = vfFormaTracoAtualVF.maxY - vfFormaTracoAtualVF.minY;
     const diagonalCaixa = Math.hypot(larguraCaixa, alturaCaixa);
@@ -5920,6 +5920,30 @@ function vfRangeDoOffsetGlobalVF(container, offsetInicio, offsetFim){
 
 // cria de fato o span de marcação (extraído pra função própria - usado
 // tanto no caminho normal quanto depois de mesclar/substituir marcas)
+// divide um intervalo de offsets [inicio, fim) nos pedaços correspondentes
+// a cada "linha" (filho direto de bloco do container, tipo .enunciado-linha
+// ou .linha-numerada) que ele toca - um span de marcação nunca pode cruzar
+// a fronteira entre duas dessas divs. Achado real: um único span tentando
+// cobrir texto de duas linhas diferentes falhava no caminho normal
+// (surroundContents) e caía num fallback que prendia divs inteiras dentro
+// de um span inline, corrompendo a estrutura e fazendo o texto "quebrar"
+// e se reorganizar errado
+function vfSegmentosPorLinhaVF(container, inicio, fim){
+  const segmentos = [];
+  let cursor = 0;
+  for(const filho of container.children){
+    const tamanho = filho.textContent.length;
+    const filhoInicio = cursor, filhoFim = cursor + tamanho;
+    const segInicio = Math.max(inicio, filhoInicio), segFim = Math.min(fim, filhoFim);
+    if(segInicio < segFim) segmentos.push({inicio: segInicio, fim: segFim});
+    cursor = filhoFim;
+  }
+  // container sem filhos de bloco (texto solto direto nele) - trata como
+  // uma linha única, mantendo o comportamento de antes nesse caso
+  if(!segmentos.length && container.children.length === 0 && fim > inicio) segmentos.push({inicio, fim});
+  return segmentos;
+}
+
 function vfCriarSpanMarcaVF(tipo, cor, range){
   const span = document.createElement('span');
   span.className = 'vf-marcacao-texto-sessao';
@@ -6004,8 +6028,12 @@ function vfAplicarMarcacaoNoRangeVF(tipo, range, apagando){
     marcasExistentes.forEach(m => {
       const antesInicio = m.inicio, antesFim = Math.min(m.fim, offsetRangeInicio);
       const depoisInicio = Math.max(m.inicio, offsetRangeFim), depoisFim = m.fim;
-      if(antesInicio < antesFim){ const r = vfRangeDoOffsetGlobalVF(container, antesInicio, antesFim); if(r) vfCriarSpanMarcaVF(tipo, m.cor, r); }
-      if(depoisInicio < depoisFim){ const r = vfRangeDoOffsetGlobalVF(container, depoisInicio, depoisFim); if(r) vfCriarSpanMarcaVF(tipo, m.cor, r); }
+      if(antesInicio < antesFim){
+        vfSegmentosPorLinhaVF(container, antesInicio, antesFim).forEach(seg => { const r = vfRangeDoOffsetGlobalVF(container, seg.inicio, seg.fim); if(r) vfCriarSpanMarcaVF(tipo, m.cor, r); });
+      }
+      if(depoisInicio < depoisFim){
+        vfSegmentosPorLinhaVF(container, depoisInicio, depoisFim).forEach(seg => { const r = vfRangeDoOffsetGlobalVF(container, seg.inicio, seg.fim); if(r) vfCriarSpanMarcaVF(tipo, m.cor, r); });
+      }
     });
   }else{
     // marca/estende: desfaz as marcas tocadas e recria TUDO (união do
@@ -6023,8 +6051,11 @@ function vfAplicarMarcacaoNoRangeVF(tipo, range, apagando){
       pai.removeChild(m.span);
       pai.normalize();
     });
-    const r = vfRangeDoOffsetGlobalVF(container, uniaoInicio, uniaoFim);
-    if(r) vfCriarSpanMarcaVF(tipo, corAplicar, r);
+    const segmentos = vfSegmentosPorLinhaVF(container, uniaoInicio, uniaoFim);
+    segmentos.forEach(seg => {
+      const r = vfRangeDoOffsetGlobalVF(container, seg.inicio, seg.fim);
+      if(r) vfCriarSpanMarcaVF(tipo, corAplicar, r);
+    });
   }
 
   vfMesclarSpansAdjacentesVF(container, tipo);
