@@ -1585,7 +1585,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-371';
+const VERSAO_APP = '2026-07-25-372';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6107,12 +6107,17 @@ function vfCriarSpanMarcaVF(tipo, cor, range){
     span.style.textDecorationColor = cor;
     span.style.textDecorationThickness = '2.5px';
   }
+  // achado real (confirmado em vídeo): o caminho de reserva que existia
+  // aqui antes (extractContents + insertNode, usado quando surroundContents
+  // falhava) causava dano PERMANENTE na estrutura do DOM em itens com
+  // layout complexo (como os itens numerados I/II/III, que têm um <div>
+  // flex com sub-elementos internos) - e esse dano não desfazia nem
+  // removendo a marcação depois. Prefere não aplicar a marcação nesse
+  // segmento a arriscar quebrar o layout permanentemente
   try{
     range.surroundContents(span);
   }catch(e){
-    const fragmento = range.extractContents();
-    span.appendChild(fragmento);
-    range.insertNode(span);
+    return; // não consegue marcar esse segmento com segurança - melhor pular do que arriscar dano permanente
   }
   // limpeza: surroundContents em texto com aninhamento (outro tipo de
   // marca já dentro do range) às vezes deixa um span vazio residual pra
