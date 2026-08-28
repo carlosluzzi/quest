@@ -85,7 +85,7 @@ classe do timer do PSCPP Tracker, cor adaptada pra marca do Pilotquest
 /* pausado NÃO troca o fundo (igual o Tracker) - só o tempo fica
 acinzentado e a tag "PAUSADO" aparece em destaque. Cor de fundo do
 balão é sempre a mesma, ativo ou pausado - só o que muda é o conteúdo */
-#vf-sessao-balao-fechar{position:absolute;top:2px;right:6px;font-size:var(--fs-b);color:#E8B8B5;padding:6px;cursor:pointer}
+#vf-sessao-balao-toggle-tempo{position:absolute;top:2px;right:6px;color:#E8B8B5;padding:6px;cursor:pointer;display:flex}
 #vf-sessao-balao-nome{font-size:var(--fs-b);color:#E8B8B5;text-transform:uppercase;letter-spacing:.03em;padding-right:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
 #vf-sessao-balao-tempo{font-size:var(--fs-g);font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
 #vf-sessao-balao.pausado #vf-sessao-balao-tempo{color:#E8B8B5}
@@ -961,7 +961,7 @@ manual (iniciar/pausar/retomar/finalizar). HTML mínimo de propósito,
 igual ao padrão já usado no timer do PSCPP Tracker: os estados (rodando/
 pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div id="vf-sessao-balao" class="hidden">
-  <span id="vf-sessao-balao-fechar" onclick="vfEsconderBalaoSessaoFlashVF(event)">✕</span>
+  <span id="vf-sessao-balao-toggle-tempo" onclick="vfToggleOcultarTempoBalaoVF(event)" title="Ocultar/mostrar o tempo"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg></span>
   <div id="vf-sessao-balao-nome">Flash</div>
   <div id="vf-sessao-balao-tempo"></div>
   <div id="vf-sessao-balao-tag" class="vf-sessao-balao-tag"></div>
@@ -2702,6 +2702,7 @@ function trocarAba(nome){
   // não é mais filho de #aba-vf, então precisa ser mostrado/escondido
   // manualmente aqui, não herda mais do .hidden da aba automaticamente
   vfAtualizarVisibilidadeCanvasVF();
+  limparCanvasDesenhoVF(); // troca de aba = contexto novo - sem isso, um traço feito no Flash continuava visível (só escondido) ao entrar no Quest, "vazando" de uma aba pra outra
   document.querySelectorAll('#bottom-nav .nav-item').forEach(item=>item.classList.toggle('active', item.dataset.aba===nome));
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança, nunca fica presa escondida
   document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
@@ -4082,6 +4083,7 @@ let vfUltimoPontoDesenho = null;
 // mudou bastante, essa detecção precisa ser própria do app agora
 let vfPontoInicialTracoAtualVF = null;
 let vfUltimoTapLeveCanetaVF = null; // {x, y, quando} - só o tap anterior mais recente
+let vfSnapshotRegiaoTapLeveVF = null; // {ctx, x, y, lado, imageData} - região capturada no touchstart, restaurada se o toque virar um tap leve
 let vfPontoMedioAnterior = null;
 let vfPosicaoSuavizada = null; // suavização leve de x,y - reseta a cada novo traço (touchstart), ver uso em touchmove
 
@@ -4245,11 +4247,11 @@ if(VF_SUPORTA_COALESCED_VF){
 }
 
 let vfBotaoPendenteToqueInfo = null; // {x, y, identifier, limiar} - toque começou num ícone pequeno, decisão adiada até ver se vira arrasto
-const VF_LIMIAR_ARRASTO_BOTAO_PX = 40; // igualado ao limiar de nav-item - mesmo motivo (tremor da Apple Pencil "parada"), afeta qualquer botão pequeno igualmente
+const VF_LIMIAR_ARRASTO_BOTAO_PX = 14; // reduzido de 40 - com 40px era difícil demais começar a desenhar em cima de botões/menu na prática (precisava de um arrasto grande só pra "ativar")
 // menu lateral/de baixo usa um limiar bem mais generoso - a Apple Pencil
 // tem um tremor natural mesmo parada (documentado antes), e isso fazia
 // clicar no menu com a caneta falhar com mais frequência que com o dedo
-const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 40;
+const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 14;
 
 document.addEventListener('touchstart', (e) => {
   if(!vfEstaVisivelAgora()) return;
@@ -4294,6 +4296,23 @@ document.addEventListener('touchstart', (e) => {
 
   const rect = canvas.getBoundingClientRect();
   const ponto = {x: touch.clientX - rect.left, y: touch.clientY - rect.top};
+  // snapshot pequeno (não o canvas inteiro, que agora pode ser bem grande)
+  // da região ao redor do toque - se isso virar um tap leve (não um
+  // traço de verdade), restaura essa região depois, desfazendo qualquer
+  // marquinha que o tremor natural da mão/caneta tenha desenhado durante
+  // o toque antes do touchend perceber que era só um tap
+  try{
+    const ctxAtivoSnapshot = vfCtxDesenhoAtivoAgoraVF();
+    const dprSnapshot = (window.devicePixelRatio || 1) * 1.5;
+    const ladoSnapshot = 120 * dprSnapshot; // margem generosa - um tap leve não deveria se mover mais que isso
+    const xSnapshot = Math.round(ponto.x * dprSnapshot - ladoSnapshot/2);
+    const ySnapshot = Math.round(ponto.y * dprSnapshot - ladoSnapshot/2);
+    vfSnapshotRegiaoTapLeveVF = {
+      ctx: ctxAtivoSnapshot,
+      x: xSnapshot, y: ySnapshot, lado: ladoSnapshot,
+      imageData: ctxAtivoSnapshot.getImageData(xSnapshot, ySnapshot, ladoSnapshot, ladoSnapshot)
+    };
+  }catch(e){ vfSnapshotRegiaoTapLeveVF = null; } // fora dos limites do canvas ou outro erro - sem snapshot, o pior caso é a marquinha residual antiga (não regride nada)
   vfUltimoPontoDesenho = ponto;
   vfPontoMedioAnterior = ponto;
   vfPosicaoSuavizada = ponto; // reseta - não herda do traço anterior, senão o primeiro ponto "saltaria"
@@ -4616,6 +4635,13 @@ function vfFinalizarTracoDesenho(e){
     const distanciaTotal = Math.hypot(touchFinal.clientX - vfPontoInicialTracoAtualVF.x, touchFinal.clientY - vfPontoInicialTracoAtualVF.y);
     const LIMIAR_TAP_LEVE_PX = 10;
     if(distanciaTotal < LIMIAR_TAP_LEVE_PX){
+      // desfaz qualquer marquinha que o tremor natural da mão/caneta
+      // tenha desenhado durante esse toque - um tap (com ou sem virar
+      // duplo toque) nunca deve deixar rastro visual nenhum
+      if(vfSnapshotRegiaoTapLeveVF){
+        try{ vfSnapshotRegiaoTapLeveVF.ctx.putImageData(vfSnapshotRegiaoTapLeveVF.imageData, vfSnapshotRegiaoTapLeveVF.x, vfSnapshotRegiaoTapLeveVF.y); }catch(e){}
+        vfSnapshotRegiaoTapLeveVF = null;
+      }
       const agora = Date.now();
       const pontoAtual = vfPontoInicialTracoAtualVF;
       const tapAnterior = vfUltimoTapLeveCanetaVF;
@@ -4638,6 +4664,7 @@ function vfFinalizarTracoDesenho(e){
     }
   }
   vfPontoInicialTracoAtualVF = null;
+  vfSnapshotRegiaoTapLeveVF = null; // traço de verdade - não precisa mais do snapshot de restauração
   // sempre libera, mesmo que o identifier não bata exatamente (evita a
   // trava de scroll ficar presa ligada por algum caso raro do navegador)
   vfDesenhandoAgora = false;
@@ -6940,6 +6967,7 @@ function vfMostrarBalaoSessaoFlashVF(){
   balao.style.right = '';
   balao.style.bottom = '';
   balao.classList.remove('hidden');
+  vfAplicarPreferenciaOcultarTempoBalaoVF();
   vfAtualizarDisplayBalaoSessaoVF();
   if(vfIntervalSessaoVF) clearInterval(vfIntervalSessaoVF);
   vfIntervalSessaoVF = setInterval(vfAtualizarDisplayBalaoSessaoVF, 1000);
@@ -6955,17 +6983,30 @@ function vfAtualizarDisplayBalaoSessaoVF(){
   document.getElementById('vf-sessao-balao-btn-pausar').textContent = vfSessaoAtivaVF.pausado ? 'Retomar' : 'Pausar';
 }
 
-// "✕" nunca fecha de vez - some por 30s e volta sozinho já atualizado.
-// Mesma ideia do timer do Tracker: nunca deixa a sessão "órfã" sem
-// nenhum controle acessível na tela
-function vfEsconderBalaoSessaoFlashVF(e){
+// esconde/mostra só a contagem do tempo dentro do balão - o balão em si
+// nunca fecha mais, mas o tempo rodando pode incomodar/distrair, então
+// vira opcional. Preferência salva no aparelho, aplicada de novo toda
+// vez que o balão aparece (troca de aba, nova sessão, etc)
+const VF_ICONE_OLHO_ABERTO = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>';
+const VF_ICONE_OLHO_FECHADO = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.06 21.06 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.32 21.32 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+function vfAplicarPreferenciaOcultarTempoBalaoVF(){
+  const tempoEl = document.getElementById('vf-sessao-balao-tempo');
+  const btnToggle = document.getElementById('vf-sessao-balao-toggle-tempo');
+  if(!tempoEl || !btnToggle) return;
+  let oculto = false;
+  try{ oculto = localStorage.getItem('pscpp_vf_ocultar_tempo_balao') === '1'; }catch(e){}
+  tempoEl.style.display = oculto ? 'none' : '';
+  btnToggle.innerHTML = oculto ? VF_ICONE_OLHO_FECHADO : VF_ICONE_OLHO_ABERTO;
+}
+function vfToggleOcultarTempoBalaoVF(e){
   if(e) e.stopPropagation();
-  const balao = document.getElementById('vf-sessao-balao');
-  if(balao) balao.classList.add('hidden');
-  clearTimeout(vfSessaoBalaoEscondidoTimeoutVF);
-  vfSessaoBalaoEscondidoTimeoutVF = setTimeout(() => {
-    if(vfSessaoAtivaVF) vfMostrarBalaoSessaoFlashVF();
-  }, 30000);
+  const tempoEl = document.getElementById('vf-sessao-balao-tempo');
+  const btnToggle = document.getElementById('vf-sessao-balao-toggle-tempo');
+  if(!tempoEl || !btnToggle) return;
+  const vaiOcultar = tempoEl.style.display !== 'none';
+  tempoEl.style.display = vaiOcultar ? 'none' : '';
+  btnToggle.innerHTML = vaiOcultar ? VF_ICONE_OLHO_FECHADO : VF_ICONE_OLHO_ABERTO;
+  try{ localStorage.setItem('pscpp_vf_ocultar_tempo_balao', vaiOcultar ? '1' : '0'); }catch(err){}
 }
 
 // mostra o botão "Iniciar sessão" quando não tem sessão ativa, esconde
@@ -7028,7 +7069,7 @@ function vfFinalizarArrastoBalaoVF(){
 (function vfConfigurarArrastoBalaoSessaoVF(){
   const balao = document.getElementById('vf-sessao-balao');
   if(!balao) return;
-  const alvoEhControleInterno = (target) => target.id === 'vf-sessao-balao-fechar' || !!target.closest('.vf-sessao-balao-btns');
+  const alvoEhControleInterno = (target) => !!target.closest('#vf-sessao-balao-toggle-tempo') || !!target.closest('.vf-sessao-balao-btns');
   balao.addEventListener('touchstart', (e) => {
     if(alvoEhControleInterno(e.target)) return;
     const t = e.touches[0];
@@ -7057,7 +7098,7 @@ function vfFinalizarArrastoBalaoVF(){
   // com a Apple Pencil. touchend explícito garante que sempre funcione,
   // com preventDefault pra não disparar a ação de novo quando o clique
   // sintético eventualmente também disparar
-  const controlesInternos = balao.querySelectorAll('#vf-sessao-balao-fechar, .vf-sessao-balao-btns > [onclick]');
+  const controlesInternos = balao.querySelectorAll('#vf-sessao-balao-toggle-tempo, .vf-sessao-balao-btns > [onclick]');
   controlesInternos.forEach(el => {
     el.addEventListener('touchend', (e) => {
       e.preventDefault();
@@ -7102,26 +7143,6 @@ window.addEventListener('pagehide', () => {
     vfSalvarSessaoNoStorageVF();
   }
 });
-
-// duplo toque em qualquer lugar da aba V/F reabre o balão da sessão, se
-// ele estiver escondido (depois do "✕", ou se a pessoa nunca reparou que
-// ele existia). Detecção simples por intervalo entre toques - não achei
-// um sistema de duplo toque já pronto no código pra reaproveitar aqui
-let vfUltimoToqueParaReabrirBalaoVF = 0;
-document.addEventListener('touchend', (e) => {
-  if(!vfSessaoAtivaVF) return;
-  if(!vfEstaVisivelAgora()) return; // só dentro da aba do Flash
-  const balao = document.getElementById('vf-sessao-balao');
-  if(!balao || !balao.classList.contains('hidden')) return; // já visível, nada a fazer
-  if(e.target.closest('#vf-sessao-balao')) return; // toque no próprio balão não conta
-  const agora = Date.now();
-  if(agora - vfUltimoToqueParaReabrirBalaoVF < 400){
-    vfMostrarBalaoSessaoFlashVF();
-    vfUltimoToqueParaReabrirBalaoVF = 0;
-  }else{
-    vfUltimoToqueParaReabrirBalaoVF = agora;
-  }
-}, {passive: true});
 
 async function entrarNoModoVF(){
   popularFiltroModuloVF();
@@ -9052,6 +9073,7 @@ function irParaQuestao(i){
   indiceQuestaoAtual = i;
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
+  limparCanvasDesenhoVF(); // questão nova = rascunho da anterior some, mesmo raciocínio já usado no Flash
   renderizarQuestaoAtual();
 }
 
