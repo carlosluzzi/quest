@@ -1585,7 +1585,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-370';
+const VERSAO_APP = '2026-07-25-371';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5848,6 +5848,7 @@ function vfAtivarModoMarcacaoTextoVF(tipo){
 // diretamente pelas coordenadas do dedo a cada movimento, então um
 // simples arrasto direto sobre o texto já basta ----
 let vfMarcacaoTextoPontoInicialVF = null; // {x, y} de onde o dedo tocou primeiro
+let vfMarcacaoTextoContainerVF = null; // container válido guardado no início do gesto - usado pra "grampear" o arrasto dentro dele
 let vfMarcacaoTextoArrastandoVF = false;
 let vfMarcacaoTextoDirecaoApagarVF = false; // calculada 1x por movimento, reaproveitada no touchend
 
@@ -5857,8 +5858,8 @@ document.addEventListener('touchstart', (e) => {
   const touch = e.touches[0];
   if(!touch) return;
   const elemento = document.elementFromPoint(touch.clientX, touch.clientY);
-  const areaValida = elemento && elemento.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual');
-  if(!areaValida) return;
+  const containerValido = elemento && elemento.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual');
+  if(!containerValido) return;
   // bloqueia o comportamento nativo de seleção desde o toque inicial -
   // sem isso, o Safari/iOS pode acionar a lupa de seleção de texto e
   // reajustar zoom/layout pra facilitar a seleção precisa, causando
@@ -5866,6 +5867,7 @@ document.addEventListener('touchstart', (e) => {
   e.preventDefault();
   vfLimparPreviewMarcacaoVF(); // segurança extra - nunca começa um gesto novo com resíduo visual de um anterior
   vfMarcacaoTextoPontoInicialVF = {x: touch.clientX, y: touch.clientY};
+  vfMarcacaoTextoContainerVF = containerValido; // guardado pra "grampear" o arrasto dentro dele, mesmo que o dedo saia (ex: em cima de uma alternativa logo abaixo)
   vfMarcacaoTextoArrastandoVF = true;
   vfMarcacaoTextoDirecaoApagarVF = false; // reseta - até mover de verdade, assume "marcando" (mais seguro como padrão)
 }, {passive: false});
@@ -5876,8 +5878,23 @@ document.addEventListener('touchmove', (e) => {
   if(!touch) return;
   if(typeof document.caretRangeFromPoint !== 'function') return; // API não suportada nesse navegador - sem seleção customizada
   const rangeInicio = document.caretRangeFromPoint(vfMarcacaoTextoPontoInicialVF.x, vfMarcacaoTextoPontoInicialVF.y);
-  const rangeFim = document.caretRangeFromPoint(touch.clientX, touch.clientY);
+  let rangeFim = document.caretRangeFromPoint(touch.clientX, touch.clientY);
   if(!rangeInicio || !rangeFim) return;
+  // se o ponto atual caiu fora do container válido (ex: o dedo escorregou
+  // pra cima de uma alternativa logo abaixo do enunciado), grampeia pra
+  // borda mais próxima do container em vez de usar o ponto real - sem
+  // isso, a seleção podia "vazar" pra dentro de outro elemento (um botão
+  // inteiro, por exemplo), não só o texto puro do enunciado
+  const elementoNoPontoFim = document.elementFromPoint(touch.clientX, touch.clientY);
+  const dentroDoContainer = elementoNoPontoFim && vfMarcacaoTextoContainerVF && elementoNoPontoFim.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual') === vfMarcacaoTextoContainerVF;
+  if(!dentroDoContainer && vfMarcacaoTextoContainerVF){
+    const rectContainer = vfMarcacaoTextoContainerVF.getBoundingClientRect();
+    const rangeLimite = document.createRange();
+    rangeLimite.selectNodeContents(vfMarcacaoTextoContainerVF);
+    // acima do container = grampeia no início; abaixo (ou de lado) = no fim
+    rangeLimite.collapse(touch.clientY < rectContainer.top);
+    rangeFim = rangeLimite;
+  }
   e.preventDefault(); // impede o scroll da página enquanto arrasta selecionando
   const range = document.createRange();
   // o dedo pode arrastar tanto pra frente quanto pra trás no texto -
@@ -5914,6 +5931,7 @@ document.addEventListener('touchend', (e) => {
   const apagando = vfMarcacaoTextoDirecaoApagarVF;
   vfMarcacaoTextoArrastandoVF = false;
   vfMarcacaoTextoPontoInicialVF = null;
+  vfMarcacaoTextoContainerVF = null;
   vfLimparPreviewMarcacaoVF();
   const touch = e.changedTouches[0];
   const range = vfMarcacaoTextoRangeAtualVF;
@@ -5936,6 +5954,7 @@ document.addEventListener('touchcancel', (e) => {
   if(!vfModoMarcacaoTextoAtivo) return;
   vfMarcacaoTextoArrastandoVF = false;
   vfMarcacaoTextoPontoInicialVF = null;
+  vfMarcacaoTextoContainerVF = null;
   vfMarcacaoTextoRangeAtualVF = null;
   vfLimparPreviewMarcacaoVF();
 });
@@ -6033,17 +6052,40 @@ function vfRangeDoOffsetGlobalVF(container, offsetInicio, offsetFim){
 function vfSegmentosPorLinhaVF(container, inicio, fim){
   const segmentos = [];
   let cursor = 0;
-  for(const filho of container.children){
-    const tamanho = filho.textContent.length;
-    const filhoInicio = cursor, filhoFim = cursor + tamanho;
-    const segInicio = Math.max(inicio, filhoInicio), segFim = Math.min(fim, filhoFim);
-    if(segInicio < segFim) segmentos.push({inicio: segInicio, fim: segFim});
-    cursor = filhoFim;
-  }
-  // container sem filhos de bloco (texto solto direto nele) - trata como
-  // uma linha única, mantendo o comportamento de antes nesse caso
-  if(!segmentos.length && container.children.length === 0 && fim > inicio) segmentos.push({inicio, fim});
+  vfColetarSegmentosRecursivoVF(container, inicio, fim, {valor: cursor}, segmentos);
   return segmentos;
+}
+// desce recursivamente até elementos "folha" (sem filhos de elemento,
+// só texto) antes de fechar um segmento - achado real: parar só no
+// primeiro nível (os itens I/II/III direto) não bastava, porque cada
+// item tem sua própria estrutura interna (span do numeral + span do
+// texto). Um segmento que cruzava essa fronteira interna fazia
+// surroundContents falhar, caindo no fallback que reorganiza/achata a
+// estrutura - e isso quebrava o layout flex do item
+function vfColetarSegmentosRecursivoVF(elemento, inicio, fim, cursorRef, segmentos){
+  const filhosDeElemento = [...elemento.childNodes].filter(n => n.nodeType === 1);
+  if(filhosDeElemento.length === 0){
+    // folha - todo o texto dele é UM segmento candidato, sem dividir mais
+    const tamanho = elemento.textContent.length;
+    const elInicio = cursorRef.valor, elFim = cursorRef.valor + tamanho;
+    const segInicio = Math.max(inicio, elInicio), segFim = Math.min(fim, elFim);
+    if(segInicio < segFim) segmentos.push({inicio: segInicio, fim: segFim});
+    cursorRef.valor = elFim;
+    return;
+  }
+  // tem filhos de elemento - desce em cada um, na ordem, incluindo
+  // texto solto entre eles (nó de texto direto, sem elemento em volta)
+  for(const no of elemento.childNodes){
+    if(no.nodeType === 3){ // texto solto direto - trata como folha própria
+      const tamanho = no.textContent.length;
+      const elInicio = cursorRef.valor, elFim = cursorRef.valor + tamanho;
+      const segInicio = Math.max(inicio, elInicio), segFim = Math.min(fim, elFim);
+      if(segInicio < segFim) segmentos.push({inicio: segInicio, fim: segFim});
+      cursorRef.valor = elFim;
+    }else if(no.nodeType === 1){
+      vfColetarSegmentosRecursivoVF(no, inicio, fim, cursorRef, segmentos);
+    }
+  }
 }
 
 function vfCriarSpanMarcaVF(tipo, cor, range){
