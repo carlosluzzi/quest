@@ -1588,7 +1588,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-376';
+const VERSAO_APP = '2026-07-25-377';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6134,6 +6134,10 @@ function vfCriarSpanMarcaVF(tipo, cor, range){
     span.style.textDecorationLine = 'underline';
     span.style.textDecorationColor = cor;
     span.style.textDecorationThickness = '2.5px';
+    // empurra o traço pra baixo dos descendentes (y, g, p, q, j) - sem
+    // isso, o traço fica na posição padrão (perto da linha de base) e
+    // cruza essas letras, ficando quebrado/difícil de ler nelas
+    span.style.textUnderlinePosition = 'under';
   }else if(tipo === 'riscar'){
     span.style.textDecorationLine = 'line-through';
     span.style.textDecorationColor = cor;
@@ -6271,7 +6275,15 @@ function vfMesclarSpansAdjacentesVF(container, tipo){
 // log_respostas_vf daquela resposta específica, no Quest é o id do
 // caderno. Isso garante que a mesma questão aparecendo de novo numa
 // rodada/caderno diferente vem sem marcação nenhuma - só a MESMA
-// tentativa/visualização específica mantém o que foi marcado ----
+// tentativa/visualização específica mantém o que foi marcado.
+//
+// Cache em memória por escopo, carregado de uma vez só (1 busca) quando
+// o caderno/sessão abre - achado real: buscar no banco a cada questão
+// individual criava um atraso perceptível de rede ao navegar (a marcação
+// "chegava depois" do resto do conteúdo). Com o cache, navegar entre
+// questões já visitadas aplica a marcação instantaneamente, sem espera
+// nenhuma ----
+let vfCacheMarcacoesVF = new Map(); // chave "${origem}:${escopoId}" -> Map<questaoId, array de marcações>
 
 // lê as marcações atuais de um container (enunciado ou correção) e
 // devolve como array de {container, tipo, cor, offsetInicio, offsetFim} -
@@ -6284,9 +6296,29 @@ function vfExtrairMarcacoesAtuaisVF(container, nomeContainer){
   });
 }
 
+// busca de uma vez só TODAS as marcações de um escopo inteiro (um
+// caderno completo, ou uma resposta específica do Flash) e monta o
+// cache em memória - chamado 1x ao abrir o caderno/questão, não a cada
+// navegação entre questões
+async function vfCarregarCacheMarcacoesDoEscopoVF(origem, escopoId){
+  const chaveCache = `${origem}:${escopoId}`;
+  if(!usuarioAtual || !escopoId) return;
+  const {data, error} = await sb.from('marcacoes_texto_vf').select('*').eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId);
+  const porQuestao = new Map();
+  if(!error && data){
+    data.forEach(m => {
+      if(!porQuestao.has(m.questao_id)) porQuestao.set(m.questao_id, []);
+      porQuestao.get(m.questao_id).push(m);
+    });
+  }
+  vfCacheMarcacoesVF.set(chaveCache, porQuestao);
+}
+
 // substitui todas as marcações salvas daquela tentativa específica pelo
 // estado atual da tela - mais simples e resistente a falha parcial do
-// que tentar sincronizar incrementalmente marca por marca
+// que tentar sincronizar incrementalmente marca por marca. Também
+// atualiza o cache em memória na hora, pra navegar pra frente e voltar
+// na mesma sessão já refletir sem precisar esperar o banco de novo
 async function vfPersistirMarcacoesTextoVF(origem, escopoId, questaoId){
   if(!usuarioAtual || !escopoId || !questaoId) return;
   const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
@@ -6295,6 +6327,13 @@ async function vfPersistirMarcacoesTextoVF(origem, escopoId, questaoId){
     ...vfExtrairMarcacoesAtuaisVF(enunciado, 'enunciado'),
     ...vfExtrairMarcacoesAtuaisVF(correcao, 'correcao'),
   ];
+  // atualiza o cache em memória imediatamente (otimista) - não espera o
+  // banco confirmar pra já refletir localmente
+  const chaveCache = `${origem}:${escopoId}`;
+  if(!vfCacheMarcacoesVF.has(chaveCache)) vfCacheMarcacoesVF.set(chaveCache, new Map());
+  vfCacheMarcacoesVF.get(chaveCache).set(questaoId, marcacoes.map(m => ({
+    container: m.container, tipo_marca: m.tipo, cor: m.cor, offset_inicio: m.offsetInicio, offset_fim: m.offsetFim
+  })));
   await sb.from('marcacoes_texto_vf').delete().eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId).eq('questao_id', questaoId);
   if(marcacoes.length){
     await sb.from('marcacoes_texto_vf').insert(marcacoes.map(m => ({
@@ -6304,18 +6343,44 @@ async function vfPersistirMarcacoesTextoVF(origem, escopoId, questaoId){
   }
 }
 
-// busca e recria as marcações salvas daquela tentativa específica -
-// chamado ao exibir uma questão, antes de qualquer interação nova
-async function vfCarregarMarcacoesTextoVF(origem, escopoId, questaoId){
-  if(!usuarioAtual || !escopoId || !questaoId) return;
-  const {data, error} = await sb.from('marcacoes_texto_vf').select('*').eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId).eq('questao_id', questaoId);
-  if(error || !data || !data.length) return;
+// versão instantânea (síncrona, sem rede) - lê do cache já carregado em
+// memória e aplica na hora. Usada na navegação normal entre questões já
+// visitadas dentro do mesmo caderno/sessão
+function vfAplicarMarcacoesDoCacheVF(origem, escopoId, questaoId){
+  const chaveCache = `${origem}:${escopoId}`;
+  const porQuestao = vfCacheMarcacoesVF.get(chaveCache);
+  if(!porQuestao) return;
+  const marcacoesDaQuestao = porQuestao.get(questaoId);
+  if(!marcacoesDaQuestao || !marcacoesDaQuestao.length) return;
   const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
   const correcao = document.getElementById('vf-correcao-atual');
   // ordena do fim pro início - aplicar marcações mexe no DOM (spans
   // novos), o que pode alterar a contagem de nós de texto restante;
   // aplicar de trás pra frente evita que uma marcação já aplicada
   // desalinhe os offsets das marcações seguintes no mesmo container
+  const ordenadas = [...marcacoesDaQuestao].sort((a,b) => b.offset_inicio - a.offset_inicio);
+  ordenadas.forEach(m => {
+    const container = m.container === 'correcao' ? correcao : enunciado;
+    if(!container) return;
+    const range = vfRangeDoOffsetGlobalVF(container, m.offset_inicio, m.offset_fim);
+    if(range) vfCriarSpanMarcaVF(m.tipo_marca, m.cor, range);
+  });
+}
+
+// versão que busca direto no banco (com espera de rede) - usada só
+// quando o cache do escopo ainda não foi carregado (ex: primeira vez
+// entrando numa questão do Flash antes do cache existir)
+async function vfCarregarMarcacoesTextoVF(origem, escopoId, questaoId){
+  if(!usuarioAtual || !escopoId || !questaoId) return;
+  const chaveCache = `${origem}:${escopoId}`;
+  if(vfCacheMarcacoesVF.has(chaveCache)){
+    vfAplicarMarcacoesDoCacheVF(origem, escopoId, questaoId);
+    return;
+  }
+  const {data, error} = await sb.from('marcacoes_texto_vf').select('*').eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId).eq('questao_id', questaoId);
+  if(error || !data || !data.length) return;
+  const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
+  const correcao = document.getElementById('vf-correcao-atual');
   const ordenadas = [...data].sort((a,b) => b.offset_inicio - a.offset_inicio);
   ordenadas.forEach(m => {
     const container = m.container === 'correcao' ? correcao : enunciado;
@@ -9197,10 +9262,13 @@ function toggleCadernosLista(tipo){
 
 async function retomarCadernoEspecifico(cadernoId){
   // caderno e respostas não dependem um do outro — só precisam do cadernoId,
-  // que já temos de cara. Rodar em paralelo evita 1 ida-e-volta desnecessária
+  // que já temos de cara. Rodar em paralelo evita 1 ida-e-volta desnecessária.
+  // O cache de marcações do caderno inteiro também entra aqui - carregado de
+  // uma vez só, pra navegar entre questões depois não ter nenhum atraso de rede
   const [{data}, {data: respostasDoCaderno}] = await Promise.all([
     sb.from('cadernos').select('*').eq('id', cadernoId).single(),
-    sb.from('respostas').select('*').eq('caderno_id', cadernoId)
+    sb.from('respostas').select('*').eq('caderno_id', cadernoId),
+    vfCarregarCacheMarcacoesDoEscopoVF('quest', cadernoId)
   ]);
   if(!data){ alert('Caderno não encontrado.'); return; }
   cadernoAtual = data;
@@ -9860,7 +9928,7 @@ function renderizarQuestaoAtual(){
       </button>
     </div>` : ''}`;
   document.getElementById('questao-atual').innerHTML = html;
-  if(cadernoAtual && q) vfCarregarMarcacoesTextoVF('quest', cadernoAtual.id, q.id);
+  if(cadernoAtual && q) vfAplicarMarcacoesDoCacheVF('quest', cadernoAtual.id, q.id);
 }
 
 function renderizarResultado(q,resposta){
