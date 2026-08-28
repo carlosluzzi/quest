@@ -90,7 +90,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* balão flutuante da sessão do Flash - mesma técnica de estados via
 classe do timer do PSCPP Tracker, cor adaptada pra marca do Pilotquest
 (B23A34 em vez do azul-marinho de lá) */
-#vf-sessao-balao{position:fixed;z-index:150;background:#B23A34;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.35);width:220px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + env(safe-area-inset-bottom, 0px) + 16px)}
+#vf-sessao-balao{position:fixed;z-index:150;background:#B23A34;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.35);width:220px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + var(--vf-barra-fixa-altura, 0px) + env(safe-area-inset-bottom, 0px) + 16px)}
 #vf-sessao-balao.hidden{display:none}
 /* pausado NÃO troca o fundo (igual o Tracker) - só o tempo fica
 acinzentado e a tag "PAUSADO" aparece em destaque. Cor de fundo do
@@ -1612,7 +1612,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-390';
+const VERSAO_APP = '2026-07-25-391';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7967,7 +7967,7 @@ async function vfReconstruirHistoricoDaSessaoVF(){
 async function vfCarregarPoolInicialVF(){
   const el = document.getElementById('vf-conteudo');
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
-  document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
+  document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
 
   estadoVF = {
     pool: [],
@@ -8000,7 +8000,7 @@ async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
   vfSalvarFiltroNoStorageVF(); // toda mudança de filtro passa por aqui - salva sempre, sem precisar duplicar a chamada em cada função de filtro específica
   const el = document.getElementById('vf-conteudo');
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
-  document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
+  document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
 
   const pool = await carregarPoolVF(ehEntradaInicialVF);
   // se outra chamada mais recente já rodou nesse meio tempo (dois toques
@@ -8056,7 +8056,7 @@ async function avancarParaProximaVF(){
   const pick = escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao, estadoVF.respostasDesdeUltimaNova, estadoVF.familiasRecentesVF);
   if(!pick){
     document.getElementById('vf-conteudo').innerHTML = `<p style="padding:24px 4px;color:#888">Nada disponível agora.</p>`;
-    document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
+    document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
     return;
   }
   estadoVF.anteriorVeioDeAprendizado = pick.veioDeAprendizado;
@@ -8606,6 +8606,12 @@ function medirAlturaBarraFixaVF(){
   if(!barraFixa || !conteudo) return;
   const altura = barraFixa.offsetHeight;
   if(altura > 0) conteudo.style.paddingBottom = (altura + 20) + 'px'; // +20px de respiro extra
+  // reflete a altura real da barra fixa numa variável CSS - usada pelo
+  // balão da sessão pra ficar acima dela, não só acima do menu de
+  // navegação. Achado real: em retrato, a barra de resposta cresce mais
+  // (botões empilham/tem mais respiro) do que em paisagem, e o balão
+  // ficava colado nela, às vezes sobrepondo os botões Verdadeiro/Falso
+  document.documentElement.style.setProperty('--vf-barra-fixa-altura', (barraFixa.classList.contains('hidden') ? 0 : altura) + 'px');
 }
 
 async function responderVF(resposta){
