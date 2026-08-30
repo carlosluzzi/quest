@@ -1612,7 +1612,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-400';
+const VERSAO_APP = '2026-07-25-402';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8280,16 +8280,11 @@ async function vfRestaurarUIFiltroVF(){
       btn.style.borderColor = '#B23A34';
     });
   }
-  if(modulo || publicacao || capitulo || numero || lista){
-    // abre o painel de filtros já expandido - se tem filtro ativo, faz
-    // sentido a pessoa ver isso de cara, não escondido atrás do chevron
-    const conteudo = document.getElementById('vf-filtros-conteudo');
-    const chevron = document.getElementById('vf-chevron-filtros');
-    if(conteudo.classList.contains('hidden')){
-      conteudo.classList.remove('hidden');
-      chevron.style.transform = 'rotate(180deg)';
-    }
-  }
+  // o chevron sempre começa fechado, independente de ter filtro ativo ou
+  // não - decisão do Carlos: nova sessão sem filtro, ou retomando uma
+  // sessão com filtro já aplicado, os dois casos vêm com a caixinha
+  // fechada. Os valores já ficaram refletidos nos selects acima, então
+  // se a pessoa expandir manualmente, o filtro certo já está lá
 }
 
 function renderizarItemVF(){
@@ -8462,7 +8457,14 @@ function vfSoltarPressionarEnunciado(evento){
   clearTimeout(vfTimerPressionarEnunciado);
   vfTimerPressionarEnunciado = null;
   const div = document.getElementById('vf-enunciado-atual');
-  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueEnunciado){
+  // vfDesenhandoAgora ainda reflete o toque que acabou de soltar aqui,
+  // já que esse handler roda ANTES do listener global que reseta ela pra
+  // false (bubbling: o elemento dispara antes do document). Um traço de
+  // caneta curto (tipo um pontinho) pode ficar dentro da tolerância de
+  // 25px de "não moveu", mas ainda assim foi um desenho de verdade, não
+  // um toque pra copiar - sem essa checagem, escrever por cima copiava
+  // o texto sem querer
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueEnunciado && !vfDesenhandoAgora){
     if(evento) evento.preventDefault(); // evita o mouseup sintético que o Safari gera após um toque real - sem isso, a cópia disparava 2x e o selinho "Copiado" piscava (reiniciava a animação no meio)
     vfCopiarTextoElementoVF(div);
   }
@@ -8605,7 +8607,8 @@ function vfSoltarPressionarCorrecao(evento){
   clearTimeout(vfTimerPressionarCorrecao);
   vfTimerPressionarCorrecao = null;
   const div = document.getElementById('vf-correcao-atual');
-  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueCorrecao){
+  // mesma checagem do enunciado - ver comentário lá
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueCorrecao && !vfDesenhandoAgora){
     if(evento) evento.preventDefault();
     vfCopiarTextoElementoVF(div);
   }
@@ -9199,7 +9202,8 @@ function vfSoltarPressionarExplicacao(evento){
   clearTimeout(vfTimerPressionarExplicacao);
   vfTimerPressionarExplicacao = null;
   const div = document.getElementById('vf-explicacao-atual');
-  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueExplicacao){
+  // mesma checagem do enunciado - ver comentário lá
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueExplicacao && !vfDesenhandoAgora){
     if(evento) evento.preventDefault();
     vfCopiarTextoElementoVF(div);
   }
