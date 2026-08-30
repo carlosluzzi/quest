@@ -1461,7 +1461,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="modal-explicacao-vf" onclick="if(event.target===this) vfFecharModalExplicacaoVF()">
+<div class="modal-overlay hidden" id="modal-explicacao-vf">
   <div class="modal-conteudo" style="max-width:700px;display:flex;flex-direction:column">
     <h3 class="config-title" style="flex-shrink:0">Explicação</h3>
     <div id="conteudo-explicacao-vf" style="flex:1;min-height:0;overflow-y:auto"></div>
@@ -1612,7 +1612,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-394';
+const VERSAO_APP = '2026-07-25-395';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5262,6 +5262,11 @@ function vfRestaurarEstadoHistoricoVF(estado){
 // desenho, então grifar/sublinhar/riscar nunca eram desfeitos por aqui
 let vfUltimoDesfazerRefazerMs = 0; // debounce contra disparo duplo (reforço de clique da caneta + clique nativo no mesmo toque)
 function vfDesfazerDesenho(){
+  // a explicação nunca teve histórico próprio (ver vfFinalizarTracoDesenho)
+  // - sem essa checagem, desfazer aqui dentro acabava agindo no histórico
+  // da tela de baixo (o canvas principal), apagando o que tinha lá
+  const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
+  if(modalExplicacaoAberto) return;
   const agora = Date.now();
   if(agora - vfUltimoDesfazerRefazerMs < 250) return;
   vfUltimoDesfazerRefazerMs = agora;
@@ -5285,6 +5290,9 @@ function vfDesfazerDesenho(){
 }
 
 function vfRefazerDesenho(){
+  // mesma proteção do desfazer - ver comentário lá
+  const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
+  if(modalExplicacaoAberto) return;
   const agora = Date.now();
   if(agora - vfUltimoDesfazerRefazerMs < 250) return;
   vfUltimoDesfazerRefazerMs = agora;
@@ -8258,16 +8266,6 @@ function renderizarItemVF(){
         <button class="btn-icone-pequeno" style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="vfAbrirAnotacaoSalvaVF()" title="Ver o que você escreveu">
           <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
         </button>` : '';
-    // preview do mnemônico/nota - convite (sem nota ainda, sabemos na
-    // hora pelo Set notasVF, sem precisar de busca) ou vazio aguardando
-    // a busca assíncrona (vfCarregarPreviewNotaVF, chamada logo abaixo,
-    // fora desse template) preencher com o texto de verdade
-    const previewNotaHtml = notasVF.has(item.id)
-      ? `<div id="vf-preview-nota"></div>`
-      : `<div id="vf-preview-nota" class="vf-nota-convite" onclick="abrirNotaVF('${item.id}')" style="border:1.5px dashed #ddd;border-radius:10px;padding:10px 12px;margin-top:12px;display:flex;gap:6px;align-items:center;justify-content:center;color:#999;cursor:pointer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
-          ${VF_ICONE_LAMPADA_SVG('14', '16', '#999')}
-        </div>`;
     blocoResultado = `
       <div style="height:1px;background:#eee;margin:14px 0"></div>
       <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:34px">
@@ -8277,10 +8275,22 @@ function renderizarItemVF(){
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
       </div>
-      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;text-align:left;font-weight:400;position:relative" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
-      ${previewNotaHtml}
+      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;text-align:left;font-weight:400;position:relative;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
     `;
   }
+
+  // preview do mnemônico/nota - card próprio, separado do card da
+  // resposta (pedido do Carlos). Convite (sem nota ainda, sabemos na
+  // hora pelo Set notasVF, sem precisar de busca) ou vazio aguardando a
+  // busca assíncrona (vfCarregarPreviewNotaVF, chamada logo abaixo, fora
+  // desse template) preencher com o texto de verdade
+  const cardNotaHtml = !jaRespondida ? '' : (notasVF.has(item.id)
+    ? `<div class="card-questao" id="vf-preview-nota" style="margin-top:14px"></div>`
+    : `<div class="card-questao" id="vf-preview-nota" onclick="abrirNotaVF('${item.id}')" style="margin-top:14px;border:1.5px dashed #ddd;box-shadow:none;display:flex;gap:6px;align-items:center;justify-content:center;color:#999;cursor:pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+        ${VF_ICONE_LAMPADA_SVG('14', '16', '#999')}
+      </div>`);
+
 
   const tagsPublicacao = [
     item.eh_numero ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center">NÚMERO</span>` : '',
@@ -8324,6 +8334,7 @@ function renderizarItemVF(){
       <div class="enunciado" id="vf-enunciado-atual" style="margin-top:10px;position:relative" data-editavel-vf="1" ontouchstart="vfIniciarPressionarEnunciado(event)" ontouchend="vfSoltarPressionarEnunciado(event)" ontouchmove="vfCancelarPressionarEnunciadoSilencioso(event)" onmousedown="vfIniciarPressionarEnunciado(event)" onmouseup="vfSoltarPressionarEnunciado()" onmouseleave="vfCancelarPressionarEnunciadoSilencioso()">${formatarTextoItemVF(item.texto)}</div>
       ${blocoResultado}
     </div>
+    ${cardNotaHtml}
   `;
 
   renderizarBarraFixaVF(item, jaRespondida);
@@ -9022,8 +9033,13 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
   // outra questão enquanto isso, não pisa no preview da questão nova
   const elAtual = document.getElementById('vf-preview-nota');
   if(!elAtual || !data || !data.length) return;
-  elAtual.className = '';
-  elAtual.style.cssText = 'background:#f7f7f5;border:0.5px solid #eee;border-radius:10px;padding:10px 12px;margin-top:12px;display:flex;gap:10px;align-items:flex-start;cursor:pointer';
+  // mantém a classe card-questao (já traz padding/borda/sombra corretos
+  // pro card próprio) - só ajusta o layout interno pra flex e o cursor
+  elAtual.style.marginTop = '14px';
+  elAtual.style.display = 'flex';
+  elAtual.style.gap = '10px';
+  elAtual.style.alignItems = 'flex-start';
+  elAtual.style.cursor = 'pointer';
   elAtual.onclick = () => abrirNotaVF(questaoVfId);
   elAtual.innerHTML = `${VF_ICONE_LAMPADA_SVG('18', '20', '#B23A34')}<div style="color:#333;line-height:1.4">${escapeHtml(data[0].texto)}</div>`;
 }
