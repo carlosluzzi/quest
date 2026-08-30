@@ -1612,7 +1612,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-391';
+const VERSAO_APP = '2026-07-25-394';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8258,6 +8258,16 @@ function renderizarItemVF(){
         <button class="btn-icone-pequeno" style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="vfAbrirAnotacaoSalvaVF()" title="Ver o que você escreveu">
           <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
         </button>` : '';
+    // preview do mnemônico/nota - convite (sem nota ainda, sabemos na
+    // hora pelo Set notasVF, sem precisar de busca) ou vazio aguardando
+    // a busca assíncrona (vfCarregarPreviewNotaVF, chamada logo abaixo,
+    // fora desse template) preencher com o texto de verdade
+    const previewNotaHtml = notasVF.has(item.id)
+      ? `<div id="vf-preview-nota"></div>`
+      : `<div id="vf-preview-nota" class="vf-nota-convite" onclick="abrirNotaVF('${item.id}')" style="border:1.5px dashed #ddd;border-radius:10px;padding:10px 12px;margin-top:12px;display:flex;gap:6px;align-items:center;justify-content:center;color:#999;cursor:pointer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+          ${VF_ICONE_LAMPADA_SVG('14', '16', '#999')}
+        </div>`;
     blocoResultado = `
       <div style="height:1px;background:#eee;margin:14px 0"></div>
       <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:34px">
@@ -8268,6 +8278,7 @@ function renderizarItemVF(){
         </button>
       </div>
       ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;text-align:left;font-weight:400;position:relative" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
+      ${previewNotaHtml}
     `;
   }
 
@@ -8320,6 +8331,10 @@ function renderizarItemVF(){
   // respondida ANTES (idRespostaVF já foi gravado num momento anterior) -
   // sem isso ainda, não tem o que carregar, o enunciado já vem limpo
   if(entrada.idRespostaVF) vfCarregarMarcacoesTextoVF('flash', entrada.idRespostaVF, item.id);
+  // preview de mnemônico/nota - só busca se já sabemos (via notasVF) que
+  // existe alguma; se não existe, o convite já foi montado direto no
+  // HTML acima, sem precisar de busca nenhuma
+  if(jaRespondida && notasVF.has(item.id)) vfCarregarPreviewNotaVF(item.id);
 }
 
 // ---- editar a afirmação segurando nela (só Carlos, é conteúdo) ----
@@ -8986,6 +9001,31 @@ function fecharModalNotaVF(){
 function fecharModalExclusaoVF(){
   fecharModal('modal-confirmar-exclusao-vf');
   retomarOuDescartarPendenteVF();
+}
+
+// ícone de lâmpada reaproveitável - usado no preview de mnemônico/nota do
+// Flash (badge com nota existente + convite pra criar uma nova)
+function VF_ICONE_LAMPADA_SVG(largura, altura, cor){
+  return `<svg width="${largura}" height="${altura}" viewBox="0 0 646 736" style="flex-shrink:0;color:${cor}"><path d="M318.41 2.13C328.5 -0.09 327.03 13.35 327.03 19.2C327.03 37.67 327.02 56.14 327.03 74.61C327.03 80.45 328.88 91.32 320.17 91.48C311.34 91.64 312.99 81.11 313.01 75.24C313.08 57.4 312.98 39.56 313.01 21.72C313.02 15.99 310.51 3.87 318.41 2.13ZM116.22 79.49C122.37 78.64 127.31 86.99 130.96 90.98C142.61 103.7 154.1 116.54 165.63 129.36C169.64 133.82 178.03 140.97 170.9 146.69C164.08 152.14 157.64 141.75 153.76 137.44C139.97 122.17 125.22 107.39 112.16 91.49C108.67 87.24 110.24 80.32 116.22 79.49ZM521.71 79.48C527.89 78.59 531.96 85.61 528.56 90.67C525 95.99 519.45 100.83 515.09 105.53C505.41 116 496 126.74 486.48 137.35C482.55 141.72 476.3 151.9 469.38 146.74C462.15 141.35 470.77 133.47 474.58 129.22C485.58 116.94 496.64 104.7 507.74 92.51C510.89 89.06 517.19 80.14 521.71 79.48ZM356.04 709.28C352.74 716.43 349.88 722.25 343.08 726.84C322.91 740.45 291.66 732.5 283.65 709.15C275.88 708.09 268.71 707.52 261.48 704.1C248.52 697.96 238.29 685.4 235.07 671.39C233.26 663.48 234.03 655.01 234.03 646.94C234.02 637.08 234.02 627.22 233.99 617.35C233.94 600.21 233.7 583.09 233.28 565.96C233.09 557.96 234.47 549.05 233.17 541.17C232.62 537.85 228.3 533.88 227.4 529.17C225.68 520.12 226.8 510.62 224.94 501.48C220.39 479.13 211.01 458.02 198.67 438.82C193.04 430.07 186.48 422.09 180.37 413.7C167.97 396.64 158.2 378.32 152.15 358.12C147.91 344 146.76 328.56 146.7 313.87C146.32 218.67 222.84 141.49 317.65 139.3C414.24 137.07 492.87 216.9 493.12 312.61C493.16 327.63 491.84 342.76 487.86 357.28C478.94 389.82 462.58 407.7 444.18 434.39C430.31 454.51 418.89 476.73 414.32 500.88C413.14 507.16 412.43 513.46 412.06 519.84C411.89 522.7 412.25 525.72 411.67 528.54C410.65 533.42 406.26 538.63 405.84 541.17C404.5 549.2 405.78 559.94 405.8 568.24C405.84 586.5 405.81 604.76 405.82 623.02C405.83 644.88 409.48 671.33 395.94 689.66C388.99 699.07 378.59 704.99 367.4 707.77C363.7 708.69 359.6 708.19 356.04 709.28ZM316.58 157.09C222.36 159.17 149.87 247.4 166.13 340.31C169.58 360 177.58 379.17 189.15 395.5C201.17 412.47 214.21 428.5 223.74 447.12C232.83 464.89 240.14 483.5 242.85 503.42C243.6 508.96 243.97 514.79 243.9 520.39C243.87 522.99 243.41 526.48 245.83 528.27C248.21 530.04 253.11 529.09 255.94 529.09C264.55 529.1 273.15 529.08 281.76 529.08C307.15 529.1 332.55 529.09 357.94 529.09C364.99 529.09 386.49 530.46 391.91 528.87C394.41 528.13 394.71 525.06 394.78 522.91C394.98 516.73 395.49 510.78 396.17 504.65C398.71 481.55 408.08 459.05 420.1 439.3C431.75 420.17 446.79 403.35 457.96 383.94C465.95 370.07 470.75 355.05 473.8 339.43C476.21 327.13 476.24 313.7 475.19 301.28C468.22 218.63 400.33 155.24 316.58 157.09ZM10.57 238.9C16.32 238.04 22.6 241.55 28.08 242.86C43.34 246.49 58.35 251.35 73.49 255.45C78.96 256.93 91.79 258.45 89.67 266.93C87.3 276.43 76.39 271.2 70.17 269.56C57.85 266.31 45.7 262.39 33.41 259.09C25.69 257.02 17.03 255.59 9.67 252.57C3.45 250.03 3.3 239.99 10.57 238.9ZM626.21 238.79C633.56 237.81 638.47 247.25 631.67 251.7C627.19 254.63 618.09 255.79 612.75 257.28C598.52 261.25 584.38 265.59 570.09 269.36C564.37 270.87 553.68 276.41 550.37 268.42C546.51 259.13 559.23 257.37 565.14 255.76C580.83 251.51 596.44 247.03 612.12 242.75C616.78 241.49 621.4 239.44 626.21 238.79ZM86.07 406.3C93.53 404.58 99.02 414.06 92.45 418.92C88.06 422.17 78.34 423.53 72.95 425.29C58.93 429.86 44.72 434.11 30.53 438.19C25.03 439.77 14.29 445.52 11.01 437.64C7.07 428.21 20.2 426.23 26.24 424.52C46.13 418.89 65.98 410.93 86.07 406.3ZM548.79 406.25C554.42 404.9 562.44 409.35 567.86 410.85C583.62 415.21 599.11 420.5 614.81 425.08C620.69 426.8 631.29 428.59 627.9 437.37C624.74 445.54 613.63 439.76 607.97 438.05C594.03 433.84 580.04 429.72 566.19 425.23C560.15 423.26 553.65 422.13 547.81 419.6C542 417.09 542.44 407.77 548.79 406.25ZM165.42 509.02C171.28 508.22 175.91 514.08 172.82 519.47C169.78 524.79 164.42 529.47 160.42 534.09C150.79 545.24 141.13 556.36 131.5 567.51C127.49 572.16 121.37 582.79 114.15 577.48C106.71 571.99 115.82 564.25 119.42 559.85C130.06 546.84 141.48 534.46 152.38 521.66C155.49 518.01 160.38 509.7 165.42 509.02ZM471.45 509.02C478.23 507.78 482.16 515.46 486.04 519.78C497.57 532.58 508.68 545.88 519.8 559.05C523.55 563.49 533.47 571.99 525.54 577.46C518.34 582.41 512.89 572.82 508.87 568.11C496.4 553.51 483.56 539.22 471.25 524.52C468.17 520.85 464.52 517.23 467.22 512.27C468.06 510.74 469.71 509.34 471.45 509.02ZM390.93 546.21C343.63 546.21 296.32 546.21 249.02 546.21C247.51 550.98 247.68 571.21 248.96 575.96C296.29 575.96 343.61 575.96 390.93 575.96C390.93 566.04 390.93 556.13 390.93 546.21ZM390.93 591.72C343.6 591.72 296.27 591.72 248.93 591.72C248.93 594.18 248.93 596.64 248.93 599.09C296.27 607.5 343.6 615.91 390.93 624.32C390.93 613.46 390.93 602.59 390.93 591.72ZM390.92 640.29C343.81 631.8 296.7 623.32 249.6 614.83C247.91 617.78 248.33 631.88 249.15 635.61C296.4 644.64 343.66 653.66 390.92 662.69C390.92 655.22 390.92 647.75 390.92 640.29ZM385.32 677.8C339.97 668.98 294.63 660.17 249.29 651.35C248.55 653.73 248.83 656.41 248.83 658.91C248.84 673.76 257.62 686.85 271.8 691.83C280.03 694.71 289.54 693.5 298.1 693.53C314.49 693.59 330.88 693.44 347.27 693.54C360.71 693.62 379 692.37 385.32 677.8Z" fill="currentColor" fill-rule="evenodd"/></svg>`;
+}
+
+// busca sob demanda (não junto com o carregamento geral do pool) a nota
+// mais recente pra mostrar como preview logo abaixo do resultado - só
+// dispara quando notasVF (já carregado com o pool inteiro) indica que
+// essa questão específica tem pelo menos uma nota, evitando uma consulta
+// desnecessária pra maioria das questões, que não têm nenhuma
+async function vfCarregarPreviewNotaVF(questaoVfId){
+  const el = document.getElementById('vf-preview-nota');
+  if(!el) return; // a tela já pode ter mudado de questão antes da resposta chegar
+  const {data} = await sb.from('notas_vf').select('id, texto').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).order('criado_em', {ascending:false}).limit(1);
+  // reconfere o elemento depois do await - se a pessoa já avançou pra
+  // outra questão enquanto isso, não pisa no preview da questão nova
+  const elAtual = document.getElementById('vf-preview-nota');
+  if(!elAtual || !data || !data.length) return;
+  elAtual.className = '';
+  elAtual.style.cssText = 'background:#f7f7f5;border:0.5px solid #eee;border-radius:10px;padding:10px 12px;margin-top:12px;display:flex;gap:10px;align-items:flex-start;cursor:pointer';
+  elAtual.onclick = () => abrirNotaVF(questaoVfId);
+  elAtual.innerHTML = `${VF_ICONE_LAMPADA_SVG('18', '20', '#B23A34')}<div style="color:#333;line-height:1.4">${escapeHtml(data[0].texto)}</div>`;
 }
 
 async function abrirNotaVF(questaoVfId){
