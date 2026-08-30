@@ -880,7 +880,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       </div>
     </div>
     <div id="vf-filtros" style="margin-bottom:16px;background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:14px 16px">
-      <button class="btn-icone-pequeno" onclick="alternarFiltrosVF()" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:4px 2px;cursor:pointer;font-family:inherit;color:#B23A34;font-size:var(--fs-f);font-weight:700;-webkit-appearance:none;appearance:none;outline:none;-webkit-tap-highlight-color:transparent;transform:none !important">
+      <button class="btn-icone-pequeno" onclick="alternarFiltrosVF()" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:4px 2px;cursor:pointer;font-family:inherit;color:#B23A34;font-size:var(--fs-f);font-weight:700;-webkit-appearance:none;appearance:none;outline:none;-webkit-tap-highlight-color:transparent">
         <span>Filtros</span>
         <svg id="vf-chevron-filtros" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
@@ -1612,7 +1612,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-395';
+const VERSAO_APP = '2026-07-25-400';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4638,6 +4638,7 @@ document.addEventListener('touchstart', (e) => {
     // traço, e voltava ao normal ao soltar (quando o preview some e só
     // sobra uma camada de novo)
     canvas.style.opacity = '0';
+    vfDesenharSnapshotCompletoNoPreviewVF(); // preview já nasce mostrando tudo, antes mesmo do primeiro ponto do traço
   }
   // trava o scroll da página inteira enquanto o traço está em andamento —
   // duas camadas (touch-action E overflow), pra fechar o máximo de portas
@@ -4699,6 +4700,7 @@ document.addEventListener('touchmove', (e) => {
             vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, vfScrollTopNoInicioTracoVF * dpr, canvas.width, alturaBufferDestaque2, 0, 0, canvas.width, alturaBufferDestaque2);
             vfRegiaoSujaDestaqueVF = null; // mesma garantia no segundo caminho de início de traço
             canvas.style.opacity = '0'; // mesma correção do outro caminho - evita dupla camada semi-transparente
+            vfDesenharSnapshotCompletoNoPreviewVF(); // mesma garantia do outro caminho
           }
           document.body.style.touchAction = 'none';
           document.documentElement.style.overflow = 'hidden';
@@ -4905,6 +4907,23 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect, dentroDeL
 // evento pointermove), então um redesenho completo do preview podia
 // acontecer 5-10 vezes numa única atualização de tela. Chamada só 1x
 // por evento agora, não mais 1x por ponto individual
+// desenha o snapshot inteiro (toda a fatia visível) no canvas de preview,
+// de uma vez, no instante em que o canvas principal é escondido - achado
+// real: como só a "região suja" (pequena, por otimização de performance)
+// é redesenhada a cada movimento, sem esse desenho inicial completo
+// qualquer área ainda não tocada pelo traço atual ficava vazia/transparente
+// (o canvas principal por baixo está com opacity:0), fazendo parecer que
+// traços já existentes "sumiam" até o traço atual passar por cima deles
+function vfDesenharSnapshotCompletoNoPreviewVF(){
+  if(!vfCanvasBaseSnapshot || !vfCtxPreviewDestaque) return;
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  const larguraTotal = vfCanvasBaseSnapshot.width/dpr;
+  const alturaVisivel = vfCanvasBaseSnapshot.height/dpr;
+  vfCtxPreviewDestaque.globalCompositeOperation = 'source-over';
+  vfCtxPreviewDestaque.globalAlpha = 1;
+  vfCtxPreviewDestaque.drawImage(vfCanvasBaseSnapshot, 0, vfScrollTopNoInicioTracoVF, larguraTotal, alturaVisivel);
+}
+
 function vfAtualizarPreviewDestaqueVF(){
   if(vfModoDestaque && vfCanvasTracoTemp && vfCtxPreviewDestaque){
     const dpr = (window.devicePixelRatio || 1) * 1.5;
@@ -7599,13 +7618,51 @@ function vfFormatarTempoSessaoVF(ms){
   return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}`;
 }
 
-function vfIniciarSessaoFlashVF(){
+async function vfIniciarSessaoFlashVF(){
   const agora = Date.now();
   vfSessaoAtivaVF = {iniciadoEm: agora, pausado: false, tempoAcumuladoMs: 0, ultimoResumeEm: agora};
   vfSalvarSessaoNoStorageVF();
   vfMostrarBalaoSessaoFlashVF();
   vfAtualizarOverlaySessaoVF();
-  if(!estadoVF || estadoVF.posicao < 0) vfCarregarPoolInicialVF(); // só agora carrega de verdade - antes disso não fazia sentido nenhum trabalho pesado rodar
+  // só é sessão NOVA de verdade quando ainda não existe pool/progresso em
+  // andamento - nesse caso, e só nesse caso, o filtro é usado pra carregar
+  // e depois resetado pra próxima vez. Continuando uma sessão que já
+  // existia, o filtro escolhido lá atrás continua valendo, intocado
+  if(!estadoVF || estadoVF.posicao < 0){
+    await vfCarregarPoolInicialVF(); // só agora carrega de verdade - antes disso não fazia sentido nenhum trabalho pesado rodar
+    // reseta o filtro pra próxima vez - essa sessão que acabou de começar
+    // já usou o filtro escolhido (linha acima), então isso não afeta ela.
+    // Sem esse reset, a tela de filtros vinha com a escolha da sessão
+    // anterior toda vez, mesmo pra quem queria recomeçar do zero
+    vfLimparFiltroVF();
+  }
+}
+
+// zera o filtro e fecha a caixinha visual - usado ao iniciar uma sessão
+// nova (ver vfIniciarSessaoFlashVF), pra a próxima vez que a tela de
+// filtros aparecer vir sempre limpa, não com a escolha da sessão anterior
+function vfLimparFiltroVF(){
+  filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false};
+  vfSalvarFiltroNoStorageVF();
+  const elModulo = document.getElementById('vf-filtro-modulo');
+  const elPub = document.getElementById('vf-filtro-publicacao');
+  const elCap = document.getElementById('vf-filtro-capitulo');
+  if(elModulo) elModulo.value = '';
+  if(elPub){ elPub.innerHTML = '<option value="">Todas as publicações</option>'; elPub.disabled = true; }
+  if(elCap){ elCap.innerHTML = '<option value="">Todos os capítulos</option>'; elCap.disabled = true; }
+  ['numero', 'lista'].forEach(tipo => {
+    const btn = document.getElementById('vf-filtro-'+tipo);
+    if(!btn) return;
+    btn.style.background = '#fff';
+    btn.style.color = '#888';
+    btn.style.borderColor = '#ddd';
+  });
+  const conteudo = document.getElementById('vf-filtros-conteudo');
+  const chevron = document.getElementById('vf-chevron-filtros');
+  if(conteudo && !conteudo.classList.contains('hidden')){
+    conteudo.classList.add('hidden');
+    if(chevron) chevron.style.transform = 'rotate(0deg)';
+  }
 }
 
 function vfTogglePausarSessaoFlashVF(e){
@@ -7724,6 +7781,12 @@ function vfMostrarBalaoSessaoFlashVF(){
 // toda vez que o tamanho da janela muda de verdade - mesmo comportamento
 // de quando o balão reabre do zero
 window.addEventListener('resize', () => {
+  // recalcula a altura real da barra fixa primeiro - ela pode mudar entre
+  // retrato e paisagem (os botões reorganizam), e sem isso a variável CSS
+  // ficava com o valor da orientação anterior, empurrando o balão pra
+  // posição errada (ficava "mais em cima", como se ainda estivesse
+  // considerando a barra mais alta do retrato, mesmo já em paisagem)
+  medirAlturaBarraFixaVF();
   const balao = document.getElementById('vf-sessao-balao');
   if(!balao || balao.classList.contains('hidden')) return;
   balao.style.left = '';
@@ -8594,28 +8657,28 @@ function renderizarBarraFixaVF(item, jaRespondida){
   barraFixa.className = 'vf-barra-fixa';
   const podeVoltar = estadoVF.posicao > 0;
   const linhaPrincipal = jaRespondida
-    ? `<button class="btn-secundario btn-icone-pequeno" style="flex:1;width:auto;height:auto;background:#f0f0ee;color:#111;border-radius:8px;padding:10px;border:none;display:block;transform:none !important" ${podeVoltar?'':'disabled'} onclick="anteriorVF()">← Anterior</button>
-       <button class="btn-primario btn-icone-pequeno" style="flex:1;width:auto;height:auto;background:#B23A34;color:#fff;border-radius:8px;padding:10px;border:none;display:block;transform:none !important" onclick="proximoVF()">Próxima →</button>`
+    ? `<button class="btn-secundario" style="flex:1" ${podeVoltar?'':'disabled'} onclick="anteriorVF()">← Anterior</button>
+       <button class="btn-primario" style="flex:1" onclick="proximoVF()">Próxima →</button>`
     : `<button class="btn-secundario vf-btn-resposta" style="flex:1" onclick="responderVF(false)">Falso</button>
        <button class="btn-secundario vf-btn-resposta" style="flex:1" onclick="responderVF(true)">Verdadeiro</button>`;
 
   barraFixa.innerHTML = `
     <div class="vf-barra-fixa-principal">${linhaPrincipal}</div>
     <div class="vf-barra-fixa-acoes">
-      <button class="banco-acao-btn btn-icone-pequeno" style="width:auto;height:auto;padding:12px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;transform:none !important" onclick="abrirConfirmacaoExclusaoVF('${item.id}')">
+      <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         <span>Excluir</span>
       </button>
-      <button class="banco-acao-btn btn-icone-pequeno ${favoritosVF.has(item.id)?'favoritada':''}" style="width:auto;height:auto;padding:12px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;transform:none !important" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar(event)" ontouchend="vfCancelarPressionarFavoritar()" ontouchmove="vfCancelarPressionarFavoritar(event)" onmousedown="vfIniciarPressionarFavoritar(event)" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
+      <button class="banco-acao-btn ${favoritosVF.has(item.id)?'favoritada':''}" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar(event)" ontouchend="vfCancelarPressionarFavoritar()" ontouchmove="vfCancelarPressionarFavoritar(event)" onmousedown="vfIniciarPressionarFavoritar(event)" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
         <svg viewBox="0 0 24 24" fill="${favoritosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
         <span>Favoritar</span>
       </button>
-      <button class="banco-acao-btn btn-icone-pequeno" style="width:auto;height:auto;padding:12px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;transform:none !important" onclick="abrirNotaVF('${item.id}')">
+      <button class="banco-acao-btn" onclick="abrirNotaVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M17 4v5h3"/></svg>
         <span>Notas</span>
         ${notasVF.has(item.id)?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
-      <button class="banco-acao-btn btn-icone-pequeno ${flashsSalvosVF.has(item.id)?'favoritada':''}" style="width:auto;height:auto;padding:12px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;transform:none !important" onclick="vfAbrirEscolhaMotivoSalvarVF('${item.id}')" ontouchstart="vfIniciarPressionarSalvar(event)" ontouchend="vfCancelarPressionarSalvar()" ontouchmove="vfCancelarPressionarSalvar(event)" onmousedown="vfIniciarPressionarSalvar(event)" onmouseup="vfCancelarPressionarSalvar()" onmouseleave="vfCancelarPressionarSalvar()">
+      <button class="banco-acao-btn ${flashsSalvosVF.has(item.id)?'favoritada':''}" onclick="vfAbrirEscolhaMotivoSalvarVF('${item.id}')" ontouchstart="vfIniciarPressionarSalvar(event)" ontouchend="vfCancelarPressionarSalvar()" ontouchmove="vfCancelarPressionarSalvar(event)" onmousedown="vfIniciarPressionarSalvar(event)" onmouseup="vfCancelarPressionarSalvar()" onmouseleave="vfCancelarPressionarSalvar()">
         <svg viewBox="0 0 24 24" fill="${flashsSalvosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         <span>Salvar</span>
       </button>
@@ -9093,7 +9156,7 @@ function abrirExplicacaoVF(questaoVfId){
   const el = document.getElementById('conteudo-explicacao-vf');
   if(!entrada){ el.innerHTML = ''; abrirModal('modal-explicacao-vf'); vfAbrirCanvasExplicacaoVF(); return; }
   const explicacao = entrada.item.explicacao || '';
-  const atributosEdicao = souCarlos() ? `id="vf-explicacao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarExplicacao(event)" ontouchend="vfCancelarPressionarExplicacao()" ontouchmove="vfCancelarPressionarExplicacao(event)" onmousedown="vfIniciarPressionarExplicacao(event)" onmouseup="vfCancelarPressionarExplicacao()" onmouseleave="vfCancelarPressionarExplicacao()"` : `id="vf-explicacao-atual"`;
+  const atributosEdicao = `id="vf-explicacao-atual" ${souCarlos() ? 'data-editavel-vf="1"' : ''} ontouchstart="vfIniciarPressionarExplicacao(event)" ontouchend="vfSoltarPressionarExplicacao(event)" ontouchmove="vfCancelarPressionarExplicacaoSilencioso(event)" onmousedown="vfIniciarPressionarExplicacao(event)" onmouseup="vfSoltarPressionarExplicacao()" onmouseleave="vfCancelarPressionarExplicacaoSilencioso()"`;
   el.innerHTML = explicacao
     ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;line-height:1.5;color:#111;position:relative">${formatarTextoItemVF(explicacao)}</div>`
     : `<p ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;color:#666;position:relative">${souCarlos() ? 'Sem explicação cadastrada – segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
@@ -9105,7 +9168,9 @@ function abrirExplicacaoVF(questaoVfId){
 // usado na afirmação (toque longo -> vira textarea no próprio lugar) ----
 let vfTimerPressionarExplicacao = null;
 let vfPosicaoInicialPressionarExplicacaoVF = null;
+let vfMoveuDuranteToqueExplicacao = false;
 function vfIniciarPressionarExplicacao(evento){
+  vfMoveuDuranteToqueExplicacao = false;
   clearTimeout(vfTimerPressionarExplicacao);
   const ponto = evento && (evento.touches ? evento.touches[0] : evento);
   vfPosicaoInicialPressionarExplicacaoVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
@@ -9114,19 +9179,34 @@ function vfIniciarPressionarExplicacao(evento){
     vfIniciarEdicaoExplicacaoVF();
   }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
 }
-function vfCancelarPressionarExplicacao(evento){
+// usado no touchmove/mouseleave - moveu ou saiu = não é toque limpo, só
+// cancela a espera de edição, NÃO copia (mesmo padrão do enunciado)
+function vfCancelarPressionarExplicacaoSilencioso(evento){
   if(evento && vfPosicaoInicialPressionarExplicacaoVF){
     const ponto = evento.touches ? evento.touches[0] : evento;
     if(ponto){
       const dx = ponto.clientX - vfPosicaoInicialPressionarExplicacaoVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarExplicacaoVF.y;
-      if(Math.hypot(dx, dy) < 25) return;
+      if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
     }
   }
+  vfMoveuDuranteToqueExplicacao = true;
   clearTimeout(vfTimerPressionarExplicacao);
   vfTimerPressionarExplicacao = null;
 }
+// usado no touchend/mouseup - toque limpo (não virou edição, não moveu)
+// copia o texto, igual já funciona no enunciado e na correção
+function vfSoltarPressionarExplicacao(evento){
+  clearTimeout(vfTimerPressionarExplicacao);
+  vfTimerPressionarExplicacao = null;
+  const div = document.getElementById('vf-explicacao-atual');
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueExplicacao){
+    if(evento) evento.preventDefault();
+    vfCopiarTextoElementoVF(div);
+  }
+}
 
 function vfIniciarEdicaoExplicacaoVF(){
+  if(!souCarlos()) return; // só o Carlos edita segurando - outros usuários só copiam com toque rápido
   const entrada = estadoVF.historico.find(h => h.item.id === vfQuestaoIdExplicacaoAtual);
   if(!entrada) return;
   const div = document.getElementById('vf-explicacao-atual');
