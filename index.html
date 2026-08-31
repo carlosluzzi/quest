@@ -938,7 +938,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         </div>
       </div>
     </div>
-    <div id="vf-conteudo" style="padding-bottom:170px">
+    <div id="vf-conteudo" style="padding-bottom:170px;position:relative">
       <div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>
     </div>
     <!-- camada de desenho com a caneta (Apple Pencil) - movida pra FORA do
@@ -8315,7 +8315,22 @@ async function vfCarregarPoolInicialVF(){
 async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
   vfSalvarFiltroNoStorageVF(); // toda mudança de filtro passa por aqui - salva sempre, sem precisar duplicar a chamada em cada função de filtro específica
   const el = document.getElementById('vf-conteudo');
-  el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
+  // spinner sobreposto (position:absolute, por cima), NÃO substituindo o
+  // conteúdo antigo - achado real: apagar tudo e pôr só o spinner (fixed,
+  // sem altura no fluxo normal) colapsava a altura de #vf-conteudo pra
+  // quase zero de repente, um reflow grande que colidia no tempo com o
+  // usuário fechando a caixa de filtros logo em seguida (outro reflow
+  // grande), e essa combinação disparava o artefato visual da linha no
+  // Safari. Mantendo o conteúdo antigo visível (só esmaecido) até o novo
+  // chegar, a altura nunca muda abruptamente
+  const conteudoAntigoHtml = el.innerHTML;
+  el.style.opacity = '0.35';
+  el.style.pointerEvents = 'none';
+  const overlaySpinner = document.createElement('div');
+  overlaySpinner.id = 'vf-overlay-spinner-recarga';
+  overlaySpinner.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:flex-start;justify-content:center;padding-top:80px;z-index:6;pointer-events:none';
+  overlaySpinner.innerHTML = `<svg class="loading-spinner" viewBox="0 0 50 50" width="36" height="36"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>`;
+  el.appendChild(overlaySpinner);
   document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
 
   const pool = await carregarPoolVF(ehEntradaInicialVF);
@@ -8323,7 +8338,7 @@ async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
   // rápidos em filtros diferentes, por exemplo), essa resposta já está
   // velha - descarta sem escrever nada, pra não sobrescrever o pool
   // certo (do filtro mais recente) com dados do filtro anterior (F1)
-  if(pool.tokenDestaCargaVF !== vfTokenGeracaoPoolVF) return;
+  if(pool.tokenDestaCargaVF !== vfTokenGeracaoPoolVF){ vfLimparOverlayCargaFiltroVF(el); return; }
   estadoVF.pool = pool;
   if(ehEntradaInicialVF && pool.dadosEntradaVF){
     const {userRow, horarioServidorMs, totalGeralQuestoesVF} = pool.dadosEntradaVF;
@@ -8335,6 +8350,7 @@ async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
     vfTotalAfirmacoesNoBanco = totalGeralQuestoesVF ?? null;
   }
   if(!pool.length){
+    vfLimparOverlayCargaFiltroVF(el);
     el.innerHTML = `<p style="padding:24px 4px;color:#888">Nenhum item disponível pra praticar com esses filtros.</p>`;
     return;
   }
@@ -8350,7 +8366,19 @@ async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
     estadoVF.historico.pop();
     estadoVF.posicao--;
   }
+  vfLimparOverlayCargaFiltroVF(el); // restaura opacity/pointer-events antes de renderizar a questão de verdade
   await avancarParaProximaVF();
+}
+
+// restaura o estado normal do #vf-conteudo depois do overlay de
+// carregamento (opacity, pointer-events, remove o spinner) - chamada em
+// todos os pontos de saída de recarregarPoolEContinuarVF, pra nunca
+// ficar "travado" esmaecido/não-clicável por engano
+function vfLimparOverlayCargaFiltroVF(el){
+  el.style.opacity = '';
+  el.style.pointerEvents = '';
+  const spinner = document.getElementById('vf-overlay-spinner-recarga');
+  if(spinner) spinner.remove();
 }
 
 // sincronização com outro aparelho não pode mais bloquear CADA avanço de
