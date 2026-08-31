@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-433';
+const VERSAO_APP = '2026-07-25-438';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1776,7 +1776,7 @@ function formatarEnunciado(texto){
   let escapedCompleto = escapeHtml(texto).replace(/\s+/g, ' ').trim();
   escapedCompleto = vfAplicarMarcacaoMatematicaVF(escapedCompleto); // gregas, operadores, sqrt, sobrescrito com chaves - mesmo padrão do V/F
   escapedCompleto = escapedCompleto
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
@@ -1977,7 +1977,7 @@ function extrairItensNumerados(enunciado){
 function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
@@ -3842,7 +3842,7 @@ function formatarTextoItemVF(texto){
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
   return resultado
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>');
 }
@@ -8077,7 +8077,7 @@ async function vfRenderizarConteudoPainelSessaoVF(){
   const el = document.getElementById('vf-painel-sessao-conteudo');
   if(!el || !estadoVF) return;
   const respondidas = estadoVF.historico.filter(h => h.resposta !== null);
-  const novas = respondidas.filter(h => !h.item.estado || h.item.estado === 'nova').length;
+  const novas = respondidas.filter(h => !h.estadoAntesDeResponder || h.estadoAntesDeResponder === 'nova').length;
   const repeticoes = respondidas.length - novas;
   const temposValidos = respondidas.map(h => h.tempoAtivoMs).filter(t => typeof t === 'number' && t > 0);
   const tempoMedioMs = temposValidos.length ? temposValidos.reduce((a,b)=>a+b,0) / temposValidos.length : 0;
@@ -9166,6 +9166,7 @@ async function responderVF(resposta){
 
   const estadoAntes = item.estado;
   const intervaloAntes = item.intervalo_horas;
+  entrada.estadoAntesDeResponder = estadoAntes; // achado real: item.estado é mutado logo abaixo (Object.assign), então precisa desse snapshot separado pro painel de estatísticas conseguir saber depois se essa questão era nova ou repetição NO MOMENTO em que foi respondida
 
   // Regra 1 (fluxo garantido de novas): reseta o contador toda vez que a
   // questão SERVIDA (não a resultante) era 'nova', não importa o caminho
@@ -9548,7 +9549,7 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
   elAtual.style.marginTop = '14px';
   elAtual.style.display = 'flex';
   elAtual.style.gap = '10px';
-  elAtual.style.alignItems = 'flex-start';
+  elAtual.style.alignItems = 'center';
   elAtual.style.cursor = 'pointer';
   elAtual.onclick = () => abrirNotaVF(questaoVfId);
   elAtual.innerHTML = `${VF_ICONE_LAMPADA_SVG('24', '27', '#B23A34')}<div style="color:#333;line-height:1.4">${escapeHtml(data[0].texto)}</div>`;
@@ -9617,6 +9618,8 @@ let vfTimerPressionarExplicacao = null;
 let vfPosicaoInicialPressionarExplicacaoVF = null;
 let vfMoveuDuranteToqueExplicacao = false;
 function vfIniciarPressionarExplicacao(evento){
+  const div = document.getElementById('vf-explicacao-atual');
+  if(div && div.dataset.editando === '1') return; // já editando - não interfere no textarea, deixa o Safari cuidar do toque/seleção sozinho
   vfMoveuDuranteToqueExplicacao = false;
   clearTimeout(vfTimerPressionarExplicacao);
   const ponto = evento && (evento.touches ? evento.touches[0] : evento);
@@ -9629,6 +9632,8 @@ function vfIniciarPressionarExplicacao(evento){
 // usado no touchmove/mouseleave - moveu ou saiu = não é toque limpo, só
 // cancela a espera de edição, NÃO copia (mesmo padrão do enunciado)
 function vfCancelarPressionarExplicacaoSilencioso(evento){
+  const div = document.getElementById('vf-explicacao-atual');
+  if(div && div.dataset.editando === '1') return; // mesma blindagem do início do toque
   if(evento && vfPosicaoInicialPressionarExplicacaoVF){
     const ponto = evento.touches ? evento.touches[0] : evento;
     if(ponto){
@@ -11720,7 +11725,7 @@ async function verificarMaioriaTopico(topicoId){
 function removerMarcadoresSubscrito(texto){
   return (texto||'')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1$2')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9]+)\^(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
 }
 async function abrirFormularioEdicao(questaoId, topicoId){
   const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
