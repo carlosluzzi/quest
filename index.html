@@ -924,7 +924,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     </div>
     <div id="vf-filtros" style="margin-bottom:16px;background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:14px 16px">
       <button class="btn-icone-pequeno" onclick="alternarFiltrosVF()" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:4px 2px;cursor:pointer;font-family:inherit;color:#B23A34;font-size:var(--fs-d);font-weight:700;-webkit-appearance:none;appearance:none;outline:none;-webkit-tap-highlight-color:transparent">
-        <span>Filtros</span>
+        <span style="line-height:1">Filtros</span>
         <span style="width:18px;height:18px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;overflow:hidden">
           <svg id="vf-chevron-filtros" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s;flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
         </span>
@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-427';
+const VERSAO_APP = '2026-07-25-431';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8117,11 +8117,38 @@ async function vfRenderizarConteudoPainelSessaoVF(){
         <span><span class="vf-dot" style="background:#B23A34"></span>${novas} novas</span>
         <span><span class="vf-dot" style="background:#E8B4B0"></span>${repeticoes} repetições</span>
       </div>` : ''}
-      <div id="vf-painel-secao-filtro"></div>
+      <div id="vf-painel-secao-filtro">${vfMontarPlaceholderPanoramaVF()}</div>
     </div>
   `;
 
   vfCarregarPanoramaFiltroVF(); // sempre carrega - sem filtro nenhum, mostra o panorama do banco inteiro
+}
+
+// monta a seção de panorama já com a estrutura/altura final desde o
+// primeiro instante (linhas de módulo/publicação/capítulo/tipo, que já
+// são conhecidas sem busca nenhuma) - só os 3 números que dependem da
+// busca assíncrona (vfCarregarPanoramaFiltroVF) ficam como travessão até
+// chegarem. Achado real: sem isso, o painel abria com essa seção vazia,
+// e crescia de novo (um segundo pulo visual) assim que a busca terminava
+// - geralmente rápido o bastante pra parecer um "flash" logo após abrir
+function vfMontarPlaceholderPanoramaVF(){
+  const nomePublicacao = filtroVF.publicacao ? (bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.nome_exibicao || bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.titulo) : null;
+  const tipoTexto = filtroVF.numero && filtroVF.lista ? 'Número ou Lista' : filtroVF.numero ? 'Número' : filtroVF.lista ? 'Lista' : null;
+  const linhasFiltro = [
+    filtroVF.modulo ? `<div class="vf-filtro-linha"><span>Módulo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.modulo)}</span></div>` : '',
+    nomePublicacao ? `<div class="vf-filtro-linha"><span>Publicação</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(nomePublicacao)}</span></div>` : '',
+    filtroVF.capitulo ? `<div class="vf-filtro-linha"><span>Capítulo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.capitulo)}</span></div>` : '',
+    tipoTexto ? `<div class="vf-filtro-linha"><span>Tipo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(tipoTexto)}</span></div>` : ''
+  ].filter(Boolean).join('');
+  const tituloSecao = linhasFiltro ? 'Panorama desse filtro (todo o banco)' : 'Panorama geral (todo o banco)';
+  return `
+    <div style="height:1px;background:#eee;margin:20px 0"></div>
+    <div class="vf-secao-titulo">${tituloSecao}</div>
+    ${linhasFiltro}
+    <div class="vf-filtro-linha"><span>Total de afirmações</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha"><span>Você já viu ao menos 1 vez</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor">—</span></div>
+  `;
 }
 
 // busca só quando há filtro ativo - total de afirmações com esse
@@ -8150,33 +8177,21 @@ async function vfCarregarPanoramaFiltroVF(){
   });
   const totalFiltro = panorama?.[0]?.total || 0;
   const jaVistas = panorama?.[0]?.ja_vistas || 0;
-  const nomePublicacao = filtroVF.publicacao ? (bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.nome_exibicao || bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.titulo) : null;
-  const tipoTexto = filtroVF.numero && filtroVF.lista ? 'Número ou Lista' : filtroVF.numero ? 'Número' : filtroVF.lista ? 'Lista' : null;
-  // linhas de descrição do filtro - só entram as partes que realmente
-  // estão definidas (módulo/publicação/capítulo/tipo são independentes
-  // entre si). Número/Lista já contavam pro total calculado, mas antes
-  // ficavam "invisíveis" aqui - dava a impressão de que o total era do
-  // banco inteiro sem filtro nenhum, quando na verdade só contava um
-  // tipo específico
-  const linhasFiltro = [
-    filtroVF.modulo ? `<div class="vf-filtro-linha"><span>Módulo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.modulo)}</span></div>` : '',
-    nomePublicacao ? `<div class="vf-filtro-linha"><span>Publicação</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(nomePublicacao)}</span></div>` : '',
-    filtroVF.capitulo ? `<div class="vf-filtro-linha"><span>Capítulo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.capitulo)}</span></div>` : '',
-    tipoTexto ? `<div class="vf-filtro-linha"><span>Tipo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(tipoTexto)}</span></div>` : ''
-  ].filter(Boolean).join('');
   // se o painel já foi fechado enquanto essa busca rodava, não escreve nada
   const elAtual = document.getElementById('vf-painel-secao-filtro');
   if(!elAtual) return;
-  const tituloSecao = linhasFiltro ? 'Panorama desse filtro (todo o banco)' : 'Panorama geral (todo o banco)';
-  elAtual.innerHTML = `
-    <div style="height:1px;background:#eee;margin:20px 0"></div>
-    <div class="vf-secao-titulo">${tituloSecao}</div>
-    ${linhasFiltro}
-    <div class="vf-filtro-linha"><span>Total de afirmações</span><span class="vf-filtro-valor">${totalFiltro||0}</span></div>
-    <div class="vf-filtro-linha"><span>Você já viu ao menos 1 vez</span><span class="vf-filtro-valor">${jaVistas}</span></div>
-    <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor">${Math.max(0,(totalFiltro||0)-jaVistas)}</span></div>
-  `;
-  vfReajustarAlturaPainelSessaoVF(); // o panorama chegou depois (busca assíncrona) - se isso fez o conteúdo crescer, ajusta o painel pra caber sem precisar rolar
+  // só troca os 3 números - a estrutura (título/linhas de filtro) já foi
+  // montada pelo placeholder síncrono (vfMontarPlaceholderPanoramaVF),
+  // então a altura do painel não muda mais nesse momento, sem o pulo
+  // visual de antes
+  const valores = elAtual.querySelectorAll('.vf-filtro-valor');
+  const nValores = valores.length;
+  if(nValores >= 3){
+    valores[nValores-3].textContent = totalFiltro||0;
+    valores[nValores-2].textContent = jaVistas;
+    valores[nValores-1].textContent = Math.max(0,(totalFiltro||0)-jaVistas);
+  }
+  vfReajustarAlturaPainelSessaoVF(); // proteção extra - normalmente não muda nada agora, já que o placeholder já tinha a altura certa
 }
 
 // mede o conteúdo de novo e ajusta o painel (altura + reposição
@@ -9122,6 +9137,7 @@ async function responderVF(resposta){
   // trecho corrente se ainda estiver ativa agora — é isso que alimenta o
   // algoritmo (não conta tempo fora do app, tela bloqueada, etc)
   const tempoAtivoMsFinal = (entrada.tempoAtivoMs||0) + (entrada.ativoDesdeMs != null ? (agoraMs - entrada.ativoDesdeMs) : 0);
+  entrada.tempoAtivoMs = tempoAtivoMsFinal; // persiste o valor final completo na entrada - sem isso, o painel de estatísticas da sessão lia só o acumulado parcial de antes da última pausa (achado real)
   const tempoS = tempoAtivoMsFinal / 1000;
   // tempo BRUTO: do momento que a questão apareceu até agora, sem
   // descontar pausa nenhuma — só pro log, pra calibração futura poder
@@ -9350,7 +9366,8 @@ async function vfAdicionarTagVF(){
     }
     if(itemNoPool) itemNoPool[campoEstrutural] = true; // reflete na tela na hora, sem esperar recarregar
     input.value = '';
-    statusEl.innerHTML = `<span style="color:#3B6D11">Marcada como ${campoEstrutural === 'eh_numero' ? 'Número' : 'Lista'} — já funciona no filtro.</span>`;
+    statusEl.innerHTML = `<span style="color:#3B6D11">Essa tag funciona no filtro.</span>`;
+    vfRenderizarListaTagsAtualVF(); // mostra o badge aqui dentro do próprio popup na hora, sem precisar fechar e reabrir
     renderizarItemVF();
     return;
   }
