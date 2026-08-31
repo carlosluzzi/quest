@@ -134,7 +134,6 @@ primeiro frame) e (2) transitiona suavemente pro tamanho/posição final
 .vf-filtro-linha{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid #f0f0ee;font-size:var(--fs-d)}
 .vf-filtro-linha:last-child{border-bottom:none}
 .vf-filtro-linha .vf-filtro-valor{font-weight:700;color:#111;font-variant-numeric:tabular-nums}
-.vf-filtro-tag{background:#F2DAD8;color:#B23A34;font-size:var(--fs-b);font-weight:700;padding:4px 10px;border-radius:20px;display:inline-block;margin-bottom:14px}
 /* sliders de espessura (caneta, destaque e tamanho da borracha) - MESMO
 visual nos três, pílula horizontal neutra (branca, como o thumb padrão
 nativo da Apple), não mais colorida - accent-color mostrou comportamento
@@ -1648,7 +1647,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-408';
+const VERSAO_APP = '2026-07-25-409';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8068,43 +8067,40 @@ async function vfCarregarPanoramaFiltroVF(){
   const elSecao = document.getElementById('vf-painel-secao-filtro');
   if(!elSecao || !usuarioAtual) return;
   // questoes_vf não tem modulo_pscpp direto - só bibliografia_id. Quando
-  // o filtro é por módulo (não por publicação específica), precisa
-  // primeiro achar quais bibliografias pertencem a esse módulo
-  const idsBibliografiaDoModulo = filtroVF.modulo
-    ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id)
-    : null;
-  const aplicarFiltrosComuns = (q) => {
-    if(filtroVF.publicacao) q = q.eq('bibliografia_id', filtroVF.publicacao);
-    else if(idsBibliografiaDoModulo) q = q.in('bibliografia_id', idsBibliografiaDoModulo);
-    if(filtroVF.capitulo) q = q.eq('capitulo', filtroVF.capitulo);
-    if(filtroVF.numero && filtroVF.lista) q = q.or('eh_numero.eq.true,eh_lista.eq.true');
-    else if(filtroVF.numero) q = q.eq('eh_numero', true);
-    else if(filtroVF.lista) q = q.eq('eh_lista', true);
-    return q;
-  };
-  const montarQueryBase = () => aplicarFiltrosComuns(sb.from('questoes_vf').select('id', {count: 'exact', head: true}).eq('anulada', false));
-  const {count: totalFiltro} = await montarQueryBase();
-  // pra saber quantas dessas já foram vistas, precisa dos IDs de verdade
-  // (não só a contagem) - busca as questões do filtro, depois cruza com
-  // repeticao_vf pra contar quantas têm registro
-  let jaVistas = 0;
-  if(totalFiltro){
-    const montarQueryIds = () => aplicarFiltrosComuns(sb.from('questoes_vf').select('id', {count: 'exact'}).eq('anulada', false)).order('id');
-    const {data: idsFiltro} = await buscarTudoPaginadoVF(montarQueryIds);
-    const ids = (idsFiltro||[]).map(q=>q.id);
-    if(ids.length){
-      const {count} = await sb.from('repeticao_vf').select('questao_vf_id', {count: 'exact', head: true}).eq('usuario_id', usuarioAtual.id).in('questao_vf_id', ids);
-      jaVistas = count || 0;
-    }
-  }
-  const nomeFiltro = filtroVF.modulo || (filtroVF.publicacao && bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.nome_exibicao) || 'Filtro atual';
+  // o filtro é por publicação específica, é só ela; quando é por módulo
+  // inteiro, resolve pra todas as bibliografias daquele módulo (usando o
+  // cache já em memória, sem busca nenhuma)
+  const idsBibliografia = filtroVF.publicacao
+    ? [filtroVF.publicacao]
+    : (filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null);
+  // uma única chamada RPC calcula total + já-vistas em SQL, direto no
+  // banco - achado real: buscar todos os IDs filtrados (podendo ser
+  // centenas) só pra depois cruzar com repeticao_vf era o gargalo real
+  // de lentidão nessa seção
+  const {data: panorama} = await sb.rpc('panorama_filtro_vf', {
+    p_usuario_id: usuarioAtual.id,
+    p_ids_bibliografia: idsBibliografia,
+    p_capitulo: filtroVF.capitulo || null,
+    p_numero: !!filtroVF.numero,
+    p_lista: !!filtroVF.lista
+  });
+  const totalFiltro = panorama?.[0]?.total || 0;
+  const jaVistas = panorama?.[0]?.ja_vistas || 0;
+  const nomePublicacao = filtroVF.publicacao ? (bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.nome_exibicao || bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.titulo) : null;
+  // linhas de descrição do filtro - só entram as partes que realmente
+  // estão definidas (módulo/publicação/capítulo são independentes entre si)
+  const linhasFiltro = [
+    filtroVF.modulo ? `<div class="vf-filtro-linha"><span>Módulo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.modulo)}</span></div>` : '',
+    nomePublicacao ? `<div class="vf-filtro-linha"><span>Publicação</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(nomePublicacao)}</span></div>` : '',
+    filtroVF.capitulo ? `<div class="vf-filtro-linha"><span>Capítulo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.capitulo)}</span></div>` : ''
+  ].filter(Boolean).join('');
   // se o painel já foi fechado enquanto essa busca rodava, não escreve nada
   const elAtual = document.getElementById('vf-painel-secao-filtro');
   if(!elAtual) return;
   elAtual.innerHTML = `
     <div style="height:1px;background:#eee;margin:20px 0"></div>
-    <div class="vf-filtro-tag">${escapeHtml(nomeFiltro)}</div>
-    <div class="vf-secao-titulo" style="margin-bottom:0">Panorama desse filtro (todo o banco)</div>
+    <div class="vf-secao-titulo">Panorama desse filtro (todo o banco)</div>
+    ${linhasFiltro}
     <div class="vf-filtro-linha"><span>Total de afirmações</span><span class="vf-filtro-valor">${totalFiltro||0}</span></div>
     <div class="vf-filtro-linha"><span>Você já viu ao menos 1 vez</span><span class="vf-filtro-valor">${jaVistas}</span></div>
     <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor">${Math.max(0,(totalFiltro||0)-jaVistas)}</span></div>
@@ -8478,11 +8474,12 @@ async function popularFiltroModuloVF(){
   const el = document.getElementById('vf-filtro-modulo');
   if(el.dataset.populado) return;
   await vfCarregarBibliografiaCacheVF(); // idempotente - garante que o cache de bibliografia já existe
-  // busca só o bibliografia_id de cada questão (sem join, sem texto) e
-  // cruza com o cache já carregado - bem mais leve que o join direto de
-  // antes, que trazia bibliografia(modulo_pscpp) pra cada uma das 7.700+
-  const {data} = await sb.from('questoes_vf').select('bibliografia_id').eq('anulada', false);
-  const modulosComVF = new Set((data||[]).map(q => vfBibliografiaCache.get(q.bibliografia_id)?.modulo_pscpp).filter(Boolean));
+  // achado real: buscar bibliografia_id de cada uma das 7.700+ questões
+  // pra deduplicar no navegador era pesado e causava lentidão perceptível
+  // (inclusive um artefato visual de reflow). A função no banco já
+  // devolve só os módulos distintos, poucas linhas
+  const {data} = await sb.rpc('modulos_com_questoes_vf');
+  const modulosComVF = new Set((data||[]).map(r => r.modulo_pscpp).filter(Boolean));
   el.innerHTML = '<option value="">Todos os módulos</option>' + [...modulosComVF].sort((a,b)=>a.localeCompare(b,'pt')).map(m=>
     `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`
   ).join('');
