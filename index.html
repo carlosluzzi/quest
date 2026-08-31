@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-425';
+const VERSAO_APP = '2026-07-25-426';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4596,6 +4596,12 @@ document.addEventListener('touchstart', (e) => {
   if(e.target.closest('#vf-sessao-balao')) return; // balão da sessão (arrastar, Pausar, Finalizar, fechar) - nunca vira início de traço, tem seu próprio sistema de arrasto/clique
   if(vfBalaoArrastoInfoVF) return; // proteção redundante - nunca desenha enquanto o balão está sendo arrastado, mesmo que o toque não esteja mais fisicamente sobre ele
   if(e.target.closest('select')) return; // qualquer <select> nativo (filtros do Flash, e futuros) - nunca vira início de traço, o dropdown nativo do Safari precisa do toque limpo
+  // Favoritar/Salvar já têm sistema PRÓPRIO completo (toque curto=clique,
+  // toque longo=abrir lista, ver vfIniciarPressionarFavoritar/Salvar) -
+  // achado real: o sistema genérico abaixo (só ativo pra caneta) competia
+  // com esse sistema próprio pela mesma caneta, quebrando os dois. Deixa
+  // esses 2 botões inteiramente por conta do próprio sistema deles
+  if(e.target.closest('[onclick^="toggleFavoritoVF"], [onclick^="vfAbrirEscolhaMotivoSalvarVF"]')) return;
   // ícones pequenos, itens de menu (barra de baixo/sidebar), botões do
   // cabeçalho, e QUALQUER botão/link clicável na tela (alternativas do
   // Quest, Anterior/Próxima, pills de navegação, Confirmar resposta,
@@ -5707,7 +5713,11 @@ async function vfExcluirFlashSalvoVF(salvoId, questaoVfId){
 
 // ---- toque longo no botão Salvar: abre a lista de tudo que já foi
 // salvo. Toque normal (sem segurar) salva a questão atual direto (abre a
-// escolha rápida Estudar depois / Corrigir depois) ----
+// escolha rápida Estudar depois / Corrigir depois). Esse botão é
+// ignorado pelo sistema genérico de toque com caneta (ver o touchstart
+// global) - fica inteiramente autossuficiente aqui, incluindo disparar o
+// clique manualmente quando necessário (só pra caneta: dedo/mouse já
+// clicam sozinhos normalmente, sem precisar de nada disso) ----
 let vfTimerPressionarSalvar = null;
 let vfFoiToqueLongoSalvar = false;
 let vfPosicaoInicialPressionarSalvarVF = null;
@@ -5727,17 +5737,30 @@ function vfIniciarPressionarSalvar(evento){
 // razão documentada em VF_LIMIAR_ARRASTO_NAV_ITEM_PX) - sem isso, segurar
 // esse botão com a caneta cancelava o toque longo quase sempre antes dos
 // 500ms completarem
-function vfCancelarPressionarSalvar(evento){
-  if(evento && vfPosicaoInicialPressionarSalvarVF){
+function vfCancelarPressionarSalvar(evento, id){
+  // touchmove: só verifica se já moveu demais - se ainda está dentro da
+  // tolerância, não faz nada ainda (deixa o toque longo pendente rodando)
+  if(evento && evento.type === 'touchmove' && vfPosicaoInicialPressionarSalvarVF){
     const ponto = evento.touches ? evento.touches[0] : evento;
     if(ponto){
       const dx = ponto.clientX - vfPosicaoInicialPressionarSalvarVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarSalvarVF.y;
-      if(Math.hypot(dx, dy) < 25) return;
+      if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela nada ainda
     }
   }
+  // chegou aqui: ou é touchend/mouseup (toque acabou de vez), ou moveu
+  // demais no touchmove (arrasto de verdade) - cancela o toque longo pendente
+  const foiToqueLongo = vfFoiToqueLongoSalvar;
   clearTimeout(vfTimerPressionarSalvar);
   vfTimerPressionarSalvar = null;
   vfPosicaoInicialPressionarSalvarVF = null;
+  // só dispara o clique manualmente se: é touchend de verdade (tem id) +
+  // não foi toque longo + foi realmente a caneta (touch-action:none nos
+  // botões do Flash suprime o clique sintético só dela, dedo/mouse
+  // continuam clicando sozinhos normalmente sem precisar disso)
+  if(id && !foiToqueLongo && evento && evento.type === 'touchend' && vfEhToqueDeCaneta(evento.changedTouches?.[0])){
+    evento.preventDefault();
+    vfAbrirEscolhaMotivoSalvarVF(id);
+  }
 }
 
 function vfAbrirEscolhaMotivoSalvarVF(questaoId){
@@ -9048,7 +9071,7 @@ function renderizarBarraFixaVF(item, jaRespondida){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         <span>Excluir</span>
       </button>
-      <button class="banco-acao-btn ${favoritosVF.has(item.id)?'favoritada':''}" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar(event)" ontouchend="vfCancelarPressionarFavoritar()" ontouchmove="vfCancelarPressionarFavoritar(event)" onmousedown="vfIniciarPressionarFavoritar(event)" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
+      <button class="banco-acao-btn ${favoritosVF.has(item.id)?'favoritada':''}" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar(event)" ontouchend="vfCancelarPressionarFavoritar(event,'${item.id}')" ontouchmove="vfCancelarPressionarFavoritar(event)" onmousedown="vfIniciarPressionarFavoritar(event)" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
         <svg viewBox="0 0 24 24" fill="${favoritosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
         <span>Favoritar</span>
       </button>
@@ -9057,7 +9080,7 @@ function renderizarBarraFixaVF(item, jaRespondida){
         <span>Notas</span>
         ${notasVF.has(item.id)?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
-      <button class="banco-acao-btn ${flashsSalvosVF.has(item.id)?'favoritada':''}" onclick="vfAbrirEscolhaMotivoSalvarVF('${item.id}')" ontouchstart="vfIniciarPressionarSalvar(event)" ontouchend="vfCancelarPressionarSalvar()" ontouchmove="vfCancelarPressionarSalvar(event)" onmousedown="vfIniciarPressionarSalvar(event)" onmouseup="vfCancelarPressionarSalvar()" onmouseleave="vfCancelarPressionarSalvar()">
+      <button class="banco-acao-btn ${flashsSalvosVF.has(item.id)?'favoritada':''}" onclick="vfAbrirEscolhaMotivoSalvarVF('${item.id}')" ontouchstart="vfIniciarPressionarSalvar(event)" ontouchend="vfCancelarPressionarSalvar(event,'${item.id}')" ontouchmove="vfCancelarPressionarSalvar(event)" onmousedown="vfIniciarPressionarSalvar(event)" onmouseup="vfCancelarPressionarSalvar()" onmouseleave="vfCancelarPressionarSalvar()">
         <svg viewBox="0 0 24 24" fill="${flashsSalvosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         <span>Salvar</span>
       </button>
@@ -9200,7 +9223,11 @@ async function responderVF(resposta){
 }
 
 // toque longo no botão Favoritar abre a lista de favoritos - toque normal
-// continua favoritando/desfavoritando como sempre foi
+// continua favoritando/desfavoritando como sempre foi. Esse botão é
+// ignorado pelo sistema genérico de toque com caneta (ver o touchstart
+// global) - fica inteiramente autossuficiente aqui, incluindo disparar o
+// clique manualmente quando necessário (só pra caneta: dedo/mouse já
+// clicam sozinhos normalmente, sem precisar de nada disso)
 let vfTimerPressionarFavoritar = null;
 let vfFoiToqueLongoFavoritar = false;
 let vfPosicaoInicialPressionarFavoritarVF = null;
@@ -9215,17 +9242,30 @@ function vfIniciarPressionarFavoritar(evento){
     vfAbrirFavoritosVF();
   }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
 }
-function vfCancelarPressionarFavoritar(evento){
-  if(evento && vfPosicaoInicialPressionarFavoritarVF){
+function vfCancelarPressionarFavoritar(evento, id){
+  // touchmove: só verifica se já moveu demais - se ainda está dentro da
+  // tolerância, não faz nada ainda (deixa o toque longo pendente rodando)
+  if(evento && evento.type === 'touchmove' && vfPosicaoInicialPressionarFavoritarVF){
     const ponto = evento.touches ? evento.touches[0] : evento;
     if(ponto){
       const dx = ponto.clientX - vfPosicaoInicialPressionarFavoritarVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarFavoritarVF.y;
-      if(Math.hypot(dx, dy) < 25) return;
+      if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela nada ainda
     }
   }
+  // chegou aqui: ou é touchend/mouseup (toque acabou de vez), ou moveu
+  // demais no touchmove (arrasto de verdade) - cancela o toque longo pendente
+  const foiToqueLongo = vfFoiToqueLongoFavoritar;
   clearTimeout(vfTimerPressionarFavoritar);
   vfTimerPressionarFavoritar = null;
   vfPosicaoInicialPressionarFavoritarVF = null;
+  // só dispara o clique manualmente se: é touchend de verdade (tem id) +
+  // não foi toque longo + foi realmente a caneta (touch-action:none nos
+  // botões do Flash suprime o clique sintético só dela, dedo/mouse
+  // continuam clicando sozinhos normalmente sem precisar disso)
+  if(id && !foiToqueLongo && evento && evento.type === 'touchend' && vfEhToqueDeCaneta(evento.changedTouches?.[0])){
+    evento.preventDefault();
+    toggleFavoritoVF(id);
+  }
 }
 
 // ---- sistema de tags customizadas (livres) por questão V/F ----
