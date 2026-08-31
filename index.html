@@ -1612,7 +1612,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-406';
+const VERSAO_APP = '2026-07-25-407';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8221,10 +8221,25 @@ async function mudarFiltroPublicacaoVF(){
   mudarFiltroVF();
 }
 
+// espera um pouco antes de recarregar o pool de verdade - achado real:
+// configurar módulo, depois publicação, depois capítulo em sequência
+// rápida disparava uma busca pesada completa A CADA select individual,
+// cada uma descartando a anterior (que já tinha sido paga em rede/tempo
+// à toa). Cancela qualquer espera pendente e recomeça a cada mudança -
+// só dispara de verdade quando a pessoa já parou de mexer nos filtros
+let vfTimerDebounceRecarregarPoolVF = null;
+function vfRecarregarPoolComDebounceVF(){
+  clearTimeout(vfTimerDebounceRecarregarPoolVF);
+  vfTimerDebounceRecarregarPoolVF = setTimeout(() => {
+    vfTimerDebounceRecarregarPoolVF = null;
+    recarregarPoolEContinuarVF();
+  }, 500);
+}
+
 function mudarFiltroVF(){
   filtroVF.publicacao = document.getElementById('vf-filtro-publicacao').value || null;
   filtroVF.capitulo = document.getElementById('vf-filtro-capitulo').value || null;
-  recarregarPoolEContinuarVF();
+  vfRecarregarPoolComDebounceVF();
 }
 
 function toggleFiltroTagVF(tipo){
@@ -8234,7 +8249,7 @@ function toggleFiltroTagVF(tipo){
   btn.style.background = filtroVF[campo] ? '#B23A34' : '#fff';
   btn.style.color = filtroVF[campo] ? '#fff' : '#888';
   btn.style.borderColor = filtroVF[campo] ? '#B23A34' : '#ddd';
-  recarregarPoolEContinuarVF();
+  vfRecarregarPoolComDebounceVF();
 }
 
 // abre/fecha o bloco de filtros — começa fechado, pra não ocupar espaço
@@ -8478,19 +8493,9 @@ function vfSoltarPressionarEnunciado(evento){
   clearTimeout(vfTimerPressionarEnunciado);
   vfTimerPressionarEnunciado = null;
   const div = document.getElementById('vf-enunciado-atual');
-  // vfDesenhandoAgora ainda reflete o toque que acabou de soltar aqui,
-  // já que esse handler roda ANTES do listener global que reseta ela pra
-  // false (bubbling: o elemento dispara antes do document). Um traço de
-  // caneta curto (tipo um pontinho) pode ficar dentro da tolerância de
-  // 25px de "não moveu", mas ainda assim foi um desenho de verdade, não
-  // um toque pra copiar - sem essa checagem, escrever por cima copiava
-  // o texto sem querer. E mais direto ainda: cópia é coisa de DEDO, a
-  // caneta nunca deveria copiar (só desenha ou troca de ferramenta com
-  // duplo toque) - checa isso primeiro, antes de qualquer outra coisa
-  const tocouComCaneta = evento && vfEhToqueDeCaneta(evento.changedTouches?.[0]);
-  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueEnunciado && !vfDesenhandoAgora && !tocouComCaneta){
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueEnunciado){
     if(evento) evento.preventDefault(); // evita o mouseup sintético que o Safari gera após um toque real - sem isso, a cópia disparava 2x e o selinho "Copiado" piscava (reiniciava a animação no meio)
-    vfCopiarTextoElementoVF(div);
+    vfCopiarComProtecaoDuploToqueVF(div, evento);
   }
 }
 
@@ -8568,6 +8573,29 @@ async function vfSalvarEdicaoEnunciadoVF(questaoId, textoOriginal){
 // copia o texto exato passado (não precisa mais buscar "afirmação
 // verdadeira" com lógica própria - agora cada bloco de texto copia
 // exatamente o que está escrito nele mesmo)
+// decide COMO copiar dependendo de quem tocou - dedo/mouse copia na
+// hora (não tem conflito nenhum ali). Caneta espera um pouco antes de
+// copiar de verdade, dando tempo do sistema de duplo toque (que troca
+// caneta<->borracha) confirmar uma troca nesse meio tempo - se isso
+// acontecer, cancela a cópia, já que aquele toque era metade de um
+// duplo toque, não um toque limpo pra copiar
+function vfCopiarComProtecaoDuploToqueVF(elemento, evento){
+  const tocouComCaneta = evento && vfEhToqueDeCaneta(evento.changedTouches?.[0]);
+  if(!tocouComCaneta){
+    vfCopiarTextoElementoVF(elemento);
+    return;
+  }
+  // guarda o estado da ferramenta agora - se um duplo toque confirmar
+  // troca antes do timeout disparar, vfModoBorracha vai ter mudado
+  const modoBorrachaAntes = vfModoBorracha;
+  // um pouco maior que a janela de duplo toque (280ms) - margem de
+  // segurança pra garantir que a confirmação (se vier) já aconteceu
+  setTimeout(() => {
+    if(vfModoBorracha !== modoBorrachaAntes) return; // duplo toque confirmou troca - não copia
+    vfCopiarTextoElementoVF(elemento);
+  }, 320);
+}
+
 async function vfCopiarTextoElementoVF(elemento){
   // remove qualquer selinho "Copiado" que ainda esteja lá (de um clique
   // duplo rápido, antes do anterior sumir) ANTES de ler o texto - senão
@@ -8631,11 +8659,10 @@ function vfSoltarPressionarCorrecao(evento){
   clearTimeout(vfTimerPressionarCorrecao);
   vfTimerPressionarCorrecao = null;
   const div = document.getElementById('vf-correcao-atual');
-  // mesma checagem do enunciado - ver comentário lá
-  const tocouComCaneta = evento && vfEhToqueDeCaneta(evento.changedTouches?.[0]);
-  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueCorrecao && !vfDesenhandoAgora && !tocouComCaneta){
+  // mesma lógica do enunciado - ver comentário lá
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueCorrecao){
     if(evento) evento.preventDefault();
-    vfCopiarTextoElementoVF(div);
+    vfCopiarComProtecaoDuploToqueVF(div, evento);
   }
 }
 
@@ -9232,11 +9259,10 @@ function vfSoltarPressionarExplicacao(evento){
   clearTimeout(vfTimerPressionarExplicacao);
   vfTimerPressionarExplicacao = null;
   const div = document.getElementById('vf-explicacao-atual');
-  // mesma checagem do enunciado - ver comentário lá
-  const tocouComCaneta = evento && vfEhToqueDeCaneta(evento.changedTouches?.[0]);
-  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueExplicacao && !vfDesenhandoAgora && !tocouComCaneta){
+  // mesma lógica do enunciado - ver comentário lá
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueExplicacao){
     if(evento) evento.preventDefault();
-    vfCopiarTextoElementoVF(div);
+    vfCopiarComProtecaoDuploToqueVF(div, evento);
   }
 }
 
