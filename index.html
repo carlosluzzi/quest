@@ -90,6 +90,13 @@ input,select,textarea{font-family:inherit;font-size:16px}
 /* balão flutuante da sessão do Flash - mesma técnica de estados via
 classe do timer do PSCPP Tracker, cor adaptada pra marca do Pilotquest
 (B23A34 em vez do azul-marinho de lá) */
+/* transição suave de altura pra caixa de filtros do Flash (ver
+alternarFiltrosVF) - max-height é a técnica clássica pra animar um
+conteúdo de altura dinâmica com CSS puro, já que "height:auto" não pode
+ser animado diretamente. 500px é generoso o bastante pra caber os 3
+selects + 2 botões sem cortar nada quando aberto */
+#vf-filtros-conteudo{overflow:hidden;max-height:500px;opacity:1;margin-top:10px;transition:max-height .28s ease,opacity .22s ease,margin-top .28s ease}
+#vf-filtros-conteudo.vf-filtros-fechado{max-height:0;opacity:0;margin-top:0}
 #vf-sessao-balao{position:fixed;z-index:150;background:#B23A34;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.35);width:220px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + var(--vf-barra-fixa-altura, 0px) + env(safe-area-inset-bottom, 0px) + 16px)}
 #vf-sessao-balao.hidden{display:none}
 /* pausado NÃO troca o fundo (igual o Tracker) - só o tempo fica
@@ -915,7 +922,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         <span>Filtros</span>
         <svg id="vf-chevron-filtros" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
-      <div id="vf-filtros-conteudo" class="hidden" style="margin-top:10px">
+      <div id="vf-filtros-conteudo" class="vf-filtros-fechado">
         <select id="vf-filtro-modulo" class="filter-select" style="margin-bottom:8px" onchange="mudarModuloFiltroVF()">
           <option value="">Todos os módulos</option>
         </select>
@@ -1651,7 +1658,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-410';
+const VERSAO_APP = '2026-07-25-411';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7709,8 +7716,8 @@ function vfLimparFiltroVF(){
   });
   const conteudo = document.getElementById('vf-filtros-conteudo');
   const chevron = document.getElementById('vf-chevron-filtros');
-  if(conteudo && !conteudo.classList.contains('hidden')){
-    conteudo.classList.add('hidden');
+  if(conteudo && !conteudo.classList.contains('vf-filtros-fechado')){
+    conteudo.classList.add('vf-filtros-fechado');
     if(chevron) chevron.style.transform = 'rotate(0deg)';
   }
 }
@@ -8465,12 +8472,17 @@ function toggleFiltroTagVF(tipo){
 }
 
 // abre/fecha o bloco de filtros — começa fechado, pra não ocupar espaço
-// da tela à toa quando não está mexendo nele
+// da tela à toa quando não está mexendo nele. Transição suave de altura
+// (max-height/opacity, ver CSS de .vf-filtros-fechado) em vez do
+// display:none instantâneo de antes - achado real: o salto abrupto de
+// altura (empurrando tudo abaixo pra baixo/cima de uma vez, sem
+// animação) disparava um artefato visual de 1 frame do Safari (uma
+// linha escura bem abaixo do cabeçalho), visível só durante a transição
 function alternarFiltrosVF(){
   const conteudo = document.getElementById('vf-filtros-conteudo');
   const chevron = document.getElementById('vf-chevron-filtros');
-  const abrindo = conteudo.classList.contains('hidden');
-  conteudo.classList.toggle('hidden');
+  const abrindo = conteudo.classList.contains('vf-filtros-fechado');
+  conteudo.classList.toggle('vf-filtros-fechado');
   chevron.style.transform = abrindo ? 'rotate(180deg)' : 'rotate(0deg)';
 }
 
