@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-438';
+const VERSAO_APP = '2026-07-25-441';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1776,7 +1776,7 @@ function formatarEnunciado(texto){
   let escapedCompleto = escapeHtml(texto).replace(/\s+/g, ' ').trim();
   escapedCompleto = vfAplicarMarcacaoMatematicaVF(escapedCompleto); // gregas, operadores, sqrt, sobrescrito com chaves - mesmo padrão do V/F
   escapedCompleto = escapedCompleto
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
@@ -1977,7 +1977,7 @@ function extrairItensNumerados(enunciado){
 function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
@@ -3842,7 +3842,7 @@ function formatarTextoItemVF(texto){
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
   return resultado
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>');
 }
@@ -8737,7 +8737,7 @@ function renderizarItemVF(){
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
       </div>
-      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;text-align:left;font-weight:400;position:relative;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
+      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;margin-left:-8px;margin-right:-8px;margin-bottom:-8px;text-align:left;font-weight:400;position:relative;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
     `;
   }
 
@@ -9594,6 +9594,14 @@ let vfQuestaoIdExplicacaoAtual = null;
 // vfDesenhandoAgora "preso" apontando pra um canvas que já sumiu)
 function vfFecharModalExplicacaoVF(){
   if(vfDesenhandoAgora) vfFinalizarTracoDesenho();
+  // força o blur do textarea de edição ANTES de fechar - achado real e
+  // crítico: sem isso, fechar o modal (botão Fechar, ou X) enquanto
+  // ainda editando podia nunca disparar o evento de blur do textarea
+  // (que é o que aciona vfSalvarEdicaoExplicacaoVF), simplesmente
+  // escondendo o modal com a edição inteira descartada, sem salvar nada
+  // no banco - e sem nenhum aviso de que isso aconteceu
+  const textareaEdicao = document.getElementById('vf-textarea-explicacao');
+  if(textareaEdicao) textareaEdicao.blur();
   fecharModal('modal-explicacao-vf');
   vfFecharCanvasExplicacaoVF();
 }
@@ -11725,7 +11733,7 @@ async function verificarMaioriaTopico(topicoId){
 function removerMarcadoresSubscrito(texto){
   return (texto||'')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1$2')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
 }
 async function abrirFormularioEdicao(questaoId, topicoId){
   const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
