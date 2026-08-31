@@ -941,10 +941,13 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     artefato visual sutil na borda desse recorte, bem em cima do
     cabeçalho. Fora do app-shell, sem overflow:hidden no caminho, o
     canvas cobre a viewport de verdade sem esse recorte -->
-    <!-- barra fina, sempre visível quando ativa - marcador+cor agrupados
-    (fundo azul claro quando ativo, igual PDF Expert) + borracha separada -->
-    
-    <div id="vf-barra-fixa" class="vf-barra-fixa hidden"></div>
+    <!-- barra fixa de resposta (Verdadeiro/Falso/Próxima) - movida pra
+    FORA do #app-shell, ver comentário completo logo depois do
+    fechamento dele (mesma causa raiz do canvas de desenho: element
+    position:fixed dentro de um container com overflow:hidden causava a
+    linha de artefato visual bem em cima do cabeçalho, exposta toda vez
+    que a caixa de filtros abria/fechava e mudava a altura do conteúdo
+    acima, disparando um reflow) -->
   </div>
 
   <!-- ===== ADICIONAR QUESTÕES (popup no mobile/tablet, página no desktop) ===== -->
@@ -1023,6 +1026,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
 mas movido pra dentro de #content via JS logo na carga da página (ver
 vfMoverCanvasParaDentroDoContentVF) - isso é o que faz o traço rolar
 junto com o conteúdo em vez de ficar "grudado na tela" -->
+<div id="vf-barra-fixa" class="vf-barra-fixa hidden"></div>
 <canvas id="vf-canvas-desenho" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:280;pointer-events:none;touch-action:none"></canvas>
 <canvas id="vf-canvas-preview-destaque" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:281;pointer-events:none;touch-action:none"></canvas>
 
@@ -1647,7 +1651,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-409';
+const VERSAO_APP = '2026-07-25-410';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
