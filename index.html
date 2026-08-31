@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-421';
+const VERSAO_APP = '2026-07-25-422';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8330,9 +8330,13 @@ async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
   // grande), e essa combinação disparava o artefato visual da linha no
   // Safari. Mantendo o conteúdo antigo visível (só esmaecido) até o novo
   // chegar, a altura nunca muda abruptamente
-  const conteudoAntigoHtml = el.innerHTML;
   el.style.opacity = '0.35';
   el.style.pointerEvents = 'none';
+  // remove qualquer spinner que já exista ali (o estático que já vem no
+  // HTML inicial da página, antes de qualquer JS rodar, ou um overlay de
+  // uma chamada anterior) - sem isso, na entrada inicial ficavam dois
+  // spinners visíveis ao mesmo tempo, um por cima do outro
+  el.querySelectorAll('.loading-spinner').forEach(s => s.closest('div')?.remove());
   const overlaySpinner = document.createElement('div');
   overlaySpinner.id = 'vf-overlay-spinner-recarga';
   overlaySpinner.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:flex-start;justify-content:center;padding-top:80px;z-index:6;pointer-events:none';
