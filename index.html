@@ -7841,6 +7841,12 @@ async function vfFinalizarSessaoFlashVF(e){
   // delimitado, o estado não deveria vazar de uma pra outra
   estadoVF = null;
   vfSalvarSessaoNoStorageVF();
+  // esconde a barra fixa (Anterior/Próxima, Excluir/Favoritar/Notas/
+  // Salvar) explicitamente - achado real: sem isso, ela continuava
+  // visível por cima da tela de "Iniciar sessão", já que essa barra fica
+  // fora da área que o overlay de início cobre
+  document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
+  document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
   if(vfIntervalSessaoVF){ clearInterval(vfIntervalSessaoVF); vfIntervalSessaoVF = null; }
   clearTimeout(vfSessaoBalaoEscondidoTimeoutVF);
   const balao = document.getElementById('vf-sessao-balao');
