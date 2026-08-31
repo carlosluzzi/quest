@@ -101,7 +101,7 @@ conteúdo de altura dinâmica com CSS puro, já que "height:auto" não pode
 ser animado diretamente. 500px é generoso o bastante pra caber os 3
 selects + 2 botões sem cortar nada quando aberto */
 #vf-filtros-conteudo{overflow:hidden;max-height:500px;opacity:1;margin-top:6px;padding:4px;transition:max-height .28s ease,opacity .22s ease,margin-top .28s ease}
-#vf-filtros-conteudo.vf-filtros-fechado{max-height:0;opacity:0;margin-top:0}
+#vf-filtros-conteudo.vf-filtros-fechado{max-height:0;opacity:0;margin-top:0;padding:0}
 #vf-sessao-balao{position:fixed;z-index:150;background:#B23A34;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.35);width:220px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + var(--vf-barra-fixa-altura, 0px) + env(safe-area-inset-bottom, 0px) + 16px)}
 #vf-sessao-balao.hidden{display:none}
 /* pausado NÃO troca o fundo (igual o Tracker) - só o tempo fica
@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-431';
+const VERSAO_APP = '2026-07-25-433';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9757,8 +9757,21 @@ async function confirmarExclusaoVF(){
 
   const entradaAtual = estadoVF.historico[estadoVF.posicao];
   if(entradaAtual && entradaAtual.item.id === idExcluido){
-    estadoVF.historico.splice(estadoVF.posicao, 1);
-    estadoVF.posicao--;
+    if(entradaAtual.resposta === null){
+      // ainda não respondida - essa é a "pendente" de verdade, sem
+      // estatística nenhuma pra preservar (nunca foi contabilizada em
+      // acertosSessao/respondidasSessao), pode sair do histórico mesmo
+      estadoVF.historico.splice(estadoVF.posicao, 1);
+      estadoVF.posicao--;
+    }
+    // se já tinha resposta, mantém a entrada no histórico (não faz
+    // splice) - achado real: excluir uma questão já respondida estava
+    // removendo ela do histórico, e como "Respondidas"/tempo médio/novas
+    // x repetições no painel de estatísticas são calculados a partir do
+    // histórico, isso fazia esses números encolherem a cada exclusão,
+    // enquanto acertosSessao/respondidasSessao (contadores à parte, só
+    // incrementados uma vez, nunca decrementados) continuavam contando
+    // a questão excluída - daí a divergência entre os números
     await avancarParaProximaVF(); // já deixa o cronômetro ativo de novo, pra questão nova
   }else{
     // não era a pendente atual — ela continua lá, só retoma o cronômetro
