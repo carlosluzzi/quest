@@ -259,7 +259,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 
 /* --- Bottom nav --- */
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
-.vf-barra-fixa{position:fixed;bottom:var(--nav-height, 76px);left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#FBFBFA;padding:14px 16px 18px;display:flex;flex-direction:column;gap:20px;z-index:9;box-sizing:border-box}
+.vf-barra-fixa{position:fixed;bottom:var(--nav-height, 76px);left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#FBFBFA;padding:14px 16px 18px;display:flex;flex-direction:column;gap:20px;z-index:150;box-sizing:border-box}
 .vf-barra-fixa,.vf-barra-fixa *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .vf-barra-fixa-principal{display:flex;gap:10px}
 .vf-barra-fixa-acoes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-426';
+const VERSAO_APP = '2026-07-25-427';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
