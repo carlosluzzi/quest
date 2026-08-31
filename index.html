@@ -1612,7 +1612,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-405';
+const VERSAO_APP = '2026-07-25-406';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7626,7 +7626,6 @@ async function vfIniciarSessaoFlashVF(){
   const agora = Date.now();
   vfSessaoAtivaVF = {iniciadoEm: agora, pausado: false, tempoAcumuladoMs: 0, ultimoResumeEm: agora};
   vfSalvarSessaoNoStorageVF();
-  vfMostrarBalaoSessaoFlashVF();
   vfAtualizarOverlaySessaoVF();
   // só é sessão NOVA de verdade quando ainda não existe pool/progresso em
   // andamento - nesse caso, e só nesse caso, o filtro é usado pra carregar
@@ -7640,6 +7639,14 @@ async function vfIniciarSessaoFlashVF(){
     // anterior toda vez, mesmo pra quem queria recomeçar do zero
     vfLimparFiltroVF();
   }
+  // o balão só aparece DEPOIS da questão (e a barra de resposta dela) já
+  // estarem renderizadas - achado real: mostrar o balão antes disso fazia
+  // ele nascer usando --vf-barra-fixa-altura ainda com o valor padrão
+  // (0px, a barra real ainda nem existia), e só "pulava" pra posição
+  // certa depois que a barra fosse medida de verdade. Em retrato, isso
+  // aparecia como o balão nascendo mais embaixo e subindo alguns
+  // instantes depois - agora já nasce direto na posição final
+  vfMostrarBalaoSessaoFlashVF();
 }
 
 // zera o filtro e fecha a caixinha visual - usado ao iniciar uma sessão
@@ -8717,11 +8724,16 @@ function medirAlturaBarraFixaVF(){
   const altura = barraFixa.offsetHeight;
   if(altura > 0) conteudo.style.paddingBottom = (altura + 20) + 'px'; // +20px de respiro extra
   // reflete a altura real da barra fixa numa variável CSS - usada pelo
-  // balão da sessão pra ficar acima dela, não só acima do menu de
-  // navegação. Achado real: em retrato, a barra de resposta cresce mais
-  // (botões empilham/tem mais respiro) do que em paisagem, e o balão
-  // ficava colado nela, às vezes sobrepondo os botões Verdadeiro/Falso
-  document.documentElement.style.setProperty('--vf-barra-fixa-altura', (barraFixa.classList.contains('hidden') ? 0 : altura) + 'px');
+  // balão da sessão pra ficar acima dela, só quando ela realmente pode
+  // sobrepor ele. Achado real: a partir de 1100px de largura (telas
+  // largas/paisagem), a barra fixa passa a começar em left:250px (depois
+  // do menu lateral) - nessa faixa ela nunca ocupa a mesma área
+  // horizontal onde o balão fica (à esquerda), então somar essa altura
+  // ali só empurrava o balão pra cima sem necessidade nenhuma. Só abaixo
+  // de 1100px (retrato) a barra ocupa a largura toda e pode sobrepor
+  const larguraEstreita = window.innerWidth < 1100;
+  const alturaConsiderada = (larguraEstreita && !barraFixa.classList.contains('hidden')) ? altura : 0;
+  document.documentElement.style.setProperty('--vf-barra-fixa-altura', alturaConsiderada + 'px');
 }
 
 async function responderVF(resposta){
