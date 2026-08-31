@@ -230,7 +230,7 @@ podiam renderizar atrás do canvas/painéis do V/F mesmo em outras abas.
 100 fica acima do canvas (8/9) mas abaixo dos painéis/barrinha do V/F
 (9999/10000) - preserva as duas correções ao mesmo tempo */
 #app-shell.ativo{display:flex}
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;flex-shrink:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;flex-shrink:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6);transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
 /* canvas de desenho voltou a ficar limitado à área de conteúdo (não mais
 tela inteira) - por isso não precisa mais de z-index condicional pra
 "passar por cima" do cabeçalho/menu, já que fisicamente não os cobre mais */
@@ -241,7 +241,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 #vf-barra-desenho,#vf-barra-desenho *,#vf-painel-caneta,#vf-painel-caneta *,#vf-painel-borracha,#vf-painel-borracha *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:#B23A34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0;border:none;padding:0;margin:0;-webkit-appearance:none;appearance:none;cursor:pointer;overflow:hidden}
 
-.content{position:relative;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
+.content{position:relative;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px;transform:translateZ(0)}
 #aba-vf{overscroll-behavior-y:none;margin:-16px -16px 0 -16px;padding:6px 6px 0 6px}
 #ptr-indicator{display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height 0.2s ease;flex-shrink:0;position:relative}
 #ptr-indicator.ativo{transition:none}
@@ -1658,7 +1658,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-413';
+const VERSAO_APP = '2026-07-25-414';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
