@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-420';
+const VERSAO_APP = '2026-07-25-421';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8522,8 +8522,23 @@ function alternarFiltrosVF(){
   const conteudo = document.getElementById('vf-filtros-conteudo');
   const chevron = document.getElementById('vf-chevron-filtros');
   const abrindo = conteudo.classList.contains('vf-filtros-fechado');
-  conteudo.classList.toggle('vf-filtros-fechado');
   chevron.style.transform = abrindo ? 'rotate(180deg)' : 'rotate(0deg)';
+  if(abrindo){
+    // mede a altura real ANTES de mexer em qualquer coisa (scrollHeight
+    // reflete o conteúdo interno de verdade, mesmo estando clipado/fechado)
+    const alturaReal = conteudo.scrollHeight;
+    conteudo.style.maxHeight = '0px'; // parte explicitamente de 0 (não do 500px genérico da regra base)
+    conteudo.classList.remove('vf-filtros-fechado'); // libera opacity/margin-top agora
+    conteudo.offsetHeight; // força o navegador a "registrar" o 0px antes de mudar - senão as duas mudanças se fundem num pulo só, sem transição
+    conteudo.style.maxHeight = alturaReal + 'px'; // agora sim anima de 0 até a altura real - sem zona morta
+    setTimeout(() => { conteudo.style.maxHeight = ''; }, 300); // depois de aberto, volta a obedecer o max-height genérico da regra base (500px) - evita ficar preso num valor antigo se a tela girar e precisar de mais espaço depois
+  }else{
+    const alturaReal = conteudo.scrollHeight;
+    conteudo.style.maxHeight = alturaReal + 'px'; // parte explicitamente da altura real atual (não do 500px genérico)
+    conteudo.offsetHeight; // mesma garantia do outro sentido
+    conteudo.style.maxHeight = '0px';
+    conteudo.classList.add('vf-filtros-fechado');
+  }
 }
 
 async function popularFiltroModuloVF(){
