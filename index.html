@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-423';
+const VERSAO_APP = '2026-07-25-425';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4573,11 +4573,15 @@ if(VF_SUPORTA_COALESCED_VF){
 }
 
 let vfBotaoPendenteToqueInfo = null; // {x, y, identifier, limiar} - toque começou num ícone pequeno, decisão adiada até ver se vira arrasto
-const VF_LIMIAR_ARRASTO_BOTAO_PX = 8; // reduzido de 14 - elementos com área de toque pequena (tipo .section-title, sem padding) ainda exigiam pressão/precisão demais pra registrar como toque simples
+// achado real: 8px era sensível demais - o tremor natural da mão/caneta
+// ao tocar (mesmo sem intenção nenhuma de arrastar) já ultrapassava esse
+// limiar, cancelando o clique e virando traço de desenho, fazendo botões
+// normais ficarem quase impossíveis de clicar com a caneta
+const VF_LIMIAR_ARRASTO_BOTAO_PX = 16;
 // menu lateral/de baixo usa um limiar bem mais generoso - a Apple Pencil
 // tem um tremor natural mesmo parada (documentado antes), e isso fazia
 // clicar no menu com a caneta falhar com mais frequência que com o dedo
-const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 8;
+const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 20;
 
 document.addEventListener('touchstart', (e) => {
   if(!vfEstaVisivelAgora()) return;
@@ -7956,12 +7960,24 @@ function vfFinalizarArrastoBalaoVF(){
 // balão: o painel nasce na posição/tamanho exatos do balão (medidos na
 // hora), e transiciona (via CSS, ver #vf-painel-sessao-vf) pro tamanho/
 // posição final. Fechar reverte a mesma animação, encolhendo de volta ----
+// controla se foi o próprio painel quem pausou a sessão ao abrir - só
+// nesse caso ele retoma ao fechar. Se a sessão já estava pausada antes
+// (o usuário tinha pausado manualmente), o painel não mexe nisso: abre
+// e fecha sem alterar esse estado, continua pausada como já estava
+let vfPainelPausouAutomaticamenteVF = false;
 function vfAbrirPainelSessaoVF(){
   const balao = document.getElementById('vf-sessao-balao');
   const painel = document.getElementById('vf-painel-sessao-vf');
   const fundo = document.getElementById('vf-painel-sessao-fundo');
   if(!balao || !painel || !fundo) return;
   const rectBalao = balao.getBoundingClientRect();
+
+  if(vfSessaoAtivaVF && !vfSessaoAtivaVF.pausado){
+    vfTogglePausarSessaoFlashVF();
+    vfPainelPausouAutomaticamenteVF = true;
+  }else{
+    vfPainelPausouAutomaticamenteVF = false;
+  }
 
   vfRenderizarConteudoPainelSessaoVF(); // monta o HTML das estatísticas antes de mostrar
 
@@ -7983,7 +7999,12 @@ function vfAbrirPainelSessaoVF(){
   requestAnimationFrame(() => {
     painel.style.transition = '';
     const larguraFinal = Math.min(440, window.innerWidth * 0.92);
-    const alturaFinal = Math.min(window.innerHeight * 0.82, 560);
+    // altura pelo conteúdo real, não um valor fixo - achado real: com a
+    // seção de panorama sempre presente agora, um valor fixo (era 560px)
+    // não cabia mais tudo, forçando rolagem interna à toa. Cap de 90% da
+    // tela só como proteção pra telas pequenas/conteúdo muito grande
+    const alturaConteudoReal = document.getElementById('vf-painel-sessao-conteudo').scrollHeight;
+    const alturaFinal = Math.min(alturaConteudoReal, window.innerHeight * 0.9);
     painel.style.top = ((window.innerHeight - alturaFinal) / 2) + 'px';
     painel.style.left = ((window.innerWidth - larguraFinal) / 2) + 'px';
     painel.style.width = larguraFinal + 'px';
@@ -7999,6 +8020,10 @@ function vfFecharPainelSessaoVF(){
   const painel = document.getElementById('vf-painel-sessao-vf');
   const fundo = document.getElementById('vf-painel-sessao-fundo');
   if(!balao || !painel || !fundo) return;
+  if(vfPainelPausouAutomaticamenteVF){
+    vfTogglePausarSessaoFlashVF();
+    vfPainelPausouAutomaticamenteVF = false;
+  }
   const rectBalao = balao.getBoundingClientRect();
   painel.classList.remove('aberto');
   fundo.classList.remove('aberto');
@@ -8128,6 +8153,21 @@ async function vfCarregarPanoramaFiltroVF(){
     <div class="vf-filtro-linha"><span>Você já viu ao menos 1 vez</span><span class="vf-filtro-valor">${jaVistas}</span></div>
     <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor">${Math.max(0,(totalFiltro||0)-jaVistas)}</span></div>
   `;
+  vfReajustarAlturaPainelSessaoVF(); // o panorama chegou depois (busca assíncrona) - se isso fez o conteúdo crescer, ajusta o painel pra caber sem precisar rolar
+}
+
+// mede o conteúdo de novo e ajusta o painel (altura + reposição
+// vertical pra continuar centralizado) suavemente - usado depois que
+// alguma seção assíncrona (o panorama) muda o tamanho do conteúdo
+// depois do painel já estar aberto
+function vfReajustarAlturaPainelSessaoVF(){
+  const painel = document.getElementById('vf-painel-sessao-vf');
+  const conteudo = document.getElementById('vf-painel-sessao-conteudo');
+  if(!painel || !conteudo || !painel.classList.contains('aberto')) return;
+  const alturaConteudoReal = conteudo.scrollHeight;
+  const alturaFinal = Math.min(alturaConteudoReal, window.innerHeight * 0.9);
+  painel.style.height = alturaFinal + 'px';
+  painel.style.top = ((window.innerHeight - alturaFinal) / 2) + 'px';
 }
 
 (function vfConfigurarArrastoBalaoSessaoVF(){
