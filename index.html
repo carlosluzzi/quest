@@ -81,6 +81,11 @@ dois casos */
 #vf-input-cor-nativo::-webkit-color-swatch{border:none;border-radius:50%}
 button:focus{outline:none}
 button:active{transform:scale(0.98)}
+/* botão dos filtros é largo demais (width:100%) - o scale de "apertar"
+padrão, aplicado a partir do centro, empurrava visivelmente o texto
+"Filtros" pro lado (achado real, confirmado com medições ao vivo no
+Safari). Em botões largos assim, o efeito atrapalha mais do que ajuda */
+#vf-filtros button:active{transform:none}
 .banco-alt-btn:active{transform:scale(0.995)}
 body.vf-tracando-agora button:active{transform:none}
 input,select,textarea{font-family:inherit;font-size:16px}
@@ -1660,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-418';
+const VERSAO_APP = '2026-07-25-419';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
