@@ -1612,7 +1612,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-402';
+const VERSAO_APP = '2026-07-25-405';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5016,12 +5016,16 @@ function vfFinalizarTracoDesenho(e){
   if(vfPontoInicialTracoAtualVF && e.changedTouches && e.changedTouches[0]){
     const touchFinal = e.changedTouches[0];
     const distanciaTotal = Math.hypot(touchFinal.clientX - vfPontoInicialTracoAtualVF.x, touchFinal.clientY - vfPontoInicialTracoAtualVF.y);
-    const LIMIAR_TAP_LEVE_PX = 10;
+    const LIMIAR_TAP_LEVE_PX = 8;
     if(distanciaTotal < LIMIAR_TAP_LEVE_PX){
       const agora = Date.now();
       const pontoAtual = vfPontoInicialTracoAtualVF;
       const tapAnterior = vfUltimoTapLeveCanetaVF;
-      const virouDuploTap = tapAnterior && (agora - tapAnterior.quando) < 350 && Math.hypot(pontoAtual.x - tapAnterior.x, pontoAtual.y - tapAnterior.y) < 30;
+      // janela e distância reduzidas de propósito (eram 350ms/30px) -
+      // achado real: sensível demais, qualquer coisa feita rápido perto
+      // do lugar anterior virava duplo toque sem intenção real. Exige
+      // agora um gesto mais preciso: rápido e no mesmo lugar de verdade
+      const virouDuploTap = tapAnterior && (agora - tapAnterior.quando) < 280 && Math.hypot(pontoAtual.x - tapAnterior.x, pontoAtual.y - tapAnterior.y) < 22;
       vfPontoInicialTracoAtualVF = null;
       vfFormaTracoAtualVF = null;
       vfDesenhandoAgora = false;
@@ -8052,6 +8056,16 @@ async function vfCarregarPoolInicialVF(){
     respostasDesdeUltimaNova: 0, // Regra 1 (fluxo garantido de novas) - zera a cada SESSÃO de verdade agora, não mais a cada abertura de aba
     familiasRecentesVF: [] // Regra 2 (anti-irmãs) - idem, zera por sessão de verdade
   };
+  // contadores restaurados direto daqui, ANTES de tentar reconstruir o
+  // histórico detalhado - achado real: vfReconstruirHistoricoDaSessaoVF
+  // pode retornar null por vários motivos (histórico não salvo, erro de
+  // rede na busca, todas as questões excluídas/anuladas entre sessões),
+  // e nesses casos os contadores eram perdidos junto, mesmo tendo sido
+  // salvos corretamente e não dependendo de nada disso pra serem lidos
+  if(vfSessaoAtivaVF){
+    estadoVF.acertosSessao = vfSessaoAtivaVF.acertosSessao || 0;
+    estadoVF.respondidasSessao = vfSessaoAtivaVF.respondidasSessao || 0;
+  }
   // restaura o histórico da sessão que ficou salvo antes do app fechar -
   // sem isso, fechar e reabrir "zerava" as questões da sessão mesmo com
   // a sessão ainda ativa/pausada, só porque estadoVF vive em memória
@@ -8346,7 +8360,7 @@ function renderizarItemVF(){
     ? `<div class="card-questao" id="vf-preview-nota" style="margin-top:14px"></div>`
     : `<div class="card-questao" id="vf-preview-nota" onclick="abrirNotaVF('${item.id}')" style="margin-top:14px;border:1.5px dashed #ddd;box-shadow:none;display:flex;gap:6px;align-items:center;justify-content:center;color:#999;cursor:pointer">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
-        ${VF_ICONE_LAMPADA_SVG('14', '16', '#999')}
+        ${VF_ICONE_LAMPADA_SVG('20', '23', '#999')}
       </div>`);
 
 
@@ -8463,8 +8477,11 @@ function vfSoltarPressionarEnunciado(evento){
   // caneta curto (tipo um pontinho) pode ficar dentro da tolerância de
   // 25px de "não moveu", mas ainda assim foi um desenho de verdade, não
   // um toque pra copiar - sem essa checagem, escrever por cima copiava
-  // o texto sem querer
-  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueEnunciado && !vfDesenhandoAgora){
+  // o texto sem querer. E mais direto ainda: cópia é coisa de DEDO, a
+  // caneta nunca deveria copiar (só desenha ou troca de ferramenta com
+  // duplo toque) - checa isso primeiro, antes de qualquer outra coisa
+  const tocouComCaneta = evento && vfEhToqueDeCaneta(evento.changedTouches?.[0]);
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueEnunciado && !vfDesenhandoAgora && !tocouComCaneta){
     if(evento) evento.preventDefault(); // evita o mouseup sintético que o Safari gera após um toque real - sem isso, a cópia disparava 2x e o selinho "Copiado" piscava (reiniciava a animação no meio)
     vfCopiarTextoElementoVF(div);
   }
@@ -8608,7 +8625,8 @@ function vfSoltarPressionarCorrecao(evento){
   vfTimerPressionarCorrecao = null;
   const div = document.getElementById('vf-correcao-atual');
   // mesma checagem do enunciado - ver comentário lá
-  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueCorrecao && !vfDesenhandoAgora){
+  const tocouComCaneta = evento && vfEhToqueDeCaneta(evento.changedTouches?.[0]);
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueCorrecao && !vfDesenhandoAgora && !tocouComCaneta){
     if(evento) evento.preventDefault();
     vfCopiarTextoElementoVF(div);
   }
@@ -9107,7 +9125,7 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
   elAtual.style.alignItems = 'flex-start';
   elAtual.style.cursor = 'pointer';
   elAtual.onclick = () => abrirNotaVF(questaoVfId);
-  elAtual.innerHTML = `${VF_ICONE_LAMPADA_SVG('18', '20', '#B23A34')}<div style="color:#333;line-height:1.4">${escapeHtml(data[0].texto)}</div>`;
+  elAtual.innerHTML = `${VF_ICONE_LAMPADA_SVG('24', '27', '#B23A34')}<div style="color:#333;line-height:1.4">${escapeHtml(data[0].texto)}</div>`;
 }
 
 async function abrirNotaVF(questaoVfId){
@@ -9203,7 +9221,8 @@ function vfSoltarPressionarExplicacao(evento){
   vfTimerPressionarExplicacao = null;
   const div = document.getElementById('vf-explicacao-atual');
   // mesma checagem do enunciado - ver comentário lá
-  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueExplicacao && !vfDesenhandoAgora){
+  const tocouComCaneta = evento && vfEhToqueDeCaneta(evento.changedTouches?.[0]);
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueExplicacao && !vfDesenhandoAgora && !tocouComCaneta){
     if(evento) evento.preventDefault();
     vfCopiarTextoElementoVF(div);
   }
