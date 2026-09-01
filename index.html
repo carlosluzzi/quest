@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-444';
+const VERSAO_APP = '2026-07-25-446';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7749,16 +7749,11 @@ async function vfIniciarSessaoFlashVF(){
   vfSalvarSessaoNoStorageVF();
   vfAtualizarOverlaySessaoVF();
   // só é sessão NOVA de verdade quando ainda não existe pool/progresso em
-  // andamento - nesse caso, e só nesse caso, o filtro é usado pra carregar
-  // e depois resetado pra próxima vez. Continuando uma sessão que já
-  // existia, o filtro escolhido lá atrás continua valendo, intocado
+  // andamento - nesse caso, e só nesse caso, carrega de fato. Continuando
+  // uma sessão que já existia, o filtro escolhido lá atrás continua
+  // valendo, intocado
   if(!estadoVF || estadoVF.posicao < 0){
     await vfCarregarPoolInicialVF(); // só agora carrega de verdade - antes disso não fazia sentido nenhum trabalho pesado rodar
-    // reseta o filtro pra próxima vez - essa sessão que acabou de começar
-    // já usou o filtro escolhido (linha acima), então isso não afeta ela.
-    // Sem esse reset, a tela de filtros vinha com a escolha da sessão
-    // anterior toda vez, mesmo pra quem queria recomeçar do zero
-    vfLimparFiltroVF();
   }
   // o balão só aparece DEPOIS da questão (e a barra de resposta dela) já
   // estarem renderizadas - achado real: mostrar o balão antes disso fazia
@@ -7881,6 +7876,14 @@ async function vfFinalizarSessaoFlashVF(e){
   // essa parou. O Flash não é mais "eterno" - cada sessão é um bloco
   // delimitado, o estado não deveria vazar de uma pra outra
   estadoVF = null;
+  // limpa o filtro AQUI (ao finalizar), não ao iniciar a próxima - achado
+  // real: limpar só depois de carregar o pool da sessão seguinte era
+  // tarde demais, essa sessão nova já tinha carregado com o filtro da
+  // anterior, mesmo sem o usuário escolher nada. Limpando já ao
+  // finalizar, a tela de "Iniciar sessão" seguinte já nasce com os
+  // filtros limpos, e uma escolha feita ali antes de "Iniciar" continua
+  // funcionando normalmente (só é limpo de novo na PRÓXIMA finalização)
+  vfLimparFiltroVF();
   vfSalvarSessaoNoStorageVF();
   // esconde a barra fixa (Anterior/Próxima, Excluir/Favoritar/Notas/
   // Salvar) explicitamente - achado real: sem isso, ela continuava
@@ -8921,7 +8924,7 @@ function vfIniciarEdicaoEnunciadoVF(){
   // padding:6px + margin:-6px se cancelam pra letra ficar exatamente onde
   // estava (não é padding:0 mais) - mas o quadro/contorno em volta fica
   // maior, com respiro de verdade entre a borda e o texto
-  div.innerHTML = `<textarea id="vf-textarea-enunciado" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:inherit;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent">${escapeHtml(textoOriginal)}</textarea>`;
+  div.innerHTML = `<textarea id="vf-textarea-enunciado" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:inherit;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default">${escapeHtml(textoOriginal)}</textarea>`;
   const textarea = document.getElementById('vf-textarea-enunciado');
   vfAutoAlturaTextareaVF(textarea);
   textarea.addEventListener('input', () => vfAutoAlturaTextareaVF(textarea));
@@ -9084,7 +9087,7 @@ function vfIniciarEdicaoCorrecaoVF(){
   if(!div || div.dataset.editando === '1') return;
   div.dataset.editando = '1';
   const textoOriginal = item.correcao || item.texto;
-  div.innerHTML = `<textarea id="vf-textarea-correcao" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:inherit;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent">${escapeHtml(textoOriginal)}</textarea>`;
+  div.innerHTML = `<textarea id="vf-textarea-correcao" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:inherit;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default">${escapeHtml(textoOriginal)}</textarea>`;
   const textarea = document.getElementById('vf-textarea-correcao');
   vfAutoAlturaTextareaVF(textarea);
   textarea.addEventListener('input', () => vfAutoAlturaTextareaVF(textarea));
@@ -9715,7 +9718,7 @@ function vfIniciarEdicaoExplicacaoVF(){
   if(!div || div.dataset.editando === '1') return;
   div.dataset.editando = '1';
   const textoOriginal = entrada.item.explicacao || '';
-  div.innerHTML = `<textarea id="vf-textarea-explicacao" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:1.5;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent">${escapeHtml(textoOriginal)}</textarea>`;
+  div.innerHTML = `<textarea id="vf-textarea-explicacao" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:1.5;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default">${escapeHtml(textoOriginal)}</textarea>`;
   const textarea = document.getElementById('vf-textarea-explicacao');
   vfAutoAlturaTextareaVF(textarea);
   textarea.addEventListener('input', () => vfAutoAlturaTextareaVF(textarea));
