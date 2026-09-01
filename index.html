@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-450';
+const VERSAO_APP = '2026-07-25-451';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8768,6 +8768,17 @@ function renderizarItemVF(){
   }
   const jaRespondida = entrada.resposta !== null;
   const publicacao = vfBibliografiaCache.get(item.bibliografia_id)?.titulo || 'Publicação não identificada';
+  // se a questão mudar (ex: clicou em Próxima) enquanto ainda estava
+  // editando algum dos três campos (afirmação/correção/explicação), força
+  // o blur ANTES de qualquer outra coisa - garante que o salvamento (que
+  // roda no blur) sempre seja disparado antes do textarea ser destruído
+  // pelo innerHTML novo mais abaixo. Achado real: sem isso, o textarea era
+  // destruído sem passar pelo blur, descartando a edição inteira em
+  // silêncio - o mesmo tipo de perda de dados já corrigido antes pro
+  // modal de explicação, mas por esse outro caminho (trocar de questão)
+  document.getElementById('vf-textarea-enunciado')?.blur();
+  document.getElementById('vf-textarea-correcao')?.blur();
+  document.getElementById('vf-textarea-explicacao')?.blur();
   // trava de segurança: se a questão mudar (ex: clicou em Próxima) enquanto
   // ainda estava editando a afirmação, o textarea é destruído sem passar
   // pelo blur — sem isso, a barra de baixo podia ficar escondida pra sempre
