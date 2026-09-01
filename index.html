@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-441';
+const VERSAO_APP = '2026-07-25-444';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1778,7 +1778,7 @@ function formatarEnunciado(texto){
   escapedCompleto = escapedCompleto
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // isola a seção "TRECHOS DA FONTE" ANTES de qualquer divisão em
   // alternativas (a, b, c...) — sem isso, menções tipo "Alternativas a) e
@@ -1979,7 +1979,7 @@ function extrairAlternativas(alternativasTexto){
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])/g, '$1<sub>$2</sub>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
     const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
@@ -3799,15 +3799,51 @@ const VF_LETRAS_GREGAS = {
   'Beta':'Β','beta':'β','Gamma':'Γ','gamma':'γ','Theta':'Θ','theta':'θ',
   'Lambda':'Λ','lambda':'λ','Mu':'Μ','mu':'μ','Nu':'Ν','nu':'ν',
   'Pi':'Π','pi':'π','Rho':'Ρ','rho':'ρ','Sigma':'Σ','sigma':'σ',
-  'Tau':'Τ','tau':'τ','Omega':'Ω','omega':'ω'
+  'Tau':'Τ','tau':'τ','Omega':'Ω','omega':'ω',
+  'Epsilon':'Ε','epsilon':'ε','varepsilon':'ϵ','Zeta':'Ζ','zeta':'ζ',
+  'Eta':'Η','eta':'η','Iota':'Ι','iota':'ι','Kappa':'Κ','kappa':'κ',
+  'Xi':'Ξ','xi':'ξ','Upsilon':'Υ','upsilon':'υ','Chi':'Χ','chi':'χ',
+  'Psi':'Ψ','psi':'ψ'
 };
 const VF_OPERADORES_MATEMATICOS = {
-  'approx':'≈','le':'≤','ge':'≥','ne':'≠','infty':'∞','int':'∫',
-  'sum':'∑','pm':'±','times':'×','partial':'∂','equiv':'≡','cdot':'·'
+  // comparação e aproximação
+  'approx':'≈','le':'≤','leq':'≤','ge':'≥','geq':'≥','ne':'≠','neq':'≠',
+  'll':'≪','gg':'≫','sim':'∼','simeq':'≃','cong':'≅','propto':'∝','equiv':'≡',
+  // operadores aritméticos e de cálculo
+  'pm':'±','mp':'∓','times':'×','div':'÷','cdot':'·','ast':'∗',
+  'partial':'∂','nabla':'∇','infty':'∞',
+  // somatórios, integrais, produtos
+  'sum':'∑','prod':'∏','int':'∫','iint':'∬','iiint':'∭','oint':'∮',
+  // setas
+  'to':'→','rightarrow':'→','leftarrow':'←','leftrightarrow':'↔',
+  'Rightarrow':'⇒','Leftarrow':'⇐','Leftrightarrow':'⇔','mapsto':'↦',
+  // conjuntos e lógica
+  'in':'∈','notin':'∉','subset':'⊂','supset':'⊃','subseteq':'⊆','supseteq':'⊇',
+  'cup':'∪','cap':'∩','emptyset':'∅','forall':'∀','exists':'∃','nexists':'∄',
+  'therefore':'∴','because':'∵',
+  // geometria
+  'perp':'⊥','parallel':'∥','angle':'∠','circ':'∘','degree':'°',
+  // outros símbolos comuns em textos técnicos
+  'otimes':'⊗','oplus':'⊕','prime':'′','hbar':'ℏ','ell':'ℓ',
+  'aleph':'ℵ','top':'⊤','bot':'⊥','dagger':'†'
 };
+// nomes conhecidos (gregas + operadores), do mais longo pro mais curto -
+// evita que um nome mais curto "roube" o início de um mais longo (ex:
+// "pi" vs um hipotético "pint"). Usado pra reconhecer só os nomes de
+// verdade em vez de "qualquer sequência de letras" - sem isso, \infty
+// colado direto (sem espaço) com outra coisa que começa com letra, tipo
+// k_s em "U_\infty k_s" virando "U_\inftyk_s", fazia o regex genérico
+// "comer" letras demais (leria "inftyk" como nome, não reconhecido,
+// texto quebrado) - com a lista fechada, sabe exatamente onde "infty"
+// termina, sem precisar de espaço ou separador nenhum
+const VF_NOMES_MATEMATICOS_REGEX = Object.keys({...VF_LETRAS_GREGAS, ...VF_OPERADORES_MATEMATICOS}).sort((a,b) => b.length-a.length).join('|');
 // recebe o texto JÁ escapado (depois do escapeHtml) - \, {, } não são
 // caracteres especiais de HTML, então processar essas marcações depois
 // do escape é seguro, sem conflito nenhum
+// regex construídas a partir da lista fechada de nomes conhecidos (não
+// "qualquer sequência de letras") - ver VF_NOMES_MATEMATICOS_REGEX acima
+const VF_REGEX_NOME_COM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')\\{([^}]*)\\}', 'g');
+const VF_REGEX_NOME_SEM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')', 'g');
 function vfAplicarMarcacaoMatematicaVF(textoEscapado){
   return textoEscapado
     // \nome{conteudo} - letra grega/operador seguido de chaves SEM
@@ -3815,15 +3851,19 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     // chaves, deixando só o conteúdo (que ainda passa pelas outras
     // regras depois, tipo subscrito). Roda ANTES da regra de gregas sem
     // chaves logo abaixo, senão essa já teria consumido o \nome antes de
-    // chegar aqui, deixando as chaves sobrando literalmente no texto
-    .replace(/\\([A-Za-z]+)\{([^}]+)\}/g, (match, nome, conteudo) => {
+    // chegar aqui, deixando as chaves sobrando literalmente no texto.
+    // Chaves vazias {} são aceitas de propósito - servem como separador
+    // explícito quando o símbolo precisa ficar colado sem espaço no que
+    // vem depois (ex: \infty{}k_s), sem isso o próximo caractere (tipo
+    // "k") ficava "grudado" no nome e quebrava o reconhecimento
+    .replace(VF_REGEX_NOME_COM_CHAVES, (match, nome, conteudo) => {
       const simbolo = VF_LETRAS_GREGAS[nome] || VF_OPERADORES_MATEMATICOS[nome];
       return simbolo ? simbolo + conteudo : match;
     })
     // gregas/operadores via \nome - roda ANTES do sqrt/superscript, pra
     // esses símbolos resolvidos poderem participar deles depois (ex:
     // \Delta^{2} precisa que \Delta já tenha virado Δ antes do ^ agir)
-    .replace(/\\([A-Za-z]+)/g, (match, nome) => (VF_LETRAS_GREGAS[nome] || VF_OPERADORES_MATEMATICOS[nome] || match))
+    .replace(VF_REGEX_NOME_SEM_CHAVES, (match, nome) => (VF_LETRAS_GREGAS[nome] || VF_OPERADORES_MATEMATICOS[nome] || match))
     // \sqrt{...} depois das gregas (pode ter grega dentro, tipo \sqrt{\Delta})
     .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
     // sobrescrito com chaves: X^{Y...} - qualquer conteúdo dentro,
@@ -3844,7 +3884,7 @@ function formatarTextoItemVF(texto){
   return resultado
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1<sub>$2</sub>');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
 }
 
 // ============================================================
@@ -4595,6 +4635,7 @@ document.addEventListener('touchstart', (e) => {
   if(e.target.closest('.vf-btn-resposta')) return; // idem pros botões Verdadeiro/Falso - nunca viram início de traço
   if(e.target.closest('#vf-sessao-balao')) return; // balão da sessão (arrastar, Pausar, Finalizar, fechar) - nunca vira início de traço, tem seu próprio sistema de arrasto/clique
   if(vfBalaoArrastoInfoVF) return; // proteção redundante - nunca desenha enquanto o balão está sendo arrastado, mesmo que o toque não esteja mais fisicamente sobre ele
+  if(e.target.closest('textarea')) return; // nunca vira início de traço - dentro de qualquer textarea (edição de explicação/enunciado/correção), o toque (caneta ou dedo) precisa ficar livre pro comportamento nativo de seleção/cursor, sem competir com o sistema de desenho
   if(e.target.closest('select')) return; // qualquer <select> nativo (filtros do Flash, e futuros) - nunca vira início de traço, o dropdown nativo do Safari precisa do toque limpo
   // Favoritar/Salvar já têm sistema PRÓPRIO completo (toque curto=clique,
   // toque longo=abrir lista, ver vfIniciarPressionarFavoritar/Salvar) -
@@ -11732,7 +11773,7 @@ async function verificarMaioriaTopico(topicoId){
 // roda de novo e recoloca os marcadores certos automaticamente
 function removerMarcadoresSubscrito(texto){
   return (texto||'')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞\u0300-\u036F]{1,6})/g, '$1$2')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1$2')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
 }
 async function abrirFormularioEdicao(questaoId, topicoId){
