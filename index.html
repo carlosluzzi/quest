@@ -337,8 +337,8 @@ body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado,body.vf-marcacao-t
 body.vf-marcacao-texto-ativa .vf-numeral-item-nao-marcavel,body.vf-marcacao-texto-ativa .linha-marcador{-webkit-user-select:none;user-select:none}
 #vf-correcao-atual{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf-correcao-atual *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
-.enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap}
-.linha-numerada{display:flex;gap:8px;margin-top:10px;align-items:flex-start}
+.enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap;position:relative}
+.linha-numerada{display:flex;gap:8px;margin-top:10px;align-items:flex-start;position:relative}
 .linha-marcador{flex-shrink:0;font-weight:400;min-width:16px}
 .linha-texto{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:break-word}
 .alternativa{display:block;width:100%;text-align:left;background:#F5F5F6;border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:var(--fs-d)}
@@ -1564,7 +1564,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-explicacao-questao" onclick="if(event.target===this) fecharModal('modal-explicacao-questao')">
   <div class="modal-conteudo" style="max-width:700px;display:flex;flex-direction:column">
     <h3 class="config-title" style="flex-shrink:0">Explicação</h3>
-    <div id="conteudo-explicacao-questao" style="flex:1;min-height:0;overflow-y:auto"></div>
+    <div id="conteudo-explicacao-questao" style="flex:1;min-height:0;overflow-y:auto;cursor:pointer" onclick="vfCliqueNaExplicacaoQuestVF(event)"></div>
     <button class="btn-secundario" style="width:100%;margin-top:14px;flex-shrink:0" onclick="fecharModal('modal-explicacao-questao')">Fechar</button>
   </div>
 </div>
@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-446';
+const VERSAO_APP = '2026-07-25-450';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1800,7 +1800,7 @@ function formatarEnunciado(texto){
   // cada uma vira seu próprio parágrafo, não fica tudo grudado num bloco só
   const textoFonte = marcadorFonte ? escapedCompleto.slice(marcadorFonte.index).trim()
     .split(/(?=\b(?:Alternativas?|Afirmativas?|Assertivas?|Itens?)\s+[a-zA-Z0-9])/i)
-    .map(p => `<div class="enunciado-linha" style="margin-top:12px">${p.trim()}</div>`).join('') : '';
+    .map((p, i) => `<div class="enunciado-linha" style="margin-top:${i===0?28:12}px">${p.trim()}</div>`).join('') : '';
 
   // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
   // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
@@ -1830,7 +1830,7 @@ function formatarEnunciado(texto){
         const matchCorreto = s.match(/^(Correto\s*:)\s*/i);
         if(matchCorreto){
           const textoCorreto = s.slice(matchCorreto[0].length).trim();
-          return `<div class="linha-numerada"><span class="linha-marcador" style="width:16px"></span><span class="linha-texto"><strong>${matchCorreto[1]}</strong> ${textoCorreto}</span></div>`;
+          return `<div class="linha-numerada"><span class="linha-marcador"></span><span class="linha-texto"><strong>${matchCorreto[1]}</strong> ${textoCorreto}</span></div>`;
         }
         return `<div class="enunciado-linha">${s}</div>`;
       }).join('');
@@ -4657,6 +4657,16 @@ document.addEventListener('touchstart', (e) => {
   const botaoIcone = itemMenu || e.target.closest('button, [onclick]');
   if(botaoIcone){
     vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX, elemento: botaoIcone};
+    // suprime o efeito de "apertar" (button:active) já desde o primeiro
+    // instante do toque, só pra caneta - achado real: a classe só era
+    // adicionada depois que o movimento já tivesse passado do limiar de
+    // arrasto, mas o :active nativo do navegador dispara imediatamente
+    // no toque, bem antes disso - causava um "pulo" visual mesmo em
+    // toques que iam virar traço de escrita em cima da alternativa.
+    // Removida logo abaixo se for confirmado que virou clique de
+    // verdade (vfFinalizarTracoDesenho), ou pelo caminho normal de
+    // desenho se virar traço - dedo nunca entra aqui, mantém o efeito normal
+    if(vfEhToqueDeCaneta(touch)) document.body.classList.add('vf-tracando-agora');
     return;
   }
   if(!vfCtxDesenhoAtivoAgoraVF()){
@@ -5107,6 +5117,7 @@ function vfFinalizarTracoDesenho(e){
   if(vfBotaoPendenteToqueInfo && vfBotaoPendenteToqueInfo.elemento){
     const elementoParaClicar = vfBotaoPendenteToqueInfo.elemento;
     vfBotaoPendenteToqueInfo = null;
+    document.body.classList.remove('vf-tracando-agora'); // tinha sido suprimido no toque (só pra caneta) - se confirmou que foi clique de verdade (não virou traço), libera de novo
     if(e && e.preventDefault) e.preventDefault();
     elementoParaClicar.click();
   }else{
@@ -9022,6 +9033,32 @@ async function vfCopiarTextoElementoVF(elemento){
   }
 }
 
+// copiar tocando numa linha da explicação do Quest ("Correto: texto",
+// alternativas, trechos da fonte) - ignora o "Correto:"/marcador em
+// negrito (<strong>), copiando só o texto de verdade que vem depois,
+// que é o que a pessoa quer colar em outro lugar
+async function vfCopiarLinhaExplicacaoQuestVF(elemento){
+  elemento.querySelector(':scope > .vf-selinho-copiado')?.remove();
+  const clone = elemento.cloneNode(true);
+  clone.querySelectorAll('strong').forEach(el => el.remove());
+  const texto = clone.textContent;
+  try{
+    await navigator.clipboard.writeText(texto.trim());
+    vfMostrarSelinhoCopiadoVF(elemento);
+  }catch(e){
+    alert('Não consegui copiar automaticamente. Tenta selecionar o texto manualmente.');
+  }
+}
+
+// toca em qualquer linha da explicação do Quest (alternativa, "Correto:",
+// trecho da fonte) pra copiar só aquele trecho específico - detecta a
+// linha mais próxima do toque (.linha-numerada tem marcador+texto juntos,
+// .enunciado-linha é só texto solto, tipo os parágrafos de TRECHOS DA FONTE)
+function vfCliqueNaExplicacaoQuestVF(evento){
+  const linha = evento.target.closest('.linha-numerada, .enunciado-linha');
+  if(linha) vfCopiarLinhaExplicacaoQuestVF(linha);
+}
+
 // selinho de texto "Copiado" flutuando acima do elemento, estilo apps de
 // banco - some sozinho depois de um tempo
 function vfMostrarSelinhoCopiadoVF(elemento){
@@ -10787,11 +10824,20 @@ function renderizarQuestaoAtual(){
   const nomeCadernoEscapado = escapeHtml(cadernoAtual.nome || 'Caderno sem nome');
 
   const mostrarBotaoSalvarAlt = jaRespondida && souCarlos();
+  // reserva o espaço do ícone de salvar SEMPRE (desde antes de responder,
+  // não só depois) - achado real: o padding-right só era aplicado depois
+  // de responder, quando o ícone surgia; isso reduzia a largura disponível
+  // pro texto NAQUELE momento, fazendo a última palavra "descer" pra uma
+  // segunda linha bem na hora que o ícone aparecia. Reservando sempre (pra
+  // quem pode ver o ícone), o texto já nasce com a largura final certa,
+  // sem nunca precisar requebrar linha depois
+  const reservarEspacoSalvarAlt = souCarlos();
   // se a questão tem formato I./II./III., só os itens fazem sentido salvar
   // (a alternativa em si é só "apenas I e III", sem conteúdo próprio) — as
   // alternativas não mostram marcador nesse caso específico
-  const itensNumeradosDaQuestao = mostrarBotaoSalvarAlt ? extrairItensNumerados(q.enunciado) : null;
+  const itensNumeradosDaQuestao = reservarEspacoSalvarAlt ? extrairItensNumerados(q.enunciado) : null;
   const mostrarBotaoSalvarNaAlternativa = mostrarBotaoSalvarAlt && !itensNumeradosDaQuestao;
+  const reservarEspacoNaAlternativa = reservarEspacoSalvarAlt && !itensNumeradosDaQuestao;
   const htmlAlternativas = alternativas.length
     ? alternativas.map(alt=>{
         const riscada = alternativasRiscadasAtual.has(alt.letra);
@@ -10805,7 +10851,7 @@ function renderizarQuestaoAtual(){
           estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
         }
         const handlers = (jaRespondida || excluida) ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}', false)" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="iniciarPressionarAlternativa('${alt.letra}', event)" ontouchend="finalizarPressionarAlternativa('${alt.letra}', true)" ontouchmove="moverDurantePressionar(event)" ontouchcancel="cancelarPressionarAlternativa()"`;
-        const botaoBtn = `<button class="banco-alt-btn" style="width:100%;${estilo}${mostrarBotaoSalvarNaAlternativa?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0${riscada?';text-decoration:line-through':''}">${alt.texto}</span></span></button>`;
+        const botaoBtn = `<button class="banco-alt-btn" style="width:100%;${estilo}${reservarEspacoNaAlternativa?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0${riscada?';text-decoration:line-through':''}">${alt.texto}</span></span></button>`;
         // botão de salvar fica FORA do <button> da alternativa de propósito —
         // um botão nativo desabilitado bloqueia clique em qualquer coisa
         // dentro dele, mesmo em elementos filhos com seu próprio onclick
