@@ -1,92 +1,14811 @@
-// api/extrair-pdf.js
-// Função serverless do Vercel. A chave da Anthropic fica só aqui (variável
-// de ambiente ANTHROPIC_API_KEY, configurada no painel do Vercel), nunca
-// exposta no navegador.
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#B23A34">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pilotquest">
+<link rel="icon" href="assets2/favicon.png" type="image/png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets2/icon-180.png">
+<link rel="apple-touch-icon-precomposed" sizes="180x180" href="assets2/icon-180.png">
+<title>Pilotquest</title>
+<meta property="og:title" content="Pilotquest">
+<meta property="og:description" content="Banco de questões colaborativo pra estudar juntos pro PSCPP.">
+<meta property="og:image" content="https://pilotquest.com.br/assets2/og-image.png">
+<meta property="og:url" content="https://pilotquest.com.br/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://pilotquest.com.br/assets2/og-image.png">
+<link rel="manifest" href="manifest2.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://jenzxycerdtjpkrzesia.supabase.co">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Escala tipográfica: razão consistente Major Second (1.125), mesma
+     usada pelo Material Design - a base (--fs-d) é o tamanho do enunciado
+     do Flash, todos os outros degraus sobem/descem dessa base na mesma
+     proporção, arredondados pro pixel mais próximo. Antes a escala tinha
+     razões inconsistentes entre 1.06 e 1.32 dependendo do degrau - agora
+     ficam todas entre 1.08 e 1.16, sem nenhum tamanho "solto" no meio */
+  --fs-a:10px; --fs-b:11px; --fs-c:12px; --fs-d:14px;
+  --fs-e:16px; --fs-f:18px; --fs-g:20px; --fs-h:22px; --fs-i:25px;
+  --azul-marca:#202A45;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box}
+input[type=checkbox],input[type=radio]{accent-color:#B23A34}
+html{height:100%;overflow:hidden;overscroll-behavior:none}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background-color:#FBFBFA;color:#111;font-size:var(--fs-d);height:100%;position:fixed;inset:0;width:100%;overflow:hidden;overscroll-behavior:none}
+#bg-fixed{position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;background-color:#FBFBFA;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cg fill='none' stroke='%230C447C' stroke-width='0.5' opacity='0.045'%3E%3Cline x1='0' y1='0' x2='140' y2='0'/%3E%3Cline x1='0' y1='0' x2='0' y2='140'/%3E%3C/g%3E%3C/svg%3E");background-repeat:repeat}
+.appname{font-size:var(--fs-h);font-weight:400;display:flex;align-items:center;gap:6px;color:#0B1D45;letter-spacing:-0.6px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.appname b{font-weight:700}
+.section-title{font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:14px;margin-top:32px;display:flex;align-items:center;gap:6px}
+.section-title:first-child{margin-top:0}
+.config-title{font-size:var(--fs-f);font-weight:500;margin:0 0 16px 0;color:#111}
+.config-item{margin-bottom:6px}
+.config-label{font-size:var(--fs-d);color:#333;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.config-label span{color:#888;font-weight:600}
+.config-slider-row{display:flex;align-items:center;gap:10px}
+.config-slider-a{font-size:var(--fs-c);color:#888;flex-shrink:0}
+.config-slider-a-big{font-size:var(--fs-g)}
+.config-slider-row input[type=range]{flex:1;accent-color:#B23A34}
+.config-reset-btn{text-align:center;color:#B23A34;font-size:var(--fs-c);font-weight:600;margin-top:12px;cursor:pointer;padding:4px}
+/* variante menor - título de topico dentro de uma tela (não é o título
+   principal de um modal/página) */
+.config-title-menor{font-size:var(--fs-e)}
+.modal-conteudo p{margin:0 0 20px 0;line-height:1.5}
+.textarea-padrao{width:100%;min-height:100px;font-size:16px;padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;font-family:inherit;color:#111;resize:vertical;line-height:1.5;margin-bottom:14px}
+button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* só nas telas onde a caneta compete com botões pelo toque (Flash e
+resolução do Quest) - evita que o navegador comece a processar um
+scroll nativo em paralelo durante a pequena janela de movimento antes
+do sistema JS decidir se foi um toque ou um traço de desenho. Global
+em todo botão do app teria efeito colateral no scroll normal com o
+dedo fora desse contexto */
+#aba-vf button, #quests-resolucao button{touch-action:none}
+label{-webkit-tap-highlight-color:transparent}
+button, [onclick]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* elementos clicáveis que não são <button> (divs com onclick, cards,
+itens de menu) - sem isso o Safari aplica seu próprio destaque nativo de
+toque, que podia se comportar diferente entre caneta e dedo. Fora da
+área onde dá pra desenhar, tudo deve se comportar exatamente igual nos
+dois casos */
+[onclick]{-webkit-tap-highlight-color:transparent}
+#vf-input-cor-nativo::-webkit-color-swatch-wrapper{padding:0;border-radius:50%}
+#vf-input-cor-nativo::-webkit-color-swatch{border:none;border-radius:50%}
+button:focus{outline:none}
+button:active{transform:scale(0.98)}
+/* botão dos filtros é largo demais (width:100%) - o scale de "apertar"
+padrão, aplicado a partir do centro, empurrava visivelmente o texto
+"Filtros" pro lado (achado real, confirmado com medições ao vivo no
+Safari). Em botões largos assim, o efeito atrapalha mais do que ajuda */
+#vf-filtros button:active{transform:none}
+.banco-alt-btn:active{transform:scale(0.995)}
+body.vf-tracando-agora button:active{transform:none}
+input,select,textarea{font-family:inherit;font-size:16px}
 
-// achado real: o modelo, ao extrair texto de contrações com apóstrofo
-// (d'Alembert, o'clock, a'frozen'...), tem uma tendência a inserir um
-// underscore sozinho logo depois do apóstrofo - bug sistemático,
-// confirmado em quase 1500 questões já extraídas antes dessa correção.
-// Limpa isso automaticamente, sem depender só do modelo se comportar bem
-// via prompt. Distingue do subscrito matemático legítimo (tipo D'_i,
-// L'_e - variáveis de fórmula real) pela quantidade de letras depois do
-// underscore: erro sempre tem 2+ letras formando uma palavra inteira
-// (Alembert, clock, frozen); subscrito de verdade sempre tem exatamente
-// 1 letra, seguida de espaço/símbolo, nunca continuando a palavra
-function limparApostrofoUnderscore(texto) {
-  if (!texto || typeof texto !== 'string') return texto;
-  return texto.replace(/'_([A-Za-zÀ-ÿ]{2,})/g, "'$1");
+.hidden{display:none !important}
+
+/* balão flutuante da sessão do Flash - mesma técnica de estados via
+classe do timer do PSCPP Tracker, cor adaptada pra marca do Pilotquest
+(B23A34 em vez do azul-marinho de lá) */
+/* transição suave de altura pra caixa de filtros do Flash (ver
+alternarFiltrosVF) - max-height é a técnica clássica pra animar um
+conteúdo de altura dinâmica com CSS puro, já que "height:auto" não pode
+ser animado diretamente. 500px é generoso o bastante pra caber os 3
+selects + 2 botões sem cortar nada quando aberto */
+#vf-filtros-conteudo{overflow:hidden;max-height:500px;opacity:1;margin-top:6px;padding:4px;transition:max-height .28s ease,opacity .22s ease,margin-top .28s ease}
+#vf-filtros-conteudo.vf-filtros-fechado{max-height:0;opacity:0;margin-top:0;padding:0}
+#vf-sessao-balao{position:fixed;z-index:150;background:#B23A34;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.35);width:220px;box-sizing:border-box;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;left:16px;bottom:calc(var(--nav-height, 76px) + var(--vf-barra-fixa-altura, 0px) + env(safe-area-inset-bottom, 0px) + 16px)}
+#vf-sessao-balao.hidden{display:none}
+/* pausado NÃO troca o fundo (igual o Tracker) - só o tempo fica
+acinzentado e a tag "PAUSADO" aparece em destaque. Cor de fundo do
+balão é sempre a mesma, ativo ou pausado - só o que muda é o conteúdo */
+#vf-sessao-balao-toggle-tempo{position:absolute;top:2px;right:6px;color:#E8B8B5;padding:6px;cursor:pointer;display:flex}
+#vf-sessao-balao-nome{font-size:var(--fs-b);color:#E8B8B5;text-transform:uppercase;letter-spacing:.03em;padding-right:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+#vf-sessao-balao-tempo{font-size:var(--fs-g);font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+#vf-sessao-balao.pausado #vf-sessao-balao-tempo{color:#E8B8B5}
+.vf-sessao-balao-tag{font-size:var(--fs-a);letter-spacing:.08em;color:#F0C9C5;font-weight:700;margin-top:1px;height:11px}
+.vf-sessao-balao-btns{display:flex;gap:8px;margin-top:8px}
+.vf-sessao-balao-btns > div{flex:1;min-width:0;background:rgba(255,255,255,0.15);color:#fff;border-radius:8px;padding:8px 6px;font-size:var(--fs-c);font-weight:600;text-align:center;cursor:pointer}
+#vf-sessao-balao.pausado #vf-sessao-balao-btn-pausar{background:rgba(255,255,255,0.9);color:#B23A34}
+/* painel expandido de estatísticas - a sensação de "expandir a partir do
+balão" vem de duas coisas juntas: (1) o painel nasce com a MESMA posição/
+tamanho do balão (definidos via JS no momento de abrir, antes do
+primeiro frame) e (2) transitiona suavemente pro tamanho/posição final
+(centralizado). Fechar reverte a mesma transição, encolhendo de volta */
+#vf-painel-sessao-vf{position:fixed;z-index:400;background:#fff;border-radius:18px;box-shadow:0 30px 70px rgba(0,0,0,0.5);overflow:hidden;transition:top .32s cubic-bezier(.32,.72,.35,1),left .32s cubic-bezier(.32,.72,.35,1),width .32s cubic-bezier(.32,.72,.35,1),height .32s cubic-bezier(.32,.72,.35,1),border-radius .32s cubic-bezier(.32,.72,.35,1)}
+#vf-painel-sessao-vf.hidden{display:none}
+#vf-painel-sessao-fundo{position:fixed;inset:0;z-index:399;background:rgba(0,0,0,0);transition:background .32s ease}
+#vf-painel-sessao-fundo.hidden{display:none}
+#vf-painel-sessao-fundo.aberto{background:rgba(0,0,0,0.4)}
+#vf-painel-sessao-conteudo{opacity:0;transition:opacity .18s ease;height:100%;overflow-y:auto}
+#vf-painel-sessao-vf.aberto #vf-painel-sessao-conteudo{opacity:1;transition-delay:.14s}
+.vf-painel-topo{background:#B23A34;color:#fff;padding:20px;display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
+.vf-painel-topo .vf-painel-tempo-grande{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.vf-painel-topo .vf-painel-rotulo-topo{font-size:11px;opacity:.8;letter-spacing:.04em;text-transform:uppercase}
+.vf-painel-corpo{padding:20px}
+.vf-secao-titulo{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#999;font-weight:700;margin-bottom:10px}
+.vf-grid-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
+.vf-stat-card{background:#f7f7f5;border-radius:12px;padding:12px 14px}
+.vf-stat-card .vf-stat-valor{font-size:22px;font-weight:700;color:#111;font-variant-numeric:tabular-nums}
+.vf-stat-card .vf-stat-rotulo{font-size:var(--fs-b);color:#888;margin-top:2px}
+.vf-stat-card.destaque .vf-stat-valor{color:#B23A34}
+.vf-barra-dupla{display:flex;height:10px;border-radius:6px;overflow:hidden;margin:8px 0 6px;background:#eee}
+.vf-barra-dupla .vf-novas{background:#B23A34}
+.vf-barra-dupla .vf-repeticoes{background:#E8B4B0}
+.vf-legenda-dupla{display:flex;justify-content:space-between;font-size:var(--fs-c);color:#666}
+.vf-legenda-dupla span{display:flex;align-items:center;gap:5px}
+.vf-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.vf-filtro-linha{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid #f0f0ee;font-size:var(--fs-d)}
+.vf-filtro-linha:last-child{border-bottom:none}
+.vf-filtro-linha .vf-filtro-valor{font-weight:700;color:#111;font-variant-numeric:tabular-nums}
+/* sliders de espessura (caneta, destaque e tamanho da borracha) - MESMO
+visual nos três, pílula horizontal neutra (branca, como o thumb padrão
+nativo da Apple), não mais colorida - accent-color mostrou comportamento
+persistente/inconsistente no Safari (ficava com resíduo de cor errada
+mesmo depois de recriar o elemento), então o thumb é estilizado
+manualmente aqui, sempre a mesma cor neutra fixa nos três. Só o
+PREENCHIMENTO da trilha (até o valor atual) continua colorido e
+dinâmico, cada um com sua própria cor - isso é controlado por JS
+trocando a custom property de cada slider individualmente */
+#vf-slider-espessura, #vf-slider-espessura-destaque, #vf-slider-tamanho-borracha{-webkit-appearance:none;appearance:none;background:transparent}
+#vf-slider-espessura::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--preenchimento-slider-caneta, #ddd)}
+#vf-slider-espessura-destaque::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--preenchimento-slider-destaque, #ddd)}
+#vf-slider-tamanho-borracha::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--preenchimento-slider-borracha, #ddd)}
+#vf-slider-espessura::-webkit-slider-thumb, #vf-slider-espessura-destaque::-webkit-slider-thumb, #vf-slider-tamanho-borracha::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:14px;border-radius:7px;background:#fff;border:1px solid #ccc;box-shadow:0 1px 3px rgba(0,0,0,0.3);margin-top:-5px}
+
+/* --- Cards --- */
+.card-inicio{background:#fff;border-radius:18px;padding:13px;box-shadow:0 1px 4px rgba(0,0,0,0.05);margin-bottom:14px;position:relative;overflow:hidden}
+
+/* --- Botões --- */
+.btn-primario{background:#B23A34;color:#fff;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;width:100%;border:none;cursor:pointer;font-family:inherit}
+.btn-primario:disabled{background:#f0f0ee;color:#888;cursor:not-allowed}
+.btn-secundario{background:#f0f0ee;color:#111;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;border:none;cursor:pointer;font-family:inherit}
+/* variante pequena - botões administrativos discretos, não o fluxo principal */
+.btn-secundario-pequeno{font-size:var(--fs-b)}
+.filter-btn{font-size:var(--fs-c);padding:4px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;margin:4px}
+.filter-btn.active{background:#111;color:#fff;border-color:#111}
+/* variante maior - botões de navegação/seleção principal (escolher PDF vs
+   planilha, tipo de tópico, abas de admin), diferente dos filtros
+   secundários (módulo/publicação/capítulo) que usam o tamanho padrão */
+.filter-btn-grande{font-size:var(--fs-e)}
+#metricas-filtro-periodo .filter-btn{flex:1 1 auto;text-align:center;margin:0;height:32px;padding:0 6px;white-space:nowrap;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+@media(min-width:768px){
+  #metricas-filtro-periodo .filter-btn{flex:1 1 0%}
+}
+#metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:32px;min-height:32px;max-height:32px;padding-top:0;padding-bottom:0;box-sizing:border-box}
+#aba-quests .filter-select{height:32px;box-sizing:border-box;padding-top:0;padding-bottom:0}
+.filter-select{font-size:var(--fs-d);padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%;box-sizing:border-box}
+.filter-select:disabled{opacity:0.5;cursor:not-allowed}
+.chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
+.chev svg{width:16px;height:16px;display:block}
+.chev.open{transform:rotate(180deg)}
+#bottom-nav.teclado-aberto{display:none}
+.vf-barra-fixa.teclado-aberto-vf{display:none}
+.icone-modulo-mini{width:14px;height:14px;display:inline-flex;flex-shrink:0}
+.icone-modulo-mini svg{width:100%;height:100%;display:block}
+#wrapper-barra-adicionar{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--nav-height, 76px);width:100%;max-width:480px;box-sizing:border-box;background:#FBFBFA;padding:0 16px 12px 16px;z-index:15}
+#barra-adicionar-questoes{width:100%;box-sizing:border-box;background:#fff;border-radius:18px;box-shadow:0 2px 8px rgba(0,0,0,0.08);padding:14px 16px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.conteudo-colapsavel{display:none}
+.conteudo-colapsavel.open{display:block}
+.carrossel-cadernos{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.carrossel-cadernos::-webkit-scrollbar{display:none}
+.carrossel-pagina{flex:0 0 100%;scroll-snap-align:start;display:flex;flex-direction:column;min-width:0}
+.carrossel-dots{display:flex;justify-content:center;gap:6px;padding:8px 0 2px}
+.carrossel-dot{width:6px;height:6px;border-radius:50%;background:#ddd;flex-shrink:0}
+.carrossel-dot.ativo{background:#B23A34}
+
+/* --- Telas de auth/onboarding --- */
+#view-login,#view-instalar-app{position:fixed;top:var(--vv-top, 0px);left:0;width:100%;height:var(--vh-real, 100vh);display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + var(--padding-extra-baixo, 24px)) 24px;box-sizing:border-box}
+#view-onboarding{position:fixed;top:var(--vv-top, 0px);left:0;width:100%;height:var(--vh-real, 100vh);display:flex;flex-direction:column;background:#fff;overflow:hidden;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + var(--padding-extra-baixo, 24px)) 24px;box-sizing:border-box}
+.onboarding-conteudo{flex:1;display:flex;flex-direction:column;justify-content:center;overflow:hidden;touch-action:pan-y;width:100%;max-width:432px;margin:0 auto}
+.onboarding-rodape{width:100%;max-width:432px;margin:0 auto;flex-shrink:0}
+.onboarding-dots{display:flex;gap:7px;justify-content:center;align-items:center;margin-bottom:48px}
+.onboarding-dots span{width:7px;height:7px;border-radius:50%;background:#DDD;transition:all 0.2s ease}
+.onboarding-dots span.ativo{background:var(--azul-marca);width:10px;height:10px}
+.login-inner{width:100%;max-width:432px}
+#view-login{background:#F9F9F7}
+#view-login .erro{color:#B00020;font-size:var(--fs-d);margin-bottom:8px}
+#view-login p{color:#666}
+#view-login h1,#view-onboarding h1{font-size:var(--fs-h);color:var(--azul-marca);margin-bottom:4px}
+#view-login input{padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;margin-bottom:10px;width:100%;background:#fff;color:#111}
+.campo-senha-wrapper{position:relative}
+.campo-senha-wrapper input{padding-right:38px !important}
+.btn-revelar-senha{position:absolute;right:6px;top:0;bottom:10px;display:flex;align-items:center;background:none;border:none;padding:4px;color:#888;cursor:pointer}
+#view-login .erro{color:#B00020;font-size:var(--fs-d);margin-bottom:8px}
+.onboarding-step{display:none}
+.onboarding-icone{margin-bottom:18px;display:flex;justify-content:center}
+.onboarding-step.ativo{display:block}
+
+/* --- App shell --- */
+#app-shell{display:none;max-width:480px;margin:0 auto;position:fixed;top:var(--vv-top, 0px);left:0;right:0;height:var(--vh-real, 100vh);flex-direction:column;overflow:hidden;z-index:100}
+/* z-index explícito acima - sem isso, o app-shell (e QUALQUER modal
+dentro dele - nota, compartilhar, confirmação, etc) ficava com z-index
+"auto", que compete em desvantagem contra elementos irmãos com z-index
+numérico (o canvas de desenho e os painéis do V/F, que vivem fora do
+app-shell desde a correção do recorte no cabeçalho). Resultado: modais
+podiam renderizar atrás do canvas/painéis do V/F mesmo em outras abas.
+100 fica acima do canvas (8/9) mas abaixo dos painéis/barrinha do V/F
+(9999/10000) - preserva as duas correções ao mesmo tempo */
+#app-shell.ativo{display:flex}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top, 0px) + 22px) 16px 14px;flex-shrink:0;background:#FBFBFA;z-index:10;border-bottom:0.5px solid rgba(224,224,224,0.6)}
+/* canvas de desenho voltou a ficar limitado à área de conteúdo (não mais
+tela inteira) - por isso não precisa mais de z-index condicional pra
+"passar por cima" do cabeçalho/menu, já que fisicamente não os cobre mais */
+/* seleção de cor estilo PDF Expert: moldura quadrada ao redor da bolinha
+(não mais um anel circular) - pseudo-elemento separado, porque outline/
+box-shadow direto no próprio botão redondo sempre saem arredondados junto */
+.vf-cor-selecionada{box-shadow:0 0 0 2px #fff, 0 0 0 4px #5B9BD5 !important}
+#vf-barra-desenho,#vf-barra-desenho *,#vf-painel-caneta,#vf-painel-caneta *,#vf-painel-borracha,#vf-painel-borracha *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
+.avatar-btn{width:36px;height:36px;border-radius:50%;background:#B23A34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0;border:none;padding:0;margin:0;-webkit-appearance:none;appearance:none;cursor:pointer;overflow:hidden}
+
+.content{position:relative;flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
+#aba-vf{overscroll-behavior-y:none;margin:-16px -16px 0 -16px;padding:6px 6px 0 6px}
+#ptr-indicator{display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height 0.2s ease;flex-shrink:0;position:relative}
+#ptr-indicator.ativo{transition:none}
+#ptr-seta{width:20px;height:20px;color:#999;transition:transform 0.25s ease,opacity 0.15s ease;transform:rotate(0deg);position:absolute}
+#ptr-seta.pronta{transform:rotate(180deg);color:#B23A34}
+#ptr-seta.escondida{opacity:0}
+#ptr-spinner{width:20px;height:20px;border-radius:50%;border:2.5px solid #F2DAD8;border-top-color:#B23A34;opacity:0;transition:opacity 0.2s ease;position:absolute}
+#ptr-spinner.girando{opacity:1;animation:ptr-girar 0.7s linear infinite}
+@keyframes ptr-girar{to{transform:rotate(360deg)}}
+
+/* --- Bottom nav --- */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid #e0e0e0;display:flex;z-index:10}
+.vf-barra-fixa{position:fixed;bottom:var(--nav-height, 76px);left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#FBFBFA;padding:14px 16px 18px;display:flex;flex-direction:column;gap:20px;z-index:150;box-sizing:border-box}
+.vf-barra-fixa,.vf-barra-fixa *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.vf-barra-fixa-principal{display:flex;gap:10px}
+.vf-barra-fixa-acoes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(min-width:1100px){.vf-barra-fixa{max-width:none;left:250px;right:0;transform:none;width:auto}}
+@media(min-width:1100px){.vf-overlay-sessao{left:242px !important}}
+.nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative;-webkit-tap-highlight-color:transparent}
+#nav-item-adicionar{display:none}
+/* tamanho fixo (não entra na escala de texto) - é um numerozinho dentro
+   de um círculo pequeno (16px), proporcional ao container, não texto de leitura */
+.badge-notificacao{position:absolute;top:10px;right:calc(50% - 24px);background:#E24B4A;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+.nav-item.active{background:#f0f0ee}
+.nav-icon{width:24px;height:24px;color:#888;display:flex;align-items:center;justify-content:center}
+.nav-icon svg{width:100%;height:100%}
+.nav-item.active .nav-icon{color:#B23A34}
+.nav-label{font-size:var(--fs-c);color:#888;white-space:normal;text-align:center;line-height:1.15;max-width:100%}
+.nav-item.active .nav-label{color:#B23A34;font-weight:500}
+
+@media(min-width:768px) and (max-width:1099px){
+  :root{
+    --fs-a:12px; --fs-b:13px; --fs-c:15px; --fs-d:17px;
+    --fs-e:19px; --fs-f:20px; --fs-g:24px; --fs-h:27px; --fs-i:31px;
+  }
+  #app-shell{max-width:100%}
+  .topbar{max-width:100%}
+  #bottom-nav{max-width:100%}
+  #wrapper-barra-adicionar{max-width:100%}
+  .vf-barra-fixa{max-width:100%}
+  .content{padding:24px;padding-bottom:calc(var(--nav-height, 76px) + 24px)}
+  .section-title{margin-top:28px}
+  .section-title:first-child{margin-top:0}
+}
+@media(min-width:1100px){
+  :root{
+    --fs-a:12px; --fs-b:13px; --fs-c:15px; --fs-d:17px;
+    --fs-e:19px; --fs-f:20px; --fs-g:24px; --fs-h:27px; --fs-i:31px;
+  }
+  body{display:flex;background:#f5f5f3}
+  #app-shell{max-width:100%}
+  #app-shell.ativo{display:grid;grid-template-columns:250px 1fr;grid-template-rows:auto auto 1fr;width:100%;padding-bottom:0}
+  .topbar{grid-column:1/-1;grid-row:1;max-width:100%;padding:16px 32px;z-index:20}
+  #bottom-nav{grid-column:1;grid-row:2/-1;position:sticky;left:auto;bottom:auto;transform:none;width:100%;max-width:none;border-top:none;border-right:0.5px solid #e0e0e0;flex-direction:column;padding:20px 14px;gap:6px;align-self:start;top:0;height:100%}
+  #ptr-indicator{grid-column:2;grid-row:2}
+  .nav-item{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;border-radius:9px;width:100%}
+  .nav-label{font-size:var(--fs-d)}
+  #nav-item-adicionar{display:flex}
+  #nav-item-adicionar .nav-label{white-space:nowrap}
+  #wrapper-barra-adicionar{display:none}
+  #view-topico-detalhe{left:250px !important;width:calc(100% - 250px) !important}
+  #pagina-flash-salvos-vf{left:250px !important;width:calc(100% - 250px) !important}
+  #pagina-favoritos-vf{left:250px !important;width:calc(100% - 250px) !important}
+  .nav-icon{width:24px;height:24px}
+  .badge-notificacao{top:3px;left:30px;right:auto}
+  .content{grid-column:2;grid-row:3;padding:32px 48px;max-width:1320px;width:100%}
+  .section-title{margin-top:28px}
+  .section-title:first-child{margin-top:0}
 }
 
-function limparQuestao(q) {
+/* --- Módulo: paleta por módulo (reaproveitada exatamente do app pessoal) --- */
+.mod-tag{display:inline-flex;align-items:center;gap:6px;border-radius:10px;padding:4px 10px;font-size:var(--fs-b);font-weight:600}
+.mod-Manobrabilidade{background:#EEEDFE;color:#3C3489}
+.mod-Arte-Naval{background:#E6F1FB;color:#0C447C}
+.mod-Navegação-em-Águas-Restritas{background:#EAF3DE;color:#27500A}
+.mod-Legislação{background:#FAEEDA;color:#633806}
+.mod-Meteorologia-e-Oceanografia{background:#FCEBEB;color:#791F1F}
+.mod-Comunicações{background:#F1EFE8;color:#444441}
+.mod-Conhecimentos-Gerais{background:#FAECE7;color:#4A1B0C}
+
+/* --- Questão --- */
+.card-questao{background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:18px;margin-bottom:8px}
+.item-lista-modulo{padding:9px 8px;font-size:var(--fs-d);line-height:1.3;color:#111;cursor:pointer;border-bottom:0.5px solid #eee}
+.item-lista-modulo:last-child{border-bottom:none}
+.item-lista-modulo:active{background:#F5F5F4}
+.card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado,body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado *,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
+body.vf-marcacao-texto-ativa .vf-numeral-item-nao-marcavel,body.vf-marcacao-texto-ativa .linha-marcador{-webkit-user-select:none;user-select:none}
+#vf-correcao-atual{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf-correcao-atual *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
+.enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap;position:relative}
+.linha-numerada{display:flex;gap:8px;margin-top:10px;align-items:flex-start;position:relative}
+.linha-marcador{flex-shrink:0;font-weight:400;min-width:16px}
+.linha-texto{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:break-word}
+.alternativa{display:block;width:100%;text-align:left;background:#F5F5F6;border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:var(--fs-d)}
+.alternativa.correta{background:#E1F5E1;color:#1B5E20;font-weight:600}
+.alternativa.errada-escolhida{background:#FBE1E1;color:#9E1B1B;font-weight:600}
+.autor-tag{font-size:var(--fs-b);color:#888}
+.selo-correcao{background:#FFF3CD;color:#856404;font-size:var(--fs-b);padding:3px 8px;border-radius:8px;font-weight:600}
+
+
+/* --- Placar --- */
+
+/* --- Modal genérico --- */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px}
+#overlay-arrastar-arquivo{position:fixed;inset:0;background:rgba(217,119,87,0.08);z-index:700;display:flex;align-items:center;justify-content:center;pointer-events:none}
+#overlay-arrastar-arquivo.hidden{display:none}
+#overlay-arrastar-arquivo>div{background:#fff;border:2px dashed #B23A34;border-radius:16px;padding:32px 40px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.12)}
+#overlay-arrastar-arquivo svg{margin-bottom:12px}
+#overlay-arrastar-arquivo p{color:#111;font-size:var(--fs-e);font-weight:600;margin:0}
+#view-topico-detalhe{position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden}
+#view-topico-detalhe .topbar-voltar{display:flex;align-items:center;gap:10px;padding:14px 16px;flex-shrink:0;background:#FBFBFA;border-bottom:0.5px solid rgba(224,224,224,0.6)}
+#conteudo-topico-detalhe{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px}
+.modal-overlay.hidden{display:none}
+.modal-conteudo{background:#fff;border-radius:14px;padding:20px;width:100%;max-width:340px;max-height:85vh;overflow-y:auto}
+
+/* "Adicionar questões" é um híbrido: no mobile/tablet se comporta como um
+   modal (popup por cima de tudo); a partir do desktop (1100px, onde o menu
+   vira lateral) vira uma página normal, igual as outras abas – sem overlay,
+   sem fundo escurecido, ocupando a área de conteúdo normalmente */
+#aba-adicionar{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:250;padding:20px}
+#aba-adicionar.hidden{display:none}
+@media(min-width:1100px){
+  #aba-adicionar{position:static;inset:auto;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;overflow-y:auto;padding:0;z-index:auto}
+  #aba-adicionar .modal-conteudo{max-width:520px;width:100%;max-height:none;overflow-y:visible;padding:0;border-radius:0;background:none;box-shadow:none}
+  #titulo-adicionar-questoes{font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 14px 0;text-align:center}
+  #card-adicionar-questoes{max-width:520px}
+}
+.modal-conteudo-fluxo-topico{max-height:420px;box-sizing:border-box}
+/* Popup grande — usado em qualquer lugar onde a pessoa escreve ou lê texto
+   mais longo (discutir dentro do caderno, notas). Pequeno no celular (tela
+   já é pequena mesmo), bem maior no iPad (retrato e paisagem) e desktop. */
+.popup-texto-longo{max-height:640px;max-width:400px;padding-top:24px}
+@media(min-width:768px) and (max-width:1099px){
+  .popup-texto-longo{height:85vh;max-width:680px}
+}
+@media(min-width:1100px){
+  .popup-texto-longo{height:85vh;max-width:830px}
+}
+/* Popup pequeno — formulários curtos (notas, nova discussão). Altura livre,
+   baseada no conteúdo (com teto de 85vh vindo do .modal-conteudo padrão),
+   só a largura cresce um pouco em telas maiores */
+.popup-formulario{max-width:400px;padding-top:24px}
+@media(min-width:768px) and (max-width:1099px){
+  .popup-formulario{max-width:500px}
+}
+@media(min-width:1100px){
+  .popup-formulario{max-width:550px}
+}
+
+/* --- Alternativas de questão (padrão herdado do app pessoal) --- */
+.banco-alternativas{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.banco-alt-btn{text-align:left;font-size:var(--fs-d);padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#111;line-height:1.5;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.banco-alt-btn:disabled:active{transform:none}
+.banco-alt-btn:disabled{cursor:default;opacity:0.9}
+.banco-resultado{font-size:var(--fs-e);font-weight:600;margin-top:14px;padding:10px 0;text-align:center;height:44px;box-sizing:border-box}
+.btn-icone-pequeno{width:24px;height:24px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#888;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
+.banco-acoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:8px;margin-top:20px}
+.banco-acao-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:12px;border:0.5px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#666;position:relative}
+.badge-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#E24B4A}
+.banco-acao-btn.ativo{background:#F2DAD8;border-color:#B23A34;color:#B23A34}
+.banco-acao-btn.favoritada{background:#FEF6E4;border-color:#EF9F27;color:#854F0B}
+.banco-acao-btn svg{width:19px;height:19px}
+.banco-acao-btn span{font-size:var(--fs-a)}
+.pills-nav{display:grid;grid-template-columns:repeat(auto-fill, minmax(32px, 1fr));justify-items:center;gap:6px;margin-bottom:14px}
+.pill-questao{width:32px;height:32px;border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#888;font-size:var(--fs-c);font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.pill-questao.atual{background:#111;color:#fff;border-color:#111}
+.pill-questao.acertou{background:#EAF3DE;color:#3B6D11;border-color:#C0DD97}
+.pill-questao.errou{background:#FCEBEB;color:#A32D2D;border-color:#F7C1C1}
+.pill-questao.excluida{background:#F0F0EE;color:#aaa;border-color:#e5e5e3}
+.loading-spinner{width:28px;height:28px;display:block;margin:20px auto}
+/* Barrinha de carregamento — usada só na tela de splash inicial */
+.loading-bar{width:120px;height:4px;border-radius:2px;background:#EEE;overflow:hidden;margin:20px auto}
+.loading-bar-fill{width:40%;height:100%;background:#B23A34;border-radius:2px;animation:carregando 1.1s ease-in-out infinite}
+@keyframes carregando{
+  0%{transform:translateX(-100%)}
+  100%{transform:translateX(350%)}
+}
+</style>
+</head>
+<body>
+<script>
+  // O ajuste extra de padding embaixo (empurrando o conteúdo ~31px pra cima)
+  // foi calibrado só pro modo webapp instalado (sem a barra do navegador
+  // ocupando espaço). No navegador comum, esse espaço extra não faz sentido
+  // e desloca o conteúdo à toa – por isso é condicional aqui.
+  const rodandoComoWebapp = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  document.documentElement.style.setProperty('--padding-extra-baixo', rodandoComoWebapp ? '86px' : '24px');
+
+  // Falha conhecida do Safari iOS: position:fixed às vezes se ancora na "layout
+  // viewport" (que pode ser maior que a área realmente visível, por causa da
+  // barra de endereço expandindo/recolhendo). window.visualViewport é a API que
+  // sempre reflete a área realmente visível, então usamos ela como fonte de verdade.
+  let vfMaiorAlturaVistaVF = 0; // maior altura já vista - referência de "tela sem teclado nenhum"
+  function ajustarViewportReal(){
+    // enquanto a caneta está desenhando, qualquer disparo desse evento é
+    // ruído (Scribble do sistema, detecção de "hover" da Apple Pencil,
+    // etc) — não tem teclado abrindo nem zoom mudando de verdade nesse
+    // momento, então recalcular aqui só fazia o app-shell inteiro tremer
+    // a cada disparo espúrio. Suspende até o traço terminar
+    if(typeof vfDesenhandoAgora !== 'undefined' && vfDesenhandoAgora) return;
+    // mesma suspensão, agora também durante o arrasto de grifar/sublinhar/
+    // riscar - achado real: esse sistema tem sua própria variável de
+    // "arrastando agora" (separada da do desenho), e nunca tinha sido
+    // incluída aqui. Um disparo espúrio de scroll/resize do visualViewport
+    // durante esse arrasto (mesma causa já documentada acima pra caneta)
+    // recalculava --vv-top/--vh-real no meio do gesto, e como vários
+    // elementos usam essas variáveis pra se posicionar, isso reorganizava
+    // o layout - inclusive o texto sendo selecionado, quebrando linha no
+    // meio da frase bem na hora de arrastar
+    if(typeof vfMarcacaoTextoArrastandoVF !== 'undefined' && vfMarcacaoTextoArrastandoVF) return;
+    const vv = window.visualViewport;
+    const alturaNova = vv ? vv.height : window.innerHeight;
+    const topoNovo = vv ? vv.offsetTop : 0;
+    if(alturaNova > vfMaiorAlturaVistaVF) vfMaiorAlturaVistaVF = alturaNova;
+    // proteção direta no valor, em vez de tentar prever exatamente quando
+    // cada coisa (teclado, seletor de cor nativo, o que for) abre e fecha —
+    // isso já foi tentado de 3 jeitos diferentes e nenhum bloqueava tudo
+    // que podia disparar esse evento de forma espúria. Um teclado de
+    // verdade nunca ocupa mais de uns 40% da tela do iPad, então qualquer
+    // valor abaixo disso é suspeito e é ignorado — não aplica, mantém o
+    // último valor bom que já tinha, e nunca deixa o app-shell encolher a
+    // ponto do menu lateral e a barra de baixo saírem da área visível
+    if(vfMaiorAlturaVistaVF > 0 && alturaNova < vfMaiorAlturaVistaVF * 0.55) return;
+    if(vv){
+      document.documentElement.style.setProperty('--vh-real', alturaNova + 'px');
+      document.documentElement.style.setProperty('--vv-top', topoNovo + 'px');
+    }else{
+      document.documentElement.style.setProperty('--vh-real', alturaNova + 'px');
+      document.documentElement.style.setProperty('--vv-top', '0px');
+    }
+  }
+  ajustarViewportReal();
+  window.addEventListener('resize', ajustarViewportReal);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', ajustarViewportReal);
+    window.visualViewport.addEventListener('scroll', ajustarViewportReal);
+  }
+</script>
+<div id="bg-fixed"></div>
+
+<!-- ============================================================ -->
+<!-- CONFIGURAÇÃO – troque pelos valores reais do seu projeto Supabase -->
+<!-- ============================================================ -->
+<script>
+  const SUPABASE_URL = "https://jenzxycerdtjpkrzesia.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_ne9lVc82Tdp6tloAbqm4xA_imwugeXg";
+</script>
+
+<!-- ============================================================ -->
+<!-- TELA: LOGIN / DEFINIR SENHA -->
+<!-- ============================================================ -->
+<div id="view-splash" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#F9F9F7;z-index:100;padding:calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + var(--padding-extra-baixo, 24px)) 24px;box-sizing:border-box">
+  <img src="assets2/logo.png" alt="Pilotquest" width="430" height="88" style="height:44px;width:auto;margin-bottom:24px">
+  <div class="loading-bar" style="margin:0"><div class="loading-bar-fill"></div></div>
+</div>
+
+<div id="view-login" class="hidden">
+<div class="login-inner">
+  <div style="text-align:center;margin-bottom:16px">
+    <img src="assets2/logo.png" alt="Pilotquest" width="430" height="88" style="height:34px;width:auto">
+  </div>
+
+  <form id="login-form-entrar" onsubmit="event.preventDefault(); entrar();">
+    <input type="email" id="login-email" placeholder="Email" autocomplete="username" required>
+    <div class="campo-senha-wrapper">
+      <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" required>
+      <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('login-senha', this)" aria-label="Mostrar senha">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+    </div>
+    <div class="erro hidden" id="login-erro"></div>
+    <button class="btn-primario" type="submit">Entrar</button>
+  </form>
+
+  <form id="login-form-definir-senha" class="hidden" onsubmit="event.preventDefault(); definirSenha();">
+    <p style="margin-bottom:16px" id="saudacao-definir-senha">Defina seu nome e sua senha pra começar a usar o Pilotquest.</p>
+    <input type="text" id="novo-nome" placeholder="Seu nome" autocomplete="name" required>
+    <div class="campo-senha-wrapper">
+      <input type="password" id="nova-senha" placeholder="Nova senha" autocomplete="new-password" required>
+      <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('nova-senha', this)" aria-label="Mostrar senha">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+    </div>
+    <div class="campo-senha-wrapper">
+      <input type="password" id="nova-senha-confirmar" placeholder="Confirmar senha" autocomplete="new-password" required>
+      <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('nova-senha-confirmar', this)" aria-label="Mostrar senha">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+    </div>
+    <div class="erro hidden" id="definir-senha-erro"></div>
+    <button class="btn-primario" type="submit">Definir senha e entrar</button>
+  </form>
+
+  <form id="login-form-convite" class="hidden" onsubmit="event.preventDefault(); cadastrarComConvite(); return false;">
+    <p style="margin-bottom:16px" id="saudacao-convite">Carregando convite...</p>
+    <div id="campos-convite" class="hidden">
+      <input type="email" id="convite-email" placeholder="Seu email" autocomplete="username" required>
+      <div class="campo-senha-wrapper">
+        <input type="password" id="convite-senha" placeholder="Crie uma senha" autocomplete="new-password" required>
+        <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('convite-senha', this)" aria-label="Mostrar senha">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+      <div class="campo-senha-wrapper">
+        <input type="password" id="convite-senha-confirmar" placeholder="Confirmar senha" autocomplete="new-password" required>
+        <button type="button" class="btn-revelar-senha" onclick="toggleSenhaVisivel('convite-senha-confirmar', this)" aria-label="Mostrar senha">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+      <div class="erro hidden" id="convite-erro"></div>
+      <button class="btn-primario" type="submit" id="btn-cadastrar-convite">Cadastrar</button>
+    </div>
+  </form>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TELA: ONBOARDING (só primeira vez) -->
+<!-- ============================================================ -->
+<div id="view-instalar-app" class="hidden">
+<div class="login-inner">
+  <div style="text-align:center">
+    <img src="assets2/logo.png" alt="Pilotquest" width="430" height="88" style="height:40px;width:auto;margin-bottom:24px;margin-left:-9px">
+    <h1>Instale como app</h1>
+    <p id="instrucao-instalacao-navegador">Carregando instruções pro seu aparelho...</p>
+    <p style="color:#888;font-size:var(--fs-d);margin-top:16px">Assim você tem acesso rápido, direto da tela inicial,<br>sem a barra do navegador ocupando espaço.</p>
+    <button class="btn-secundario" id="btn-continuar-navegador" style="width:100%;margin-top:20px" onclick="continuarNoNavegador()">Continuar no navegador mesmo assim</button>
+  </div>
+</div>
+</div>
+
+<div id="view-onboarding" class="hidden">
+  <div class="onboarding-conteudo" id="onboarding-conteudo">
+    <div class="onboarding-step ativo" data-step="0">
+      <div class="onboarding-icone"><img src="assets2/favicon.png" alt="Pilotquest" width="44" height="44" style="border-radius:12px"></div>
+      <h1>Bem-vindo(a) ao Pilotquest</h1>
+      <p>Aqui é onde vamos estudar juntos pro PSCPP, com um banco de questões compartilhado.</p>
+    </div>
+    <div class="onboarding-step" data-step="1">
+      <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#B23A34" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+      <h1>Como funciona o banco</h1>
+      <p>Todo mundo pode adicionar questões novas – subindo um PDF ou a planilha-modelo. Todo mundo estuda das mesmas questões, mas cada um tem suas próprias estatísticas.</p>
+    </div>
+    <div class="onboarding-step" data-step="2">
+      <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#B23A34" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div>
+      <h1>A exclusão é só sua</h1>
+      <p>Se uma questão parecer errada ou malformada, você pode excluir – mas isso some <strong>só pra você</strong>. Ela continua existindo pros outros. Quanto mais gente excluir a mesma questão, mais evidente fica que ela tem um problema.</p>
+    </div>
+    <div class="onboarding-step" data-step="3">
+      <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="#B23A34"><path fill-rule="evenodd" d="M1.75 1A1.75 1.75 0 000 2.75v9.5C0 13.216.784 14 1.75 14H3v1.543a1.457 1.457 0 002.487 1.03L8.061 14h6.189A1.75 1.75 0 0016 12.25v-9.5A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v9.5a.25.25 0 01-.25.25h-6.5a.75.75 0 00-.53.22L4.5 15.44v-2.19a.75.75 0 00-.75-.75h-2a.25.25 0 01-.25-.25v-9.5z"/><path d="M22.5 8.75a.25.25 0 00-.25-.25h-3.5a.75.75 0 010-1.5h3.5c.966 0 1.75.784 1.75 1.75v9.5A1.75 1.75 0 0122.25 20H21v1.543a1.457 1.457 0 01-2.487 1.03L15.939 20H10.75A1.75 1.75 0 019 18.25v-1.465a.75.75 0 011.5 0v1.465c0 .138.112.25.25.25h5.5a.75.75 0 01.53.22l2.72 2.72v-2.19a.75.75 0 01.75-.75h2a.25.25 0 00.25-.25v-9.5z"/></svg></div>
+      <h1>Fórum, do jeito coletivo</h1>
+      <p>Cada questão tem um espaço de discussão, com respostas encadeadas (dá pra responder direto a um comentário específico). Se algo estiver errado, use "Reportar erro" e proponha a correção – a mudança só entra de verdade depois que a maioria concordar votando.</p>
+    </div>
+    <div class="onboarding-step" data-step="4">
+      <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#B23A34" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg></div>
+      <h1>Métricas, só suas</h1>
+      <p>Acompanhe seu desempenho por módulo, por tipo de questão, por publicação – e veja direto as questões que você mais erra, seus favoritos e suas notas escritas, tudo num só lugar.</p>
+    </div>
+    <div class="onboarding-step" data-step="5">
+      <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#B23A34" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></div>
+      <h1>No computador, arrasta e solta</h1>
+      <p>Pra adicionar questões, não precisa nem clicar em "Escolher arquivo" – em qualquer tela do app, é só arrastar o PDF ou a planilha direto pra cima da janela e soltar. Ele já reconhece o tipo de arquivo e leva pra tela certa, com tudo pré-carregado.</p>
+    </div>
+    <div class="onboarding-step" data-step="6">
+      <div class="onboarding-icone"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#B23A34" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></div>
+      <h1>Vamos com tudo!</h1>
+      <p>Você já viu o essencial. Agora é só clicar abaixo, entrar, e começar a estudar com o pessoal. Espero que minha contribuição com o Pilotquest ajude bastante nessa reta final – tamo junto!</p>
+    </div>
+  </div>
+
+  <div class="onboarding-rodape">
+    <div class="onboarding-dots" id="onboarding-dots"></div>
+    <button class="btn-primario" id="btn-onboarding-concluir" onclick="concluirOnboarding()" style="visibility:hidden">Concluir e começar</button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- APP SHELL (pós-login) -->
+<!-- ============================================================ -->
+<div id="app-shell">
+  <div id="overlay-arrastar-arquivo" class="hidden">
+    <div>
+      <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#B23A34" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15l3-3 3 3"/></svg>
+      <p>Solte o arquivo aqui pra adicionar questões</p>
+    </div>
+  </div>
+
+  <div class="topbar">
+    <img src="assets2/logo.png" alt="Pilotquest" width="430" height="88" style="height:34px;width:auto;display:block">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="btn-secundario btn-secundario-pequeno hidden" id="btn-abrir-admin" style="width:auto;padding:6px 12px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em" onclick="abrirModal('modal-admin')">Admin</button>
+      <button class="btn-icone-pequeno" onclick="abrirRascunhoLivreVF()" title="Rascunho" style="width:36px;height:36px"><svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24"><path fill="currentColor" d="M6.616 21q-.691 0-1.153-.462T5 19.385V4.615q0-.69.463-1.152T6.616 3h7.213q.323 0 .628.13t.522.349L18.52 7.02q.217.218.348.522t.131.628v11.214q0 .69-.463 1.153T17.385 21zM14 7.192V4H6.616q-.231 0-.424.192T6 4.615v14.77q0 .23.192.423t.423.192h10.77q.23 0 .423-.192t.192-.424V8h-3.192q-.349 0-.578-.23T14 7.192M6 4v4zv16z"/></svg></button>
+      <button class="avatar-btn" onclick="abrirModalPerfil()" id="avatar-inicial">?</button>
+    </div>
+  </div>
+
+  <div id="ptr-indicator">
+    <svg id="ptr-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    <div id="ptr-spinner"></div>
+  </div>
+
+  <div class="content" id="content">
+
+  <!-- ===== INÍCIO ===== -->
+  <div class="view-aba" id="aba-inicio">
+    <div class="card-inicio" style="background:#B23A34;color:#fff">
+      <div style="font-size:var(--fs-f);font-weight:600" id="inicio-saudacao">Olá!</div>
+      <div style="font-size:var(--fs-d);opacity:0.85;display:flex;align-items:center;gap:6px" id="inicio-contagem-pscpp"><span id="inicio-contagem-pscpp-texto">Faltam ... dias para o PSCPP</span> <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-contagem-pscpp')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></div>
+    </div>
+
+    <div id="caderno-em-andamento" class="hidden">
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="retomarCaderno()">
+        <div style="font-weight:600;font-size:var(--fs-d);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg> Cadernos em andamento</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px" id="caderno-em-andamento-info"></div>
+      </button>
+    </div>
+
+    <div id="container-notificacoes-ordenadas"></div>
+    <div style="height:48px"></div>
+  </div>
+
+  <!-- ===== GERAR QUESTS (filtros + resolução) ===== -->
+  <div class="view-aba hidden" id="aba-quests">
+
+    <div id="quests-filtros">
+
+      <button id="btn-super-quest" onclick="gerarSuperQuest()" style="width:100%;background:#B23A34;color:#fff;border:none;border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-bottom:36px;font-weight:700;font-size:var(--fs-e);text-transform:uppercase;letter-spacing:0.02em">
+        <span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></span>
+        Gerar SuperQuest
+      </button>
+
+      <div>
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0">
+          <span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span>
+          <span>Novo caderno</span>
+        </div>
+
+        <input type="text" id="nome-caderno" class="filter-select" placeholder="Nome do caderno (opcional)">
+
+        <select class="filter-select" id="filtro-origem" onchange="mudarOrigemFiltro(this.value)">
+          <option value="usuarios">Questões dos usuários</option>
+          <option value="marinha">Questões da Marinha</option>
+          <option value="todas">Todas as questões</option>
+        </select>
+
+        <div id="bloco-filtro-marinha" class="hidden">
+          <select class="filter-select" id="filtro-concurso" onchange="atualizarAnosDoConcurso()">
+            <option value="">Todos os concursos</option>
+          </select>
+          <select class="filter-select" id="filtro-ano-prova" onchange="selecionarAnoProva(this.value)" disabled>
+            <option value="">Escolhe o concurso primeiro</option>
+          </select>
+        </div>
+
+        <select class="filter-select hidden" id="filtro-usuario-admin" onchange="selecionarFiltroSelect('usuario', this.value)">
+          <option value="">Todos os usuários</option>
+        </select>
+
+        <select class="filter-select" id="filtro-modulo" onchange="selecionarFiltroSelect('modulo', this.value)">
+          <option value="">Todos os módulos</option>
+        </select>
+
+        <select class="filter-select" id="filtro-publicacao" onchange="selecionarFiltroSelect('publicacao', this.value)" disabled>
+          <option value="">Todas as publicações</option>
+        </select>
+
+        <select class="filter-select" id="filtro-capitulo" onchange="selecionarFiltroSelect('capitulo', this.value)" disabled>
+          <option value="">Todos os capítulos</option>
+        </select>
+
+        <select class="filter-select" id="filtro-tipo-questao" onchange="selecionarFiltroSelect('tipoQuestao', this.value)">
+          <option value="todos">Todos os tipos de questão</option>
+          <option value="Conceitual">Conceitual</option>
+          <option value="Cálculo">Cálculo</option>
+          <option value="Número">Número</option>
+          <option value="Lista">Lista</option>
+          <option value="Identificação">Identificação</option>
+        </select>
+
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#111;padding:6px 2px;cursor:pointer">
+          <input type="checkbox" id="toggle-priorizar-erro" onchange="atualizarContadorDisponiveis()">
+          Priorizar questões que mais erro
+          <button class="btn-icone-pequeno" onclick="event.preventDefault();event.stopPropagation();abrirModal('modal-info-wilson')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#111;padding:6px 2px 14px;cursor:pointer">
+          <input type="checkbox" id="toggle-ineditas" onchange="atualizarContadorDisponiveis()"> Apenas questões inéditas
+        </label>
+
+        <div id="contador-disponiveis" style="text-align:center;color:#888;font-size:var(--fs-b);margin-bottom:14px;min-height:18px"></div>
+
+        <input type="number" min="1" inputmode="numeric" pattern="[0-9]*" id="quantidade-customizada" class="filter-select" placeholder="Quantidade de questões" oninput="const v=parseInt(this.value,10); if(v>0) selecionarQuantidade(null,v)">
+
+        <button class="btn-primario" onclick="montarCaderno()">Gerar caderno ↗</button>
+        <div style="text-align:center;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px">
+          <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
+          <span style="font-size:var(--fs-b);color:#888;cursor:pointer" onclick="abrirModal('modal-info-fisher-yates')">Como a ordem das questões é sorteada?</span>
+        </div>
+        <div id="quests-sem-resultado" class="hidden" style="text-align:center;color:#888;margin-top:16px">
+          Poucas ou nenhuma questão com esses filtros ainda –
+          <button style="color:var(--azul-marca);font-weight:600;text-decoration:underline" onclick="trocarAba('adicionar')">que tal subir um PDF?</button>
+        </div>
+      </div>
+
+      <div id="card-cadernos-existentes" style="margin-top:28px">
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0;cursor:pointer" onclick="toggleCadernosLista('andamento')" ontouchend="event.preventDefault();toggleCadernosLista('andamento')">
+          <span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg></span>
+          <span id="titulo-cadernos-andamento">Cadernos em andamento (0)</span>
+          <span class="chev" id="chev-andamento" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </div>
+        <div id="lista-cadernos-andamento" class="conteudo-colapsavel" style="padding-left:10px"><span style="color:#888;font-size:var(--fs-d)">Nenhum caderno em andamento.</span></div>
+
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:16px" onclick="toggleCadernosLista('concluidos')" ontouchend="event.preventDefault();toggleCadernosLista('concluidos')">
+          <span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span id="titulo-cadernos-concluidos">Cadernos concluídos (0)</span>
+          <span class="chev" id="chev-concluidos" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </div>
+        <div id="lista-cadernos-concluidos" class="conteudo-colapsavel" style="padding-left:10px"><span style="color:#888;font-size:var(--fs-d)">Nenhum caderno concluído ainda.</span></div>
+      </div>
+    </div>
+
+    <div id="quests-resolucao" class="hidden">
+      <div style="color:#444;cursor:pointer;margin-bottom:16px;font-size:var(--fs-d)" onclick="fecharCadernoResolucao()" ontouchend="event.preventDefault();fecharCadernoResolucao()">← Quest</div>
+      <div id="pills-nav-caderno" class="pills-nav"></div>
+      <div id="questao-atual"></div>
+    </div>
+  </div>
+
+  <!-- ===== RASCUNHO LIVRE — folha de rascunho estilo prancheta de projeto,
+       pra desenhar/calcular fora do contexto de qualquer questão ===== -->
+  <div class="view-aba hidden" id="aba-rascunho-livre-vf" style="position:fixed;inset:0;z-index:150;padding:0;display:flex;flex-direction:column;background:#fff">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid #eee;flex-shrink:0;background:#fff">
+      <button onclick="fecharRascunhoLivreVF()" style="display:flex;align-items:center;gap:8px;color:#444;font-size:var(--fs-d);background:none;padding:0">
+        <svg viewBox="0 0 24 24" width="18" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        <span id="rascunho-livre-texto-voltar">Rascunho</span>
+      </button>
+      <button onclick="vfLimparRascunhoLivreVF()" title="Apagar tudo" style="display:flex;align-items:center;gap:6px;color:#999;font-size:var(--fs-c);background:none;padding:6px 10px;border-radius:8px">
+        <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        Limpar folha
+      </button>
+    </div>
+    <div id="rascunho-livre-papel" style="flex:1;position:relative;overflow:hidden;background:#fff;background-image:radial-gradient(circle, #E3E0D2 1.1px, transparent 1.1px);background-size:22px 22px;background-position:34px 14px">
+      <div style="position:absolute;top:0;bottom:0;left:0;width:34px;background:repeating-linear-gradient(to bottom, transparent, transparent 21px, #C9A876 21px, #C9A876 22px);opacity:0.3;border-right:1px dashed #C9A876;pointer-events:none"></div>
+      <div style="position:absolute;bottom:14px;right:18px;text-align:right;pointer-events:none">
+        <div style="font-family:ui-monospace,monospace;font-size:10px;color:#8A8375;opacity:0.65;line-height:1.5;border-top:1px solid #C9A876;padding-top:5px">
+          <b style="color:#2B2620;opacity:0.85">Pilotquest</b> · Rascunho pessoal<br>não salvo no seu histórico de questões
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FÓRUM ===== -->
+  <div class="view-aba hidden" id="aba-forum">
+    <div id="lista-forum"><div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div></div>
+  </div>
+
+  <!-- ===== COMO VOCÊ TÁ INDO (placar) ===== -->
+  <div class="view-aba hidden" id="aba-placar">
+    <div id="metricas-carregando-inicial" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5">
+      <svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>
+    </div>
+
+    <div id="metricas-conteudo" class="hidden">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+      <span style="font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em">Módulos</span>
+    </div>
+    <div id="conteudo-filtro-modulo" class="conteudo-colapsavel open" style="margin-bottom:12px">
+      <div style="display:flex;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis</div>
+          <div id="metricas-modulos-disponiveis" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Selecionados</div>
+          <div id="metricas-modulos-selecionados" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:20px;margin-bottom:8px" onclick="toggleFiltroMateria()" ontouchend="event.preventDefault();toggleFiltroMateria()">
+      <span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+      <span style="font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em">Publicações</span>
+      <span class="chev" id="chev-filtro-materia" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+    </div>
+    <div id="conteudo-filtro-materia" class="conteudo-colapsavel" style="margin-bottom:12px">
+      <div style="display:flex;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Disponíveis</div>
+          <div id="metricas-materias-disponiveis" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Selecionados</div>
+          <div id="metricas-materias-selecionadas" style="border:0.5px solid #ddd;border-radius:8px;height:140px;overflow-y:auto;background:#fff"></div>
+        </div>
+      </div>
+    </div>
+
+    <select class="filter-select" id="metricas-filtro-tipo" onchange="renderizarMetricasPessoais()" style="margin-top:20px">
+      <option value="">Todos os tipos de questão</option>
+      <option value="Cálculo">Cálculo</option>
+      <option value="Conceitual">Conceitual</option>
+      <option value="Identificação">Identificação</option>
+      <option value="Lista">Lista</option>
+      <option value="Número">Número</option>
+    </select>
+    <div style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;margin-top:10px;margin-bottom:8px;padding-bottom:2px" id="metricas-filtro-periodo">
+      <button class="filter-btn active" data-dias="30" onclick="selecionarPeriodoMetricas(30, this)">30 dias</button>
+      <button class="filter-btn" data-dias="90" onclick="selecionarPeriodoMetricas(90, this)">3 meses</button>
+      <button class="filter-btn" data-dias="180" onclick="selecionarPeriodoMetricas(180, this)">6 meses</button>
+      <button class="filter-btn" data-dias="0" onclick="selecionarPeriodoMetricas(0, this)">Tudo</button>
+      <button class="filter-btn" id="btn-periodo-customizado" onclick="toggleFiltroCustomizado()" title="Escolher datas" style="flex-shrink:0">📅</button>
+    </div>
+    <div id="metricas-filtro-datas-customizadas" class="hidden" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <input type="date" id="metricas-data-inicio" class="filter-select" style="margin-bottom:0" onchange="aplicarFiltroDatasCustomizadas()">
+      <span style="color:#888;font-size:var(--fs-d)">até</span>
+      <input type="date" id="metricas-data-fim" class="filter-select" style="margin-bottom:0" onchange="aplicarFiltroDatasCustomizadas()">
+    </div>
+    <div id="metricas-redefinir-datas" class="hidden" style="font-size:var(--fs-c);color:#888;text-align:right;margin-top:12px;margin-bottom:14px;cursor:pointer;text-decoration:underline" onclick="redefinirFiltroDatas()" ontouchend="event.preventDefault();redefinirFiltroDatas()">Redefinir</div>
+
+    <div style="border-top:1px solid #eee;margin:24px 0"></div>
+
+    <div id="metricas-resumo-geral" style="margin-top:16px"></div>
+
+    <div class="section-title"><span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span>Por módulo</div>
+    <div id="lista-metricas-modulo" style="padding-left:10px"></div>
+
+    <div class="section-title"><span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 17 9 11 13 15 21 6"/><polyline points="15 6 21 6 21 12"/></svg></span>Evolução no tempo</div>
+    <div id="metricas-evolucao-contexto" style="color:#888;font-size:var(--fs-b);margin-bottom:8px">Todos os módulos</div>
+    <div class="card-questao" style="position:relative;height:220px;padding-left:13px;padding-right:13px">
+      <canvas id="grafico-evolucao"></canvas>
+      <p id="metricas-evolucao-vazio" class="hidden" style="color:#888;font-size:var(--fs-d)">Não tem dado suficiente ainda pra mostrar evolução nesse módulo/período.</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+      <span style="color:#888;font-size:var(--fs-b);flex-shrink:0">Período:</span>
+      <input type="range" class="slider-evolucao" id="evolucao-slider" min="2" max="260" value="12" step="1" oninput="atualizarSliderEvolucao(this.value)" style="flex:1">
+      <span id="evolucao-slider-valor" style="color:#111;font-size:var(--fs-d);font-weight:600;flex-shrink:0;min-width:70px;text-align:right">3 meses</span>
+    </div>
+
+    <div class="section-title"><span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .59 1.41l9.58 9.59a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span>Por tipo de questão</div>
+    <div id="lista-metricas-tipo"></div>
+
+    <div class="section-title"><span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>Por publicação</div>
+    <div id="lista-metricas-publicacao"></div>
+
+    <div class="section-title"><span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>Suas questões mais difíceis <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-wilson')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></div>
+    <div id="lista-metricas-piores"></div>
+
+    <div class="section-title"><span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg></span>Seus favoritos</div>
+    <div id="lista-metricas-favoritos"></div>
+
+    <div class="section-title"><span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></span>Suas notas</div>
+    <div id="lista-metricas-notas" style="padding-left:10px"></div>
+    </div>
+  </div>
+
+  <!-- ===== V/F (beta, só Carlos por enquanto) ===== -->
+  <div class="view-aba hidden" id="aba-vf">
+    <!-- sem sessão ativa: cobre tudo, só mostra o botão de iniciar. Some
+    (via vfAtualizarOverlaySessaoVF) assim que vfSessaoAtivaVF existe -->
+    <div id="vf-overlay-iniciar-sessao" class="vf-overlay-sessao" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:-8px;right:-8px;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:12px">
+      <button class="btn-primario" onclick="vfIniciarSessaoFlashVF()" style="width:auto;padding:14px 32px">▶ Iniciar sessão</button>
+    </div>
+    <!-- havia uma sessão pausada quando o app fechou - pergunta o que
+    fazer em vez de reabrir o balão sozinho -->
+    <div id="vf-overlay-retomar-sessao" class="vf-overlay-sessao hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:-8px;right:-8px;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:16px">
+      <div>
+        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Você tinha uma sessão pausada</div>
+        <div id="vf-overlay-retomar-tempo" style="font-size:var(--fs-h);font-weight:700;font-variant-numeric:tabular-nums;color:#B23A34"></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secundario" onclick="vfConfirmarFinalizarSessaoFlashVF()" style="width:auto;padding:12px 24px">Finalizar</button>
+        <button class="btn-primario" onclick="vfRetomarSessaoRestauradaVF()" style="width:auto;padding:12px 24px">Retomar</button>
+      </div>
+    </div>
+    <div id="vf-filtros" style="margin-bottom:16px;background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:14px 16px">
+      <button class="btn-icone-pequeno" onclick="alternarFiltrosVF()" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:4px 2px;cursor:pointer;font-family:inherit;color:#B23A34;font-size:var(--fs-d);font-weight:700;-webkit-appearance:none;appearance:none;outline:none;-webkit-tap-highlight-color:transparent">
+        <span style="line-height:1">Filtros</span>
+        <span style="width:18px;height:18px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;overflow:hidden">
+          <svg id="vf-chevron-filtros" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s;flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+      </button>
+      <div id="vf-filtros-conteudo" class="vf-filtros-fechado">
+        <select id="vf-filtro-modulo" class="filter-select" style="margin-bottom:8px" onchange="mudarModuloFiltroVF()">
+          <option value="">Todos os módulos</option>
+        </select>
+        <select id="vf-filtro-publicacao" class="filter-select" style="margin-bottom:8px" onchange="mudarFiltroPublicacaoVF()" disabled>
+          <option value="">Todas as publicações</option>
+        </select>
+        <select id="vf-filtro-capitulo" class="filter-select" style="margin-bottom:8px" onchange="mudarFiltroVF()" disabled>
+          <option value="">Todos os capítulos</option>
+        </select>
+        <div style="display:flex;gap:8px">
+          <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 10px;font-size:var(--fs-d);font-weight:500;cursor:pointer;font-family:inherit">Número</button>
+          <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 10px;font-size:var(--fs-d);font-weight:500;cursor:pointer;font-family:inherit">Lista</button>
+        </div>
+      </div>
+    </div>
+    <div id="vf-conteudo" style="padding-bottom:170px;position:relative">
+      <div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>
+    </div>
+    <!-- camada de desenho com a caneta (Apple Pencil) - movida pra FORA do
+    #app-shell (ver logo depois do fechamento dele) - o app-shell é
+    position:fixed + overflow:hidden, e isso recorta (clip) qualquer
+    filho position:fixed nas bordas dele, o que causava uma linha de
+    artefato visual sutil na borda desse recorte, bem em cima do
+    cabeçalho. Fora do app-shell, sem overflow:hidden no caminho, o
+    canvas cobre a viewport de verdade sem esse recorte -->
+    <!-- barra fixa de resposta (Verdadeiro/Falso/Próxima) - movida pra
+    FORA do #app-shell, ver comentário completo logo depois do
+    fechamento dele (mesma causa raiz do canvas de desenho: element
+    position:fixed dentro de um container com overflow:hidden causava a
+    linha de artefato visual bem em cima do cabeçalho, exposta toda vez
+    que a caixa de filtros abria/fechava e mudava a altura do conteúdo
+    acima, disparando um reflow) -->
+  </div>
+
+  <!-- ===== ADICIONAR QUESTÕES (popup no mobile/tablet, página no desktop) ===== -->
+  <div class="view-aba hidden" id="aba-adicionar">
+    <div class="modal-conteudo">
+      <h3 id="titulo-adicionar-questoes">Adicionar questões</h3>
+      <div class="card-questao" id="card-adicionar-questoes">
+
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div class="filter-btn filter-btn-grande active" id="toggle-upload-pdf" style="flex:1;text-align:center;padding:10px" onclick="alternarTipoUpload('pdf')">PDF</div>
+        <div class="filter-btn filter-btn-grande" id="toggle-upload-planilha" style="flex:1;text-align:center;padding:10px" onclick="alternarTipoUpload('planilha')">Planilha</div>
+      </div>
+
+      <div id="bloco-upload-marinha" class="hidden">
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#444;margin-bottom:10px;cursor:pointer">
+          <input type="checkbox" id="upload-eh-marinha" style="width:16px;height:16px;flex-shrink:0" onchange="document.getElementById('upload-campos-concurso').classList.toggle('hidden', !this.checked)">
+          Questões de prova real (Marinha)
+        </label>
+        <div id="upload-campos-concurso" class="hidden" style="margin-bottom:14px">
+          <input type="text" id="upload-concurso" class="filter-select" placeholder="Concurso (ex: PSCPP, EFOMM)" list="lista-concursos-existentes">
+          <datalist id="lista-concursos-existentes"></datalist>
+          <input type="number" id="upload-ano" class="filter-select" placeholder="Ano da prova">
+        </div>
+      </div>
+
+      <div id="secao-upload-pdf">
+        <p style="color:#666;font-size:var(--fs-d)">Selecione o PDF com as questões que você deseja adicionar ao banco.</p>
+        <input type="file" id="upload-arquivo" accept="application/pdf" multiple class="hidden" onchange="atualizarNomeArquivoSelecionado()">
+        <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 6px" onclick="document.getElementById('upload-arquivo').click()">Escolher arquivo</button>
+        <div id="nome-arquivo-selecionado" style="color:#888;font-size:var(--fs-d);display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhum arquivo selecionado</div>
+        <div id="upload-status" style="margin:14px 0"></div>
+        <button class="btn-primario" onclick="enviarUpload()">Cadastrar questões</button>
+      </div>
+
+      <div id="secao-upload-planilha" class="hidden">
+        <p style="color:#666;font-size:var(--fs-d)">Selecione a planilha com as questões que você deseja adicionar ao banco.</p>
+        <button type="button" class="btn-secundario" style="width:100%;margin:14px 0 10px;white-space:nowrap" onclick="baixarModeloPlanilha()">Baixar planilha-modelo</button>
+        <input type="file" id="upload-planilha" accept=".xlsx" class="hidden" onchange="atualizarNomePlanilhaSelecionada()">
+        <button type="button" class="btn-secundario" style="width:100%;margin-bottom:6px;white-space:nowrap" onclick="document.getElementById('upload-planilha').click()">Escolher planilha preenchida</button>
+        <div id="nome-planilha-selecionada" style="color:#888;font-size:var(--fs-d);display:flex;align-items:center;gap:8px;margin-bottom:20px">Nenhuma planilha selecionada</div>
+        <div id="upload-planilha-status" style="margin:14px 0"></div>
+        <button class="btn-primario" onclick="enviarPlanilha()">Cadastrar questões</button>
+      </div>
+
+      <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="trocarAba('inicio')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <div class="bottom-nav" id="bottom-nav">
+    <div class="nav-item active" data-aba="inicio" onclick="trocarAba('inicio')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h3.5v-6.5h5V21H18a1 1 0 0 0 1-1V9.5"/></svg></span><span class="nav-label">Início</span>
+    </div>
+    <div class="nav-item" data-aba="forum" onclick="trocarAba('forum')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor"><path fill-rule="evenodd" d="M1.75 1A1.75 1.75 0 000 2.75v9.5C0 13.216.784 14 1.75 14H3v1.543a1.457 1.457 0 002.487 1.03L8.061 14h6.189A1.75 1.75 0 0016 12.25v-9.5A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v9.5a.25.25 0 01-.25.25h-6.5a.75.75 0 00-.53.22L4.5 15.44v-2.19a.75.75 0 00-.75-.75h-2a.25.25 0 01-.25-.25v-9.5z"/><path d="M22.5 8.75a.25.25 0 00-.25-.25h-3.5a.75.75 0 010-1.5h3.5c.966 0 1.75.784 1.75 1.75v9.5A1.75 1.75 0 0122.25 20H21v1.543a1.457 1.457 0 01-2.487 1.03L15.939 20H10.75A1.75 1.75 0 019 18.25v-1.465a.75.75 0 011.5 0v1.465c0 .138.112.25.25.25h5.5a.75.75 0 01.53.22l2.72 2.72v-2.19a.75.75 0 01.75-.75h2a.25.25 0 00.25-.25v-9.5z"/></svg></span><span class="nav-label">Fórum</span>
+      <span id="badge-forum" class="badge-notificacao hidden">0</span>
+    </div>
+    <div class="nav-item" data-aba="placar" onclick="trocarAba('placar')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M18.7 8.3L13 14l-4-4-5.3 5.3"/></svg></span><span class="nav-label">Desempenho</span>
+    </div>
+    <div class="nav-item hidden" id="nav-item-vf" data-aba="vf" onclick="trocarAba('vf')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></span><span class="nav-label">Flash</span>
+    </div>
+    <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
+    </div>
+    <div class="nav-item" id="nav-item-adicionar" data-aba="adicionar" onclick="trocarAba('adicionar')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span><span class="nav-label">Adicionar questões</span>
+    </div>
+  </div>
+</div>
+
+<!-- canvas de desenho da caneta (Apple Pencil) - definido aqui no HTML,
+mas movido pra dentro de #content via JS logo na carga da página (ver
+vfMoverCanvasParaDentroDoContentVF) - isso é o que faz o traço rolar
+junto com o conteúdo em vez de ficar "grudado na tela" -->
+<div id="vf-barra-fixa" class="vf-barra-fixa hidden"></div>
+<canvas id="vf-canvas-desenho" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:280;pointer-events:none;touch-action:none"></canvas>
+<canvas id="vf-canvas-preview-destaque" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:281;pointer-events:none;touch-action:none"></canvas>
+
+<!-- canvas temporário exclusivo pra rabiscar em cima do popup de explicação -
+     fica ACIMA do modal (z-index maior que .modal-overlay:300), separado do
+     canvas principal da questão. É limpo/descartado ao fechar o popup, nunca
+     persiste no desenho real da questão -->
+<canvas id="vf-canvas-desenho-explicacao" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:320;pointer-events:none;touch-action:none"></canvas>
+
+<!-- balão flutuante da sessão do Flash - painel de controle da sessão
+manual (iniciar/pausar/retomar/finalizar). HTML mínimo de propósito,
+igual ao padrão já usado no timer do PSCPP Tracker: os estados (rodando/
+pausado) trocam só via classList, sem reescrever HTML nenhum -->
+<div id="vf-sessao-balao" class="hidden">
+  <span id="vf-sessao-balao-toggle-tempo" onclick="vfToggleOcultarTempoBalaoVF(event)" title="Ocultar/mostrar o tempo"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+  <div id="vf-sessao-balao-nome">Flash</div>
+  <div id="vf-sessao-balao-tempo"></div>
+  <div id="vf-sessao-balao-tag" class="vf-sessao-balao-tag"></div>
+  <div class="vf-sessao-balao-btns">
+    <div id="vf-sessao-balao-btn-pausar" onclick="vfTogglePausarSessaoFlashVF(event)">Pausar</div>
+    <div onclick="vfConfirmarFinalizarSessaoFlashVF(event)">Finalizar</div>
+  </div>
+</div>
+<div id="vf-painel-sessao-fundo" class="hidden" onclick="vfFecharPainelSessaoVF()"></div>
+<div id="vf-painel-sessao-vf" class="hidden">
+  <div id="vf-painel-sessao-conteudo"></div>
+</div>
+<div id="vf-barra-desenho" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 6px);left:50%;transform:translateX(-50%);z-index:500;background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.12);padding:6px 8px;display:flex;align-items:center;gap:14px">
+      <div id="vf-alca-arrastar" style="display:flex;flex-direction:column;gap:3px;padding:14px 12px;margin:-8px -8px;cursor:grab;touch-action:none">
+        <div style="display:flex;gap:3px"><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span></div>
+        <div style="display:flex;gap:3px"><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span></div>
+        <div style="display:flex;gap:3px"><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span><span style="width:3px;height:3px;border-radius:50%;background:#ccc"></span></div>
+      </div>
+      <div id="vf-grupo-marcacao-texto" style="display:flex;align-items:center;gap:2px">
+        <div id="vf-grupo-grifar" style="display:flex;align-items:center;gap:0px;background:none;border-radius:8px;padding:2px 0px;transition:gap 0.25s ease, background 0.25s ease">
+          <button onclick="vfAtivarModoMarcacaoTextoVF('grifar')" class="vf-btn-marcacao-texto" data-tipo-marcacao="grifar" title="Grifar - ative e arraste o dedo sobre o texto" style="width:32px;height:32px;border-radius:8px;background:none;border:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 690" width="20" height="20"><path d="M67.51 0.11C77.64 0.11 87.78 0.11 97.91 0.11C104.29 0.11 110.66 0.11 117.04 0.11C118.7 0.11 120.36 0.11 122.02 0.11C130.72 0.11 139.42 0.11 148.12 0.11C171.69 0.11 195.26 0.11 218.82 0.11C225.57 0.11 232.31 0.11 239.06 0.11C263.02 0.11 286.99 0.11 310.95 0.11C313.92 0.11 316.89 0.11 319.86 0.11C332.14 0.11 344.41 0.11 356.68 0.11C359.92 0.11 363.16 0.11 366.4 0.11C378.26 0.11 390.12 0.11 401.98 0.11C411.69 0.11 421.4 0.11 431.11 0.11C435.39 0.11 439.68 0.11 443.96 0.11C456.9 0.11 469.83 0.11 482.77 0.11C483.4 0.11 484.03 0.11 484.66 0.11C492.25 0.11 499.84 0.11 507.43 0.11C510.6 0.11 513.77 0.11 516.94 0.11C537.34 0.11 557.74 0.11 578.14 0.11C590.01 0.11 601.88 0.11 613.75 0.11C617.31 0.11 620.88 0.11 624.44 0.11C627.88 0.11 631.31 0.11 634.74 0.11C640.55 1.56 646.84 1.52 652.71 3.33C671.5 9.14 686.53 22.56 695.89 39.61C698.35 44.1 700.47 49.06 701.77 54.03C702.53 56.94 702.65 60.38 703.89 63.04C703.89 251.46 703.89 439.88 703.89 628.29C701.76 633.87 701.32 640.12 698.85 645.76C692.58 660.06 682.25 672.61 668.65 680.44C663.74 683.27 658.44 685.36 653.05 687.11C650.6 687.9 647.75 688.14 645.5 689.27C449.86 689.27 254.23 689.27 58.6 689.27C54.97 686.87 46.66 685.57 41.99 683.3C31.48 678.2 22.92 671.09 15.65 661.95C-0.22 641.99 0.79 619 0.79 594.93C0.8 565.68 0.84 536.42 0.78 507.17C0.52 393.12 0.59 279.08 0.71 165.03C0.73 142.98 0.67 120.94 0.67 98.89C0.67 88.43 -0.3 77.53 0.84 67.12C2.9 48.28 12.95 28.14 28.28 16.52C35.71 10.88 44.33 6.18 53.24 3.38C57.9 1.91 62.98 1.61 67.51 0.11ZM349 124.29C329.68 126.53 325.65 140.12 319.45 155.68C313.26 171.25 306.68 186.64 300.43 202.18C266.2 287.33 231.23 372.16 196.83 457.28C187.97 479.2 178.66 500.98 169.47 522.76C164.65 534.16 160.67 545.23 170.06 555.88C179.91 567.05 198.15 567.59 208.16 556.35C210.84 553.34 212.36 549.83 213.89 546.15C225.7 517.8 237.33 489.32 248.79 460.84C252.13 452.55 255.61 444.32 259 436.06C260.32 432.83 261.4 427.02 264.06 424.66C267.42 421.69 273.53 422.7 277.59 422.71C288.4 422.74 299.22 422.66 310.03 422.68C342.25 422.73 374.47 422.57 406.69 422.73C414.54 422.77 422.38 422.72 430.22 422.73C432.81 422.73 437.04 422.2 438.87 424.43C441.49 427.63 442.62 433.06 444.26 436.86C447.59 444.56 451.07 452.19 454.3 459.93C464.57 484.53 475.77 508.79 485.51 533.61C491.3 548.39 495.02 564.21 514.17 564.58C516.86 564.63 519.92 564.44 522.49 563.59C535.11 559.43 541.6 546.81 539.01 534.07C537.5 526.67 532.35 519.53 529.45 512.56C522.61 496.12 515.48 479.79 508.75 463.3C490.29 418.08 471.37 373.01 453.79 327.44C447.58 311.36 440.48 295.64 434.23 279.59C423.81 252.85 413.49 225.94 402.46 199.45C396.46 185.05 390.69 170.47 384.98 155.95C380.2 143.78 376.73 132.42 363.85 126.8C359.22 124.77 354.07 123.71 349 124.29ZM417.81 372.35C409.48 374.02 398.2 372.82 389.52 372.85C369.81 372.93 350.09 372.72 330.38 372.76C320.2 372.78 310.03 372.81 299.85 372.71C295.45 372.66 290.06 373.43 285.86 372.21C285.45 368.69 287.76 364.55 289.03 361.21C291.89 353.7 294.96 346.28 297.76 338.73C308.82 308.93 321 279.22 333.67 250.06C337.4 241.46 341.08 232.79 344.58 224.1C345.91 220.79 347.1 216.21 351.36 216.19C356.31 216.17 357.26 220.97 358.69 224.81C361.83 233.27 365.72 241.53 369.25 249.84C381.64 278.97 393.98 308.14 405.49 337.62C408.77 346.01 412.19 354.35 415.27 362.81C416.28 365.58 418.57 369.45 417.81 372.35Z" class="vf-tinta-marcacao-icone" data-cor-original="#da8bf9" fill="#da8bf9" fill-rule="evenodd" stroke="#da8bf9" stroke-width="0.25" stroke-linejoin="round"/><path d="M349 124.29C354.07 123.71 359.22 124.77 363.85 126.8C376.73 132.42 380.2 143.78 384.98 155.95C390.69 170.47 396.46 185.05 402.46 199.45C413.49 225.94 423.81 252.85 434.23 279.59C440.48 295.64 447.58 311.36 453.79 327.44C471.37 373.01 490.29 418.08 508.75 463.3C515.48 479.79 522.61 496.12 529.45 512.56C532.35 519.53 537.5 526.67 539.01 534.07C541.6 546.81 535.11 559.43 522.49 563.59C519.92 564.44 516.86 564.63 514.17 564.58C495.02 564.21 491.3 548.39 485.51 533.61C475.77 508.79 464.57 484.53 454.3 459.93C451.07 452.19 447.59 444.56 444.26 436.86C442.62 433.06 441.49 427.63 438.87 424.43C437.04 422.2 432.81 422.73 430.22 422.73C422.38 422.72 414.54 422.77 406.69 422.73C374.47 422.57 342.25 422.73 310.03 422.68C299.22 422.66 288.4 422.74 277.59 422.71C273.53 422.7 267.42 421.69 264.06 424.66C261.4 427.02 260.32 432.83 259 436.06C255.61 444.32 252.13 452.55 248.79 460.84C237.33 489.32 225.7 517.8 213.89 546.15C212.36 549.83 210.84 553.34 208.16 556.35C198.15 567.59 179.91 567.05 170.06 555.88C160.67 545.23 164.65 534.16 169.47 522.76C178.66 500.98 187.97 479.2 196.83 457.28C231.23 372.16 266.2 287.33 300.43 202.18C306.68 186.64 313.26 171.25 319.45 155.68C325.65 140.12 329.68 126.53 349 124.29ZM417.81 372.35C418.57 369.45 416.28 365.58 415.27 362.81C412.19 354.35 408.77 346.01 405.49 337.62C393.98 308.14 381.64 278.97 369.25 249.84C365.72 241.53 361.83 233.27 358.69 224.81C357.26 220.97 356.31 216.17 351.36 216.19C347.1 216.21 345.91 220.79 344.58 224.1C341.08 232.79 337.4 241.46 333.67 250.06C321 279.22 308.82 308.93 297.76 338.73C294.96 346.28 291.89 353.7 289.03 361.21C287.76 364.55 285.45 368.69 285.86 372.21C290.06 373.43 295.45 372.66 299.85 372.71C310.03 372.81 320.2 372.78 330.38 372.76C350.09 372.72 369.81 372.93 389.52 372.85C398.2 372.82 409.48 374.02 417.81 372.35Z" fill="#2a2a2e" fill-rule="evenodd" stroke="#2a2a2e" stroke-width="0.25" stroke-linejoin="round"/></svg>
+          </button>
+          <button id="vf-swatch-cor-marcacao-texto-btn" onclick="abrirPainelMarcacaoTextoVF()" style="width:0px;height:20px;border-radius:50%;opacity:0;overflow:hidden;transition:width 0.25s ease, opacity 0.25s ease;padding:0;border:none;cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none;outline:none;box-shadow:none;-webkit-tap-highlight-color:transparent" title="Cor do grifo">
+            <span id="vf-swatch-cor-marcacao-texto" style="width:20px;height:20px;border-radius:50%;background:#FFD84D;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15)"></span>
+          </button>
+        </div>
+        <button onclick="vfAtivarModoMarcacaoTextoVF('sublinhar')" class="vf-btn-marcacao-texto" data-tipo-marcacao="sublinhar" title="Sublinhar - ative e arraste o dedo sobre o texto" style="width:32px;height:32px;border-radius:8px;background:none;border:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 690" width="20" height="20"><path d="M397.63 181.88C399.95 187.82 402.26 193.75 404.57 199.69C407.47 207.12 410.37 214.56 413.27 222C414.41 224.75 415.55 227.51 416.69 230.27C427.66 258.66 438.62 287.05 449.59 315.43C450.19 316.93 450.79 318.43 451.4 319.93C453.91 326.26 456.43 332.58 458.95 338.91C460.48 342.74 462 346.57 463.53 350.4C466.54 357.61 469.55 364.82 472.56 372.03C473.35 373.96 474.14 375.89 474.93 377.81C482.12 395.57 489.31 413.34 496.49 431.1C496.92 432.04 497.34 432.98 497.77 433.93C504.41 449.97 511.06 466.01 517.71 482.05C518.56 484.19 519.4 486.34 520.24 488.48C523.48 496.3 526.73 504.12 529.97 511.94C530.97 514.27 531.96 516.61 532.95 518.94C537.28 529.52 540.34 535.71 536.66 547.24C534.71 549.89 532.77 552.53 530.82 555.18C527.58 557.47 524.41 559.91 520.39 560.65C517.23 561.24 514.25 561.92 511 561.46C490.46 558.53 489.43 535.43 481.03 520.81C480.13 518.69 479.24 516.58 478.34 514.46C468.05 491.54 458.46 468.18 448.82 444.99C446.39 439.17 444.01 433.32 441.56 427.5C440.57 425.13 439.61 421.03 437.66 419.28C435.39 417.24 426.84 417.86 423.86 417.85C411.57 417.81 399.27 417.92 386.98 417.87C358.15 417.75 329.32 417.76 300.49 417.84C293.28 417.86 286.07 417.91 278.87 417.87C275.08 417.85 271.17 417.29 267.9 419.55C265.08 421.5 264.34 425.13 263.06 428.12C260.28 434.59 256.68 441.36 254.98 448.18C254.02 450.36 253.06 452.53 252.1 454.71C244.33 473.97 236.56 493.23 228.79 512.49C227.74 515.02 226.69 517.55 225.64 520.08C219.58 529.79 218.99 542.9 211.86 552.01C211.35 552.65 210.83 553.28 210.31 553.92C209.74 554.4 209.17 554.88 208.59 555.36C206.9 556.55 205.22 557.73 203.53 558.92C193.26 563.3 182.79 561.63 174.23 554.53C173.4 553.61 172.58 552.7 171.75 551.78C169.85 548.1 167.84 544.46 167.32 540.24C165.98 529.29 175.43 512.73 179.58 502.31C189.06 478.47 199.07 454.82 208.87 431.11C213.68 419.46 219.71 407.66 223.35 395.61C225.3 390.72 227.24 385.83 229.18 380.95C258.18 308.88 287.18 236.81 316.18 164.73C317.44 161.34 318.71 157.95 319.98 154.56C324.05 147.36 324.66 138.64 330.39 132.3C333.8 128.51 338.52 125.22 343.35 123.65C346.57 122.6 349.88 122.04 353.27 122.01C363.57 121.93 375.08 128.1 379.95 137.39C382.2 141.67 383.49 146.59 385.32 151.06C389.49 161.27 393.1 171.82 397.63 181.88ZM315.59 296.97C314.24 300.16 312.88 303.35 311.53 306.53C303.68 326.99 295.83 347.44 287.98 367.9C290.62 369.25 294.35 368.6 297.31 368.58C303.46 368.54 309.6 368.58 315.75 368.62C339.49 368.75 363.24 368.8 386.98 368.73C393.97 368.71 400.97 368.65 407.96 368.69C410.91 368.7 414.73 369.41 417.29 367.9C415.15 359.52 411.34 351.77 408.16 343.8C401.95 328.22 395.64 312.71 389.46 297.11C382.45 279.42 375.34 261.76 367.89 244.23C363.79 234.57 360.6 224.3 355.82 214.96C353.7 214.91 351.58 214.86 349.46 214.82C346.12 219.17 344.66 225.31 342.59 230.37C338.35 240.74 334.05 251.09 329.77 261.46C326.37 269.73 323.03 278.01 319.63 286.29C318.24 289.65 315.99 293.38 315.59 296.97Z" fill="#2c2c30" fill-rule="evenodd" stroke="#2c2c30" stroke-width="0.25" stroke-linejoin="round"/><path d="M74.13 597.27C78.09 596.22 82.74 597.25 86.81 597.23C96.56 597.19 106.31 597.25 116.06 597.27C146.37 597.33 176.69 597.47 207 597.29C309.59 596.67 412.21 597.05 514.8 597.22C541.09 597.27 567.38 597.31 593.66 597.28C601.71 597.27 609.79 597.42 617.83 597.17C621.51 597.06 625.61 596.29 629.28 596.93C630.64 597.17 631.59 598.12 632.79 598.74C640.49 602.73 645.59 609.41 645.1 618.46C644.66 626.69 637.95 635.1 629.89 637.33C624.64 638.78 617.52 637.4 612.1 637.41C577.98 637.46 543.85 637.4 509.72 637.37C409.87 637.27 310.03 637.6 210.18 637.4C179.44 637.34 148.71 637.43 117.97 637.41C108.22 637.4 98.47 637.35 88.72 637.38C84.38 637.39 79.33 638.32 75.06 637.53C54.48 633.75 54.61 602.47 74.13 597.27Z" fill="#fd3e14" fill-rule="evenodd" stroke="#fd3e14" stroke-width="0.25" stroke-linejoin="round"/></svg>
+        </button>
+        <button onclick="vfAtivarModoMarcacaoTextoVF('riscar')" class="vf-btn-marcacao-texto" data-tipo-marcacao="riscar" title="Riscar - ative e arraste o dedo sobre o texto" style="width:32px;height:32px;border-radius:8px;background:none;border:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 690" width="20" height="20"><path d="M445.08 309.89C428.59 309.87 412.11 309.86 395.63 309.85C393.34 308.4 392.76 304.87 391.74 302.41C389.23 296.37 386.85 290.32 384.42 284.26C377.19 266.23 369.86 248.16 362.06 230.37C359.83 225.29 358.35 219.93 355.82 214.97C353.7 214.92 351.58 214.87 349.46 214.82C344.81 220.89 342.78 230.04 339.8 237.07C333.09 252.92 326.54 268.83 320.16 284.81C317.8 290.71 315.32 296.57 312.99 302.47C312.01 304.97 311.48 308.61 309.02 309.86C292.71 309.87 276.4 309.88 260.09 309.89C259.56 309.51 259.02 309.13 258.49 308.76C278.08 261.75 296.59 214.24 315.38 166.91C322.89 147.99 326.88 123.19 352 122.03C378.33 120.82 383.61 146.4 391.16 165.63C409.88 213.28 428.11 261.14 446.91 308.76C446.3 309.13 445.69 309.51 445.08 309.89ZM241.34 351.58C258.73 351.58 276.11 351.58 293.49 351.58C291.66 357.02 289.82 362.46 287.98 367.9C290.62 369.25 294.35 368.59 297.31 368.58C303.46 368.54 309.6 368.58 315.75 368.61C339.49 368.74 363.24 368.8 386.98 368.73C393.97 368.71 400.97 368.64 407.96 368.68C410.91 368.7 414.73 369.41 417.28 367.9C415.51 362.46 413.75 357.02 411.98 351.58C429.3 351.58 446.61 351.58 463.93 351.58C471.47 367.08 477.04 383.6 483.48 399.57C497.61 434.61 512.42 469.4 526.9 504.3C534.1 521.64 549.08 546.63 525.45 558.83C523.05 560.07 520.66 560.52 518.05 561.08C498.13 565.3 491.21 546.09 485.7 531.45C482.87 523.94 479.31 516.64 476.1 509.29C467.79 490.19 459.61 470.97 451.68 451.71C448.79 444.69 445.61 437.77 442.83 430.7C441.57 427.49 440.28 421.64 437.65 419.28C435.29 417.16 429.29 417.89 426.41 417.87C416.23 417.8 406.06 417.94 395.88 417.9C369.38 417.8 342.88 417.95 316.39 417.86C306.42 417.83 296.46 417.88 286.5 417.91C281.69 417.92 276.66 417.42 271.87 417.93C266.91 418.46 265.22 422.74 263.61 426.76C260.67 434.12 257.71 441.55 254.58 448.84C243.82 473.88 233.73 499.33 223.51 524.6C220.16 532.88 217.98 542.93 213.05 550.41C204.55 563.33 185.14 565.2 174.12 554.36C162.83 543.25 167.78 531.38 172.71 519.04C175.31 512.54 177.85 505.97 180.66 499.57C195.45 465.85 208.86 431.42 222.79 397.34C228.97 382.21 234.02 366.19 241.34 351.58Z" fill="#2e2e32" fill-rule="evenodd" stroke="#2e2e32" stroke-width="0.25" stroke-linejoin="round"/><path d="M260.09 309.89C276.4 309.88 292.71 309.87 309.02 309.86C313.44 311.85 323.94 310.57 329.11 310.57C344.16 310.54 359.21 310.56 374.26 310.51C379.56 310.5 391.25 311.98 395.63 309.85C412.11 309.86 428.59 309.87 445.08 309.89C449.67 311.55 455.87 310.53 460.75 310.53C471.35 310.52 481.95 310.5 492.55 310.5C528.58 310.51 564.62 310.63 600.66 310.53C607.22 310.51 613.82 310.67 620.37 310.42C623.95 310.28 628.28 309.43 631.8 310.3C632.98 310.6 634.01 311.61 635.1 312.15C643.93 316.56 648.7 325.35 646.5 335.27C645.09 341.65 637.98 349.28 631.5 350.71C626.19 351.88 619.46 350.66 614.01 350.67C583.28 350.72 552.54 350.55 521.8 350.63C406.06 350.94 290.31 350.12 174.57 350.65C147.86 350.77 121.15 350.67 94.44 350.64C82.24 350.63 69.4 353.16 63.26 339.65C61.97 336.78 61.23 333.52 61.24 330.38C61.26 321.18 67.69 311.63 77.27 310.27C80.18 309.86 83.24 310.44 86.17 310.5C91.89 310.6 97.62 310.48 103.34 310.51C140.01 310.69 176.69 310.56 213.36 310.53C224.17 310.51 234.99 310.61 245.8 310.57C250.16 310.56 256.03 311.57 260.09 309.89Z" fill="#fd3e14" fill-rule="evenodd" stroke="#fd3e14" stroke-width="0.25" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div style="width:1px;height:22px;background:#eee"></div>
+      <div id="vf-grupo-caneta" style="display:flex;align-items:center;gap:10px;background:#D2E7FA;border-radius:8px;padding:6px 12px;transition:gap 0.25s ease, background 0.25s ease">
+        <button onclick="selecionarFerramentaCanetaVF()" style="background:none;border:none;padding:0;display:flex;cursor:pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1094 1097" width="20" height="20">	
+<path d="M558.03 39.97C725.7 204.91 893.37 369.85 1061.04 534.79C1058.53 534.53 1056.01 534.27 1053.5 534.01C981.5 605.2 910.03 677.24 838.06 748.56C803.62 782.68 776.85 808.62 731.03 827.53C721.02 831.66 708.86 837.08 698.23 838.31C691.84 829.56 681.86 821.1 673.98 813.5C659.41 799.46 645.07 785.05 630.88 770.63C589.22 728.3 546.17 687.3 504.69 644.81C452.19 591.03 397.33 539.49 344.91 485.6C326.01 466.18 306.54 447.26 287.17 428.32C275.7 417.12 263.25 402.53 250.73 392.96C251.37 382.86 258.95 364.42 263.39 354.89C281.42 316.28 309.1 291.64 338.76 262.25C358 243.18 376.21 223.03 395.18 203.69C418.29 180.14 441.77 156.92 464.66 133.16C493.27 103.46 523.3 75.06 551.7 45.2C553.61 43.18 556.14 42 558.03 39.97ZM80.34 867.77C88.29 873.63 95.28 882.12 102.41 889.09C115.23 901.61 128.06 914.09 140.84 926.65C161 946.47 181.59 965.95 200.75 986.76C209.87 996.66 220.21 1005.87 228.29 1016.58C224.95 1018.86 216.85 1033.87 213.95 1038.43C207.26 1048.98 199.44 1058.21 190.04 1066.53C176.47 1078.54 159.02 1088.52 141.3 1092.69C136.44 1093.83 131.41 1095.14 126.46 1095.75C122.7 1096.22 118.64 1095.78 115.07 1096.83C113.02 1096.83 110.96 1096.83 108.91 1096.83C103.19 1095.11 96.31 1095.63 90.28 1094.36C76.54 1091.46 63.54 1086.44 51.73 1078.76C9.19 1051.11 -9.25 996.9 6.2 948.65C8.96 940.02 13.13 931.9 17.57 924.06C26.77 907.81 40.67 894.91 55.67 884.15C60.33 880.81 65.16 877.51 70.09 874.6C73.59 872.53 77.82 870.93 80.34 867.77Z" class="vf-tinta-marcador" data-cor-original="#0142a9" fill="#0142a9" fill-rule="evenodd" stroke="#0142a9" stroke-width="0.25" stroke-linejoin="round"/>	
+<path d="M516.87 0.17C517.28 0.17 517.7 0.17 518.11 0.17C531.42 13.43 544.72 26.7 558.03 39.97C556.14 42 553.61 43.18 551.7 45.2C523.3 75.06 493.27 103.46 464.66 133.16C441.77 156.92 418.29 180.14 395.18 203.69C376.21 223.03 358 243.18 338.76 262.25C309.1 291.64 281.42 316.28 263.39 354.89C258.95 364.42 251.37 382.86 250.73 392.96C247.59 398.73 247.04 406.85 245.65 413.3C242.17 429.47 240.09 446.07 238.21 462.5C233.66 502.06 232.01 541.73 230.22 581.5C229.01 608.34 229.56 636 223.67 662.36C216.56 694.24 191.42 716.29 166.26 734.77C158.03 740.81 150.11 747.38 141.71 753.2C130.54 760.95 119.37 769.65 109.61 779.12C105.85 782.77 101.48 786.24 99.81 791.41C97.38 798.97 104.18 803.94 108.92 808.57C119.71 819.11 130 830.15 140.79 840.69C178.57 877.6 215.6 915.23 252.85 952.65C262.83 962.68 272.58 972.93 282.57 982.94C286.46 986.84 290.77 992.77 296.56 993.77C301.73 994.67 305.67 990.89 308.96 987.47C316.85 979.25 323.14 969.63 330.11 960.66C344.48 942.14 358.5 923.21 374.77 906.26C386.98 893.52 399.9 880.8 416.58 874.11C445.94 862.33 479.43 864.64 510.5 863.11C554.37 860.94 598.11 858.08 641.5 851C654.61 848.87 667.81 846.51 680.72 843.35C686.42 841.95 693.02 840.99 698.23 838.31C708.86 837.08 721.02 831.66 731.03 827.53C776.85 808.62 803.62 782.68 838.06 748.56C910.03 677.24 981.5 605.2 1053.5 534.01C1056.01 534.27 1058.53 534.53 1061.04 534.79C1071.97 545.22 1082.9 555.66 1093.83 566.1C1093.83 568.43 1093.83 570.76 1093.83 573.1C1091.88 576.29 1090.98 580.14 1088.72 583.24C1084.65 588.81 1078.66 593.41 1073.81 598.3C1063.68 608.52 1053.65 618.83 1043.4 628.92C1021.05 650.9 999.29 673.47 976.8 695.31C945.02 726.17 914.49 758.33 882.56 789.04C856.85 813.77 832 838.75 802.42 858.94C773.15 878.93 739.44 894.14 705.45 903.96C654.17 918.77 598.73 924.68 545.5 926.97C524.16 927.89 502.84 929.07 481.5 929.89C470.07 930.32 454.96 929.88 444.01 932.52C429.26 936.08 418.21 951.21 408.88 962.37C402.83 969.61 396.58 976.89 391 984.51C386.1 991.21 380.81 997.66 375.7 1004.21C354.23 1031.72 326.17 1067.02 286.51 1058.9C280.81 1057.73 274.95 1055.37 269.79 1052.7C252.99 1044 242.51 1028.29 228.29 1016.58C220.21 1005.87 209.87 996.66 200.75 986.76C181.59 965.95 161 946.47 140.84 926.65C128.06 914.09 115.23 901.61 102.41 889.09C95.28 882.12 88.29 873.63 80.34 867.77C68.45 854.46 53.66 843.64 44.6 827.9C41.34 822.22 38.53 815.88 37.03 809.5C25.7 761.07 71.05 731.3 103.23 704.67C110.36 698.77 117.83 693.31 125.09 687.55C137.53 677.69 158.64 665.22 162.47 648.95C164.19 641.67 163.84 634.17 164.47 626.76C166.01 608.7 165.94 590.58 167.01 572.5C170.7 510.08 170.05 446.24 186.82 385.45C196.13 351.68 209.58 318.26 230.34 289.79C249.46 263.58 274.26 242.4 296.34 218.84C335.32 177.23 376.25 137.4 416.44 96.95C436.54 76.7 456.84 56.66 476.9 36.39C484.69 28.51 492.43 20.6 500.31 12.81C502.94 10.22 505.28 6.94 508.2 4.7C510.82 2.7 514.03 1.68 516.87 0.17Z" fill="#232426" fill-rule="evenodd" stroke="#232426" stroke-width="0.25" stroke-linejoin="round"/>	
+</svg>
+        </button>
+        <button id="vf-swatch-cor-atual-btn" onclick="abrirPainelCanetaVF()" style="width:22px;height:22px;border-radius:50%;opacity:1;overflow:hidden;transition:width 0.25s ease, opacity 0.25s ease;background:none;border:none;padding:0;margin:0;cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none;outline:none;box-shadow:none;-webkit-tap-highlight-color:transparent">
+          <span id="vf-swatch-cor-atual" style="width:22px;height:22px;border-radius:50%;background:#1A40A1;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15)"></span>
+        </button>
+      </div>
+      <div id="vf-grupo-destaque" style="display:flex;align-items:center;gap:0px;background:none;border-radius:8px;padding:6px 8px;transition:gap 0.25s ease, background 0.25s ease">
+        <button onclick="selecionarFerramentaDestaqueVF()" style="background:none;border:none;padding:0;display:flex;cursor:pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1115 1077" width="20" height="20">
+<path d="M619.29 24.05C632.15 39.03 647.48 52.11 661.32 66.17C688.25 93.54 715.85 120.34 743.26 147.24C825.33 227.79 906.46 309.64 987.7 390.82C1008.34 411.44 1028.62 432.61 1049.63 452.87C1062.74 465.52 1078.54 479.94 1090.09 493.76C979.73 602.47 869.36 711.17 759 819.88C601.32 662.28 443.65 504.69 285.97 347.09C294.23 337.41 304.67 329.19 313.78 320.28C328.59 305.78 343.41 291.22 358.56 277.06C381.1 255.96 402.84 234 425.21 212.72C459.01 180.57 492.45 147.93 525.92 115.43C548.23 93.74 570.69 72.21 593.09 50.59C599.02 44.86 605.05 39.21 610.93 33.42C613.86 30.53 617.58 27.78 619.29 24.05ZM77.93 771.68C87.33 780.18 96.02 789.55 104.99 798.49C122.69 816.11 140.36 833.8 158.15 851.33C221.99 914.2 285.58 977.45 348 1041.66C343.35 1044.06 339.52 1049.5 335.74 1053.24C331.26 1057.66 326.76 1062.35 322.1 1066.59C315.83 1072.3 308.85 1074.16 301.12 1076.83C293.76 1076.83 286.4 1076.83 279.04 1076.83C274.62 1075.26 269.86 1074.21 265.58 1071.95C263.63 1070.92 262.13 1069.3 260.24 1068.23C258.88 1067.46 257.3 1067.25 255.92 1066.52C250.19 1063.5 245.13 1058.4 239.82 1054.67C228.12 1046.47 216.8 1037.7 205.25 1029.26C177.53 1008.99 149.76 988.79 122.13 968.38C107.76 957.77 93.55 946.83 78.94 936.57C62.17 924.79 45.75 912.4 29.32 900.15C23.79 896.03 18.2 891.97 12.62 887.92C10.08 886.08 6.69 884.26 4.62 881.91C2.41 879.4 1.77 875.71 0.17 872.97C0.17 866.66 0.17 860.35 0.17 854.03C2.45 850.15 3.46 845.5 6.32 841.79C9.32 837.92 13.35 834.73 16.82 831.29C26.52 821.66 36.3 812.13 46.07 802.57C53.31 795.48 60.5 788.33 67.77 781.27C71.06 778.06 74.16 774.24 77.93 771.68Z" class="vf-tinta-destaque" data-cor-original="#f9e007" fill="#f9e007" fill-rule="evenodd" stroke="#f9e007" stroke-width="0.25" stroke-linejoin="round"/>
+<path d="M571.85 0.17C576.22 0.17 580.59 0.17 584.96 0.17C589.59 1.97 594.64 2.78 599.11 5.39C606.9 9.93 612.94 17.78 619.29 24.05C617.58 27.78 613.86 30.53 610.93 33.42C605.05 39.21 599.02 44.86 593.09 50.59C570.69 72.21 548.23 93.74 525.92 115.43C492.45 147.93 459.01 180.57 425.21 212.72C402.84 234 381.1 255.96 358.56 277.06C343.41 291.22 328.59 305.78 313.78 320.28C304.67 329.19 294.23 337.41 285.97 347.09C277.03 353.85 268.1 364.46 259.99 372.49C241.9 390.39 223.76 408.29 205.35 425.87C198.2 432.7 191.12 439.61 184.01 446.48C181.94 448.48 176.05 453.18 175.25 455.69C173.99 459.65 175.05 465.35 175.03 469.5C174.99 480.17 175.01 490.83 175.01 501.5C175.02 523.5 174.95 545.5 175.01 567.5C175.04 578.75 174.23 590.31 175.27 601.5C177.89 603.83 181.04 605.5 183.69 607.83C190.91 614.19 197.46 621.43 204.32 628.19C219.93 643.57 235.19 659.31 250.77 674.73C286.27 709.91 321.5 745.32 356.69 780.81C393.03 817.46 429.49 854.02 465.85 890.64C481.84 906.74 498.36 922.6 513.5 939.47C523.42 940.16 533.56 939.59 543.5 939.57C562.83 939.54 582.17 939.5 601.5 939.55C609.83 939.57 618.17 939.52 626.5 939.58C629.74 939.61 634.83 940.61 637.84 939.33C640.17 938.34 647.29 930.25 649.53 928.01C658.17 919.34 667.33 911.11 675.71 902.2C683.61 893.81 692.34 886.14 700.48 877.99C711.28 867.15 722.11 856.27 733.11 845.63C737.68 841.2 742.23 836.73 746.74 832.23C750.77 828.21 755.67 824.51 759 819.88C869.36 711.17 979.73 602.47 1090.09 493.76C1093.93 496.19 1105.73 508.22 1108.39 512.13C1111.32 516.43 1112.84 521.53 1114.83 526.16C1114.83 531.76 1114.83 537.36 1114.83 542.95C1112.79 548.4 1110.89 554 1107.37 558.85C1104.87 562.31 1101.35 564.85 1098.33 567.83C1090.45 575.6 1082.53 583.35 1074.63 591.11C1050.06 615.23 1025.65 639.47 1000.93 663.45C963.57 699.69 926.87 736.7 889.73 773.23C850.73 811.59 811.54 849.76 772.8 888.31C749.27 911.72 725.44 934.93 701.95 958.46C689.27 971.16 677.09 986.42 660.45 994C645.73 1000.7 630.31 999.68 614.5 999.69C591.83 999.7 569.17 999.72 546.5 999.69C539.17 999.68 531.83 999.68 524.5 999.68C521.33 999.68 517.61 999.14 514.5 999.7C510.3 1000.47 502.12 1010.91 498.81 1014.29C487.28 1026.05 475.58 1037.8 463.72 1049.22C443.77 1068.4 412.84 1074.1 386.78 1066.63C371.28 1062.18 359.42 1052.46 348 1041.66C285.58 977.45 221.99 914.2 158.15 851.33C140.36 833.8 122.69 816.11 104.99 798.49C96.02 789.55 87.33 780.18 77.93 771.68C75.4 768.57 72.1 766.09 69.33 763.18C64.55 758.17 60.47 752.44 57.09 746.38C41.34 718.11 45.48 680.99 67.52 657.02C78.96 644.59 91.88 633.29 103.87 621.38C106.45 618.81 115.79 611.18 116.49 608.19C117.37 604.39 116.52 599.41 116.53 595.5C116.54 586.5 116.55 577.5 116.54 568.5C116.51 539.83 116.53 511.17 116.54 482.5C116.54 465.24 114.99 447.76 121.91 431.49C129.17 414.42 146.44 400.79 159.6 388.1C185.54 363.08 211.35 337.84 237.03 312.53C260.54 289.35 284.58 266.75 308.38 243.88C340.33 213.17 371.89 182.06 404.05 151.55C422.33 134.21 440.92 117.08 458.79 99.3C477.85 80.34 497.96 62.45 516.84 43.36C525.13 34.99 533.65 26.79 542.21 18.69C546.68 14.46 550.77 9.82 556.01 6.53C561.02 3.39 566.54 2.33 571.85 0.17ZM459.48 968.5C452.31 959.06 443.03 951.19 434.79 942.7C417.71 925.12 400.11 908.04 382.98 890.51C335.55 841.95 286.65 794.83 239 746.5C218.49 725.7 197.99 704.81 177 684.51C171.24 678.93 165.68 673.16 159.94 667.56C157.99 665.65 155.47 661.63 152.96 660.58C148.31 658.65 144.77 663.59 142 666.49C133.48 675.4 123.22 683.37 115.47 692.95C107.85 702.37 108.23 715.66 115.33 725.22C116.76 727.13 118.72 728.42 120.41 730.07C124.97 734.5 129.48 739.02 133.98 743.53C149.11 758.69 164.64 773.54 179.57 788.92C232.77 843.72 288.08 896.44 341.63 950.88C354.69 964.15 368.09 977.1 381.1 990.41C388.68 998.16 396 1006.95 407.5 1008.29C423.38 1010.14 437.69 991.59 447.63 981.14C451.59 976.98 456.16 973.16 459.48 968.5Z" fill="#222121" fill-rule="evenodd" stroke="#222121" stroke-width="0.25" stroke-linejoin="round"/>
+</svg>
+        </button>
+        <button id="vf-circulo-destaque-btn" onclick="abrirPainelDestaqueVF()" style="width:0px;height:20px;border-radius:50%;opacity:0;overflow:hidden;transition:width 0.25s ease, opacity 0.25s ease;background:none;border:none;padding:0;margin:0;cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none;outline:none;box-shadow:none;-webkit-tap-highlight-color:transparent">
+          <span id="vf-swatch-destaque-atual" style="width:20px;height:20px;border-radius:50%;background:#FFD84D;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15)"></span>
+        </button>
+      </div>
+      <div style="width:1px;height:22px;background:#eee"></div>
+      <div id="vf-grupo-borracha" style="display:flex;align-items:center;gap:0px;background:none;border-radius:8px;padding:6px 8px;transition:gap 0.25s ease, background 0.25s ease">
+        <button onclick="selecionarFerramentaBorrachaVF()" style="background:none;border:none;padding:0;display:flex;cursor:pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1123 1069" width="20" height="20">	
+<path d="M674.14 0.17C677.77 0.17 681.4 0.17 685.03 0.17C679.91 0.74 674.79 1.31 669.67 1.88C671.16 1.31 672.65 0.74 674.14 0.17ZM702.13 0.17C703.09 0.17 704.04 0.17 705 0.17C704.04 0.17 703.09 0.17 702.13 0.17ZM706 0.17C708.66 0.17 711.31 0.17 713.97 0.17C715.61 0.78 717.26 1.4 718.91 2.02C714.61 1.4 710.3 0.78 706 0.17ZM666 2.8C664.67 3.13 663.33 3.46 662 3.79C663.17 3.22 664.33 2.65 665.5 2.09C665.67 2.33 665.83 2.56 666 2.8ZM718.91 2.02C720.32 2.34 721.73 2.66 723.14 2.98C721.73 2.66 720.32 2.34 718.91 2.02ZM729 4.65C728.17 4.61 727.33 4.57 726.5 4.54C726.38 4.27 726.25 4 726.13 3.74C726.92 3.71 727.71 3.68 728.5 3.65C728.67 3.99 728.83 4.32 729 4.65ZM657.24 4.92C656.11 5.26 654.98 5.6 653.85 5.93C654.98 5.6 656.11 5.26 657.24 4.92ZM733.95 5.98C735.02 6.32 736.09 6.65 737.16 6.99C736.09 6.65 735.02 6.32 733.95 5.98ZM647.24 8.1C646.16 8.61 645.08 9.13 644 9.65C645.03 8.12 645.41 8.33 647.24 8.1ZM740.15 7.93C741.14 8.29 742.13 8.66 743.12 9.02C742.13 8.66 741.14 8.29 740.15 7.93ZM766.9 21.97C767.73 22.52 768.56 23.07 769.39 23.63C768.56 23.07 767.73 22.52 766.9 21.97ZM617.97 23.89C616.96 24.62 615.95 25.34 614.94 26.07C615.95 25.34 616.96 24.62 617.97 23.89ZM774.01 26.87C774.96 27.65 775.9 28.42 776.84 29.2C775.9 28.42 774.96 27.65 774.01 26.87ZM750.65 760.91C750.22 759.58 745.25 755.61 743.57 753.92C737.59 747.91 731.63 741.81 725.49 735.96C724.08 734.61 723.39 732.57 722.2 731.41C720.97 730.22 717.67 728.37 715.88 726.62C700.52 711.6 685.38 696.3 670.24 681.05C602.87 613.19 534.52 546.15 467.34 478.09C458.19 468.82 448.64 459.61 439.94 450.31C435.04 445.07 429.12 440.53 424.11 435.31C416.44 427.34 408.75 419.01 400.92 411.31C398.45 408.88 394.62 406.87 392.6 403.88C391.97 402.96 391.97 401.95 391.43 401.03C391.2 400.64 385.52 395.65 384.76 395.07C383.61 394.21 383.37 393.26 382.43 392.39C380.98 391.05 378.42 391.77 379 388.5C371.05 386.11 366.97 375.84 359.78 372C361.6 369.6 367.79 362.49 370.22 360.71C371.01 360.13 372 359.93 372.67 359.25C375.36 356.55 377.68 352.93 380.57 350.15C396.96 334.34 412.17 317.13 428.89 301.78C432.82 298.17 435.87 293.01 440.15 289.68C440.94 289.07 441.97 288.9 442.64 288.24C444.97 285.94 447.11 282.62 449.54 280.13C462.19 267.14 474.67 253.88 487.61 241.18C502.87 226.2 517.54 210.62 532.63 195.46C538.23 189.84 545.19 184.25 549.72 178.23C551.6 175.72 555.5 171.39 558.18 169.78C558.45 169.61 559.32 169.73 559.43 169.62C561.12 167.99 562.15 165.39 564.09 163.64C565.39 162.49 567.57 161.56 568.62 160.43C569.04 159.98 569.4 158.43 570.13 157.65C583.63 143.27 597.87 129.42 611.97 115.62C623.11 104.71 633.67 93.2 644.78 82.28C646.36 80.72 648.1 80.04 649.89 78.88C658.87 73.1 668.14 68.23 678.98 66.51C681.12 66.16 683.43 66.42 685.5 66.08C689.76 65.4 694.06 64.61 698.5 65.24C705.65 66.25 712.54 67.82 719.56 69.91C727.07 72.14 734.5 76.27 740.32 81.18C741.71 82.36 742.89 84.96 743.38 85.44C745.06 87.06 745.72 86.33 746.5 89C748.94 88.57 751.22 91.7 753.1 93.55C758.62 98.99 763.91 104.65 769.5 110.02C792.44 132.02 814.69 154.85 837.19 177.3C843.18 183.28 848.97 189.48 855.17 195.24C857.15 197.09 861.43 199.96 861 202.5C864.43 204.17 879.07 218.1 881.81 221.7C882.13 222.13 882.2 223.24 882.38 223.43C884.02 225.21 886.91 226.85 888.8 228.7C892.94 232.76 898.39 237.03 901.83 241.65C902.13 242.05 902.25 243.29 902.39 243.43C902.87 243.93 903.7 243.62 904.18 244.13C904.79 244.77 904.03 245.35 904.56 246C905.81 247.51 908.19 248.51 909.82 249.67C913.47 252.28 916.59 256.48 919.83 259.61C928.27 267.79 936.83 275.99 944.97 284.47C949.74 289.44 956.64 294.28 960.4 300.07C960.74 300.6 960.96 301.82 961.33 302.21C961.99 302.89 963.06 302.96 963.87 303.5C966.1 304.97 968.1 307.54 970 309.43C982.86 322.22 995.36 335.42 1008.49 347.94C1014.8 353.95 1020.74 360.32 1026.96 366.42C1031.16 370.54 1036.53 374.51 1039.88 379.38C1041.61 381.88 1042.46 384.36 1043.85 386.97C1044.57 388.32 1045.93 389.07 1046.46 390.69C1046.89 392 1046.91 393.42 1047.45 394.5C1047.92 395.44 1049.02 395.91 1049.49 396.91C1055.12 408.85 1055.91 423.52 1053.53 436.44C1051.97 444.88 1048.97 451.6 1045 459.15C1044.05 460.96 1043.58 463.07 1042.13 464.65C1041.8 465.01 1040.64 465.3 1040.58 465.38C1039.48 466.86 1039.27 468.75 1037.87 470.33C1035.58 472.91 1032.61 474.36 1030.35 477.01C1028.75 478.87 1022.55 486.32 1020.92 487.43C1020.17 487.93 1019 488.01 1018.38 488.57C1017.87 489.03 1016.48 491.84 1015.88 492.3C1015.5 492.59 1014.78 492.2 1014.57 492.39C1013.94 492.98 1014.22 493.89 1013.44 494.49C1012.9 494.91 1012.28 494.12 1011.57 495.03C1011.09 495.66 1011.34 496.59 1010.81 497.22C1010.09 498.07 1009.07 498.01 1008.35 498.76C1007.07 500.12 1006.66 502.31 1004.89 503.51C1004.34 503.89 1003.21 503.99 1002.79 504.37C1000.31 506.58 998.08 511.1 994.85 513.37C994.39 513.7 993.08 514.07 992.77 514.39C991.81 515.39 991.55 516.94 990.45 518.08C980.35 528.53 970.04 538.87 959.76 549.15C954.97 553.94 948.42 559.12 944.08 563.83C940.94 567.23 938.14 570.96 934.75 574.26C933.67 575.31 932.09 575.9 931.21 577.11C929.4 579.61 927.16 582.27 924.72 584.21C923.39 585.26 921.82 585.9 920.5 587C917.74 589.31 916.62 593.37 913.87 595.37C912.64 596.27 911.25 596.61 910 597.5C908.93 600.21 908.2 601.59 905 602.5C905.43 604.8 903.12 606.09 901.4 607.9C897.49 612.01 893.46 615.99 889.42 619.99C881.35 627.98 872.25 636.09 865.21 644.71C863.71 646.54 861.15 649.44 859.17 650.71C857.65 651.69 856.14 651.87 855 653.5C854.17 654.67 854.51 655.72 853.48 656.88C852.14 658.4 850.03 659.14 848.76 660.38C848.19 660.94 848.41 661.72 847.87 662.27C846.12 664.03 845.42 664.22 843.82 666.5C843.34 666.86 841.71 667.27 841.58 667.39C840 668.93 841.15 670.64 838.5 670C837.49 674.89 831.43 678.95 827.94 682.5C820.43 690.16 812.92 698.05 805.08 705.21C803.49 706.67 802.56 708.94 800.78 710.3C799.99 710.91 798.7 710.97 798.03 711.57C797.17 712.34 797.51 713.44 796.82 714.27C796.11 715.11 795.1 715.02 794.4 715.77C791.83 718.47 792.43 720.29 788 721.5C788.49 723.72 787.18 723.92 785 724.5C785.59 727.04 783.9 726.18 782.41 727.8C781.39 728.92 780.75 730.73 779.5 732C774.66 736.88 769.8 741.76 765 746.68C763.2 748.53 760 750.37 759.62 752.5C759.12 752.9 757.76 753.2 757.57 753.38C756.77 754.17 756.95 755.5 755.89 756.29C755.51 756.57 754.77 756.21 754.57 756.39C753.04 757.83 752.67 759.63 750.65 760.91ZM834.11 85.86C835.03 86.75 835.95 87.64 836.87 88.53C835.95 87.64 835.03 86.75 834.11 85.86ZM843.09 94.84C843.78 95.52 844.48 96.2 845.18 96.88C844.48 96.2 843.78 95.52 843.09 94.84ZM531.1 109.05C530.43 109.76 529.75 110.46 529.07 111.16C529.75 110.46 530.43 109.76 531.1 109.05ZM858.16 109.79C859.07 110.69 859.99 111.59 860.9 112.49C859.99 111.59 859.07 110.69 858.16 109.79ZM874.17 125.79C874.85 126.47 875.53 127.15 876.21 127.83C875.53 127.15 874.85 126.47 874.17 125.79ZM884.18 135.81C885.55 137.12 886.91 138.42 888.28 139.73C886.91 138.42 885.55 137.12 884.18 135.81ZM895.27 146.73C896.14 147.53 897.01 148.33 897.87 149.14C897.01 148.33 896.14 147.53 895.27 146.73ZM897.87 149.14C898.56 149.9 899.26 150.67 899.95 151.43C899.26 150.67 898.56 149.9 897.87 149.14ZM905.7 157.3C906.52 158.14 907.35 158.98 908.17 159.82C907.35 158.98 906.52 158.14 905.7 157.3ZM908.17 159.82C909.36 160.97 910.54 162.12 911.73 163.27C910.54 162.12 909.36 160.97 908.17 159.82ZM460.15 181.11C459.17 182.15 458.18 183.19 457.2 184.23C458.18 183.19 459.17 182.15 460.15 181.11ZM929.72 181.1C930.57 181.98 931.42 182.86 932.27 183.73C931.42 182.86 930.57 181.98 929.72 181.1ZM938.7 190.03C939.88 191.27 941.06 192.5 942.24 193.73C941.06 192.5 939.88 191.27 938.7 190.03ZM449.81 191.79C449.15 192.46 448.5 193.13 447.84 193.8C448.5 193.13 449.15 192.46 449.81 191.79ZM943.76 195.11C944.59 195.96 945.41 196.82 946.24 197.67C945.41 196.82 944.59 195.96 943.76 195.11ZM950.76 202.17C951.45 202.86 952.14 203.54 952.83 204.23C952.14 203.54 951.45 202.86 950.76 202.17ZM383.76 258.75C383.1 259.44 382.45 260.13 381.8 260.82C382.45 260.13 383.1 259.44 383.76 258.75ZM374.84 267.8C374.16 268.48 373.48 269.17 372.81 269.86C373.48 269.17 374.16 268.48 374.84 267.8ZM1022.78 274.05C1023.5 274.83 1024.22 275.6 1024.94 276.38C1024.22 275.6 1023.5 274.83 1022.78 274.05ZM1037.42 288.64C1038.55 289.84 1039.68 291.05 1040.81 292.25C1039.68 291.05 1038.55 289.84 1037.42 288.64ZM1046.73 298.01C1048.12 299.4 1049.51 300.78 1050.9 302.17C1049.51 300.78 1048.12 299.4 1046.73 298.01ZM320.79 322.81C319.88 323.67 318.98 324.53 318.07 325.39C318.98 324.53 319.88 323.67 320.79 322.81ZM306.81 336.78C306.15 337.46 305.5 338.14 304.84 338.83C305.5 338.14 306.15 337.46 306.81 336.78ZM1090.87 341.98C1091.96 343.3 1093.05 344.63 1094.15 345.95C1093.05 344.63 1091.96 343.3 1090.87 341.98ZM292.83 350.84C292.01 351.66 291.2 352.48 290.38 353.31C291.2 352.48 292.01 351.66 292.83 350.84ZM1112.96 376.94C1113.59 378.38 1114.23 379.83 1114.87 381.28C1114.23 379.83 1113.59 378.38 1112.96 376.94ZM351.71 379.73C350.85 380.53 349.99 381.33 349.14 382.14C349.99 381.33 350.85 380.53 351.71 379.73ZM1115.06 381.89C1115.38 382.91 1115.7 383.93 1116.02 384.94C1115.7 383.93 1115.38 382.91 1115.06 381.89ZM1116.02 384.94C1116.37 385.95 1116.71 386.96 1117.06 387.96C1116.71 386.96 1116.37 385.95 1116.02 384.94ZM340.99 390.75C340.25 391.5 339.51 392.25 338.77 393C339.51 392.25 340.25 391.5 340.99 390.75ZM1120.04 399.89C1120.32 400.92 1120.61 401.96 1120.89 403C1120.58 402.83 1120.26 402.67 1119.95 402.5C1119.98 401.63 1120.01 400.76 1120.04 399.89ZM1121.25 408C1121.58 408.17 1121.91 408.33 1122.24 408.5C1122.15 409.33 1122.07 410.17 1121.98 411C1121.69 410.83 1121.4 410.67 1121.11 410.5C1121.16 409.67 1121.21 408.83 1121.25 408ZM323.15 409.07C322.44 409.74 321.74 410.42 321.03 411.09C321.74 410.42 322.44 409.74 323.15 409.07ZM1122.25 417C1122.45 417 1122.64 417 1122.83 417C1122.83 421.67 1122.83 426.33 1122.83 431C1122.63 431 1122.43 431 1122.22 431C1122.23 426.33 1122.24 421.67 1122.25 417ZM299.95 432.66C298.42 434.21 296.9 435.76 295.37 437.31C296.9 435.76 298.42 434.21 299.95 432.66ZM1122.01 436.83C1122.28 436.89 1122.56 436.94 1122.83 437C1122.83 437.33 1122.83 437.65 1122.83 437.98C1122.25 439.67 1121.66 441.36 1121.07 443.05C1121.38 440.98 1121.69 438.91 1122.01 436.83ZM1118.07 455.8C1118.24 456.03 1118.42 456.27 1118.6 456.5C1118.07 457.35 1117.54 458.2 1117.01 459.05C1117.36 457.97 1117.72 456.88 1118.07 455.8ZM1116.08 462.85C1115.72 463.9 1115.36 464.94 1115 465.99C1115.36 464.94 1115.72 463.9 1116.08 462.85ZM1114.24 468.09C1113.83 469.09 1113.41 470.09 1113 471.09C1113.41 470.09 1113.83 469.09 1114.24 468.09ZM1111.86 473.74C1111.3 474.93 1110.73 476.12 1110.17 477.31C1110.73 476.12 1111.3 474.93 1111.86 473.74ZM253.16 480.16C252.48 480.85 251.81 481.54 251.14 482.22C251.81 481.54 252.48 480.85 253.16 480.16ZM1104.05 488.77C1103.37 489.88 1102.68 490.99 1102 492.11C1102.68 490.99 1103.37 489.88 1104.05 488.77ZM243.89 489.5C242.99 490.42 242.09 491.33 241.2 492.24C242.09 491.33 242.99 490.42 243.89 489.5ZM228.83 504.75C228.16 505.47 227.5 506.19 226.83 506.91C227.5 506.19 228.16 505.47 228.83 504.75ZM225 508.78C224.28 509.51 223.56 510.24 222.85 510.97C223.56 510.24 224.28 509.51 225 508.78ZM130.37 515.14C128.62 516.83 126.87 518.52 125.12 520.2C126.87 518.52 128.62 516.83 130.37 515.14ZM189.64 544.71C188.82 545.54 188 546.36 187.17 547.19C188 546.36 188.82 545.54 189.64 544.71ZM184.86 549.57C183.96 550.43 183.07 551.3 182.18 552.17C183.07 551.3 183.96 550.43 184.86 549.57ZM178.15 556.11C177.3 557.05 176.45 557.99 175.59 558.92C176.45 557.99 177.3 557.05 178.15 556.11ZM157.28 577.27C156.32 578.28 155.37 579.29 154.41 580.3C155.37 579.29 156.32 578.28 157.28 577.27ZM153.86 580.84C153.17 581.51 152.49 582.19 151.81 582.86C152.49 582.19 153.17 581.51 153.86 580.84ZM28.18 620.04C27.46 621.07 26.73 622.09 26 623.12C26.73 622.09 27.46 621.07 28.18 620.04ZM11.23 650.13C10.79 651.09 10.34 652.06 9.9 653.02C10.34 652.06 10.79 651.09 11.23 650.13ZM78.94 659.89C78.35 661.02 77.76 662.16 77.17 663.3C77.76 662.16 78.35 661.02 78.94 659.89ZM938.96 659.66C937.93 660.76 936.9 661.86 935.88 662.96C936.9 661.86 937.93 660.76 938.96 659.66ZM74.16 669.88C74.3 670.08 74.45 670.29 74.59 670.5C74.06 671.37 73.53 672.23 72.99 673.1C73.38 672.02 73.77 670.95 74.16 669.88ZM72.1 676.04C71.71 677 71.32 677.96 70.93 678.92C71.32 677.96 71.71 677 72.1 676.04ZM69.83 684C69.18 688.33 68.54 692.67 67.89 697C67.64 696.83 67.39 696.67 67.14 696.5C68.04 692.33 68.93 688.17 69.83 684ZM67.84 698C67.62 699.33 67.4 700.67 67.19 702C67.13 700.83 67.07 699.67 67.01 698.5C67.29 698.33 67.56 698.17 67.84 698ZM67.16 705C67.37 705.17 67.57 705.33 67.78 705.5C67.82 706.5 67.86 707.5 67.9 708.5C67.67 708.67 67.44 708.83 67.21 709C67.2 707.67 67.18 706.33 67.16 705ZM67.3 711C67.6 711.17 67.91 711.33 68.21 711.5C68.78 716.41 69.35 721.31 69.93 726.22C67.79 722.2 66.99 715.66 67.3 711ZM883.95 715.6C883.22 716.39 882.49 717.18 881.75 717.97C882.49 717.18 883.22 716.39 883.95 715.6ZM0.17 717C0.6 718.83 1.03 720.67 1.46 722.5C1.03 722.67 0.6 722.83 0.17 723C0.17 721 0.17 719 0.17 717ZM1.13 725C1.41 725.17 1.7 725.33 1.98 725.5C1.92 726.33 1.85 727.17 1.78 728C1.57 727 1.35 726 1.13 725ZM70.04 726.98C70.72 728.98 71.4 730.98 72.08 732.98C71.69 732.82 71.3 732.66 70.91 732.5C70.62 730.66 70.33 728.82 70.04 726.98ZM72.99 735.91C73.4 736.91 73.8 737.92 74.21 738.92C73.8 737.92 73.4 736.91 72.99 735.91ZM7.89 751.76C8.24 752.88 8.58 754 8.93 755.13C8.58 754 8.24 752.88 7.89 751.76ZM846.13 754.08C845.31 754.92 844.48 755.76 843.66 756.6C844.48 755.76 845.31 754.92 846.13 754.08ZM9.96 757.46C10.65 758.99 11.33 760.52 12.02 762.06C11.33 760.52 10.65 758.99 9.96 757.46ZM84.91 758.07C85.65 759.06 86.38 760.05 87.11 761.04C86.38 760.05 85.65 759.06 84.91 758.07ZM742.13 770.01C741.42 770.76 740.71 771.52 740 772.28C740.71 771.52 741.42 770.76 742.13 770.01ZM35.87 799.06C36.54 799.76 37.2 800.46 37.87 801.16C37.2 800.46 36.54 799.76 35.87 799.06ZM55.13 817.78C55.86 818.5 56.59 819.23 57.32 819.96C56.59 819.23 55.86 818.5 55.13 817.78ZM768.81 832.8C767.49 834.16 766.17 835.52 764.85 836.88C766.17 835.52 767.49 834.16 768.81 832.8ZM679.79 833.78C678.97 834.61 678.15 835.44 677.32 836.27C678.15 835.44 678.97 834.61 679.79 833.78ZM93.75 856.23C94.58 857.09 95.41 857.95 96.24 858.81C95.41 857.95 94.58 857.09 93.75 856.23ZM97.2 859.78C98.04 860.61 98.87 861.45 99.7 862.28C98.87 861.45 98.04 860.61 97.2 859.78ZM186.79 860.99C187.83 862.04 188.88 863.08 189.92 864.13C188.88 863.08 187.83 862.04 186.79 860.99ZM718.02 884.8C717.29 885.51 716.56 886.21 715.84 886.92C716.56 886.21 717.29 885.51 718.02 884.8ZM212.19 886.77C213.19 887.79 214.19 888.82 215.19 889.85C214.19 888.82 213.19 887.79 212.19 886.77ZM125.14 887.77C125.84 888.45 126.53 889.14 127.23 889.82C126.53 889.14 125.84 888.45 125.14 887.77ZM135.75 898.22C136.42 898.9 137.1 899.58 137.78 900.26C137.1 899.58 136.42 898.9 135.75 898.22ZM141.01 903.66C141.73 904.39 142.45 905.12 143.16 905.86C142.45 905.12 141.73 904.39 141.01 903.66ZM231.05 905.87C231.76 906.53 232.46 907.19 233.16 907.84C232.46 907.19 231.76 906.53 231.05 905.87ZM235.09 909.81C235.79 910.48 236.48 911.15 237.18 911.82C236.48 911.15 235.79 910.48 235.09 909.81ZM582.21 934C581.48 934.76 580.74 935.52 580.01 936.28C580.74 935.52 581.48 934.76 582.21 934ZM207.9 971.03C208.91 972.06 209.93 973.09 210.94 974.13C209.93 973.09 208.91 972.06 207.9 971.03ZM546.2 971.1C545.38 971.98 544.56 972.87 543.75 973.76C544.56 972.87 545.38 971.98 546.2 971.1ZM630.16 975.14C629.34 975.99 628.53 976.84 627.71 977.68C628.53 976.84 629.34 975.99 630.16 975.14ZM538.83 978.84C538.02 979.68 537.21 980.52 536.4 981.36C537.21 980.52 538.02 979.68 538.83 978.84ZM621.95 983.63C621.25 984.36 620.54 985.1 619.83 985.83C620.54 985.1 621.25 984.36 621.95 983.63ZM619.83 985.83C619.17 986.56 618.51 987.29 617.85 988.02C618.51 987.29 619.17 986.56 619.83 985.83ZM507.19 1002.86C505.15 1003.62 503.11 1004.39 501.07 1005.16C503.11 1004.39 505.15 1003.62 507.19 1002.86ZM602.18 1004.15C599.71 1006.76 597.23 1009.37 594.76 1011.98C597.23 1009.37 599.71 1006.76 602.18 1004.15ZM494.09 1006.97C492.27 1008.18 490.63 1008.71 488.42 1007.99C490.31 1007.65 492.2 1007.31 494.09 1006.97ZM360 1008.1C361.17 1008.04 362.33 1007.98 363.5 1007.92C363.67 1008.21 363.83 1008.49 364 1008.78C362.83 1008.84 361.67 1008.9 360.5 1008.96C360.33 1008.67 360.17 1008.39 360 1008.1ZM407 1008.92C406 1008.92 405 1008.92 404 1008.92C404.17 1008.69 404.33 1008.46 404.5 1008.22C405.33 1008.45 406.17 1008.69 407 1008.92ZM486 1008.12C485.83 1008.4 485.67 1008.68 485.5 1008.95C484.67 1008.88 483.83 1008.8 483 1008.72C483.17 1008.42 483.33 1008.12 483.5 1007.82C484.33 1007.92 485.17 1008.02 486 1008.12ZM571.85 1035.76C571.2 1036.5 570.54 1037.23 569.88 1037.97C570.54 1037.23 571.2 1036.5 571.85 1035.76ZM287.61 1048.32C288.44 1048.87 289.27 1049.42 290.1 1049.98C289.27 1049.42 288.44 1048.87 287.61 1048.32ZM554.09 1050.98C553.03 1051.68 551.97 1052.38 550.9 1053.08C551.97 1052.38 553.03 1051.68 554.09 1050.98ZM334 1068.11C335.33 1068.35 336.66 1068.59 337.99 1068.83C336.66 1068.83 335.33 1068.83 334 1068.83C334 1068.59 334 1068.35 334 1068.11Z" fill="#89898c" fill-rule="evenodd" stroke="#89898c" stroke-width="0.25" stroke-linejoin="round"/>	
+<path d="M685.03 0.17C690.73 0.17 696.43 0.17 702.13 0.17C703.09 0.17 704.04 0.17 705 0.17C705.33 0.17 705.67 0.17 706 0.17C710.3 0.78 714.61 1.4 718.91 2.02C720.32 2.34 721.73 2.66 723.14 2.98C724.14 3.23 725.13 3.48 726.13 3.74C726.25 4 726.38 4.27 726.5 4.54C727.33 4.57 728.17 4.61 729 4.65C730.65 5.09 732.3 5.54 733.95 5.98C735.02 6.32 736.09 6.65 737.16 6.99C738.16 7.3 739.15 7.62 740.15 7.93C741.14 8.29 742.13 8.66 743.12 9.02C751.3 11.77 759.96 16.76 766.9 21.97C767.73 22.52 768.56 23.07 769.39 23.63C770.93 24.71 772.47 25.79 774.01 26.87C774.96 27.65 775.9 28.42 776.84 29.2C795.93 48.08 815.02 66.97 834.11 85.86C835.03 86.75 835.95 87.64 836.87 88.53C836.88 88.52 836.88 88.51 836.89 88.5C838.95 90.61 841.02 92.73 843.09 94.84C843.78 95.52 844.48 96.2 845.18 96.88C849.51 101.19 853.83 105.49 858.16 109.79C859.07 110.69 859.99 111.59 860.9 112.49C865.32 116.93 869.75 121.36 874.17 125.79C874.85 126.47 875.53 127.15 876.21 127.83C878.87 130.49 881.53 133.15 884.18 135.81C885.55 137.12 886.91 138.42 888.28 139.73C890.61 142.06 892.94 144.39 895.27 146.73C896.14 147.53 897.01 148.33 897.87 149.14C898.56 149.9 899.26 150.67 899.95 151.43C901.87 153.39 903.78 155.34 905.7 157.3C906.52 158.14 907.35 158.98 908.17 159.82C909.36 160.97 910.54 162.12 911.73 163.27C917.72 169.22 923.72 175.16 929.72 181.1C930.57 181.98 931.42 182.86 932.27 183.73C934.41 185.83 936.56 187.93 938.7 190.03C939.88 191.27 941.06 192.5 942.24 193.73C942.75 194.19 943.25 194.65 943.76 195.11C944.59 195.96 945.41 196.82 946.24 197.67C947.74 199.17 949.25 200.67 950.76 202.17C951.45 202.86 952.14 203.54 952.83 204.23C976.15 227.5 999.46 250.78 1022.78 274.05C1023.5 274.83 1024.22 275.6 1024.94 276.38C1029.1 280.47 1033.26 284.55 1037.42 288.64C1038.55 289.84 1039.68 291.05 1040.81 292.25C1042.78 294.17 1044.76 296.09 1046.73 298.01C1048.12 299.4 1049.51 300.78 1050.9 302.17C1064.22 315.44 1077.54 328.71 1090.87 341.98C1091.96 343.3 1093.05 344.63 1094.15 345.95C1102.02 355.1 1108.39 365.78 1112.96 376.94C1113.59 378.38 1114.23 379.83 1114.87 381.28C1114.93 381.48 1115 381.69 1115.06 381.89C1115.38 382.91 1115.7 383.93 1116.02 384.94C1116.37 385.95 1116.71 386.96 1117.06 387.96C1118.05 391.94 1119.05 395.91 1120.04 399.89C1120.01 400.76 1119.98 401.63 1119.95 402.5C1120.26 402.67 1120.58 402.83 1120.89 403C1121.01 404.67 1121.13 406.33 1121.25 408C1121.21 408.83 1121.16 409.67 1121.11 410.5C1121.4 410.67 1121.69 410.83 1121.98 411C1122.07 413 1122.16 415 1122.25 417C1122.24 421.67 1122.23 426.33 1122.22 431C1122.15 432.94 1122.08 434.89 1122.01 436.83C1121.69 438.91 1121.38 440.98 1121.07 443.05C1120.07 447.3 1119.07 451.55 1118.07 455.8C1117.72 456.88 1117.36 457.97 1117.01 459.05C1116.7 460.32 1116.39 461.58 1116.08 462.85C1115.72 463.9 1115.36 464.94 1115 465.99C1114.75 466.69 1114.49 467.39 1114.24 468.09C1113.83 469.09 1113.41 470.09 1113 471.09C1112.62 471.97 1112.24 472.86 1111.86 473.74C1111.3 474.93 1110.73 476.12 1110.17 477.31C1108.13 481.13 1106.09 484.95 1104.05 488.77C1103.37 489.88 1102.68 490.99 1102 492.11C1092.96 505.9 1081.16 516.49 1069.62 528.12C1059.34 538.48 1048.85 548.69 1038.7 559.18C1023.63 574.75 1007.65 589.51 992.79 605.28C975.35 623.77 957.35 642.12 938.96 659.66C937.93 660.76 936.9 661.86 935.88 662.96C918.57 680.51 901.26 698.06 883.95 715.6C883.22 716.39 882.49 717.18 881.75 717.97C869.88 730.01 858.01 742.04 846.13 754.08C845.31 754.92 844.48 755.76 843.66 756.6C818.71 782 793.76 807.4 768.81 832.8C767.49 834.16 766.17 835.52 764.85 836.88C749.24 852.85 733.63 868.83 718.02 884.8C717.29 885.51 716.56 886.21 715.84 886.92C687.28 916.33 658.72 945.74 630.16 975.14C629.34 975.99 628.53 976.84 627.71 977.68C625.79 979.66 623.87 981.64 621.95 983.63C621.25 984.36 620.54 985.1 619.83 985.83C619.17 986.56 618.51 987.29 617.85 988.02C612.63 993.4 607.4 998.77 602.18 1004.15C599.71 1006.76 597.23 1009.37 594.76 1011.98C587.13 1019.91 579.49 1027.83 571.85 1035.76C571.2 1036.5 570.54 1037.23 569.88 1037.97C564.62 1042.31 559.36 1046.64 554.09 1050.98C553.03 1051.68 551.97 1052.38 550.9 1053.08C543.89 1057.85 535.87 1061.49 527.94 1064.46C523.92 1065.96 519.17 1066.87 515.61 1068.83C456.4 1068.83 397.2 1068.83 337.99 1068.83C336.66 1068.59 335.33 1068.35 334 1068.11C318.67 1065.79 302.99 1058.67 290.1 1049.98C289.27 1049.42 288.44 1048.87 287.61 1048.32C276.54 1040.94 267.92 1031.39 258.57 1022.06C242.62 1006.16 227.21 989.68 210.94 974.13C209.93 973.09 208.91 972.06 207.9 971.03C186.32 949.3 164.74 927.58 143.16 905.86C142.45 905.12 141.73 904.39 141.01 903.66C139.93 902.53 138.85 901.39 137.78 900.26C137.1 899.58 136.42 898.9 135.75 898.22C132.91 895.42 130.07 892.62 127.23 889.82C126.53 889.14 125.84 888.45 125.14 887.77C116.66 879.28 108.18 870.78 99.7 862.28C98.87 861.45 98.04 860.61 97.2 859.78C96.88 859.46 96.56 859.13 96.24 858.81C95.41 857.95 94.58 857.09 93.75 856.23C81.6 844.14 69.46 832.05 57.32 819.96C56.59 819.23 55.86 818.5 55.13 817.78C49.38 812.24 43.62 806.7 37.87 801.16C37.2 800.46 36.54 799.76 35.87 799.06C25.58 788.75 18 775.2 12.02 762.06C11.33 760.52 10.65 758.99 9.96 757.46C9.96 757.47 9.97 757.49 9.97 757.5C9.62 756.71 9.27 755.92 8.93 755.13C8.58 754 8.24 752.88 7.89 751.76C5.86 743.84 3.82 735.92 1.78 728C1.85 727.17 1.92 726.33 1.98 725.5C1.7 725.33 1.41 725.17 1.13 725C0.81 724.67 0.49 724.33 0.17 724C0.17 723.67 0.17 723.33 0.17 723C0.6 722.83 1.03 722.67 1.46 722.5C1.03 720.67 0.6 718.83 0.17 717C0.17 708.31 0.17 699.62 0.17 690.93C1.45 687.61 1.05 683.97 1.76 680.5C3.45 672.22 6.05 660.53 9.9 653.02C10.34 652.06 10.79 651.09 11.23 650.13C14.59 640.71 20.03 631.13 26 623.12C26.73 622.09 27.46 621.07 28.18 620.04C39.44 605.19 53.61 592.31 66.95 579.34C86.72 560.13 106.26 540.32 125.12 520.2C126.87 518.52 128.62 516.83 130.37 515.14C183.7 461.2 237.04 407.25 290.38 353.31C291.2 352.48 292.01 351.66 292.83 350.84C296.83 346.83 300.84 342.83 304.84 338.83C305.5 338.14 306.15 337.46 306.81 336.78C310.56 332.98 314.32 329.18 318.07 325.39C318.98 324.53 319.88 323.67 320.79 322.81C338.13 305.16 355.47 287.51 372.81 269.86C373.48 269.17 374.16 268.48 374.84 267.8C377.16 265.47 379.48 263.15 381.8 260.82C382.45 260.13 383.1 259.44 383.76 258.75C405.12 237.1 426.48 215.45 447.84 193.8C448.5 193.13 449.15 192.46 449.81 191.79C452.27 189.27 454.73 186.75 457.2 184.23C458.18 183.19 459.17 182.15 460.15 181.11C483.13 157.79 506.1 134.48 529.07 111.16C529.75 110.46 530.43 109.76 531.1 109.05C549.18 90.69 566.99 71.91 585.67 54.17C595.51 44.82 604.24 34.5 614.94 26.07C615.95 25.34 616.96 24.62 617.97 23.89C626.1 18.44 634.49 12.43 644 9.65C645.08 9.13 646.16 8.61 647.24 8.1C649.45 7.37 651.65 6.65 653.85 5.93C654.98 5.6 656.11 5.26 657.24 4.92C658.83 4.54 660.41 4.17 662 3.79C663.33 3.46 664.67 3.13 666 2.8C667.22 2.5 668.45 2.19 669.67 1.88C674.79 1.31 679.91 0.74 685.03 0.17ZM359.78 372C357.09 374.57 354.4 377.15 351.71 379.73C350.85 380.53 349.99 381.33 349.14 382.14C346.42 385.01 343.7 387.88 340.99 390.75C340.25 391.5 339.51 392.25 338.77 393C333.56 398.36 328.36 403.71 323.15 409.07C322.44 409.74 321.74 410.42 321.03 411.09C314 418.28 306.98 425.47 299.95 432.66C298.42 434.21 296.9 435.76 295.37 437.31C281.3 451.6 267.23 465.88 253.16 480.16C252.48 480.85 251.81 481.54 251.14 482.22C248.73 484.65 246.31 487.08 243.89 489.5C242.99 490.42 242.09 491.33 241.2 492.24C237.07 496.41 232.95 500.58 228.83 504.75C228.16 505.47 227.5 506.19 226.83 506.91C226.22 507.53 225.61 508.15 225 508.78C224.28 509.51 223.56 510.24 222.85 510.97C211.78 522.22 200.71 533.47 189.64 544.71C188.82 545.54 188 546.36 187.17 547.19C186.4 547.98 185.63 548.77 184.86 549.57C183.96 550.43 183.07 551.3 182.18 552.17C180.84 553.48 179.49 554.8 178.15 556.11C177.3 557.05 176.45 557.99 175.59 558.92C169.49 565.04 163.38 571.15 157.28 577.27C156.32 578.28 155.37 579.29 154.41 580.3C154.23 580.48 154.04 580.66 153.86 580.84C153.17 581.51 152.49 582.19 151.81 582.86C137.73 597.24 123.71 611.77 109.32 625.83C98.35 636.54 86.74 646.53 78.94 659.89C78.35 661.02 77.76 662.16 77.17 663.3C76.16 665.49 75.16 667.68 74.16 669.88C73.77 670.95 73.38 672.02 72.99 673.1C72.7 674.08 72.4 675.06 72.1 676.04C71.71 677 71.32 677.96 70.93 678.92C70.56 680.62 70.19 682.31 69.83 684C68.93 688.17 68.04 692.33 67.14 696.5C67.39 696.67 67.64 696.83 67.89 697C67.87 697.33 67.85 697.67 67.84 698C67.56 698.17 67.29 698.33 67.01 698.5C67.07 699.67 67.13 700.83 67.19 702C67.18 703 67.17 704 67.16 705C67.18 706.33 67.2 707.67 67.21 709C67.24 709.67 67.27 710.33 67.3 711C66.99 715.66 67.79 722.2 69.93 726.22C69.96 726.47 70 726.73 70.04 726.98C70.33 728.82 70.62 730.66 70.91 732.5C71.3 732.66 71.69 732.82 72.08 732.98C72.38 733.95 72.69 734.93 72.99 735.91C73.4 736.91 73.8 737.92 74.21 738.92C77.78 745.3 81.35 751.68 84.91 758.07C85.65 759.06 86.38 760.05 87.11 761.04C120.34 794.36 153.56 827.67 186.79 860.99C187.83 862.04 188.88 863.08 189.92 864.13C197.34 871.68 204.77 879.22 212.19 886.77C213.19 887.79 214.19 888.82 215.19 889.85C220.48 895.19 225.77 900.53 231.05 905.87C231.76 906.53 232.46 907.19 233.16 907.84C233.81 908.5 234.45 909.15 235.09 909.81C235.79 910.48 236.48 911.15 237.18 911.82C254.8 928.53 272.07 946.1 288.81 963.7C295.3 970.53 302.13 977.06 308.86 983.65C311.72 986.45 314.15 989.67 317.33 992.13C329.44 1001.52 344.99 1006.42 360 1008.1C360.17 1008.39 360.33 1008.67 360.5 1008.96C361.67 1008.9 362.83 1008.84 364 1008.78C377.33 1008.83 390.67 1008.87 404 1008.92C405 1008.92 406 1008.92 407 1008.92C432.33 1008.85 457.67 1008.79 483 1008.72C483.83 1008.8 484.67 1008.88 485.5 1008.95C485.67 1008.68 485.83 1008.4 486 1008.12C486.81 1008.08 487.61 1008.03 488.42 1007.99C490.63 1008.71 492.27 1008.18 494.09 1006.97C496.42 1006.36 498.75 1005.76 501.07 1005.16C503.11 1004.39 505.15 1003.62 507.19 1002.86C514.61 999.6 521.87 995.93 527.89 990.4C530.93 987.6 533.34 984.2 536.4 981.36C537.21 980.52 538.02 979.68 538.83 978.84C540.47 977.15 542.11 975.45 543.75 973.76C544.56 972.87 545.38 971.98 546.2 971.1C557.47 959.49 568.74 947.89 580.01 936.28C580.74 935.52 581.48 934.76 582.21 934C613.92 901.42 645.62 868.85 677.32 836.27C678.15 835.44 678.97 834.61 679.79 833.78C699.86 813.28 719.93 792.78 740 772.28C740.71 771.52 741.42 770.76 742.13 770.01C744.97 766.97 747.81 763.94 750.65 760.91C752.67 759.63 753.04 757.83 754.57 756.39C754.77 756.21 755.51 756.57 755.89 756.29C756.95 755.5 756.77 754.17 757.57 753.38C757.76 753.2 759.12 752.9 759.62 752.5C760 750.37 763.2 748.53 765 746.68C769.8 741.76 774.66 736.88 779.5 732C780.75 730.73 781.39 728.92 782.41 727.8C783.9 726.18 785.59 727.04 785 724.5C787.18 723.92 788.49 723.72 788 721.5C792.43 720.29 791.83 718.47 794.4 715.77C795.1 715.02 796.11 715.11 796.82 714.27C797.51 713.44 797.17 712.34 798.03 711.57C798.7 710.97 799.99 710.91 800.78 710.3C802.56 708.94 803.49 706.67 805.08 705.21C812.92 698.05 820.43 690.16 827.94 682.5C831.43 678.95 837.49 674.89 838.5 670C841.15 670.64 840 668.93 841.58 667.39C841.71 667.27 843.34 666.86 843.82 666.5C845.42 664.22 846.12 664.03 847.87 662.27C848.41 661.72 848.19 660.94 848.76 660.38C850.03 659.14 852.14 658.4 853.48 656.88C854.51 655.72 854.17 654.67 855 653.5C856.14 651.87 857.65 651.69 859.17 650.71C861.15 649.44 863.71 646.54 865.21 644.71C872.25 636.09 881.35 627.98 889.42 619.99C893.46 615.99 897.49 612.01 901.4 607.9C903.12 606.09 905.43 604.8 905 602.5C908.2 601.59 908.93 600.21 910 597.5C911.25 596.61 912.64 596.27 913.87 595.37C916.62 593.37 917.74 589.31 920.5 587C921.82 585.9 923.39 585.26 924.72 584.21C927.16 582.27 929.4 579.61 931.21 577.11C932.09 575.9 933.67 575.31 934.75 574.26C938.14 570.96 940.94 567.23 944.08 563.83C948.42 559.12 954.97 553.94 959.76 549.15C970.04 538.87 980.35 528.53 990.45 518.08C991.55 516.94 991.81 515.39 992.77 514.39C993.08 514.07 994.39 513.7 994.85 513.37C998.08 511.1 1000.31 506.58 1002.79 504.37C1003.21 503.99 1004.34 503.89 1004.89 503.51C1006.66 502.31 1007.07 500.12 1008.35 498.76C1009.07 498.01 1010.09 498.07 1010.81 497.22C1011.34 496.59 1011.09 495.66 1011.57 495.03C1012.28 494.12 1012.9 494.91 1013.44 494.49C1014.22 493.89 1013.94 492.98 1014.57 492.39C1014.78 492.2 1015.5 492.59 1015.88 492.3C1016.48 491.84 1017.87 489.03 1018.38 488.57C1019 488.01 1020.17 487.93 1020.92 487.43C1022.55 486.32 1028.75 478.87 1030.35 477.01C1032.61 474.36 1035.58 472.91 1037.87 470.33C1039.27 468.75 1039.48 466.86 1040.58 465.38C1040.64 465.3 1041.8 465.01 1042.13 464.65C1043.58 463.07 1044.05 460.96 1045 459.15C1048.97 451.6 1051.97 444.88 1053.53 436.44C1055.91 423.52 1055.12 408.85 1049.49 396.91C1049.02 395.91 1047.92 395.44 1047.45 394.5C1046.91 393.42 1046.89 392 1046.46 390.69C1045.93 389.07 1044.57 388.32 1043.85 386.97C1042.46 384.36 1041.61 381.88 1039.88 379.38C1036.53 374.51 1031.16 370.54 1026.96 366.42C1020.74 360.32 1014.8 353.95 1008.49 347.94C995.36 335.42 982.86 322.22 970 309.43C968.1 307.54 966.1 304.97 963.87 303.5C963.06 302.96 961.99 302.89 961.33 302.21C960.96 301.82 960.74 300.6 960.4 300.07C956.64 294.28 949.74 289.44 944.97 284.47C936.83 275.99 928.27 267.79 919.83 259.61C916.59 256.48 913.47 252.28 909.82 249.67C908.19 248.51 905.81 247.51 904.56 246C904.03 245.35 904.79 244.77 904.18 244.13C903.7 243.62 902.87 243.93 902.39 243.43C902.25 243.29 902.13 242.05 901.83 241.65C898.39 237.03 892.94 232.76 888.8 228.7C886.91 226.85 884.02 225.21 882.38 223.43C882.2 223.24 882.13 222.13 881.81 221.7C879.07 218.1 864.43 204.17 861 202.5C861.43 199.96 857.15 197.09 855.17 195.24C848.97 189.48 843.18 183.28 837.19 177.3C814.69 154.85 792.44 132.02 769.5 110.02C763.91 104.65 758.62 98.99 753.1 93.55C751.22 91.7 748.94 88.57 746.5 89C745.72 86.33 745.06 87.06 743.38 85.44C742.89 84.96 741.71 82.36 740.32 81.18C734.5 76.27 727.07 72.14 719.56 69.91C712.54 67.82 705.65 66.25 698.5 65.24C694.06 64.61 689.76 65.4 685.5 66.08C683.43 66.42 681.12 66.16 678.98 66.51C668.14 68.23 658.87 73.1 649.89 78.88C648.1 80.04 646.36 80.72 644.78 82.28C633.67 93.2 623.11 104.71 611.97 115.62C597.87 129.42 583.63 143.27 570.13 157.65C569.4 158.43 569.04 159.98 568.62 160.43C567.57 161.56 565.39 162.49 564.09 163.64C562.15 165.39 561.12 167.99 559.43 169.62C559.32 169.73 558.45 169.61 558.18 169.78C555.5 171.39 551.6 175.72 549.72 178.23C545.19 184.25 538.23 189.84 532.63 195.46C517.54 210.62 502.87 226.2 487.61 241.18C474.67 253.88 462.19 267.14 449.54 280.13C447.11 282.62 444.97 285.94 442.64 288.24C441.97 288.9 440.94 289.07 440.15 289.68C435.87 293.01 432.82 298.17 428.89 301.78C412.17 317.13 396.96 334.34 380.57 350.15C377.68 352.93 375.36 356.55 372.67 359.25C372 359.93 371.01 360.13 370.22 360.71C367.79 362.49 361.6 369.6 359.78 372Z" fill="#28282c" fill-rule="evenodd" stroke="#28282c" stroke-width="0.25" stroke-linejoin="round"/>	
+</svg>
+        </button>
+        <button id="vf-circulo-borracha-btn" onclick="abrirPainelBorrachaVF()" style="width:0px;height:20px;border-radius:50%;opacity:0;overflow:hidden;transition:width 0.25s ease, opacity 0.25s ease;background:none;border:none;padding:0;margin:0;cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none;outline:none;box-shadow:none;-webkit-tap-highlight-color:transparent">
+          <span style="width:20px;height:20px;border-radius:50%;background:#999;display:block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15)"></span>
+        </button>
+      </div>
+      <div style="width:1px;height:22px;background:#eee"></div>
+      <button id="vf-btn-desfazer" title="Desfazer" disabled style="background:none;border-radius:6px;border:none;padding:6px;display:flex;align-items:center;justify-content:center;color:#ccc;opacity:0.4;transition:background 0.1s ease">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+      </button>
+      <button id="vf-btn-refazer" title="Refazer" disabled style="background:none;border-radius:6px;border:none;padding:6px;display:flex;align-items:center;justify-content:center;color:#ccc;opacity:0.4;transition:background 0.1s ease">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14 20 9l-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+      </button>
+      <div style="width:1px;height:22px;background:#eee"></div>
+      <button onclick="fecharBarraDesenhoVF()" title="Fechar" style="background:none;border:none;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;color:#999">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- painel "Caneta" - só aparece ao tocar no grupo marcador+cor da
+    barra fina, fecha sozinho ao tocar de novo ou ao tocar fora dele -->
+    <div id="vf-painel-caneta" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:600;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
+      <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
+      <div style="text-align:center;font-weight:600;font-size:var(--fs-e);color:#111;margin-bottom:14px">Caneta</div>
+
+      <div>
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
+        <!-- renderizado dinamicamente por vfRenderizarGradeCoresVF - sempre
+        7 posições, espaçadas de ponta a ponta (justify-content:space-between) -->
+        <div id="vf-grade-cores-caneta" style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;justify-items:center"></div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Espessura</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="vf-preview-espessura" style="width:8px;height:8px;border-radius:50%;background:#1A40A1;flex-shrink:0"></span>
+          <input type="range" id="vf-slider-espessura" min="1" max="10" step="0.5" value="4.5" oninput="mudarEspessuraSliderVF(this.value)" style="flex:1;min-width:0">
+          <span id="vf-espessura-valor" style="font-size:var(--fs-d);color:#333;flex-shrink:0;white-space:nowrap">4,5 pt</span>
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Sensibilidade da ponta</div>
+        <div style="display:flex;gap:8px">
+          <button id="vf-btn-persistente" onclick="selecionarSensibilidadeVF('persistente')" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-c)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1099 1092" width="26" height="18">	
+<path d="M366.59 3.47C391.99 1.82 415.67 16.56 436.85 28.64C464.12 44.18 489.57 63.85 513.67 83.87C538.34 104.36 562.71 125.42 585.54 147.96C603.49 165.69 621.57 183.26 638.85 201.66C718.94 286.93 789.21 381.01 858.09 475.36C906.4 541.52 953.11 609.25 992.07 681.42C1006.51 708.18 1020.7 735.2 1032.13 763.41C1052.09 812.66 1069.75 862.46 1081.22 914.44C1087.21 941.61 1093.06 968.77 1095.71 996.5C1097.68 1017.01 1098.89 1039.48 1092.92 1059.47C1089.9 1069.58 1085.23 1079.7 1075.91 1085.41C1057.81 1096.51 1035.65 1082.82 1019.95 1073.55C976.31 1047.79 937.01 1014.69 898.49 982.01C858.91 948.44 820.52 913.38 783.1 877.41C764.91 859.93 747.41 841.76 729.53 823.96C697.8 792.37 665.87 760.95 633.81 729.68C605.47 702.05 577.14 674.28 547.64 647.89C517.52 620.95 487.49 594 456.69 567.84C448.72 561.07 440.54 554.42 431.74 548.74C428.47 546.63 424.51 543.55 420.46 543.41C416.24 543.27 414.6 546.83 414.37 550.54C413.98 556.92 417.14 564.26 419.44 570.12C429.92 596.89 443.95 622.49 457.99 647.52C478.17 683.52 500.38 718.17 522.55 752.95C541.23 782.25 560.94 811.1 575.92 842.54C586.2 864.12 596.27 889.27 585.01 912.52C582.37 917.96 579.03 922.93 574.25 926.73C543.33 951.23 498.32 924.76 469.46 909.03C438.82 892.33 409.7 872.72 379.9 854.59C359.69 842.28 339.19 830.57 318.62 818.89C287.81 801.39 254.63 784.5 219.91 776.56C202.93 772.67 174.21 768.72 171.04 792.5C170.57 796.06 170.62 799.94 171.07 803.5C175.57 838.79 207.59 888.07 170.91 916.43C166.45 919.88 161.54 922.72 156.23 924.64C149.25 927.15 141.94 928.91 134.5 929.18C103.1 930.34 79.85 908.8 62.42 885.09C38.26 852.22 21.46 814.54 9.95 775.55C2.59 750.6 -1.47 723.34 3.19 697.54C5.33 685.68 8.96 674.51 14.14 663.63C17.11 657.39 21.07 651.34 25.63 646.14C51.94 616.12 89.63 615.66 126.5 620.1C146.29 622.48 165.95 626.04 185.51 629.92C196.46 632.09 207.46 634.24 218.5 635.98C236.91 638.89 255.81 643.57 274.5 643.7C282.17 643.76 291.67 643.83 297.43 637.94C303.66 631.56 302.02 622.31 299.81 614.56C294.9 597.31 286.94 581.37 279.33 565.2C275.2 556.43 270.73 547.83 266.36 539.19C250.52 507.85 231.47 469.4 233.31 433.53C234 420.17 238.74 407.4 245.46 395.96C249.01 389.91 253.48 384.84 258.65 380.13C266.05 373.39 274.83 368.84 284.34 365.79C295.84 362.1 308.51 361.44 320.5 361.93C341.7 362.78 362.43 369.14 382.25 376.31C423.44 391.22 465.09 419.35 500.19 445.33C575.98 501.44 642.3 569.24 711.57 632.93C749.91 668.17 787.41 704.98 828.91 736.57C838.45 743.83 847.96 751.41 858.77 756.7C863.27 758.9 869.88 760.74 872.91 755.35C875.09 751.45 874.2 746.5 873.36 742.39C871.02 730.86 866.18 719.88 861.23 709.27C842.53 669.2 817.55 628.65 791.75 592.74C773.91 567.91 756.85 542.53 738.41 518.11C683.97 445.98 625.83 377.16 565.99 309.51C523.18 261.11 479.07 213.78 432.34 169.16C410.82 148.61 388.32 129.18 366.28 109.19C353.24 97.37 337.86 85.59 330.24 69.28C325.89 59.98 323.17 48.78 324.86 38.5C328.13 18.6 347.03 4.74 366.59 3.47Z" class="vf-tinta-marcador" data-cor-original="#f60101" fill="#f60101" fill-rule="evenodd" stroke="#f60101" stroke-width="0.25" stroke-linejoin="round"/>	
+</svg>
+            Persistente
+          </button>
+          <button id="vf-btn-variavel" onclick="selecionarSensibilidadeVF('variavel')" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-c)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 1053" width="26" height="18">	
+<path d="M84.87 785.5C79.78 786.63 76.25 782 73.08 778.38C65.58 769.8 58.31 761.05 51.73 751.74C33.51 725.91 9.62 698.37 22.72 664.27C24.63 659.29 27.25 655.25 30.79 651.28C34.56 647.06 39.38 643.44 44.54 641.07C68.87 629.94 96.67 630.77 122.73 633.57C160.66 637.63 197.34 646.68 234.44 655.23C249.66 658.74 264.93 663.37 280.55 664.65C287.2 665.19 295.8 664.28 298.86 657.35C301.75 650.81 299.21 642.76 297.36 636.25C292.32 618.49 285.02 600.98 277.32 584.22C260.92 548.54 244.07 513.19 226.38 478.14C216.44 458.44 202.19 439.35 198.4 417.25C197.1 409.68 197.15 402.1 198 394.5C203.04 349.31 243.23 329.35 284.5 327.29C353.3 323.85 410.11 366.38 463.1 404.41C481.41 417.54 498.4 432.47 516.09 446.43C534.84 461.22 553.31 476.51 571.47 492.02C630.44 542.4 690.77 591.22 748.56 642.93C784.45 675.04 820.12 707.32 855.62 739.89C864.78 748.3 873.59 757.43 883.27 765.24C887.49 768.65 890.82 772.23 896.5 771.93C899.78 767.8 898.31 762.25 897.26 757.43C894.52 744.82 890.11 732.27 885.14 720.38C865.02 672.23 841.02 625.86 814.64 580.83C785.45 530.99 753.79 482.41 719.97 435.56C698.19 405.4 675.56 375.88 653.64 345.84C604.35 278.31 550.87 213.49 496.88 149.66C467.75 115.22 437.95 81.32 406.97 48.53C399.23 40.34 391.23 32.15 383.96 23.55C380.93 19.97 377.5 16.85 378.5 11.99C384.14 9.57 391.47 16.17 395.97 19.52C409.17 29.36 422.53 38.94 435.67 48.88C492.48 91.84 544.44 140.51 595.65 189.84C632.69 225.5 667.42 263.5 702 301.49C755.78 360.55 807.44 421.17 855.41 485.12C882.64 521.4 907.46 559.33 932.04 597.44C954.73 632.62 976.28 668.88 995.36 706.16C1009.7 734.19 1022.17 762.91 1034.7 791.78C1042.14 808.92 1048.28 826.58 1054.31 844.26C1068.42 885.63 1079.84 928.16 1085.99 971.5C1088.07 986.08 1088.97 1000.79 1088.11 1015.5C1087.68 1022.87 1086.17 1031.67 1080.48 1036.99C1075.07 1042.04 1067.34 1041.98 1060.5 1040.99C1047.11 1039.04 1034.4 1034.16 1022.36 1028.16C1008.02 1021.03 994.77 1011.02 981.82 1001.66C949.09 978.02 918.96 951.58 889.23 924.32C852.2 890.37 816.7 854.75 779.96 820.53C768.07 809.45 756.72 797.74 744.72 786.8C700.57 746.58 656.53 706.31 612.08 666.43C583.83 641.08 555.58 615.36 526.17 591.34C510.4 578.46 495.22 564.88 479.33 552.13C457.3 534.43 435.15 516.96 412.71 499.8C401.19 490.98 389.5 481.87 376.97 474.51C371.33 471.19 365.64 467.16 359.28 465.31C342.82 460.52 340.47 473.03 342.43 486.21C345.74 508.6 355.88 535.5 365.47 556.04C372.04 570.14 378.16 584.43 385.25 598.27C400.61 628.3 417.4 657.65 435.12 686.35C453.59 716.26 474.73 744.48 493 774.5C502.71 790.47 512.36 807.27 517.03 825.5C519.47 835 518.94 845.91 511.7 853.2C504.15 860.8 492.63 862.09 482.5 861.09C462.27 859.09 441.06 844.35 425.16 832.36C379.15 797.64 331.68 765.33 281.23 737.31C247.8 718.75 214.17 700.82 177.79 688.63C151.03 679.65 122.95 672.39 94.5 672.92C81.55 673.16 65.3 676.68 59.41 689.84C55.6 698.36 56.79 707.82 58.74 716.61C62.27 732.55 69.49 747.55 76.17 762.35C79.29 769.27 85.55 777.86 84.87 785.5Z" class="vf-tinta-marcador" data-cor-original="#ec0c02" fill="#ec0c02" fill-rule="evenodd" stroke="#ec0c02" stroke-width="0.25" stroke-linejoin="round"/>	
+</svg>
+            Variável
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- painel "Borracha" - mesmo padrão do painel Caneta, só aparece ao
+    selecionar a borracha, fecha ao tocar fora -->
+    <div id="vf-painel-borracha" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:600;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
+      <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
+      <div style="text-align:center;font-weight:600;font-size:var(--fs-e);color:#111;margin-bottom:14px">Borracha</div>
+
+      <div>
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Modo</div>
+        <div style="display:flex;gap:8px">
+          <button id="vf-btn-borracha-total" onclick="selecionarModoBorrachaVF('total')" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-c)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1212 990" width="20" height="14">	
+<path d="M1178.77 1.45C1197.59 -0.57 1213.43 16.95 1210.66 35.36C1209.78 41.21 1207.8 47.04 1206.4 52.79C1202.72 67.9 1198.52 82.85 1194.44 97.86C1185.56 130.51 1176.01 163.39 1164.74 195.3C1155.88 220.37 1147.28 245.48 1137.81 270.34C1130.12 290.52 1121.22 310.22 1112.51 329.96C1097.98 362.86 1080.61 394.53 1061.51 424.99C1016.62 496.55 954.34 560.97 869.45 580.86C848.15 585.85 826.33 587.28 804.5 586.78C786.52 586.37 768.88 583.35 751.45 579.17C638.54 552.13 573.32 452.52 502.05 370.45C480.52 345.66 456.72 320.78 427.54 304.97C370.77 274.22 301.22 279.49 248.19 315.65C202.35 346.91 169.06 394.45 145.47 443.97C109.05 520.39 90.85 603.03 79.26 686.54C75.24 715.52 72.86 744.67 69.42 773.71C68.09 784.9 67.66 796.26 66.83 807.5C64.47 839.45 62.76 871.46 62.09 903.5C61.81 916.84 61.4 930.16 61.25 943.5C61.17 950.4 61.89 957.66 60.9 964.5C57.4 988.67 26.18 997.74 10.25 979.26C-0.18 967.16 3.8 937.09 4.19 921.5C5.43 872.39 7.67 823.45 11.88 774.5C14.95 738.81 18.97 703.26 24.46 667.87C28.79 639.93 33.69 612.06 40.01 584.5C44.85 563.43 49.93 542.36 56.24 521.68C92.38 403.08 159.53 268.47 289.88 234.46C311.29 228.87 333.86 226.63 355.96 227.5C373.84 228.21 391.82 230.67 409.08 235.48C485.11 256.67 530.35 311.93 578.68 369.82C599.75 395.07 620.68 420.29 643.39 444.1C679.37 481.82 722.66 515.7 774.73 526.61C794.31 530.72 814.68 530.8 834.5 528.9C851.11 527.32 867.97 523.39 883.36 516.83C933.04 495.64 969.83 456.27 1000.33 412.8C1052.01 339.14 1085.43 249.82 1113.44 164.89C1126.69 124.72 1137.14 83.47 1146.64 42.27C1150.89 23.81 1156.46 3.85 1178.77 1.45Z" fill="#232324" fill-rule="evenodd" stroke="#232324" stroke-width="0.25" stroke-linejoin="round"/>	
+</svg>
+            Total
+          </button>
+          <button id="vf-btn-borracha-parcial" onclick="selecionarModoBorrachaVF('parcial')" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-c)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1215 988" width="20" height="14">	
+<path d="M1178.71 2.33C1193.59 -0.86 1209.38 9.24 1212.02 24.5C1214.07 36.31 1211.42 49.67 1210.3 61.5C1208.29 82.65 1205.07 103.65 1201.13 124.51C1199.95 130.74 1199.37 137.24 1197.79 143.37C1194.48 156.23 1181.86 166.02 1168.5 165.25C1154.35 164.43 1144.39 153.26 1143.25 139.48C1142.81 134.11 1144.19 128.8 1144.88 123.5C1146.62 110.12 1148.94 96.84 1150.68 83.45C1152.28 71.18 1153.78 58.84 1154.77 46.5C1155.39 38.69 1155.08 30.12 1157.15 22.56C1159.91 12.5 1168.55 4.5 1178.71 2.33ZM1090.6 249.24C1110.56 244.76 1127.12 261.88 1124.8 281.48C1123.09 295.97 1116.14 313.8 1111.24 327.68C1100.85 357.1 1089.05 386.3 1074.41 413.88C1065.25 431.15 1054.39 451.11 1030.69 443.73C1017.13 439.51 1008.89 425.48 1011.3 411.58C1013.48 399.06 1025.7 380.22 1031.4 367.88C1043.78 341.05 1054.84 313.88 1064.44 285.92C1069.75 270.41 1071.47 253.54 1090.6 249.24ZM347.78 273.49C423.88 271.21 491.26 314.2 542.05 367.45C556.58 382.68 569.86 399.03 583.07 415.4C594.72 429.83 606.16 444.55 616.6 459.88C620.37 465.42 624.98 470.59 627.83 476.68C632.34 486.3 631.64 497.94 624.74 506.25C614.01 519.17 595.53 517.19 584.67 505.82C581.54 502.54 579.42 498.4 576.88 494.65C571.64 486.94 566.39 479.17 560.79 471.72C541.15 445.62 520.91 419.83 498.02 396.48C470.16 368.05 436.05 340.68 397.2 329.4C385.93 326.13 374.24 323.64 362.5 323.14C299.11 320.41 245.54 358.36 206.66 405.17C178.09 439.56 156.06 480.22 138.7 521.24C102.4 607.04 85.11 699.23 72.53 791.1C67.06 831.04 63.48 871.32 60.27 911.5C58.95 928.08 58.99 945.01 56.91 961.5C54.75 978.56 35.93 988.9 20.22 982.33C-2.15 972.97 5.16 944.12 6.57 925.4C10.65 870.94 16.08 816.57 23.84 762.5C28.71 728.62 34.51 694.91 41.88 661.49C47.87 634.3 54.59 607.45 62.3 580.7C68.4 559.55 75.76 538.72 83.6 518.18C89.83 501.86 97.12 485.97 104.75 470.27C151.42 374.27 232.29 276.96 347.78 273.49ZM894.79 533.44C922.53 528.71 942.65 561.7 921.93 582.43C912.64 591.72 898.75 593.53 886.65 597.26C855.55 606.85 822.03 611.41 789.5 610.14C772.13 609.46 752.3 609.9 745.37 590.2C740.24 575.63 747.17 558.94 761.75 553.29C769.43 550.32 776.57 551.63 784.5 551.88C795.5 552.22 806.55 551.89 817.5 550.84C835.37 549.13 853.01 545.56 870.27 540.66C878.38 538.36 886.46 534.86 894.79 533.44Z" fill="#303030" fill-rule="evenodd" stroke="#303030" stroke-width="0.25" stroke-linejoin="round"/>	
+</svg>
+            Parcial
+          </button>
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Tamanho</div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px">
+          <input type="range" id="vf-slider-tamanho-borracha" min="10" max="40" step="1" value="28" oninput="mudarTamanhoBorrachaVF(this.value)" style="flex:1;min-width:0">
+          <span id="vf-preview-tamanho-borracha" style="width:28px;height:28px;border-radius:50%;background:#999;flex-shrink:0;display:block"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="vf-painel-destaque" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:600;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
+      <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
+      <div style="text-align:center;font-weight:600;font-size:var(--fs-e);color:#111;margin-bottom:14px">Marcador</div>
+
+      <div>
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Cor</div>
+        <div id="vf-grade-cores-destaque" style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;justify-items:center"></div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Espessura</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="vf-preview-espessura-destaque" style="width:8px;height:8px;border-radius:50%;background:#FFD84D;flex-shrink:0"></span>
+          <input type="range" id="vf-slider-espessura-destaque" min="8" max="30" step="1" value="20" oninput="mudarEspessuraSliderDestaqueVF(this.value)" style="flex:1;min-width:0">
+          <span id="vf-espessura-valor-destaque" style="font-size:var(--fs-d);color:#333;flex-shrink:0;white-space:nowrap">20 pt</span>
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Opacidade</div>
+        <div style="display:flex;gap:8px">
+          <button class="vf-opacidade-destaque" data-opacidade="0.25" onclick="selecionarOpacidadeDestaqueVF(0.25)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-b);color:#333">
+            <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0px"><span class="vf-bolinha-opacidade-preview" style="width:15px;height:15px;border-radius:50%;background:#FFD84D;opacity:0.25;display:block"></span></span>
+            25%
+          </button>
+          <button class="vf-opacidade-destaque" data-opacidade="0.45" onclick="selecionarOpacidadeDestaqueVF(0.45)" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-b);color:#333">
+            <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0px"><span class="vf-bolinha-opacidade-preview" style="width:15px;height:15px;border-radius:50%;background:#FFD84D;opacity:0.45;display:block"></span></span>
+            50%
+          </button>
+          <button class="vf-opacidade-destaque" data-opacidade="0.7" onclick="selecionarOpacidadeDestaqueVF(0.7)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-b);color:#333">
+            <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0px"><span class="vf-bolinha-opacidade-preview" style="width:15px;height:15px;border-radius:50%;background:#FFD84D;opacity:0.7;display:block"></span></span>
+            75%
+          </button>
+          <button class="vf-opacidade-destaque" data-opacidade="1" onclick="selecionarOpacidadeDestaqueVF(1)" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-b);color:#333">
+            <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0px"><span class="vf-bolinha-opacidade-preview" style="width:15px;height:15px;border-radius:50%;background:#FFD84D;opacity:1;display:block"></span></span>
+            100%
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="vf-painel-marcacao-texto" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px) + 56px);left:50%;transform:translateX(-50%);z-index:600;background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,0.2);padding:16px;width:280px;box-sizing:border-box">
+      <span class="vf-seta-painel" style="position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);left:140px;top:-6px;margin-left:-7px;z-index:-1;border-radius:3px"></span>
+      <div style="text-align:center;font-weight:600;font-size:var(--fs-e);color:#111;margin-bottom:14px">Cor</div>
+      <div id="vf-grade-cores-marcacao-texto" style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;justify-items:center"></div>
+    </div>
+
+<div id="wrapper-barra-adicionar" class="hidden">
+  <button id="barra-adicionar-questoes" onclick="trocarAba('adicionar')">
+    <span style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#B23A34"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg></span>
+    <span style="font-weight:700;font-size:var(--fs-e);color:#B23A34;text-transform:uppercase;letter-spacing:0.02em">Adicionar questões</span>
+  </button>
+</div>
+
+<!-- ============================================================ -->
+<!-- MODAIS -->
+<!-- ============================================================ -->
+
+<div class="modal-overlay hidden" id="modal-perfil" onclick="if(event.target===this) fecharModal('modal-perfil')">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Seu perfil</h3>
+    <div id="linha-versao-perfil" style="text-align:center;color:#bbb;font-size:var(--fs-a);margin-bottom:14px" class="hidden">versão do app: <span id="versao-app-exibida"></span></div>
+
+    <div style="text-align:center;margin-bottom:14px">
+      <div id="avatar-perfil-preview" style="width:140px;height:140px;border-radius:50%;background:#B23A34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:44px;margin:0 auto 16px;overflow:hidden">?</div>
+      <input type="file" id="upload-foto-perfil" accept="image/*" class="hidden" onchange="selecionarArquivoFoto()">
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button type="button" class="btn-secundario" onclick="document.getElementById('upload-foto-perfil').click()">Trocar foto</button>
+        <button type="button" class="btn-secundario" onclick="removerFotoPerfil()">Remover foto</button>
+      </div>
+
+      <div id="cropper-foto-overlay" class="hidden" style="margin-top:14px">
+        <div id="cropper-container" style="width:220px;height:220px;border-radius:50%;overflow:hidden;margin:0 auto 10px;position:relative;background:#eee;touch-action:none;cursor:grab">
+          <img id="cropper-img" style="position:absolute;left:50%;top:50%;pointer-events:none;user-select:none">
+        </div>
+        <input type="range" id="cropper-zoom" min="1" max="3" step="0.01" value="1" style="width:220px" oninput="atualizarCropTransform()">
+        <div style="display:flex;gap:8px;margin-top:10px;justify-content:center">
+          <button class="btn-secundario" onclick="cancelarCropFoto()">Cancelar</button>
+          <button class="btn-primario" style="width:auto;padding:10px 20px" onclick="confirmarCropFoto()">Usar essa foto</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:22px;font-weight:600;font-size:var(--fs-e)" id="perfil-nome-exibicao"></div>
+
+    <div style="border-top:0.5px solid #eee;margin:20px 0 14px"></div>
+
+    <div class="config-item">
+      <div class="config-label">Tamanho da fonte <span id="font-value">100%</span></div>
+      <div class="config-slider-row">
+        <span class="config-slider-a">A</span>
+        <input type="range" id="font-slider" min="85" max="130" value="100" oninput="aplicarFontScale(this.value)">
+        <span class="config-slider-a config-slider-a-big">A</span>
+      </div>
+      <div class="config-reset-btn" onclick="restaurarPadraoFonte()">Restaurar padrão</div>
+    </div>
+
+    <div style="border-top:0.5px solid #eee;margin:20px 0 14px"></div>
+
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-perfil')">Fechar</button>
+    <button class="btn-secundario" style="width:100%;color:#B00020;margin-top:10px" onclick="sair()">Sair da conta</button>
+  </div>
+</div>
+
+
+<div class="modal-overlay hidden" id="modal-info-wilson">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Wilson Score</h3>
+    <p>É a fórmula usada pra calcular a % de acerto e pra saber quais questões você mais erra. Diferente de uma % simples, ela leva em conta <em>quantas vezes</em> você já tentou aquela questão – errar 1 de 1 tentativa pesa menos do que errar 8 de 10, mesmo a % "crua" sendo parecida. Isso evita que uma questão respondida só uma vez pareça mais confiável do que realmente é.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-wilson')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-contagem-pscpp">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Contagem regressiva</h3>
+    <p>Quantos dias faltam até a data prevista do PSCPP: <strong>06/11/2027</strong>. É só uma referência pra ajudar a planejar o ritmo de estudo.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-contagem-pscpp')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-resolucao">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Como funciona "Marcar como resolvido"</h3>
+    <p id="texto-info-resolucao">Cada pessoa cadastrada vota individualmente que considera a discussão resolvida. Com a maioria dos votos, a discussão passa a aparecer como resolvida – mas quem ainda não votou pode reabrir ela a qualquer momento, mesmo com maioria já formada. Seu voto pode ser desfeito depois, se mudar de ideia.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-resolucao')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-anulacao-topico">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Como funciona "Anular questão"</h3>
+    <p>Remove a questão de cadernos futuros pra sempre. Quem já respondeu essa questão (de qualquer jeito, em qualquer caderno) passa a ter a resposta contada como acerto, mesmo quem errou – igual acontece numa anulação de prova de verdade. Essa ação não pode ser desfeita.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-anulacao-topico')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-questao">
+  <div class="modal-conteudo" style="max-width:420px">
+    <h3 class="config-title">Sobre essa questão</h3>
+    <p id="texto-info-questao">Carregando...</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-questao')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-fisher-yates">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Fisher-Yates</h3>
+    <p>É o algoritmo usado pra embaralhar a ordem das questões do seu caderno. Diferente de um embaralhamento "ingênuo" (tipo ordenar por número aleatório), o Fisher-Yates garante que cada ordem possível tem exatamente a mesma chance de acontecer – sem viés escondido favorecendo certas posições.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-fisher-yates')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-fisher-yates-vf">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Repetição espaçada</h3>
+    <p>A ordem não é sorteio: cada questão tem um "quanto tempo até valer a pena rever" calculado pra você, com base em quando você respondeu da última vez e se acertou ou errou. Questão que você errou volta mais cedo; questão que você domina bem se afasta mais. O sistema também leva em conta quanto tempo você levou pra responder – acerto rápido conta mais do que acerto arrastado. Nunca mostra a mesma questão errada de novo muito perto, mesmo respondendo rápido.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-fisher-yates-vf')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-anotacao-sessao-vf">
+  <div class="modal-conteudo" style="max-width:600px;max-height:90vh">
+    <h3 class="config-title">O que você escreveu</h3>
+    <img id="vf-img-anotacao-sessao" style="width:100%;border-radius:8px;border:0.5px solid #eee;background:#fff" alt="Anotação feita nessa questão">
+    <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-anotacao-sessao-vf')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-escolha-motivo-salvar-vf" onclick="if(event.target===this) vfFecharModalMotivoSalvarVF()">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Salvar esse Flash</h3>
+    <input type="hidden" id="vf-escolha-motivo-questao-id">
+    <button class="btn-secundario" style="width:100%;text-align:left;display:flex;align-items:center;gap:10px" onclick="vfSalvarFlashComMotivoVF('estudar')">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Estudar depois
+    </button>
+    <button class="btn-secundario" style="width:100%;text-align:left;display:flex;align-items:center;gap:10px;margin-top:16px" onclick="vfSalvarFlashComMotivoVF('corrigir')">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+      Corrigir depois
+    </button>
+  </div>
+</div>
+
+<div id="pagina-favoritos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
+    <h2 style="margin:0;font-size:var(--fs-f);font-weight:700;color:#111">Flashes favoritos</h2>
+    <button onclick="vfFecharFavoritosVF()" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div id="vf-lista-favoritos" style="flex:1;overflow-y:auto;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px"></div>
+</div>
+
+<div id="pagina-flash-salvos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
+    <h2 style="margin:0;font-size:var(--fs-f);font-weight:700;color:#111">Flashes salvos</h2>
+    <button onclick="vfFecharFlashSalvosVF()" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div id="vf-lista-flash-salvos" style="flex:1;overflow-y:auto;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px"></div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-envio-tracker">
+  <div class="modal-conteudo">
+    <div id="confirmacao-envio-tracker">
+      <h3 class="config-title">Enviar para o PSCPP Tracker?</h3>
+      <p id="texto-confirmacao-envio-tracker">Isso registra esse caderno (tempo, acertos e as questões) no PSCPP Tracker.</p>
+      <div style="display:flex;gap:8px">
+        <button class="btn-secundario" style="flex:1" onclick="naoEnviarTracker()">Não enviar</button>
+        <button class="btn-primario" style="flex:1" id="btn-confirmar-envio-tracker" onclick="confirmarEnvioTracker()">Enviar</button>
+      </div>
+    </div>
+    <div id="resultado-envio-tracker" class="hidden">
+      <h3 class="config-title">PSCPP Tracker</h3>
+      <p id="texto-resultado-envio-tracker"></p>
+      <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-envio-tracker')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-confirmar-exclusao-caderno">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Excluir caderno</h3>
+    <p id="texto-confirmar-exclusao-caderno"></p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-exclusao-caderno')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="confirmarExclusaoCaderno()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-confirmar-exclusao-questao">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Excluir questão</h3>
+    <p>Ao excluir essa questão, ela deixa de aparecer só pra você. Os outros usuários continuam vendo ela normalmente, sem nenhuma mudança.</p>
+    <textarea id="motivo-exclusao-questao" class="textarea-padrao hidden" placeholder="Motivo (opcional)" style="min-height:140px"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-exclusao-questao')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="confirmarExclusaoQuestao()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-confirmar-exclusao-vf">
+  <div class="modal-conteudo popup-formulario">
+    <h3 class="config-title">Excluir questão</h3>
+    <p>Ao excluir esse Flash, ele nunca mais aparece pra você.</p>
+    <textarea id="motivo-exclusao-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:140px"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModalExclusaoVF()">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="confirmarExclusaoVF()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-confirmar-finalizar-vf">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Finalizar sessão?</h3>
+    <p>Isso encerra a sessão de vez – o tempo é registrado e a fila para até você iniciar de novo.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-finalizar-vf')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="vfFinalizarSessaoFlashVF()">Finalizar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-tags-vf" onclick="if(event.target===this) vfFecharPopupTagsVF()">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Tags dessa afirmação</h3>
+    <div id="vf-tags-lista-atual" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px;align-items:stretch">
+      <input type="text" id="vf-tags-input-novo" class="filter-select" placeholder="Digite ou escolhe uma tag" list="vf-tags-datalist" style="flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfAdicionarTagVF();}">
+      <datalist id="vf-tags-datalist"></datalist>
+      <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfAdicionarTagVF()">+</button>
+    </div>
+    <p id="vf-tags-status" style="font-size:var(--fs-c);margin-top:6px"></p>
+    <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="vfFecharPopupTagsVF()">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-nota-questao" onclick="if(event.target===this) fecharModal('modal-nota-questao')">
+  <div class="modal-conteudo popup-formulario">
+    <h3 class="config-title">Suas notas nessa questão</h3>
+    <div id="lista-notas-questao"></div>
+    <textarea id="texto-nota-questao" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:80px"></textarea>
+    <button class="btn-primario" style="width:100%" onclick="adicionarNotaQuestao()">Adicionar nota</button>
+    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-nota-questao')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-nota-vf" onclick="if(event.target===this) fecharModalNotaVF()">
+  <div class="modal-conteudo popup-formulario">
+    <h3 class="config-title">Suas notas nessa questão</h3>
+    <div id="lista-notas-vf" style="transition:max-height 0.25s ease;overflow:hidden;max-height:0"></div>
+    <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:140px"></textarea>
+    <button class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
+    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModalNotaVF()">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-explicacao-vf">
+  <div class="modal-conteudo" style="max-width:700px;display:flex;flex-direction:column">
+    <h3 class="config-title" style="flex-shrink:0">Explicação</h3>
+    <div id="conteudo-explicacao-vf" style="flex:1;min-height:0;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-shrink:0">
+      <button id="vf-btn-copiar-explicacao" class="btn-secundario" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;position:relative" onclick="vfCopiarExplicacaoParaClaude(this)">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copiar pra IA
+      </button>
+      <button class="btn-primario" style="flex:1" onclick="vfFecharModalExplicacaoVF()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-editar-questao-admin" onclick="if(event.target===this) fecharModal('modal-editar-questao-admin')">
+  <div class="modal-conteudo popup-texto-longo" style="display:flex;flex-direction:column">
+    <h3 class="config-title">Editar questão (admin)</h3>
+    <p style="color:#888;font-size:var(--fs-b);margin-top:-14px;margin-bottom:16px">Isso aplica direto, sem passar por votação da comunidade.</p>
+    <div style="flex:1;overflow-y:auto;padding-right:8px">
+      <label style="font-size:var(--fs-b);color:#888">Enunciado</label>
+      <textarea id="admin-edicao-enunciado" class="filter-select" style="min-height:160px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Alternativa A</label>
+      <textarea id="admin-edicao-alt-a" class="filter-select" style="min-height:60px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Alternativa B</label>
+      <textarea id="admin-edicao-alt-b" class="filter-select" style="min-height:60px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Alternativa C</label>
+      <textarea id="admin-edicao-alt-c" class="filter-select" style="min-height:60px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Alternativa D</label>
+      <textarea id="admin-edicao-alt-d" class="filter-select" style="min-height:60px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Alternativa E</label>
+      <textarea id="admin-edicao-alt-e" class="filter-select" style="min-height:60px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Gabarito (uma letra, a-e)</label>
+      <input type="text" id="admin-edicao-gabarito" class="filter-select" maxlength="1">
+      <label style="font-size:var(--fs-b);color:#888">Explicação</label>
+      <textarea id="admin-edicao-explicacao" class="filter-select" style="min-height:160px"></textarea>
+      <label style="font-size:var(--fs-b);color:#888">Concurso de origem (deixa vazio se não for prova real)</label>
+      <input type="text" id="admin-edicao-concurso" class="filter-select" placeholder="Ex: PSCPP, EFOMM" list="lista-concursos-existentes">
+      <label style="font-size:var(--fs-b);color:#888">Ano da prova</label>
+      <input type="number" id="admin-edicao-ano" class="filter-select">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-shrink:0">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-editar-questao-admin')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="salvarEdicaoDiretaAdmin()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-explicacao-questao" onclick="if(event.target===this) fecharModal('modal-explicacao-questao')">
+  <div class="modal-conteudo" style="max-width:700px;display:flex;flex-direction:column">
+    <h3 class="config-title" style="flex-shrink:0">Explicação</h3>
+    <div id="conteudo-explicacao-questao" style="flex:1;min-height:0;overflow-y:auto;cursor:pointer" onclick="vfCliqueNaExplicacaoQuestVF(event)"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:14px;flex-shrink:0" onclick="fecharModal('modal-explicacao-questao')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-detalhe-caderno" onclick="if(event.target===this) fecharModal('modal-detalhe-caderno')">
+  <div class="modal-conteudo" id="modal-detalhe-caderno-conteudo"></div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-questao-detalhe" onclick="if(event.target===this) fecharModal('modal-questao-detalhe')">
+  <div class="modal-conteudo modal-conteudo-fluxo-topico popup-texto-longo" style="position:relative;display:flex;flex-direction:column;padding-right:12px">
+    <div id="modal-questao-detalhe-conteudo" style="flex:1;min-height:0;overflow-y:auto;padding-right:10px"></div>
+    <div style="border-top:0.5px solid #eee;margin:12px 0 0;flex-shrink:0"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:12px;flex-shrink:0" onclick="fecharModal('modal-questao-detalhe')">Fechar</button>
+  </div>
+</div>
+
+<div id="view-topico-detalhe" class="hidden">
+  <div class="topbar-voltar">
+    <button onclick="fecharViewTopico()" style="color:#444;font-size:var(--fs-d);cursor:pointer;background:none;border:none;padding:0">← <span id="texto-voltar-topico">Fórum</span></button>
+  </div>
+  <div id="conteudo-topico-detalhe" style="position:relative"></div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-revisao-rascunho" onclick="if(event.target===this) fecharModal('modal-revisao-rascunho')">
+  <div class="modal-conteudo" style="max-width:600px;display:flex;flex-direction:column">
+    <h3 class="config-title" style="flex-shrink:0">Revisar questões pendentes</h3>
+    <p style="color:#666;font-size:var(--fs-d);margin-bottom:14px;flex-shrink:0">Essas questões foram extraídas, mas o app não conseguiu identificar a bibliografia sozinho. Escolhe entre o que já existe – nada de digitar um livro novo.</p>
+    <div id="lista-rascunhos-pendentes" style="flex:1;min-height:0;overflow-y:auto"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:10px;flex-shrink:0" onclick="fecharModal('modal-revisao-rascunho')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-revisao-rascunho-vf" onclick="if(event.target===this) fecharModal('modal-revisao-rascunho-vf')">
+  <div class="modal-conteudo" style="max-width:600px;display:flex;flex-direction:column">
+    <h3 class="config-title" style="flex-shrink:0">Revisar afirmações V/F pendentes</h3>
+    <p style="color:#666;font-size:var(--fs-d);margin-bottom:14px;flex-shrink:0">Essas afirmações foram extraídas, mas o app não conseguiu identificar a bibliografia sozinho. Escolhe entre o que já existe – nada de digitar um livro novo.</p>
+    <div id="lista-rascunhos-pendentes-vf" style="flex:1;min-height:0;overflow-y:auto"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:10px;flex-shrink:0" onclick="fecharModal('modal-revisao-rascunho-vf')">Fechar</button>
+  </div>
+</div>
+
+
+<div class="modal-overlay hidden" id="modal-novo-topico" onclick="if(event.target===this) fecharModal('modal-novo-topico')">
+  <div class="modal-conteudo popup-formulario">
+    <h3 class="config-title" id="titulo-modal-novo-topico">Nova discussão</h3>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div class="filter-btn filter-btn-grande" id="toggle-tipo-geral" style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px" onclick="selecionarTipoNovoTopico('geral')">Abrir discussão</div>
+      <div class="filter-btn filter-btn-grande" id="toggle-tipo-erro" style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px" onclick="selecionarTipoNovoTopico('erro')">Reportar erro</div>
+    </div>
+    <input type="text" id="novo-topico-titulo" class="filter-select" placeholder="Resumo curto do que você quer discutir">
+    <textarea id="novo-topico-mensagem" class="textarea-padrao" placeholder="Escreve aqui o que você quer falar"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-novo-topico')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="confirmarNovoTopico()">Abrir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-confirmar-anulacao" onclick="if(event.target===this) fecharModal('modal-confirmar-anulacao')">
+  <div class="modal-conteudo modal-conteudo-fluxo-topico">
+    <h3 class="config-title">Anular questão</h3>
+    <p>Isso remove a questão de cadernos futuros pra sempre. Quem já respondeu essa questão (de qualquer jeito) passa a ter a resposta contada como acerto, mesmo quem errou – igual acontece numa anulação de prova de verdade.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-confirmar-anulacao')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="executarAnulacaoQuestao()">Anular</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-admin">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Painel admin</h3>
+    <div class="filter-btn filter-btn-grande active" style="padding:10px" onclick="trocarAbaAdmin('erros')">Erros técnicos</div>
+    <div class="filter-btn filter-btn-grande" style="padding:10px" onclick="trocarAbaAdmin('malformadas')">Questões malformadas</div>
+    <div class="filter-btn filter-btn-grande" style="padding:10px" onclick="trocarAbaAdmin('caderno')">Buscar caderno</div>
+    <div class="filter-btn filter-btn-grande" style="padding:10px" onclick="trocarAbaAdmin('convites')">Convites</div>
+    <div id="admin-conteudo" style="margin-top:14px"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-admin')">Fechar</button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SDK do Supabase -->
+<!-- ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+<script>
+/* ============================================================
+   ESTADO GLOBAL
+   ============================================================ */
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    storage: window.localStorage
+  }
+});
+// Muda esse valor toda vez que uma versão nova do index.html for entregue —
+// é o que permite ao app avisar "carreguei a versão nova" na primeira
+// abertura depois do deploy, sem precisar adivinhar se já propagou ou não
+const VERSAO_APP = '2026-07-25-453';
+
+function verificarVersaoNova(){
+  if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
+  const versaoVista = localStorage.getItem('pilotquest_versao_vista');
+  if(versaoVista === VERSAO_APP) return; // já viu essa versão, não mostra de novo
+  localStorage.setItem('pilotquest_versao_vista', VERSAO_APP);
+  if(versaoVista === null) return; // primeira vez usando o app de verdade (não é atualização, não precisa avisar)
+
+  const aviso = document.createElement('div');
+  aviso.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 16px);left:50%;transform:translateX(-50%);background:#1B5E20;color:#fff;padding:10px 14px 10px 18px;border-radius:10px;font-size:var(--fs-d);box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:9999;display:flex;align-items:center;gap:14px';
+  aviso.innerHTML = `<span>✓ Versão nova carregada (${VERSAO_APP})</span><button style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-weight:600;cursor:pointer;font-family:inherit" onclick="this.parentElement.remove()">OK</button>`;
+  document.body.appendChild(aviso);
+}
+
+let usuarioAtual = null;       // linha da tabela usuarios
+let modulosPscpp = [];
+let bibliografiaCache = [];
+let cadernoAtual = null;       // linha da tabela cadernos
+let questoesCaderno = [];      // array de questões do caderno atual
+let indiceQuestaoAtual = 0;
+let respostasPorQuestao = {};  // {questaoId: {letra, correta}} – pra colorir a navegação numerada
+// guarda o desenho de CADA questão do caderno atual, chaveado pelo id da
+// questão - sem isso, ir pra próxima e voltar apagava o que tinha sido
+// riscado, mesmo dentro do mesmo caderno ainda em aberto. Zerado sempre
+// que um caderno é carregado/aberto (não faz sentido herdar desenho de
+// outro caderno), preservado entre navegações dentro do mesmo caderno,
+// até ele ser finalizado ou excluído
+let vfDesenhosPorQuestaoQuestVF = new Map();
+
+/* ============================================================
+   CÓDIGO REAPROVEITADO DO APP PESSOAL (ver dossiê)
+   ============================================================ */
+function embaralharFisherYates(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function wilsonScoreLowerBound(k,n){
+  if(n===0) return 50;
+  const z=1.96;
+  const p=k/n;
+  const denom=1+(z*z)/n;
+  const centro=p+(z*z)/(2*n);
+  const margem=z*Math.sqrt((p*(1-p))/n+(z*z)/(4*n*n));
+  return Math.max(0,Math.round(((centro-margem)/denom)*100));
+}
+
+function saudacaoHora(){
+  const h = new Date().getHours();
+  if(h < 12) return 'Bom dia';
+  if(h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+// contagem regressiva de dias até a data prevista do PSCPP — atualizada
+// junto com a saudação, toda vez que a aba Início carrega
+function diasAteOPscpp(){
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  const dataPscpp = new Date(2027, 10, 6); // mês é 0-indexado: 10 = novembro
+  const diffMs = dataPscpp - hoje;
+  return Math.max(0, Math.ceil(diffMs / (1000*60*60*24)));
+}
+
+function primeiroNomeDe(nomeCompleto){
+  const partes = (nomeCompleto||'').trim().split(/\s+/);
+  return partes[0] || nomeCompleto;
+}
+
+function escapeHtml(texto){
+  if(!texto) return '';
+  return texto.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function formatQuestaoCompleta(texto){
+  if(!texto) return '';
+  const escaped=escapeHtml(texto);
+  const altMatch=escaped.match(/\s\([a-e]\)/);
+  const idxAlt=altMatch?altMatch.index:-1;
+  const zonaEnunciado=idxAlt===-1?escaped:escaped.slice(0,idxAlt);
+  const zonaAlternativas=idxAlt===-1?'':escaped.slice(idxAlt).trim();
+  const temRomanos=/\s\(?[IVXLCDM]{1,6}\)/.test(zonaEnunciado);
+  const padraoQuebra=temRomanos?/(?=\s(?:\(?[IVXLCDM]{1,6}\)|\(\s*\)))/:/(?=\s(?:\(\s*\)|[A-F]\.\s))/;
+  const partesEnun=zonaEnunciado.split(padraoQuebra).map(p=>p.trim()).filter(Boolean);
+  const partesAlt=zonaAlternativas?zonaAlternativas.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean):[];
+  return {enunciado:[partesEnun[0]||'', ...partesEnun.slice(1)].join('<br>'), alternativas:partesAlt};
+}
+
+// extrai {letra, texto} de cada alternativa a partir do campo "alternativas" da questão,
+// que já vem normalizado no formato "(a) texto. (b) texto. ..." (ver molde padrão de questão no dossiê)
+// Quebra o enunciado em linhas quando ele tem uma estrutura de lista interna.
+// Prioridade estrita e mutuamente exclusiva – só verifica a regra seguinte
+// se a anterior não se aplicou:
+//   1. Assertivas romanas (I) II) III)...)
+//   2. Parênteses vazios ( ) – questões de Certo/Errado ou ordenação
+//   3. Maiúsculas seguidas de ponto (A. B. C...) – questões de correlação
+function formatarEnunciado(texto){
+  if(!texto) return '(enunciado vazio – questão pode estar malformada)';
+  // colapsa qualquer quebra de linha/espaço interno pra um espaço só, ANTES
+  // de dividir em itens — sem isso, o texto respeita as quebras de linha
+  // originais do PDF (que quebravam numa largura de página estreita),
+  // fazendo o parágrafo parecer cortado antes da borda da tela, em vez de
+  // fluir naturalmente até o final e quebrar só onde o navegador decidir
+  let escapedCompleto = escapeHtml(texto).replace(/\s+/g, ' ').trim();
+  escapedCompleto = vfAplicarMarcacaoMatematicaVF(escapedCompleto); // gregas, operadores, sqrt, sobrescrito com chaves - mesmo padrão do V/F
+  escapedCompleto = escapedCompleto
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
+
+  // isola a seção "TRECHOS DA FONTE" ANTES de qualquer divisão em
+  // alternativas (a, b, c...) — sem isso, menções tipo "Alternativas a) e
+  // c) — Página 7..." dentro dessa seção são incorretamente tratadas como
+  // se fossem uma alternativa nova começando, quebrando a formatação. Essa
+  // seção volta a ser anexada no final, sem passar pelas regras de divisão
+  const marcadorFonte = escapedCompleto.match(/\s?TRECHOS DA FONTE\b/i);
+  const escaped0 = marcadorFonte ? escapedCompleto.slice(0, marcadorFonte.index).trim() : escapedCompleto;
+  // normaliza "Alternativa (a) —" e "(a) —" pro formato simples "a) —",
+  // que é o único formato que a lógica de divisão abaixo reconhece —
+  // fazer isso ANTES de qualquer divisão evita sobra de "Alternativa" ou
+  // "(" soltos no meio do texto
+  const escaped = escaped0
+    .replace(/\bAlternativas?\s+\(([a-f]\))/gi, '$1') // "Alternativa (a)" -> "a)"
+    .replace(/\bAlternativas?\s+([a-f]\))/gi, '$1')   // "Alternativa a)" -> "a)"
+    .replace(/\(([a-f]\))/g, '$1');                    // "(a)" solto -> "a)"
+  // dentro de "TRECHOS DA FONTE" pode ter várias citações diferentes
+  // (Alternativa(s)/Afirmativa(s)/Assertiva(s)/Item(ns) X — Página Y...) —
+  // cada uma vira seu próprio parágrafo, não fica tudo grudado num bloco só
+  const textoFonte = marcadorFonte ? escapedCompleto.slice(marcadorFonte.index).trim()
+    .split(/(?=\b(?:Alternativas?|Afirmativas?|Assertivas?|Itens?)\s+[a-zA-Z0-9])/i)
+    .map((p, i) => `<div class="enunciado-linha" style="margin-top:${i===0?28:12}px">${p.trim()}</div>`).join('') : '';
+
+  // monta uma "linha marcada" com o marcador (I., a), A., etc.) numa coluna
+  // fixa e o texto numa coluna flexível — assim, se o texto quebrar linha,
+  // a segunda linha fica alinhada embaixo do TEXTO, não embaixo do marcador
+  function linhaMarcada(parte, regexMarcador, marcadorForcado){
+    const m = parte.match(regexMarcador);
+    if(!m) return `<div class="enunciado-linha">${parte}</div>`;
+    const marcador = marcadorForcado || m[0].trim().replace(/\s*[-–—‒]\s*$/, '.'); // padroniza traço pro formato ponto (só afeta numerais romanos com traço, tipo "I —")
+    let resto = parte.slice(m[0].length).trim();
+    // várias frases marcam o início de uma seção nova dentro da
+    // explicação (fonte, texto original, análise, dica) — quando vêm
+    // grudadas no último item sem marcador próprio, cada uma precisa virar
+    // seu próprio parágrafo separado, não ficar junto do texto do item
+    const regexSecoes = /\s?(FONTE\s*\(|TEXTO\s+ORIGINAL|Análise\s*:|Correto\s*:|💡|Assinale a alternativa|Marque a alternativa|Indique a alternativa|Est[ãa]o\s+(?:CORRETAS|INCORRETAS)\s+as\s+assertivas|S[ãa]o\s+(?:CORRETAS|INCORRETAS)\s+as\s+assertivas)/gi;
+    const pontos = [...resto.matchAll(regexSecoes)].map(x => x.index + (x[0].length - x[1].length)); // pula o espaço opcional que às vezes vem antes, começando o corte exatamente na palavra-gatilho
+    let secoesSeparadas = '';
+    if(pontos.length){
+      const secoes = pontos.map((p, i) => resto.slice(p, pontos[i+1] ?? resto.length).trim());
+      // "Correto: ..." explica qual é a resposta certa quando a alternativa
+      // é a errada — usa a MESMA estrutura de coluna (marcador+texto) que
+      // os próprios "a) b) c)" da explicação usam, com marcador vazio —
+      // isso alinha automaticamente com onde o TEXTO das alternativas
+      // começa (não onde a letra começa), herdando o mesmo CSS, sem
+      // precisar adivinhar um valor de largura fixo. Só a palavra
+      // "Correto:" fica em negrito, resto do texto no peso normal
+      secoesSeparadas = secoes.map(s => {
+        const matchCorreto = s.match(/^(Correto\s*:)\s*/i);
+        if(matchCorreto){
+          const textoCorreto = s.slice(matchCorreto[0].length).trim();
+          return `<div class="linha-numerada"><span class="linha-marcador"></span><span class="linha-texto"><strong>${matchCorreto[1]}</strong> ${textoCorreto}</span></div>`;
+        }
+        return `<div class="enunciado-linha">${s}</div>`;
+      }).join('');
+      resto = resto.slice(0, pontos[0]).trim();
+    }
+    // se o texto da alternativa começa dizendo se ela é CORRETA ou
+    // INCORRETA, colore só a letra do marcador (verde/vermelho) — sem
+    // adicionar nenhum elemento novo, só usa a cor pra dar esse sinal. Checa
+    // "INCORRETA" primeiro, já que "CORRETA" é uma substring dela
+    // se o texto da alternativa começa dizendo se ela é CORRETA ou
+    // INCORRETA, colore a letra do marcador (verde/vermelho) e REMOVE essa
+    // palavra do texto — a cor já basta pra dar esse sinal, repetir em
+    // texto vira redundância. Testado contra 85 variações reais do banco
+    // (traço comum, en-dash, em-dash, com/sem ponto final, com/sem traço
+    // nenhum) — checa INCORRETA primeiro, já que "CORRETA" é substring dela
+    // mesma lógica pro par VERDADEIRA/FALSA, usado no formato de assertivas
+    // I./II./III. — ancorado no INÍCIO do texto (logo após o marcador) de
+    // propósito, já que "verdadeiro/verdadeira" também aparece como termo
+    // técnico náutico normal no MEIO do texto (Norte Verdadeiro, vetor
+    // verdadeiro, derrota verdadeira) — a âncora no início evita confundir
+    let corMarcador = '';
+    const matchIncorreta = resto.match(/^[\s\n\-–—]*(?:INCORRETA|FALSA)\b[\s.\-–—]*/i);
+    const matchCorreta = !matchIncorreta && resto.match(/^[\s\n\-–—]*(?:CORRETA|VERDADEIRA)\b[\s.\-–—]*/i);
+    // badge quadradinho arredondado, mesmo padrão visual do ícone de
+    // informação que já existe no app — largura mínima (não fixa) pra
+    // acomodar tanto marcadores curtos ("a)") quanto mais longos ("III.")
+    // sem espremer o texto
+    const estiloBadge = 'display:inline-block;min-width:24px;height:24px;line-height:24px;padding:0 4px;border-radius:8px;font-weight:700;text-align:center;box-sizing:border-box';
+    if(matchIncorreta){ corMarcador = ` style="${estiloBadge};background:#FCEBEB;color:#A32D2D"`; resto = resto.slice(matchIncorreta[0].length); }
+    else if(matchCorreta){ corMarcador = ` style="${estiloBadge};background:#EAF3DE;color:#3B6D11"`; resto = resto.slice(matchCorreta[0].length); }
+    return `<div class="linha-numerada"><span class="linha-marcador"${corMarcador}>${marcador}</span><span class="linha-texto">${resto}</span></div>${secoesSeparadas}`;
+  }
+
+  // 1. Maiúsculas com ponto ou parêntese (correlação) – ancorado no "A." ou
+  // "A)" literal, pra não confundir com uma letra maiúscula solta que
+  // aparece por acaso no meio de uma frase normal (ex: "a coluna B." não é
+  // item de lista). Checado ANTES do caso de numeral romano de propósito:
+  // "C", "D", "L", "I", "V", "X", "M" também são letras romanas válidas, e
+  // sem essa ordem, uma lista "A) B) C)" acaba sendo mal interpretada
+  // quando chega no "C)" (que bateria como numeral romano C=100 sozinho)
+  const anchorA = /(?<!\()\bA[).]\s/.test(escaped) && /(?<!\()\bB[).]\s/.test(escaped) ? escaped.match(/(?<!\()\bA[).]\s/) : null;
+  if(anchorA){
+    const idx = anchorA.index;
+    const antes = escaped.slice(0, idx).trim();
+    const zonaLista = escaped.slice(idx);
+    const partesLista = zonaLista.split(/(?=\b[A-F][).]\s)/).map(p=>p.trim()).filter(Boolean);
+    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[A-F][).]/))].join('') + textoFonte;
+  }
+
+  // 2. Assertivas romanas — aceita "I)", "I.", ou "I —"/"I -"/"I –" (traço,
+  // com ou sem espaço antes, dependendo da fonte do PDF) como marcador, e
+  // padroniza tudo pro formato ponto na hora de exibir, que é o padrão do
+  // resto do app. Ancorado no "I." (ou variante) literal, pra não confundir
+  // com letras físicas comuns em textos de hidrodinâmica que também são
+  // numerais romanos válidos sozinhos — D (drag), L (lift), M (moment), C
+  // (coeficiente), V (velocidade), X — que aparecem soltas no meio de
+  // frases normais seguidas de ponto
+  if(/\bI\s?[).\-–—‒]\s?/.test(escaped) && /\s\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/.test(escaped)){
+    const partes = escaped.split(/(?<!\se)(?<!,)(?<![Aa]penas)(?<![Ss]omente)(?<!\sSó)(?<![Gg]abarito:)(?<![Gg]abarito: )(?=\s\(?[IVXLCDM]{1,6}\s?[).\-–—‒])/).map(p=>p.trim()).filter(Boolean);
+    const normalizarMarcadorRomano = t => t.replace(/^(\(?[IVXLCDM]{1,6})\s?[-–—‒]\s*/, '$1. ');
+    return [normalizarMarcadorRomano(partes[0]||''), ...partes.slice(1).map(p=>linhaMarcada(p, /^\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/))].join('') + textoFonte;
+  }
+
+  // 3. Parênteses vazios (Certo/Errado, ordenação) — o texto de origem
+  // costuma perder o espaço interno na extração do PDF, ficando "()" em vez
+  // de "( )" — força sempre "( )" na exibição, independente da fonte
+  if(/\(\s*\)/.test(escaped)){
+    const partes = escaped.split(/(?=\s\(\s*\))/).map(p=>p.trim()).filter(Boolean);
+    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^\(\s*\)/, '(&nbsp;&nbsp;)'))].join('') + textoFonte;
+  }
+
+  // 4. Letras minúsculas com parêntese ("a) ... b) ... c) ...") ou
+  // "Alternativa (a) — ... Alternativa (b) — ...") — formato usado na
+  // análise de cada alternativa dentro da explicação. Exige pelo menos 2
+  // letras DIFERENTES (não só 2 ocorrências) — sem isso, uma linha tipo
+  // "Sequência correta: (V) (F) (V) (F) (V)" disparava esse caso à toa,
+  // porque "F" cai dentro do range a-f (repetido, mas ainda "1 match")
+  const todasLetras = [...escaped.matchAll(/\b([a-f])\)\s/gi)].map(m=>m[1].toLowerCase());
+  const letrasDistintas = new Set(todasLetras);
+  if(letrasDistintas.size >= 2){
+    const anchorMinuscula = escaped.match(/\b[a-f]\)\s/i);
+    const idx = anchorMinuscula.index;
+    const antes = escaped.slice(0, idx).trim();
+    const zonaLista = escaped.slice(idx);
+    const partesLista = zonaLista.split(/(?=\b[a-f]\)\s)/i).map(p=>p.trim()).filter(Boolean);
+    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^[a-f]\)/i))].join('') + textoFonte;
+  }
+
+  // 5. Números arábicos soltos com ponto ou parêntese ("1. ... 2. ...",
+  // "1) ... 2) ..." ou ordinais "1ª) ... 2ª) ...") — ancorado em "1)"/"1."
+  // seguido de "2)"/"2." (exige os dois em sequência, senão qualquer "1."
+  // solto no meio de uma frase normal ia disparar isso à toa)
+  if(/\b1[ªº]?[).]\s.*?\b2[ªº]?[).]\s/s.test(escaped)){
+    const anchor1 = escaped.match(/\b1[ªº]?[).]\s/);
+    const idx = anchor1.index;
+    const antes = escaped.slice(0, idx).trim();
+    const zonaLista = escaped.slice(idx);
+    const partesLista = zonaLista.split(/(?=\b\d{1,2}[ªº]?[).]\s)/).map(p=>p.trim()).filter(Boolean);
+    return [antes, ...partesLista.map(p=>linhaMarcada(p, /^\d{1,2}[ªº]?[).]/))].join('') + textoFonte;
+  }
+
+  // 6. Marcador de bullet ("•") — qualquer ocorrência já é sinal suficiente,
+  // símbolo bem específico, sem risco de confundir com texto normal
+  if(/•/.test(escaped)){
+    const partes = escaped.split(/(?=•)/).map(p=>p.trim()).filter(Boolean);
+    return [partes[0]||'', ...partes.slice(1).map(p=>linhaMarcada(p, /^•/))].join('') + textoFonte;
+  }
+
+  return escaped + textoFonte;
+}
+
+// detecta questões no formato "I. ... II. ... III. ..." dentro do
+// enunciado — usado pra permitir salvar cada item individualmente, já que
+// salvar só "alternativa b) Apenas I e III corretas" sozinho não diz nada
+// sem saber o que I e III realmente afirmavam
+function extrairItensNumerados(enunciado){
+  if(!enunciado) return null;
+  const regex = /(?:^|\n)\s*(I{1,3}|IV|V|VI{1,3}|IX|X)\.\s+/g;
+  const matches = [...enunciado.matchAll(regex)];
+  if(matches.length < 2) return null; // precisa de pelo menos 2 itens pra fazer sentido
+  const intro = enunciado.slice(0, matches[0].index).trim();
+  // uma frase de conclusão (tipo "Assinale a opção que apresenta...") às
+  // vezes vem GRUDADA no texto do último item, sem nenhum marcador
+  // separando os dois — detecta esse padrão e separa, pra não virar parte
+  // do conteúdo do item por engano
+  const regexConclusao = /\n\s*((?:Assinale|Marque|Indique)\s+a\s+(?:op[çc][ãa]o|alternativa)[^]*|Est[ãa]o\s+(?:CORRETAS|INCORRETAS)[^]*|S[ãa]o\s+(?:CORRETAS|INCORRETAS)[^]*)$/i;
+  const itens = [];
+  let conclusao = '';
+  for(let i=0; i<matches.length; i++){
+    const numeral = matches[i][1];
+    const inicioTexto = matches[i].index + matches[i][0].length;
+    const fimTexto = i+1 < matches.length ? matches[i+1].index : enunciado.length;
+    let texto = enunciado.slice(inicioTexto, fimTexto).trim();
+    const matchConclusao = texto.match(regexConclusao);
+    if(matchConclusao){
+      conclusao = matchConclusao[1].trim();
+      texto = texto.slice(0, matchConclusao.index).trim();
+    }
+    itens.push({numeral, texto});
+  }
+  return {intro, itens, conclusao};
+}
+
+function extrairAlternativas(alternativasTexto){
+  if(!alternativasTexto) return [];
+  const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
+  const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
+  return partes.map(p=>{
+    const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
+    return m ? {letra:m[1], texto:m[2]} : {letra:'?', texto:p};
+  });
+}
+
+const modIconesCustomSvg={
+  'Legislação':(cor)=>`<svg viewBox="0 0 24 24" fill="${cor}"><path d="M22.951,11.259a.919.919,0,0,0-.057-.189c-.007-.014-.006-.03-.013-.044l-3.5-6.5a.913.913,0,0,0-.142-.187A.989.989,0,0,0,18.5,4H13V2a1,1,0,0,0-2,0V4H5.5a.989.989,0,0,0-.739.339.913.913,0,0,0-.142.187l-3.5,6.5c-.007.014-.006.03-.013.044a.91.91,0,0,0-.057.188.98.98,0,0,0-.04.2c0,.015-.009.028-.009.044a4.5,4.5,0,0,0,9,0c0-.016-.008-.029-.009-.044a.97.97,0,0,0-.04-.2.919.919,0,0,0-.057-.189c-.007-.014-.006-.03-.013-.044L7.174,6H11V18H8a1,1,0,0,0,0,2h8a1,1,0,0,0,0-2H13V6h3.826l-2.707,5.026c-.007.014-.006.03-.013.044a.91.91,0,0,0-.057.188.98.98,0,0,0-.04.2c0,.015-.009.028-.009.044a4.5,4.5,0,0,0,9,0c0-.016-.008-.029-.009-.044A.97.97,0,0,0,22.951,11.259ZM5.5,14a2.5,2.5,0,0,1-2.291-1.5H7.791A2.5,2.5,0,0,1,5.5,14Zm1.826-3.5H3.674L5.5,7.109ZM18.5,7.109,20.326,10.5H16.674ZM18.5,14a2.5,2.5,0,0,1-2.291-1.5h4.582A2.5,2.5,0,0,1,18.5,14ZM21,22a1,1,0,0,1-1,1H4a1,1,0,0,1,0-2H20A1,1,0,0,1,21,22Z"/></svg>`,
+  'Navegação em Águas Restritas':(cor)=>`<svg viewBox="0 0 512 512" fill="${cor}"><path d="M131.908,370.088c-0.145-0.712-0.356-1.414-0.634-2.081c-0.278-0.668-0.623-1.313-1.024-1.926c-0.412-0.601-0.868-1.18-1.391-1.692c-0.512-0.512-1.08-0.979-1.692-1.38c-0.601-0.401-1.247-0.746-1.914-1.024c-0.679-0.278-1.38-0.49-2.081-0.634c-1.436-0.289-2.916-0.289-4.352,0c-0.712,0.145-1.414,0.356-2.081,0.634c-0.668,0.278-1.325,0.623-1.926,1.024c-0.612,0.401-1.18,0.868-1.692,1.38c-0.512,0.512-0.979,1.091-1.38,1.692c-0.401,0.612-0.746,1.258-1.024,1.926c-0.278,0.668-0.49,1.369-0.634,2.081c-0.145,0.723-0.223,1.447-0.223,2.182c0,0.723,0.078,1.447,0.223,2.17c0.145,0.712,0.356,1.414,0.634,2.081s0.623,1.313,1.024,1.926c0.401,0.601,0.868,1.169,1.38,1.692c0.512,0.512,1.08,0.968,1.692,1.38c0.601,0.401,1.258,0.746,1.926,1.024c0.668,0.278,1.369,0.49,2.081,0.634c0.712,0.145,1.447,0.223,2.17,0.223c0.724,0,1.458-0.078,2.182-0.223c0.701-0.145,1.402-0.356,2.081-0.634c0.668-0.278,1.313-0.623,1.914-1.024c0.612-0.412,1.18-0.868,1.692-1.38c0.523-0.523,0.979-1.091,1.391-1.692c0.401-0.612,0.746-1.258,1.024-1.926s0.49-1.369,0.634-2.081c0.145-0.724,0.211-1.447,0.211-2.17C132.12,371.535,132.053,370.811,131.908,370.088z"/><path d="M437.02,74.983C391.533,29.498,331.113,2.951,266.889,0.233C206.056-2.349,146.835,16.604,99.116,53.698c-12.708-7.081-29.089-5.239-39.873,5.544c-10.784,10.784-12.625,27.166-5.544,39.874C16.604,146.835-2.343,206.053,0.232,266.89c2.718,64.225,29.264,124.645,74.749,170.13C123.333,485.372,187.621,512,256.001,512s132.666-26.628,181.019-74.98C485.371,388.669,512,324.381,512,256.001S485.37,123.335,437.02,74.983z M74.982,74.983c2.103-2.102,4.897-3.26,7.87-3.26c2.973,0,5.768,1.158,7.87,3.26c2.103,2.103,3.26,4.897,3.26,7.87c0,2.973-1.158,5.768-3.26,7.87s-4.897,3.26-7.87,3.26c-2.973,0-5.768-1.158-7.87-3.26s-3.26-4.897-3.26-7.87C71.722,79.881,72.879,77.086,74.982,74.983z M421.278,421.28c-91.135,91.136-239.42,91.136-330.555,0C6.851,337.407-1.182,206.854,70.436,113.846c3.976,1.586,8.195,2.383,12.416,2.383c8.55,0,17.102-3.255,23.611-9.764c9.722-9.724,12.181-23.999,7.382-36.028c90.083-69.366,215.382-64.011,299.38,12.599L381.661,114.6C348.044,84.754,303.862,66.786,256,66.786c-104.334,0-189.217,84.883-189.217,189.217c0,33.263,8.756,65.982,25.322,94.618c2.064,3.566,5.801,5.558,9.644,5.558c1.891,0,3.808-0.483,5.563-1.498c5.321-3.078,7.139-9.887,4.06-15.207c-14.609-25.253-22.33-54.117-22.33-83.471c0-92.059,74.896-166.956,166.956-166.956c41.768,0,80.358,15.506,109.896,41.318l-31.593,31.592c-21.24-17.715-48.547-28.389-78.303-28.389c-67.51,0-122.434,54.924-122.434,122.434s54.924,122.434,122.434,122.434s122.434-54.924,122.434-122.434c0-29.756-10.674-57.063-28.389-78.303l31.607-31.607c19.331,22.04,32.99,49.28,38.543,79.559c-11.494,5.281-19.5,16.896-19.5,30.353c0,13.457,8.006,25.071,19.5,30.353c-14.399,78.522-83.347,136.603-164.195,136.603c-38.381,0-74.462-12.661-104.342-36.613c-4.796-3.846-11.802-3.074-15.646,1.722c-3.844,4.796-3.074,11.802,1.722,15.646c33.389,26.765,75.389,41.506,118.266,41.506c92.329,0,170.977-66.847,186.465-156.891c14.37-3.726,25.012-16.807,25.012-32.326c0-15.519-10.643-28.598-25.012-32.326c-6.133-35.659-22.181-67.674-45.052-93.345l31.545-31.544C512.328,190.403,509.775,332.783,421.278,421.28z M248.131,263.873c2.174,2.174,5.022,3.26,7.87,3.26c2.848,0,5.698-1.086,7.87-3.26l22.257-22.257c2.09,4.359,3.263,9.238,3.263,14.386c0,18.412-14.979,33.391-33.391,33.391c-18.412,0-33.391-14.979-33.391-33.391c0-18.412,14.979-33.391,33.391-33.391c5.149,0,10.027,1.173,14.387,3.263l-22.257,22.257C243.784,252.478,243.784,259.525,248.131,263.873z M286.667,209.593c-8.8-5.835-19.341-9.244-30.668-9.244c-30.686,0-55.652,24.965-55.652,55.652c0,30.686,24.965,55.652,55.652,55.652s55.652-24.965,55.652-55.652c0-11.326-3.409-21.867-9.244-30.668l31.823-31.823c13.723,17.144,21.942,38.874,21.942,62.49c0,55.236-44.938,100.173-100.173,100.173s-100.174-44.938-100.174-100.173c0-55.236,44.938-100.174,100.174-100.174c23.616,0,45.346,8.22,62.49,21.942L286.667,209.593z M422.957,256.001c0-6.137,4.993-11.13,11.13-11.13c6.137,0,11.13,4.993,11.13,11.13c0,6.137-4.993,11.13-11.13,11.13C427.95,267.132,422.957,262.139,422.957,256.001z"/></svg>`,
+  'Comunicações':(cor)=>`<svg viewBox="0 0 24 24" fill="${cor}"><path d="M12 8a3 3 0 0 0-1 5.83 1 1 0 0 0 0 .17v6a1 1 0 0 0 2 0v-6a1 1 0 0 0 0-.17A3 3 0 0 0 12 8zm0 4a1 1 0 1 1 1-1 1 1 0 0 1-1 1z"/><path d="M3.5 11a6.87 6.87 0 0 1 2.64-5.23 1 1 0 1 0-1.28-1.54A8.84 8.84 0 0 0 1.5 11a8.84 8.84 0 0 0 3.36 6.77 1 1 0 1 0 1.28-1.54A6.87 6.87 0 0 1 3.5 11z"/><path d="M16.64 6.24a1 1 0 0 0-1.28 1.52A4.28 4.28 0 0 1 17 11a4.28 4.28 0 0 1-1.64 3.24A1 1 0 0 0 16 16a1 1 0 0 0 .64-.24A6.2 6.2 0 0 0 19 11a6.2 6.2 0 0 0-2.36-4.76z"/><path d="M8.76 6.36a1 1 0 0 0-1.4-.12A6.2 6.2 0 0 0 5 11a6.2 6.2 0 0 0 2.36 4.76 1 1 0 0 0 1.4-.12 1 1 0 0 0-.12-1.4A4.28 4.28 0 0 1 7 11a4.28 4.28 0 0 1 1.64-3.24 1 1 0 0 0 .12-1.4z"/><path d="M19.14 4.23a1 1 0 1 0-1.28 1.54A6.87 6.87 0 0 1 20.5 11a6.87 6.87 0 0 1-2.64 5.23 1 1 0 0 0 1.28 1.54A8.84 8.84 0 0 0 22.5 11a8.84 8.84 0 0 0-3.36-6.77z"/></svg>`,
+  'Arte Naval':(cor)=>`<svg viewBox="0 0 512 512" fill="${cor}"><path d="M363.323,169.047c2.548,3.133,4.977,6.37,7.244,9.726c12.355,18.325,20.414,39.688,22.814,62.813h-88.923c-1.008-3.385-2.348-6.629-4-9.674L363.323,169.047z M270.407,118.604c13.837,1.43,27.051,4.904,39.362,10.103c12.014,5.082,23.169,11.837,33.184,19.963l-62.872,62.865c-3.045-1.652-6.289-2.993-9.674-4V118.604z M128.708,202.231c5.081-12.022,11.844-23.177,19.97-33.184l62.865,62.865c-1.652,3.052-2.993,6.289-4,9.674l-88.938,0.008C120.041,227.749,123.5,214.542,128.708,202.231z M148.678,342.946c-2.549-3.133-4.978-6.37-7.244-9.726c-12.355-18.318-20.422-39.688-22.814-62.82l88.923,0.008c1,3.385,2.348,6.629,4,9.682L148.678,342.946z M241.593,393.396c-13.836-1.437-27.051-4.904-39.362-10.103c-12.015-5.089-23.17-11.844-33.184-19.97l62.872-62.865c3.037,1.66,6.289,3,9.674,4.007V393.396z M241.593,207.534c-3.385,1.007-6.63,2.348-9.674,4.007l-62.872-62.864c3.141-2.548,6.371-4.97,9.726-7.237c18.318-12.37,39.688-20.429,62.821-22.822V207.534z M256,270.17c-7.829,0-14.17-6.34-14.17-14.17c0-7.83,6.341-14.17,14.17-14.17c7.829,0,14.17,6.34,14.17,14.17C270.17,263.829,263.829,270.17,256,270.17z M333.22,370.56c-18.318,12.362-39.688,20.428-62.813,22.822v-88.916c3.385-1.007,6.629-2.348,9.674-4.007l62.872,62.865C339.812,365.863,336.583,368.293,333.22,370.56z M383.292,309.768c-5.081,12.022-11.836,23.17-19.97,33.184l-62.865-62.864c1.652-3.052,2.992-6.296,4-9.682h88.938C391.959,284.243,388.493,297.458,383.292,309.768z M485.334,232.808c-15.2,0-28.162,6.185-39.406,7.977c0,0-7.392,0.948-15.644,1.126c-1.511-18.993-6.059-37.169-13.185-53.984c-6.992-16.533-16.458-31.732-27.925-45.191c5.97-5.712,11.881-10.274,11.881-10.274c9.215-6.689,22.755-11.481,33.51-22.237c10.563-10.563,11.511-26.192,2.459-35.243c-9.066-9.059-24.696-8.111-35.244,2.46c-10.77,10.748-15.555,24.28-22.236,33.503c0,0-4.563,5.896-10.266,11.866c-4.948-4.208-10.118-8.148-15.511-11.792c-24.221-16.384-52.872-26.843-83.686-29.303c0.185-8.244,1.133-15.636,1.133-15.636c1.786-11.252,7.97-24.214,7.97-39.422C279.184,11.726,268.807,0,256,0c-12.807,0-23.185,11.726-23.185,26.658c0,15.207,6.186,28.17,7.97,39.422c0,0,0.948,7.392,1.133,15.636c-18.992,1.512-37.169,6.066-53.983,13.177c-16.533,6.992-31.74,16.466-45.199,27.933c-5.704-5.978-10.281-11.881-10.281-11.881c-6.682-9.215-11.466-22.755-22.229-33.503c-10.562-10.563-26.192-11.518-35.25-2.46c-9.052,9.052-8.096,24.68,2.459,35.243c10.762,10.756,24.296,15.548,33.51,22.237c0,0,5.896,4.562,11.858,10.266c-4.2,4.933-8.14,10.111-11.785,15.488c-16.377,24.236-26.843,52.887-29.303,83.694c-8.244-0.178-15.644-1.126-15.644-1.126c-11.244-1.785-24.199-7.977-39.406-7.977C11.733,232.808,0,243.193,0,256c0,12.807,11.726,23.177,26.666,23.177c15.207,0,28.162-6.177,39.406-7.97c0,0,7.393-0.942,15.644-1.126c1.518,18.992,6.066,37.169,13.185,53.984c6.992,16.533,16.459,31.74,27.918,45.191c-5.962,5.711-11.874,10.282-11.874,10.282c-9.215,6.688-22.748,11.481-33.51,22.236c-10.555,10.563-11.511,26.192-2.459,35.243c9.059,9.059,24.688,8.104,35.25-2.459c10.763-10.748,15.541-24.289,22.229-33.503c0,0,4.57-5.911,10.266-11.867c4.948,4.208,10.111,8.149,15.504,11.786c24.229,16.384,52.88,26.851,83.693,29.302c-0.185,8.245-1.133,15.644-1.133,15.644c-1.785,11.251-7.97,24.206-7.97,39.414C232.815,500.267,243.193,512,256,512c12.807,0,23.184-11.733,23.184-26.666c0-15.207-6.185-28.162-7.97-39.414c0,0-0.948-7.392-1.133-15.636c18.992-1.519,37.169-6.074,53.984-13.178c16.533-6.999,31.732-16.474,45.199-27.932c5.704,5.97,10.282,11.881,10.282,11.881c6.681,9.214,11.466,22.755,22.222,33.503c10.562,10.563,26.192,11.518,35.258,2.459c9.052-9.052,8.104-24.68-2.459-35.243c-10.756-10.755-24.296-15.548-33.51-22.236c0,0-5.896-4.563-11.866-10.266c4.207-4.941,8.148-10.111,11.792-15.496c16.385-24.236,26.844-52.888,29.303-83.694c8.252,0.185,15.644,1.126,15.644,1.126c11.244,1.792,24.206,7.97,39.406,7.97c14.933,0,26.666-10.37,26.666-23.177C512,243.193,500.267,232.808,485.334,232.808z"/></svg>`,
+  'Manobrabilidade':(cor)=>`<svg viewBox="0 0 24 24" fill="${cor}"><path d="m12 13.123c-.621 0-1.125-.504-1.125-1.125 0-.621.504-1.125 1.125-1.125.621 0 1.125.504 1.125 1.125 0 .621-.504 1.125-1.125 1.125zm11.992-.54c-.117-2.122-1.644-3.856-3.653-4.288l-.031-.006c-.34-.048-.733-.075-1.132-.075-2.05 0-3.932.717-5.409 1.914l.016-.013c-.167-.156-.357-.292-.563-.4l-.014-.007c1.625-1.535 4.339-3.075 4.715-5.118.407-2.205-2.524-4.758-5.338-4.584-2.122.118-3.856 1.644-4.288 3.653l-.006.031c-.048.34-.075.733-.075 1.132 0 2.05.717 3.932 1.914 5.409l-.013-.016c-.156.167-.291.357-.4.563l-.007.014c-1.536-1.625-3.075-4.339-5.119-4.716-2.205-.406-4.758 2.524-4.584 5.338.118 2.122 1.644 3.856 3.654 4.288l.03.005c.34.048.732.075 1.131.075 2.05 0 3.932-.718 5.41-1.915l-.016.013c.167.156.357.291.563.4l.014.007c-1.625 1.536-4.34 3.075-4.716 5.119-.406 2.205 2.524 4.758 5.339 4.584 2.122-.117 3.856-1.644 4.288-3.653l.006-.031c.048-.34.075-.733.075-1.132 0-2.05-.718-3.932-1.915-5.409l.013.016c.156-.167.292-.357.4-.563l.007-.014c1.535 1.625 3.075 4.339 5.119 4.716 2.205.407 4.758-2.524 4.584-5.339z"/></svg>`,
+  'Meteorologia e Oceanografia':(cor)=>`<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 14.3529C22 17.4717 19.4416 20 16.2857 20H11M14.381 9.02721C14.9767 8.81911 15.6178 8.70588 16.2857 8.70588C16.9404 8.70588 17.5693 8.81468 18.1551 9.01498M7.11616 11.6089C6.8475 11.5567 6.56983 11.5294 6.28571 11.5294C3.91878 11.5294 2 13.4256 2 15.7647C2 18.1038 3.91878 20 6.28571 20H7M7.11616 11.6089C6.88706 10.9978 6.7619 10.3369 6.7619 9.64706C6.7619 6.52827 9.32028 4 12.4762 4C15.4159 4 17.8371 6.19371 18.1551 9.01498M7.11616 11.6089C7.68059 11.7184 8.20528 11.9374 8.66667 12.2426M18.1551 9.01498C18.8381 9.24853 19.4623 9.60648 20 10.0614" stroke="${cor}" stroke-width="1.5" stroke-linecap="round"/><path d="M11.0004 4C10.0882 2.78555 8.63582 2 7 2C4.23858 2 2 4.23858 2 7C2 9.05032 3.2341 10.8124 5 11.584" stroke="${cor}" stroke-width="1.5"/></svg>`,
+  'Conhecimentos Gerais':(cor)=>`<svg viewBox="0 0 32 32" fill="${cor}" xmlns="http://www.w3.org/2000/svg"><path d="M30.639 26.361l-6.211-23.183c-0.384-1.398-1.644-2.408-3.139-2.408-0.299 0-0.589 0.040-0.864 0.116l0.023-0.005-2.896 0.776c-0.23 0.065-0.429 0.145-0.618 0.243l0.018-0.008c-0.594-0.698-1.472-1.14-2.453-1.143h-2.999c-0.76 0.003-1.457 0.27-2.006 0.713l0.006-0.005c-0.543-0.438-1.24-0.705-1.999-0.708h-3.001c-1.794 0.002-3.248 1.456-3.25 3.25v24c0.002 1.794 1.456 3.248 3.25 3.25h3c0.76-0.003 1.457-0.269 2.006-0.712l-0.006 0.005c0.543 0.438 1.24 0.704 1.999 0.708h2.999c1.794-0.002 3.248-1.456 3.25-3.25v-13.053l3.717 13.873c0.382 1.398 1.641 2.408 3.136 2.408 0.3 0 0.59-0.041 0.866-0.117l-0.023 0.005 2.898-0.775c1.398-0.386 2.407-1.646 2.407-3.141 0-0.298-0.040-0.587-0.115-0.862l0.005 0.023zM19.026 10.061l4.346-1.165 3.494 13.042-4.345 1.164zM18.199 4.072l2.895-0.775c0.056-0.015 0.121-0.023 0.188-0.023 0.346 0 0.639 0.231 0.731 0.547l0.001 0.005 0.712 2.656-4.346 1.165-0.632-2.357v-0.848c0.094-0.179 0.254-0.312 0.446-0.37l0.005-0.001zM11.5 3.25h2.998c0.412 0.006 0.744 0.338 0.75 0.749v2.75l-4.498 0.001v-2.75c0.006-0.412 0.338-0.744 0.749-0.75h0.001zM8.25 22.75h-4.5v-13.5l4.5-0.001zM10.75 9.25l4.498-0.001v13.501h-4.498zM4.5 3.25h3c0.412 0.006 0.744 0.338 0.75 0.749v2.75l-4.5 0.001v-2.75c0.006-0.412 0.338-0.744 0.749-0.75h0.001zM7.5 28.75h-3c-0.412-0.006-0.744-0.338-0.75-0.749v-2.751h4.5v2.75c-0.006 0.412-0.338 0.744-0.749 0.75h-0.001zM14.498 28.75h-2.998c-0.412-0.006-0.744-0.338-0.75-0.749v-2.751h4.498v2.75c-0.006 0.412-0.338 0.744-0.749 0.75h-0.001zM27.693 27.928l-2.896 0.775c-0.057 0.015-0.122 0.024-0.189 0.024-0.139 0-0.269-0.037-0.381-0.102l0.004 0.002c-0.171-0.099-0.298-0.259-0.35-0.45l-0.001-0.005-0.711-2.655 4.345-1.164 0.712 2.657c0.015 0.056 0.023 0.12 0.023 0.186 0 0.347-0.232 0.639-0.549 0.73l-0.005 0.001z"/></svg>`,
+};
+const modClasseCss={
+  'Manobrabilidade':'mod-Manobrabilidade','Arte Naval':'mod-Arte-Naval',
+  'Navegação em Águas Restritas':'mod-Navegação-em-Águas-Restritas','Legislação':'mod-Legislação',
+  'Meteorologia e Oceanografia':'mod-Meteorologia-e-Oceanografia','Comunicações':'mod-Comunicações',
+  'Conhecimentos Gerais':'mod-Conhecimentos-Gerais',
+};
+const modCorTexto={
+  'Manobrabilidade':'#3C3489','Arte Naval':'#0C447C','Navegação em Águas Restritas':'#27500A',
+  'Legislação':'#633806','Meteorologia e Oceanografia':'#791F1F','Comunicações':'#444441','Conhecimentos Gerais':'#4A1B0C',
+};
+function tagModulo(nomeModulo){
+  const cls = modClasseCss[nomeModulo] || '';
+  const cor = modCorTexto[nomeModulo] || '#5F5E5A';
+  const svg = modIconesCustomSvg[nomeModulo] ? modIconesCustomSvg[nomeModulo](cor) : '';
+  return `<span class="mod-tag ${cls}" style="display:inline-flex;align-items:center;gap:5px">${svg?`<span class="icone-modulo-mini">${svg}</span>`:''}${escapeHtml(nomeModulo||'')}</span>`;
+}
+function iconeModuloPreto(nomeModulo){
+  const svg = modIconesCustomSvg[nomeModulo] ? modIconesCustomSvg[nomeModulo]('#111') : '';
+  return `<span style="display:inline-flex;align-items:center;gap:6px">${svg?`<span class="icone-modulo-mini">${svg}</span>`:''}${escapeHtml(nomeModulo||'')}</span>`;
+}
+
+/* ============================================================
+   AUTENTICAÇÃO
+   ============================================================ */
+window.addEventListener('DOMContentLoaded', async ()=>{
+  // Convite por código próprio (não o convite nativo do Supabase) – a URL
+  // vem com ?convite=<uuid>, sem hash nenhum
+  const params = new URLSearchParams(window.location.search);
+  const codigoConvite = params.get('convite');
+  if(codigoConvite){
+    await processarConvite(codigoConvite);
+    return;
+  }
+
+  // Se veio de link de convite, o Supabase te devolve com type=invite no hash da URL
+  if(window.location.hash.includes('type=invite') || window.location.hash.includes('type=recovery')){
+    document.getElementById('view-splash').classList.add('hidden');
+    document.getElementById('view-login').classList.remove('hidden');
+    document.getElementById('login-form-entrar').classList.add('hidden');
+    document.getElementById('login-form-definir-senha').classList.remove('hidden');
+
+    // se o nome já foi pré-definido na criação da conta (metadata do usuário
+    // no Supabase), não precisa perguntar de novo – só usa direto
+    const {data:{user}} = await sb.auth.getUser();
+    const nomePreDefinido = user?.user_metadata?.nome;
+    if(nomePreDefinido){
+      const campoNome = document.getElementById('novo-nome');
+      campoNome.value = nomePreDefinido;
+      campoNome.classList.add('hidden');
+      campoNome.required = false;
+      document.getElementById('saudacao-definir-senha').textContent = `Olá, ${nomePreDefinido}! Defina sua senha pra começar a usar o Pilotquest.`;
+    }
+    return;
+  }
+  const {data:{session}} = await sb.auth.getSession();
+  if(session){
+    await posLogin(undefined, undefined, session.user);
+  }else{
+    document.getElementById('view-splash').classList.add('hidden');
+    document.getElementById('view-login').classList.remove('hidden');
+  }
+});
+
+const SVG_OLHO_ABERTO = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const SVG_OLHO_FECHADO = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+function toggleSenhaVisivel(inputId, btn){
+  const input = document.getElementById(inputId);
+  const vaiMostrar = input.type === 'password';
+  input.type = vaiMostrar ? 'text' : 'password';
+  btn.innerHTML = vaiMostrar ? SVG_OLHO_ABERTO : SVG_OLHO_FECHADO;
+  btn.setAttribute('aria-label', vaiMostrar ? 'Esconder senha' : 'Mostrar senha');
+}
+
+async function entrar(){
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const {data, error} = await sb.auth.signInWithPassword({email, password:senha});
+  const erroEl = document.getElementById('login-erro');
+  if(error){
+    erroEl.textContent = 'Email ou senha incorretos.';
+    erroEl.classList.remove('hidden');
+    return;
+  }
+  erroEl.classList.add('hidden');
+  await posLogin(undefined, undefined, data.user);
+}
+
+let conviteAtual = null;
+
+async function processarConvite(id){
+  document.getElementById('view-splash').classList.add('hidden');
+  document.getElementById('view-login').classList.remove('hidden');
+  document.getElementById('login-form-entrar').classList.add('hidden');
+  document.getElementById('login-form-convite').classList.remove('hidden');
+
+  const {data: convite} = await sb.from('convites').select('*').eq('id', id).single();
+  if(!convite || convite.usado){
+    document.getElementById('saudacao-convite').textContent = 'Esse link de convite não é válido ou já foi usado. Pede um link novo pra quem te convidou.';
+    return; // campos-convite continua escondido, só aparece a mensagem
+  }
+  conviteAtual = convite;
+  document.getElementById('saudacao-convite').textContent = `Olá, ${convite.apelido}! Cadastre seu email e crie uma senha pra começar a usar o Pilotquest.`;
+  document.getElementById('campos-convite').classList.remove('hidden');
+}
+
+async function cadastrarComConvite(){
+  if(!conviteAtual) return;
+  const email = document.getElementById('convite-email').value.trim();
+  const s1 = document.getElementById('convite-senha').value;
+  const s2 = document.getElementById('convite-senha-confirmar').value;
+  const erroEl = document.getElementById('convite-erro');
+  const btnEl = document.getElementById('btn-cadastrar-convite');
+  erroEl.classList.add('hidden');
+
+  if(s1.length < 6){
+    erroEl.textContent = 'Senha precisa ter pelo menos 6 caracteres.';
+    erroEl.classList.remove('hidden');
+    return;
+  }
+  if(s1 !== s2){
+    erroEl.textContent = 'As senhas não são iguais.';
+    erroEl.classList.remove('hidden');
+    return;
+  }
+
+  // trava o botão pra não deixar clicar de novo enquanto processa, e sempre
+  // destrava no fim (sucesso ou erro) – nunca deve ficar "preso" sem explicação
+  btnEl.disabled = true;
+  btnEl.textContent = 'Cadastrando...';
+  try{
+    const {data, error} = await sb.auth.signUp({email, password: s1});
+    if(error){
+      if(error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('user already')){
+        erroEl.textContent = 'Esse email já tem uma conta criada (provavelmente de uma tentativa anterior que não finalizou). Volta pra tela de login e entra normal com esse email e a senha que você criou.';
+      }else{
+        erroEl.textContent = 'Erro ao cadastrar: ' + error.message;
+      }
+      erroEl.classList.remove('hidden');
+      return;
+    }
+    if(!data.session || !data.user){
+      // só acontece se "Confirm email" ainda estiver ativado no projeto –
+      // nesse caso o cadastro funcionou, mas precisa confirmar por email
+      erroEl.textContent = 'Cadastro feito! Confirma seu email antes de entrar (verifica sua caixa de entrada).';
+      erroEl.classList.remove('hidden');
+      return;
+    }
+
+    // marca o convite como usado, vinculado ao novo usuário
+    await sb.from('convites').update({usado:true, usuario_id: data.user.id, usado_em: new Date().toISOString()}).eq('id', conviteAtual.id);
+
+    await posLogin(conviteAtual.apelido, conviteAtual.nome_completo, data.user);
+  }catch(e){
+    erroEl.textContent = 'Erro inesperado ao cadastrar: ' + (e?.message || e);
+    erroEl.classList.remove('hidden');
+  }finally{
+    btnEl.disabled = false;
+    btnEl.textContent = 'Cadastrar';
+  }
+}
+
+async function definirSenha(){
+  const nome = document.getElementById('novo-nome').value.trim();
+  const s1 = document.getElementById('nova-senha').value;
+  const s2 = document.getElementById('nova-senha-confirmar').value;
+  const erroEl = document.getElementById('definir-senha-erro');
+  if(!nome){
+    erroEl.textContent = 'Digite seu nome.';
+    erroEl.classList.remove('hidden');
+    return;
+  }
+  if(s1.length < 6){
+    erroEl.textContent = 'Senha precisa ter pelo menos 6 caracteres.';
+    erroEl.classList.remove('hidden');
+    return;
+  }
+  if(s1 !== s2){
+    erroEl.textContent = 'As senhas não são iguais.';
+    erroEl.classList.remove('hidden');
+    return;
+  }
+  const {data, error} = await sb.auth.updateUser({password:s1});
+  if(error){
+    erroEl.textContent = 'Erro ao definir senha: ' + error.message;
+    erroEl.classList.remove('hidden');
+    return;
+  }
+  await posLogin(nome, undefined, data.user);
+}
+
+function atualizarAvatarUI(){
+  const iniciais = (usuarioAtual.nome||'?')[0].toUpperCase();
+  ['avatar-inicial','avatar-perfil-preview'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(usuarioAtual.foto_url){
+      el.innerHTML = `<img src="${usuarioAtual.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    }else{
+      el.textContent = iniciais;
+    }
+  });
+}
+
+function abrirModalPerfil(){
+  atualizarAvatarUI();
+  document.getElementById('versao-app-exibida').textContent = VERSAO_APP;
+  document.getElementById('linha-versao-perfil').classList.toggle('hidden', !usuarioAtual?.is_admin);
+  abrirModal('modal-perfil');
+}
+
+function selecionarArquivoFoto(){
+  const input = document.getElementById('upload-foto-perfil');
+  if(input.files.length) iniciarCropFoto(input.files[0]);
+}
+
+let cropState = null;
+
+function iniciarCropFoto(arquivo){
+  const leitor = new FileReader();
+  leitor.onload = (e)=>{
+    const img = document.getElementById('cropper-img');
+    img.onload = ()=>{
+      const C = 220;
+      const baseScale = Math.max(C / img.naturalWidth, C / img.naturalHeight);
+      cropState = {natW: img.naturalWidth, natH: img.naturalHeight, baseScale, scale: 1, tx: 0, ty: 0, C};
+      document.getElementById('cropper-zoom').value = 1;
+      atualizarCropTransform();
+      document.getElementById('cropper-foto-overlay').classList.remove('hidden');
+    };
+    img.src = e.target.result;
+  };
+  leitor.readAsDataURL(arquivo);
+}
+
+function clampCropOffset(){
+  const efetivo = cropState.baseScale * cropState.scale;
+  const dispW = cropState.natW * efetivo;
+  const dispH = cropState.natH * efetivo;
+  const maxX = Math.max(0, (dispW - cropState.C) / 2);
+  const maxY = Math.max(0, (dispH - cropState.C) / 2);
+  cropState.tx = Math.max(-maxX, Math.min(maxX, cropState.tx));
+  cropState.ty = Math.max(-maxY, Math.min(maxY, cropState.ty));
+}
+
+function atualizarCropTransform(){
+  if(!cropState) return;
+  cropState.scale = parseFloat(document.getElementById('cropper-zoom').value);
+  clampCropOffset();
+  const img = document.getElementById('cropper-img');
+  const efetivo = cropState.baseScale * cropState.scale;
+  img.style.width = cropState.natW + 'px';
+  img.style.height = cropState.natH + 'px';
+  img.style.transform = `translate(-50%,-50%) translate(${cropState.tx}px, ${cropState.ty}px) scale(${efetivo})`;
+}
+
+(function configurarArrastoCrop(){
+  let arrastando = false, inicioX = 0, inicioY = 0, txInicial = 0, tyInicial = 0;
+
+  function comecar(x, y){
+    if(!cropState) return;
+    arrastando = true;
+    inicioX = x; inicioY = y;
+    txInicial = cropState.tx; tyInicial = cropState.ty;
+  }
+  function mover(x, y){
+    if(!arrastando || !cropState) return;
+    cropState.tx = txInicial + (x - inicioX);
+    cropState.ty = tyInicial + (y - inicioY);
+    clampCropOffset();
+    atualizarCropTransform();
+  }
+  function soltar(){ arrastando = false; }
+
+  document.addEventListener('mousedown', e=>{ if(e.target.closest('#cropper-container')) comecar(e.clientX, e.clientY); });
+  window.addEventListener('mousemove', e=>mover(e.clientX, e.clientY));
+  window.addEventListener('mouseup', soltar);
+
+  document.addEventListener('touchstart', e=>{
+    if(e.target.closest('#cropper-container')){ const t=e.touches[0]; comecar(t.clientX, t.clientY); }
+  }, {passive:true});
+  document.addEventListener('touchmove', e=>{
+    if(arrastando){ const t=e.touches[0]; mover(t.clientX, t.clientY); }
+  }, {passive:true});
+  document.addEventListener('touchend', soltar);
+})();
+
+function cancelarCropFoto(){
+  document.getElementById('cropper-foto-overlay').classList.add('hidden');
+  document.getElementById('upload-foto-perfil').value = '';
+  cropState = null;
+}
+
+async function confirmarCropFoto(){
+  const O = 400; // resolução final salva
+  const canvas = document.createElement('canvas');
+  canvas.width = O; canvas.height = O;
+  const ctx = canvas.getContext('2d');
+  const img = document.getElementById('cropper-img');
+  const fator = O / cropState.C;
+  const efetivo = cropState.baseScale * cropState.scale * fator;
+  ctx.save();
+  ctx.translate(O/2 + cropState.tx*fator, O/2 + cropState.ty*fator);
+  ctx.scale(efetivo, efetivo);
+  ctx.drawImage(img, -cropState.natW/2, -cropState.natH/2);
+  ctx.restore();
+
+  canvas.toBlob(async (blob)=>{
+    await enviarFotoPerfilBlob(blob);
+    document.getElementById('cropper-foto-overlay').classList.add('hidden');
+    cropState = null;
+  }, 'image/jpeg', 0.9);
+}
+
+async function removerFotoPerfil(){
+  const caminho = `${usuarioAtual.id}/avatar.jpg`;
+  await sb.storage.from('avatars').remove([caminho]);
+  const {error} = await sb.from('usuarios').update({foto_url: null}).eq('id', usuarioAtual.id);
+  if(error){ alert('Erro ao remover foto: '+error.message); return; }
+  usuarioAtual.foto_url = null;
+  atualizarAvatarUI();
+}
+
+async function enviarFotoPerfilBlob(blob){
+  const caminho = `${usuarioAtual.id}/avatar.jpg`;
+
+  const {error: erroUpload} = await sb.storage.from('avatars').upload(caminho, blob, {upsert:true, contentType:'image/jpeg'});
+  if(erroUpload){ alert('Erro ao enviar foto: '+erroUpload.message); return; }
+
+  const {data: urlData} = sb.storage.from('avatars').getPublicUrl(caminho);
+  const fotoUrl = urlData.publicUrl + '?t=' + Date.now(); // evita cache antigo
+
+  const {error: erroUpdate} = await sb.from('usuarios').update({foto_url: fotoUrl}).eq('id', usuarioAtual.id);
+  if(erroUpdate){ alert('Erro ao salvar foto: '+erroUpdate.message); return; }
+
+  usuarioAtual.foto_url = fotoUrl;
+  atualizarAvatarUI();
+}
+
+async function sair(){
+  await sb.auth.signOut();
+  location.reload();
+}
+
+async function posLogin(nomeInformado, nomeCompletoInformado, usuarioAuthFornecido){
+  // se quem chamou já tem o usuário em mãos (do próprio getSession/signIn/
+  // signUp/updateUser), reaproveita em vez de fazer outra chamada de rede
+  // pra buscar a mesma informação de novo (getUser() é mais lento de
+  // propósito que getSession(), porque valida direto no servidor)
+  const user = usuarioAuthFornecido || (await sb.auth.getUser()).data.user;
+  if(!user) return;
+
+  let {data: perfil} = await sb.from('usuarios').select('*').eq('id', user.id).single();
+  if(!perfil){
+    // primeira vez desse usuário – cria a linha de perfil. Se Carlos já
+    // pré-definiu apelido e nome completo (metadata, ou vindo do convite
+    // por código), usa direto; senão cai no nome digitado ou no prefixo do email.
+    const nome = nomeInformado || user.user_metadata?.nome || user.email.split('@')[0];
+    const nomeCompleto = nomeCompletoInformado || user.user_metadata?.nome_completo || null;
+    const {data: novo, error: erroPerfil} = await sb.from('usuarios').insert({id:user.id, nome, nome_completo: nomeCompleto}).select().single();
+    if(erroPerfil || !novo){
+      throw new Error('Não consegui criar seu perfil: ' + (erroPerfil?.message || 'erro desconhecido'));
+    }
+    perfil = novo;
+  }
+  // a tabela usuarios não tem coluna de email — quem guarda isso é o
+  // sistema de autenticação (user.email), não o perfil customizado. Sem
+  // isso, souCarlos() e podeUsarIntegracaoTracker() nunca bateriam com
+  // ninguém, já que dependem desse campo pra identificar o Carlos
+  usuarioAtual = {...perfil, email: user.email};
+
+  document.getElementById('view-login').classList.add('hidden');
+
+  if(!estaComoWebapp()){
+    document.getElementById('view-splash').classList.add('hidden');
+    mostrarTelaInstalarApp();
+  }else if(!usuarioAtual.onboarding_concluido){
+    document.getElementById('view-splash').classList.add('hidden');
+    mostrarOnboarding();
+  }else{
+    await mostrarAppShell(); // esconde o splash só quando terminar de carregar tudo
+  }
+}
+
+/* ============================================================
+   ONBOARDING
+   ============================================================ */
+let passoOnboarding = 0;
+let swipeOnboardingIniciado = false;
+let botaoConcluirJaApareceu = false;
+function mostrarOnboarding(){
+  document.getElementById('view-onboarding').classList.remove('hidden');
+  renderizarDotsOnboarding();
+  atualizarBotaoConcluirOnboarding();
+  if(!swipeOnboardingIniciado){
+    iniciarSwipeOnboarding();
+    swipeOnboardingIniciado = true;
+  }
+}
+function renderizarDotsOnboarding(){
+  const total = document.querySelectorAll('.onboarding-step').length;
+  const dotsEl = document.getElementById('onboarding-dots');
+  dotsEl.innerHTML = '';
+  for(let i=0;i<total;i++){
+    dotsEl.innerHTML += `<span class="${i===passoOnboarding?'ativo':''}"></span>`;
+  }
+}
+function avancarOnboarding(){
+  const passos = document.querySelectorAll('.onboarding-step');
+  passos[passoOnboarding].classList.remove('ativo');
+  passoOnboarding = Math.min(passoOnboarding+1, passos.length-1);
+  passos[passoOnboarding].classList.add('ativo');
+  renderizarDotsOnboarding();
+  atualizarBotaoConcluirOnboarding();
+}
+function voltarOnboarding(){
+  const passos = document.querySelectorAll('.onboarding-step');
+  passos[passoOnboarding].classList.remove('ativo');
+  passoOnboarding = Math.max(passoOnboarding-1, 0);
+  passos[passoOnboarding].classList.add('ativo');
+  renderizarDotsOnboarding();
+  atualizarBotaoConcluirOnboarding();
+}
+function atualizarBotaoConcluirOnboarding(){
+  const passos = document.querySelectorAll('.onboarding-step');
+  const ultimo = passoOnboarding === passos.length-1;
+  if(ultimo) botaoConcluirJaApareceu = true;
+  document.getElementById('btn-onboarding-concluir').style.visibility = botaoConcluirJaApareceu ? 'visible' : 'hidden';
+}
+// Swipe de verdade no conteúdo do onboarding – as bolinhas só fazem sentido
+// se o gesto funcionar também, não só o botão do último passo
+function iniciarSwipeOnboarding(){
+  const el = document.getElementById('onboarding-conteudo');
+  let inicioX = null, inicioY = null;
+  el.addEventListener('touchstart', e=>{
+    inicioX = e.touches[0].clientX;
+    inicioY = e.touches[0].clientY;
+  }, {passive:true});
+  el.addEventListener('touchend', e=>{
+    if(inicioX === null) return;
+    const dx = e.changedTouches[0].clientX - inicioX;
+    const dy = e.changedTouches[0].clientY - inicioY;
+    inicioX = null;
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)){
+      if(dx < 0) avancarOnboarding(); else voltarOnboarding();
+    }
+  }, {passive:true});
+}
+function estaComoWebapp(){
+  return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+}
+function ehIpad(){
+  // iPadOS finge ser um Mac de mesa no user agent, de propósito – a forma
+  // confiável de detectar é combinar "parece Mac" + "tem suporte a toque"
+  // (um Mac de verdade nunca tem maxTouchPoints > 1)
+  return /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+function ehMobileOuTablet(){
+  return /iPhone|iPad|iPod|Android/.test(navigator.userAgent) || ehIpad();
+}
+function detectarInstrucaoInstalacao(elId){
+  const ua = navigator.userAgent;
+  const el = document.getElementById(elId);
+  // iOS: ícones no estilo contorno (mesma linguagem visual do resto do app / SF Symbols)
+  const SVG_COMPARTILHAR_IOS = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin:0 3px"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>';
+  const SVG_ADICIONAR_IOS = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin:0 3px"><rect x="3" y="3" width="18" height="18" rx="5"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+  // Android: ícones preenchidos (padrão Material Design, diferente do contorno usado no resto do app)
+  const SVG_TRES_PONTOS_ANDROID = '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" style="vertical-align:-4px;margin:0 3px"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';
+  const SVG_INSTALAR_ANDROID = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin:0 3px"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 7v7"/><path d="M9 11l3 3 3-3"/></svg>';
+
+  if(/iPhone|iPad|iPod/.test(ua) || ehIpad()){
+    el.innerHTML = `No Safari, toque no ícone de compartilhar${SVG_COMPARTILHAR_IOS}<br>e depois em ${SVG_ADICIONAR_IOS}"Adicionar à Tela de Início".`;
+  }else if(/Android/.test(ua)){
+    el.innerHTML = `No Chrome, toque nos três pontinhos${SVG_TRES_PONTOS_ANDROID}<br>no canto e depois em ${SVG_INSTALAR_ANDROID}"Instalar app" (ou "Adicionar à tela inicial").`;
+  }else{
+    el.innerHTML = 'No seu navegador de computador, procure o ícone de<br>instalar na barra de endereço, ou o menu de opções.';
+  }
+}
+function mostrarTelaInstalarApp(){
+  document.getElementById('view-instalar-app').classList.remove('hidden');
+  detectarInstrucaoInstalacao('instrucao-instalacao-navegador');
+  // no celular/tablet não tem escape: só sai daqui instalando de verdade.
+  // Só no computador existe a opção de seguir mesmo assim (e mesmo lá, na
+  // próxima vez que a página recarregar, pergunta de novo)
+  document.getElementById('btn-continuar-navegador').classList.toggle('hidden', ehMobileOuTablet());
+}
+function continuarNoNavegador(){
+  document.getElementById('view-instalar-app').classList.add('hidden');
+  if(!usuarioAtual.onboarding_concluido){
+    mostrarOnboarding();
+  }else{
+    mostrarAppShell();
+  }
+}
+async function concluirOnboarding(){
+  await sb.from('usuarios').update({onboarding_concluido:true}).eq('id', usuarioAtual.id);
+  usuarioAtual.onboarding_concluido = true;
+  document.getElementById('view-onboarding').classList.add('hidden');
+  mostrarAppShell();
+}
+
+/* ============================================================
+   APP SHELL / NAVEGAÇÃO
+   ============================================================ */
+async function mostrarAppShell(){
+  document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${primeiroNomeDe(usuarioAtual.nome)}!`;
+  document.getElementById('inicio-contagem-pscpp-texto').textContent = `Faltam ${diasAteOPscpp()} dias para o PSCPP`;
+  atualizarAvatarUI();
+  document.getElementById('perfil-nome-exibicao').textContent = usuarioAtual.nome_completo || usuarioAtual.nome;
+  if(usuarioAtual.is_admin){
+    document.getElementById('btn-abrir-admin').classList.remove('hidden');
+  }
+  if(souCarlos()){
+    document.getElementById('bloco-upload-marinha').classList.remove('hidden');
+    document.getElementById('nav-item-vf').classList.remove('hidden'); // Flash de volta, a pedido do Carlos
+    document.getElementById('motivo-exclusao-questao').classList.remove('hidden');
+    sb.rpc('concursos_disponiveis').then(({data})=>{
+      document.getElementById('lista-concursos-existentes').innerHTML = (data||[]).map(c=>`<option value="${escapeHtml(c.concurso)}">`).join('');
+    });
+  }
+  // todos esses carregamentos são independentes entre si – rodar em paralelo
+  // em vez de um atrás do outro é o que faz a tela abrir rápido, mesmo com
+  // várias notificações pra checar
+  // dispara o pré-carregamento das bibliotecas de PDF/planilha/gráfico por
+  // trás, sem esperar (por isso sem "await" aqui) — não atrasa a abertura
+  // do app, mas se a pessoa for usar upload ou o gráfico depois, é bem
+  // provável que já esteja pronto, sem espera extra
+  carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', () => typeof pdfjsLib !== 'undefined').catch(()=>{});
+  carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', () => typeof XLSX !== 'undefined').catch(()=>{});
+  carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js', () => typeof Chart !== 'undefined').catch(()=>{});
+
+  await Promise.all([
+    carregarBibliografia(),
+    atualizarNotificacoesForum(),
+    carregarTotalUsuarios()
+  ]);
+  // só agora, com tudo pronto de verdade, a tela aparece – nada de spinner
+  // girando ou notificação surgindo aos poucos depois que already apareceu
+  document.getElementById('view-splash').classList.add('hidden');
+  document.getElementById('app-shell').classList.add('ativo');
+  document.getElementById('wrapper-barra-adicionar').classList.remove('hidden'); // app abre sempre na aba Início
+  medirAlturaNav(); // só mede depois que o menu está visível de verdade, senão dá 0
+  verificarVersaoNova();
+  medirAlturaTopbar(); // idem, pro cabeçalho principal
+  document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança
+  document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
+  iniciarRealtimeForum();
+  try{ if(souCarlos()) vfRestaurarSessaoFlashVF(); }catch(e){ console.error('Erro ao restaurar sessão do Flash:', e); } // só depois do login confirmado - nunca antes
+}
+
+function medirAlturaNav(){
+  const nav = document.getElementById('bottom-nav');
+  if(!nav) return;
+  // a partir de 1100px o menu vira barra lateral (ocupa a tela toda de
+  // cima a baixo) – nesse caso não existe barra embaixo pra reservar
+  // espaço, senão a altura medida seria a tela inteira por engano
+  const alturaReal = window.innerWidth >= 1100 ? 0 : nav.offsetHeight;
+  document.documentElement.style.setProperty('--nav-height', alturaReal + 'px');
+}
+
+// ---- zoom de fonte (Configurações > Seu perfil) ----
+// zoom (não transform:scale) aplicado só na área de conteúdo - não estica
+// os ícones de navegação nem o cabeçalho, só o miolo da tela cresce/
+// encolhe. Guardado no localStorage (preferência do aparelho, não do
+// perfil - cada dispositivo pode ter seu próprio tamanho)
+let fontScaleRAF = null;
+function aplicarFontScale(v, salvar){
+  if(salvar === undefined) salvar = true;
+  const contentEl = document.getElementById('content');
+  if(contentEl) contentEl.style.zoom = (v/100);
+  const label = document.getElementById('font-value');
+  if(label) label.textContent = v + '%';
+  if(salvar) localStorage.setItem('pscpp_font_scale', v);
+  // agrupa a remedição da altura do nav num só frame - arrastar o slider
+  // dispara isso dezenas de vezes por segundo, sem agrupar travaria o
+  // movimento. medirAlturaNav já existe e faz a medição real
+  if(fontScaleRAF) cancelAnimationFrame(fontScaleRAF);
+  fontScaleRAF = requestAnimationFrame(medirAlturaNav);
+}
+function restaurarPadraoFonte(){
+  const slider = document.getElementById('font-slider');
+  if(slider) slider.value = 100;
+  aplicarFontScale(100);
+}
+(function initFontScale(){
+  const savedScale = localStorage.getItem('pscpp_font_scale');
+  if(savedScale){
+    const slider = document.getElementById('font-slider');
+    if(slider) slider.value = savedScale;
+  }
+  aplicarFontScale(savedScale || 100, false);
+  // a primeira medição pode acontecer antes das áreas de segurança do
+  // iPad estarem totalmente resolvidas pelo navegador - remede algumas
+  // vezes nos primeiros segundos pra garantir que pegou o valor certo
+  [100, 400, 1000, 2000].forEach(ms => setTimeout(medirAlturaNav, ms));
+})();
+// só reage quando a LARGURA muda - ignora resize que só mexe na altura
+// (a barra de endereço do Safari que aparece/some ao rolar dispara esse
+// evento sem a tela ter girado de verdade)
+let larguraAnteriorResizeFonte = window.innerWidth;
+window.addEventListener('resize', () => {
+  if(window.innerWidth === larguraAnteriorResizeFonte) return;
+  larguraAnteriorResizeFonte = window.innerWidth;
+  const scaleAtual = localStorage.getItem('pscpp_font_scale') || 100;
+  aplicarFontScale(scaleAtual, false);
+  [100, 400, 1000].forEach(ms => setTimeout(medirAlturaNav, ms));
+});
+function medirAlturaTopbar(){
+  const topbar = document.querySelector('#app-shell .topbar');
+  if(!topbar) return;
+  document.documentElement.style.setProperty('--topbar-height', topbar.offsetHeight + 'px');
+}
+// nav e topbar só mudam de altura de verdade quando a LARGURA muda (o
+// ponto de quebra de 1100px) — reagir a resize sem essa trava faria essas
+// 2 funções rodarem à toa toda vez que a barra de endereço do Safari
+// expande/recolhe durante o scroll no celular (isso não muda a largura,
+// só a altura visível), forçando reflow sem necessidade nenhuma
+let larguraAnteriorNavTopbar = window.innerWidth;
+window.addEventListener('resize', ()=>{
+  if(window.innerWidth === larguraAnteriorNavTopbar) return;
+  larguraAnteriorNavTopbar = window.innerWidth;
+  medirAlturaNav();
+  medirAlturaTopbar();
+  medirAlturaBarraFixaVF(); // largura mudando pode fazer a fileira de ações quebrar linha
+});
+
+// ---- pausar/retomar o cronômetro do V/F conforme a pessoa sai/volta pra
+// tela — cobre trocar de app no celular, bloquear tela, trocar de aba do
+// navegador, minimizar, e (desktop) clicar em outra janela sem esconder
+// a aba. Só age se a aba V/F está realmente visível no momento
+// trava o scroll de #content SEM mexer no overflow-y (auto -> hidden e
+// de volta) - achado real: trocar overflow no meio de um traço podia
+// remover/adicionar a reserva de espaço da barra de rolagem, mudando a
+// largura efetiva do conteúdo e disparando reflow do texto bem no meio
+// de uma frase, exatamente durante o desenho. Em vez disso, segura a
+// posição de scroll atual e força ela de volta se algo tentar mudar -
+// mesmo efeito prático (o scroll não anda), sem nunca tocar em overflow
+let vfScrollTopTravadoVF = null;
+function vfHandlerScrollTravadoVF(){
+  const content = document.getElementById('content');
+  if(content && vfScrollTopTravadoVF !== null) content.scrollTop = vfScrollTopTravadoVF;
+}
+function vfTravarScrollContentVF(){
+  const content = document.getElementById('content');
+  if(!content) return;
+  vfScrollTopTravadoVF = content.scrollTop;
+  content.addEventListener('scroll', vfHandlerScrollTravadoVF, {passive: true});
+}
+function vfLiberarScrollContentVF(){
+  const content = document.getElementById('content');
+  if(content) content.removeEventListener('scroll', vfHandlerScrollTravadoVF);
+  vfScrollTopTravadoVF = null;
+}
+
+function vfEstaVisivelAgora(){
+  const flash = document.getElementById('aba-vf');
+  if(flash && !flash.classList.contains('hidden')) return true;
+  const questResolucao = document.getElementById('quests-resolucao');
+  if(questResolucao && !questResolucao.classList.contains('hidden')) return true;
+  const rascunho = document.getElementById('aba-rascunho-livre-vf');
+  if(rascunho && !rascunho.classList.contains('hidden')) return true;
+  return false;
+}
+
+// a ferramenta de desenho (canvas, caneta, borracha, destaque) é a MESMA
+// nos dois lugares - qualquer melhoria nela vale pros dois. Mas a TELA
+// em volta é diferente (Flash vs Quest), e alguns comportamentos
+// precisam ser específicos de cada uma (ex: bloquear o scroll de
+// #content durante o desenho só faz sentido no Quest, onde o bug de
+// "a caneta rola a página" foi relatado - no Flash isso nunca era
+// necessário). Uma função única, chamada em todo lugar que precisa
+// dessa distinção, evita checagens repetidas e inconsistentes
+function vfTelaAtualVF(){
+  const flash = document.getElementById('aba-vf');
+  if(flash && !flash.classList.contains('hidden')) return 'flash';
+  const questResolucao = document.getElementById('quests-resolucao');
+  if(questResolucao && !questResolucao.classList.contains('hidden')) return 'quest';
+  const rascunho = document.getElementById('aba-rascunho-livre-vf');
+  if(rascunho && !rascunho.classList.contains('hidden')) return 'rascunho';
+  return null;
+}
+
+// mostra/esconde o canvas de desenho global - vive fora do #app-shell,
+// não herda .hidden de nenhuma aba automaticamente. Usado tanto na troca
+// de aba principal quanto observado via MutationObserver em
+// #quests-resolucao (ver mais abaixo), cobrindo os dois contextos onde
+// a caneta pode desenhar (Flash e resolução de caderno do Quest)
+function vfAtualizarVisibilidadeCanvasVF(){
+  const mostrar = vfEstaVisivelAgora();
+  const canvasDesenho = document.getElementById('vf-canvas-desenho');
+  const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
+  if(canvasDesenho) canvasDesenho.style.display = mostrar ? 'block' : 'none';
+  if(canvasPreview) canvasPreview.style.display = mostrar ? 'block' : 'none';
+  if(!mostrar) fecharBarraDesenhoVF();
+  vfAjustarPosicionamentoCanvasVF();
+  // configura o canvas de verdade (contexto 2d, dimensões) sempre que
+  // ele deve ficar visível - antes só acontecia ao entrar no Flash
+  // (entrarNoModoVF), então o Quest sozinho (sem visitar o Flash antes)
+  // nunca inicializava vfCtxDesenho, e a caneta não desenhava lá até
+  // passar pelo Flash pelo menos uma vez. Cada contexto precisa ser
+  // autossuficiente, não depender do outro ter sido visitado primeiro
+  if(mostrar && !vfDesenhandoAgora) inicializarCanvasDesenhoVF();
+}
+
+// achado real (relatado pelo Carlos): mover o canvas pra dentro de
+// #content (position:absolute, rolando com o scroll) resolveu o traço
+// "grudado na tela" no Quest, onde questões longas realmente precisam
+// disso - mas isso foi aplicado nos dois contextos por engano. No Flash,
+// cada questão é curta o bastante pra nunca precisar de scroll, e o
+// comportamento antigo (position:fixed, cobrindo a viewport inteira,
+// desenhando em qualquer lugar da tela sem depender de onde o conteúdo
+// termina) era o correto - só o Quest precisava da mudança
+function vfAjustarPosicionamentoCanvasVF(){
+  const canvasDesenho = document.getElementById('vf-canvas-desenho');
+  const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
+  const content = document.getElementById('content');
+  if(!canvasDesenho || !canvasPreview || !content) return;
+  const tela = vfTelaAtualVF();
+  if(tela === 'flash'){
+    // fixed, direto no body - cobre a viewport inteira, "grudado",
+    // desenha em qualquer lugar independente do scroll
+    if(canvasDesenho.style.position !== 'fixed'){
+      document.body.appendChild(canvasDesenho);
+      document.body.appendChild(canvasPreview);
+      canvasDesenho.style.position = 'fixed';
+      canvasPreview.style.position = 'fixed';
+    }
+  }else{
+    // absolute, dentro de #content - rola junto com o texto (necessário
+    // no Quest, onde a questão pode ser mais longa que a tela)
+    if(canvasDesenho.style.position !== 'absolute' || canvasDesenho.parentElement !== content){
+      content.appendChild(canvasDesenho);
+      content.appendChild(canvasPreview);
+      canvasDesenho.style.position = 'absolute';
+      canvasPreview.style.position = 'absolute';
+    }
+  }
+}
+(function vfObservarResolucaoQuestParaCanvasVF(){
+  const el = document.getElementById('quests-resolucao');
+  if(!el) return;
+  new MutationObserver(vfAtualizarVisibilidadeCanvasVF).observe(el, {attributes: true, attributeFilter: ['class']});
+})();
+
+// move os canvas de desenho pra dentro de #content - antes viviam fora
+// dele (position:fixed, cobrindo a viewport toda), o que fazia qualquer
+// traço já desenhado ficar "grudado na tela" em vez de rolar junto com o
+// texto quando o conteúdo precisa de scroll (achado real: numa questão
+// longa, um risco feito em cima de uma palavra ficava parado enquanto o
+// texto rolava por baixo). Como filhos de #content (que já tem
+// position:relative), com position:absolute e o tamanho do conteúdo
+// inteiro (não só da tela visível), passam a rolar naturalmente com o
+// scroll nativo do navegador - sem precisar sincronizar nada via JS
+(function vfMoverCanvasParaDentroDoContentVF(){
+  const content = document.getElementById('content');
+  const canvasDesenho = document.getElementById('vf-canvas-desenho');
+  const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
+  if(!content || !canvasDesenho || !canvasPreview) return;
+  content.appendChild(canvasDesenho);
+  content.appendChild(canvasPreview);
+  // observa mudanças de altura do conteúdo real (nova questão mais longa/
+  // curta, abrir/fechar filtros, etc) pra manter o canvas sempre do
+  // tamanho certo - debounced com requestAnimationFrame porque
+  // ResizeObserver pode disparar em rajada durante uma sequência de
+  // mudanças de layout. Só redimensiona se não tiver um traço em
+  // andamento (redimensionar no meio de um traço reseta o ponto de
+  // referência da suavização)
+  let vfResizeCanvasRAF = null;
+  const resizeObserverCanvasVF = new ResizeObserver(() => {
+    if(vfResizeCanvasRAF) cancelAnimationFrame(vfResizeCanvasRAF);
+    vfResizeCanvasRAF = requestAnimationFrame(() => {
+      if(vfEstaVisivelAgora() && !vfDesenhandoAgora) redimensionarCanvasDesenhoVF();
+    });
+  });
+  document.querySelectorAll('#content > .view-aba').forEach(aba => resizeObserverCanvasVF.observe(aba));
+})();
+
+// ponto de entrada ÚNICO pra "voltei pra tela" — visibilitychange, pageshow
+// e focus disparam quase juntos (às vezes os três), e cada um chamando
+// retomarOuDescartarPendenteVF+sincronizarPoolVF direto criava execuções
+// em paralelo: no caso de "pendente respondida em outro aparelho", cada
+// execução fazia seu próprio pop+avançar, empilhando uma segunda pendente
+// por cima de uma já respondida (achado real do Fable). A trava garante
+// que só uma execução roda por vez — as outras reaproveitam a mesma promessa
+let voltandoParaVF = null;
+function aoVoltarParaVF(){
+  if(voltandoParaVF) return voltandoParaVF;
+  voltandoParaVF = (async () => {
+    await retomarOuDescartarPendenteVF();
+    await sincronizarPoolVF();
+  })().finally(() => { voltandoParaVF = null; });
+  return voltandoParaVF;
+}
+
+document.addEventListener('visibilitychange', () => {
+  if(!vfEstaVisivelAgora()) return;
+  if(document.hidden) pausarTimerVF();
+  else aoVoltarParaVF();
+});
+// iOS Safari às vezes não dispara visibilitychange direito — pagehide/
+// pageshow cobrem esse caso específico, como reforço
+window.addEventListener('pagehide', () => { if(vfEstaVisivelAgora()) pausarTimerVF(); });
+window.addEventListener('pageshow', () => { if(vfEstaVisivelAgora()) aoVoltarParaVF(); });
+// desktop: clicar em outra janela sem esconder a aba (a aba continua
+// "visível" pro visibilitychange, mas a pessoa não está olhando pra ela)
+window.addEventListener('blur', () => { if(vfEstaVisivelAgora()) pausarTimerVF(); });
+window.addEventListener('focus', () => { if(vfEstaVisivelAgora()) aoVoltarParaVF(); });
+
+// Some navegadores mobile "flutuam" a barra fixa em cima do teclado quando um
+// campo de texto ganha foco. Solução: esconder a barra enquanto o teclado
+// estiver aberto, e mostrar de volta ao fechar. Restrito ao #app-shell (não
+// à tela de login), e com trava de segurança pra nunca ficar presa escondida.
+// Só conta como "abriu teclado" campo de texto de verdade – checkbox, radio
+// e select nunca chamam teclado no celular, então nunca podem esconder o menu.
+function ehCampoDeTeclado(el){
+  // esses campos de edição/anotação do Flash não devem esconder o menu -
+  // mesmo abrindo teclado de verdade, Carlos prefere o menu continuar
+  // visível enquanto edita esse conteúdo específico. Antes só 3 campos
+  // estavam aqui (enunciado/correção/explicação), motivo de exclusão e
+  // nota escondiam normalmente - causava a barra se comportar diferente
+  // dependendo de qual campo você estivesse editando
+  if(['vf-textarea-enunciado', 'vf-textarea-explicacao', 'vf-textarea-correcao', 'motivo-exclusao-vf', 'texto-nota-vf'].includes(el.id)) return false;
+  if(el.tagName === 'TEXTAREA') return true;
+  if(el.tagName !== 'INPUT') return false;
+  // lista do que REALMENTE abre teclado, em vez de excluir só
+  // checkbox/radio - "color" (o seletor de cor) e "range" (o slider de
+  // espessura) nunca chamam teclado nenhum, mas caíam na lista antiga por
+  // não serem nem checkbox nem radio, e isso escondia a barra de baixo
+  // sem necessidade nenhuma
+  const tiposComTeclado = ['text','password','email','number','tel','url','search','date','datetime-local','month','time','week'];
+  return tiposComTeclado.includes(el.type);
+}
+document.addEventListener('focusin', (e)=>{
+  if(ehCampoDeTeclado(e.target) && e.target.closest('#app-shell')){
+    const nav = document.getElementById('bottom-nav');
+    if(nav) nav.classList.add('teclado-aberto');
+    // mesma lógica pra barra fixa do V/F — hoje isso fica mascarado porque
+    // os únicos campos de texto do V/F vivem dentro de modal (que cobre a
+    // tela toda), mas não custa nada deixar coberto pra qualquer campo
+    // futuro que apareça direto na tela principal
+    const barraVF = document.getElementById('vf-barra-fixa');
+    if(barraVF && !barraVF.classList.contains('hidden')) barraVF.classList.add('teclado-aberto-vf');
+    setTimeout(()=>{ e.target.scrollIntoView({block:'center', behavior:'smooth'}); }, 300);
+  }
+});
+document.addEventListener('focusout', (e)=>{
+  if(ehCampoDeTeclado(e.target) && e.target.closest('#app-shell')){
+    const nav = document.getElementById('bottom-nav');
+    if(nav) nav.classList.remove('teclado-aberto');
+    const barraVF = document.getElementById('vf-barra-fixa');
+    if(barraVF) barraVF.classList.remove('teclado-aberto-vf');
+  }
+});
+
+// recarrega os dados da aba que estiver ativa no momento — usado pelo
+// puxar-pra-atualizar. Cada aba tem sua própria noção do que "atualizar"
+// significa; dentro de um caderno respondendo questões não faz sentido
+// nenhum, então não faz nada nesse caso
+async function atualizarAbaAtual(){
+  const abaAtiva = document.querySelector('#bottom-nav .nav-item.active')?.dataset.aba;
+  if(abaAtiva === 'inicio'){
+    await atualizarNotificacoesForum();
+  }else if(abaAtiva === 'quests'){
+    const resolucaoVisivel = !document.getElementById('quests-resolucao').classList.contains('hidden');
+    if(resolucaoVisivel) return; // no meio de um caderno, não atualiza
+    await carregarBibliografia();
+  }else if(abaAtiva === 'forum'){
+    await carregarForum();
+  }else if(abaAtiva === 'placar'){
+    await carregarMetricasPessoais(true);
+  }
+  // 'adicionar' é formulário de upload, não tem dado nenhum pra recarregar
+}
+
+function trocarAba(nome, pularContadorQuest){
+  const abaJaEstavaAtiva = !document.getElementById('aba-'+nome).classList.contains('hidden');
+  // pausa o cronômetro do V/F se estava nele e está saindo pra outra aba —
+  // "trocar de tela dentro do próprio app" é um dos 5 pontos de pausa
+  const vfEstavaAtiva = !document.getElementById('aba-vf').classList.contains('hidden');
+  if(vfEstavaAtiva && nome !== 'vf') pausarTimerVF();
+
+  // #view-topico-detalhe não tem a classe .view-aba (é uma tela flutuante
+  // própria, position:fixed com z-index alto) - sem fechar ela aqui,
+  // trocar de aba enquanto um tópico do fórum estava aberto deixava ela
+  // "grudada" por cima de qualquer outra aba visitada depois, misturando
+  // as duas telas visualmente
+  // idem pras páginas flutuantes de Favoritos/Salvos do Flash - mesmo
+  // padrão de risco (position:fixed com z-index alto, sem a classe
+  // .view-aba), mesma correção
+  fecharViewTopico();
+  document.getElementById('pagina-favoritos-vf')?.classList.add('hidden');
+  document.getElementById('pagina-flash-salvos-vf')?.classList.add('hidden');
+
+  document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
+  document.getElementById('aba-'+nome).classList.remove('hidden');
+  // canvas de desenho vive FORA do #app-shell agora (ver comentário lá) -
+  // não é mais filho de #aba-vf, então precisa ser mostrado/escondido
+  // manualmente aqui, não herda mais do .hidden da aba automaticamente
+  vfAtualizarVisibilidadeCanvasVF();
+  // só limpa se a aba mudou de verdade - achado real: tocar no balão do
+  // Flash pra "reabrir" chama trocarAba('vf') mesmo já estando nele
+  // (toque simples sem arrastar), e limpar incondicionalmente apagava
+  // o que a pessoa tinha acabado de escrever
+  if(!abaJaEstavaAtiva) limparCanvasDesenhoVF(); // troca de aba de verdade = contexto novo - sem isso, um traço feito no Flash continuava visível (só escondido) ao entrar no Quest, "vazando" de uma aba pra outra
+  document.querySelectorAll('#bottom-nav .nav-item').forEach(item=>item.classList.toggle('active', item.dataset.aba===nome));
+  document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança, nunca fica presa escondida
+  document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
+  document.getElementById('wrapper-barra-adicionar').classList.toggle('hidden', nome!=='inicio');
+  document.getElementById('content').scrollTop = 0;
+  if(nome==='forum'){ carregarForum(); }
+  if(nome==='placar') carregarMetricasPessoais();
+  if(nome==='quests' && !pularContadorQuest) contarDisponiveisAgora();
+  if(nome==='vf') entrarNoModoVF();
+  if(nome==='adicionar' && !extracaoEmAndamento){
+    document.getElementById('upload-status').innerHTML = '';
+    document.getElementById('upload-planilha-status').innerHTML = '';
+  }
+}
+
+function abrirModal(id){
+  // fecha qualquer outro modal que já esteja aberto antes de abrir este -
+  // sem essa garantia, se algum caminho do código chamar abrirModal()
+  // enquanto outro modal ainda está visível (por esquecer de fechar o
+  // anterior antes), os dois ficavam sobrepostos na mesma camada (mesmo
+  // z-index), misturando as duas telas visualmente
+  document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => { if(m.id !== id) m.classList.add('hidden'); });
+  document.getElementById(id).classList.remove('hidden');
+}
+function fecharModal(id){ document.getElementById(id).classList.add('hidden'); }
+// Discussão de uma questão pode abrir de 2 jeitos, dependendo de onde a
+// pessoa clicou:
+// - "Discutir" DENTRO de um caderno respondendo questões → modal grande,
+//   pra não perder o lugar onde estava no caderno
+// - Fórum, notificações do Início, Métricas → tela cheia normal, com voltar
+let modoTopicoModal = false;
+function containerTopicoAtual(){
+  return modoTopicoModal ? 'modal-questao-detalhe-conteudo' : 'conteudo-topico-detalhe';
+}
+function mostrarCarregandoTopico(){
+  const el = document.getElementById(containerTopicoAtual());
+  // tela cheia (fora do modal) já ocupa o espaço certo entre cabeçalho e
+  // menu — só precisa centralizar dentro dela. Dentro do popup pequeno,
+  // centraliza dentro da própria caixa
+  const altura = modoTopicoModal ? '200px' : '100%';
+  el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:${altura}"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
+}
+function abrirViewTopico(rotuloVoltar){
+  modoTopicoModal = false;
+  document.getElementById('texto-voltar-topico').textContent = rotuloVoltar || 'Fórum';
+  document.getElementById('view-topico-detalhe').classList.remove('hidden');
+}
+function fecharViewTopico(){ document.getElementById('view-topico-detalhe').classList.add('hidden'); }
+async function abrirDiscussaoDoCaderno(questaoId){
+  modoTopicoModal = true;
+  // só pode existir 1 tópico ativo por questão (regra do banco) – se tiver
+  // um, vai direto pra dentro dele, sem tela de lista no meio
+  const {data: topicoAtivo} = await sb.from('topicos').select('id').eq('questao_id', questaoId).eq('status','aberto').maybeSingle();
+  if(topicoAtivo){
+    modoTopicoModal = true;
+    mostrarCarregandoTopico();
+    abrirModal('modal-questao-detalhe');
+    await renderizarTopico(topicoAtivo.id);
+  }else{
+    // sem nenhuma discussão ativa – vai direto pro popup pequeno de criar
+    abrirModalNovoTopico(questaoId, 'geral');
+  }
+}
+function fecharTopicoAtual(){
+  if(modoTopicoModal) fecharModal('modal-questao-detalhe');
+  else fecharViewTopico();
+}
+
+/* ============================================================
+   INÍCIO – caderno em andamento
+   ============================================================ */
+async function verificarCadernoEmAndamento(){
+  const {data} = await sb.from('cadernos').select('id').eq('usuario_id', usuarioAtual.id).eq('status','em_andamento');
+  const total = (data||[]).length;
+  const cardEl = document.getElementById('caderno-em-andamento');
+  if(total > 0){
+    cardEl.classList.remove('hidden');
+    document.getElementById('caderno-em-andamento-info').textContent = total===1 ? '1 caderno esperando você' : `${total} cadernos esperando você`;
+  }else{
+    cardEl.classList.add('hidden');
+  }
+}
+
+/* ============================================================
+   NOTIFICAÇÕES DO ÍNCIO – mesmo padrão visual dos cards já
+   existentes (Cadernos em andamento / Novidades no Fórum)
+   ============================================================ */
+// Todas as notificações "de verdade" (não o Cadernos em andamento, que fica
+// sempre fixo em primeiro) se reordenam juntas por data – a mais recente
+// sempre vai pro topo, não importa o tipo dela
+// se já tem uma atualização rodando, uma chamada nova não dispara outra
+// leva de 8 consultas em paralelo — só espera a que já está em andamento
+// terminar, e reaproveita o mesmo resultado. Evita tela piscando ou uma
+// resposta mais lenta sobrescrever uma mais rápida com dado desatualizado
+let atualizacaoNotificacoesEmAndamento = null;
+async function atualizarNotificacoesOrdenadas(){
+  if(atualizacaoNotificacoesEmAndamento) return atualizacaoNotificacoesEmAndamento;
+  atualizacaoNotificacoesEmAndamento = (async () => {
+    const [itensAnulacao, itensDiscussao, itensCorrigida, itensPdfNovo, itensForum, itensPropostaNova, itensRascunho, itensRascunhoVF, itensFormatacao] = await Promise.all([
+      coletarNotificacaoAnulacao(),
+      coletarNotificacaoRespostaDiscussao(),
+      coletarNotificacaoQuestaoCorrigida(),
+      coletarNotificacaoPdfNovo(),
+      coletarNotificacaoForum(),
+      coletarNotificacaoPropostaNova(),
+      coletarNotificacaoRascunhoPendente(),
+      coletarNotificacaoRascunhoPendenteVF(),
+      coletarNotificacaoRelatoFormatacao()
+    ]);
+    const todos = [...itensAnulacao, ...itensDiscussao, ...itensCorrigida, ...itensPdfNovo, ...itensForum, ...itensPropostaNova, ...itensRascunho, ...itensRascunhoVF, ...itensFormatacao];
+    todos.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+    document.getElementById('container-notificacoes-ordenadas').innerHTML = todos.map(item=>item.html).join('');
+  })();
+  try{
+    await atualizacaoNotificacoesEmAndamento;
+  }finally{
+    atualizacaoNotificacoesEmAndamento = null;
+  }
+}
+
+/* 1. Anulação te afetou – respostas suas que foram tocadas por uma anulação
+   e que você ainda não "viu" */
+async function coletarNotificacaoAnulacao(){
+  const {data} = await sb.from('respostas').select('id, questoes(atualizado_em)').eq('usuario_id', usuarioAtual.id).eq('foi_anulada', true).eq('anulacao_vista', false);
+  const total = (data||[]).length;
+  if(!total) return [];
+  const timestamp = data.reduce((max,r)=>{
+    const t = r.questoes?.atualizado_em;
+    return (t && t > max) ? t : max;
+  }, data[0].questoes?.atualizado_em || new Date(0).toISOString());
+  const texto = total===1
+    ? '1 questão que você respondeu foi anulada – sua estatística foi atualizada'
+    : `${total} questões que você respondeu foram anuladas – sua estatística foi atualizada`;
+  const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarAnulacaoVista()">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg> Questão anulada</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">${texto}</div>
+      </button>
+    </div>`;
+  return [{timestamp, html}];
+}
+async function marcarAnulacaoVista(){
+  await sb.from('respostas').update({anulacao_vista:true}).eq('usuario_id', usuarioAtual.id).eq('foi_anulada', true).eq('anulacao_vista', false);
+  await atualizarNotificacoesOrdenadas();
+}
+
+/* 2. Alguém respondeu sua discussão – tópicos que você abriu, com
+   comentário de outra pessoa depois da última vez que você viu */
+function formatarListaNomes(nomes){
+  if(nomes.length === 0) return '';
+  if(nomes.length === 1) return nomes[0];
+  if(nomes.length === 2) return `${nomes[0]} e ${nomes[1]}`;
+  return `${nomes.slice(0,-1).join(', ')} e ${nomes[nomes.length-1]}`;
+}
+async function coletarNotificacaoRespostaDiscussao(){
+  const {data: meusTopicos} = await sb.from('topicos').select('id, titulo, criado_em, criador_visto_em').eq('criado_por', usuarioAtual.id);
+  if(!meusTopicos || !meusTopicos.length) return [];
+
+  const idsMeusTopicos = meusTopicos.map(t=>t.id);
+  const {data: comentariosNovos} = await sb.from('comentarios').select('topico_id, usuario_id, criado_em, usuarios(nome)').in('topico_id', idsMeusTopicos).neq('usuario_id', usuarioAtual.id);
+
+  const mapaTopico = {};
+  meusTopicos.forEach(t=>{ mapaTopico[t.id] = t; });
+
+  const relevantes = (comentariosNovos||[]).filter(c=>{
+    const t = mapaTopico[c.topico_id];
+    const marco = t.criador_visto_em || t.criado_em;
+    return c.criado_em > marco;
+  });
+
+  // 1 tópico = 1 notificação separada, igual já fazemos com "Questão
+  // corrigida" – cada card já sabe exatamente pra qual tópico levar
+  const topicosAfetados = [...new Set(relevantes.map(c=>c.topico_id))];
+  if(!topicosAfetados.length) return [];
+
+  return topicosAfetados.map(topicoId=>{
+    const comentariosDesseTopico = relevantes.filter(c=>c.topico_id===topicoId);
+    const nomes = [...new Set(comentariosDesseTopico.map(c=>c.usuarios?.nome).filter(Boolean))];
+    const verbo = nomes.length===1 ? 'respondeu' : 'responderam';
+    const texto = `${formatarListaNomes(nomes)} ${verbo} "${escapeHtml(mapaTopico[topicoId].titulo)}"`;
+    const timestamp = comentariosDesseTopico.reduce((max,c)=> c.criado_em > max ? c.criado_em : max, comentariosDesseTopico[0].criado_em);
+    const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirTopicoNotificado('${topicoId}')">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Responderam sua discussão</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">${texto}</div>
+      </button>
+    </div>`;
+    return {timestamp, html};
+  });
+}
+function abrirTopicoNotificado(topicoId){
+  abrirViewTopico('Início');
+  mostrarCarregandoTopico();
+  renderizarTopico(topicoId);
+}
+
+/* 3. Questão do seu caderno em andamento foi corrigida antes de você
+   responder ela */
+async function coletarNotificacaoQuestaoCorrigida(){
+  const {data: cadernosAndamento} = await sb.from('cadernos').select('id, criado_em, filtros_aplicados').eq('usuario_id', usuarioAtual.id).eq('status','em_andamento');
+  if(!cadernosAndamento || !cadernosAndamento.length){ questoesCorrigidasPorCaderno = {}; return []; }
+
+  const pendentesPorCaderno = {}; // cadernoId -> [questaoId, ...]
+  const timestampPorCaderno = {};
+  // antes isso rodava um caderno de cada vez (sequencial); agora todos os
+  // cadernos em andamento são checados ao mesmo tempo, em paralelo
+  await Promise.all(cadernosAndamento.map(async (c) => {
+    const ids = (c.filtros_aplicados && c.filtros_aplicados.questao_ids) || [];
+    if(!ids.length) return;
+    const {data: questoesEditadas} = await sb.from('questoes').select('id, atualizado_em').in('id', ids).gt('atualizado_em', c.criado_em);
+    if(!questoesEditadas || !questoesEditadas.length) return;
+    const idsEditadas = questoesEditadas.map(q=>q.id);
+    const {data: jaRespondidas} = await sb.from('respostas').select('questao_id').eq('caderno_id', c.id).in('questao_id', idsEditadas);
+    const idsRespondidas = new Set((jaRespondidas||[]).map(r=>r.questao_id));
+    const pendentesDesseCaderno = questoesEditadas.filter(q=>
+      !idsRespondidas.has(q.id) && localStorage.getItem(chaveCorrigidaVista(c.id, q.id)) !== 'true'
+    );
+    if(pendentesDesseCaderno.length){
+      pendentesPorCaderno[c.id] = pendentesDesseCaderno.map(q=>q.id);
+      timestampPorCaderno[c.id] = pendentesDesseCaderno.reduce((max,q)=> q.atualizado_em > max ? q.atualizado_em : max, pendentesDesseCaderno[0].atualizado_em);
+    }
+  }));
+  questoesCorrigidasPorCaderno = pendentesPorCaderno;
+
+  const idsCadernosComPendencia = Object.keys(pendentesPorCaderno);
+  if(!idsCadernosComPendencia.length) return [];
+
+  // 1 caderno = 1 notificação separada – nunca mistura questões de cadernos
+  // diferentes num texto só, até pra já deixar pronto pro dia que o clique
+  // for levar direto pro caderno específico (aí não teria como escolher
+  // "qual dos vários" se estivesse tudo junto)
+  return idsCadernosComPendencia.map(cadernoId=>{
+    const total = pendentesPorCaderno[cadernoId].length;
+    const texto = total===1
+      ? '1 questão foi corrigida em um caderno em andamento antes de você respondê-la'
+      : `${total} questões foram corrigidas em um caderno em andamento antes de você respondê-las`;
+    const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarCorrigidasVistas('${cadernoId}')">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Questão corrigida</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">${texto}</div>
+      </button>
+    </div>`;
+    return {timestamp: timestampPorCaderno[cadernoId], html};
+  });
+}
+let questoesCorrigidasPorCaderno = {};
+function chaveCorrigidaVista(cadernoId, questaoId){
+  return `corrigidaVista:${cadernoId}:${questaoId}`;
+}
+function marcarCorrigidasVistas(cadernoId){
+  (questoesCorrigidasPorCaderno[cadernoId]||[]).forEach(questaoId=>{
+    localStorage.setItem(chaveCorrigidaVista(cadernoId, questaoId), 'true');
+  });
+  atualizarNotificacoesOrdenadas();
+}
+
+/* 4. Novidades no Fórum – tópicos ativos (abertos, ou resolvidos que você
+   ainda não votou/concordou) */
+async function coletarNotificacaoForum(){
+  const [{data: todosTopicos}, {data: meusVotos}, {data: minhasVisualizacoes}] = await Promise.all([
+    sb.from('topicos').select('id, status, criado_em'),
+    sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id),
+    sb.from('topicos_vistos').select('topico_id, visto_em').eq('usuario_id', usuarioAtual.id)
+  ]);
+  const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
+  const mapaVisto = {};
+  (minhasVisualizacoes||[]).forEach(v=>{ mapaVisto[v.topico_id] = v.visto_em; });
+
+  // "ativos" é a mesma definição de sempre (usada só pra saber quais tópicos
+  // contam pra essa notificação e aparecem na lista do Fórum) – o que muda é
+  // que a BOLINHA agora conta só quem ainda não foi visualizado, não o total
+  const ativos = (todosTopicos||[]).filter(t => t.status==='aberto' || !idsVotados.has(t.id));
+
+  if(!ativos.length){
+    document.getElementById('badge-forum').classList.add('hidden');
+    return [];
+  }
+
+  const idsAtivos = ativos.map(t=>t.id);
+  const {data: comentariosAtivos} = await sb.from('comentarios').select('topico_id, criado_em').in('topico_id', idsAtivos);
+  const ultimaAtividadePorTopico = {};
+  ativos.forEach(t=>{ ultimaAtividadePorTopico[t.id] = t.criado_em; });
+  (comentariosAtivos||[]).forEach(c=>{
+    if(!ultimaAtividadePorTopico[c.topico_id] || c.criado_em > ultimaAtividadePorTopico[c.topico_id]){
+      ultimaAtividadePorTopico[c.topico_id] = c.criado_em;
+    }
+  });
+
+  // 3 motivos possíveis pra uma discussão precisar de atenção (nessa ordem
+  // de prioridade, cada tópico só entra em UM deles, sem contar em dobro):
+  // nunca viu / viu mas tem resposta nova / já viu e não tem nada novo, mas
+  // ainda não votou e a discussão continua aberta — esse último é o que
+  // faz a notificação persistir mesmo depois de "vista", sem precisar de
+  // ação manual nenhuma, até a pessoa realmente votar
+  const nuncaVistos = ativos.filter(t => !mapaVisto[t.id]);
+  const comAtividadeNova = ativos.filter(t => mapaVisto[t.id] && ultimaAtividadePorTopico[t.id] > mapaVisto[t.id]);
+  const aguardandoVoto = ativos.filter(t => mapaVisto[t.id] && ultimaAtividadePorTopico[t.id] <= mapaVisto[t.id] && t.status==='aberto' && !idsVotados.has(t.id));
+  const naoVistos = [...nuncaVistos, ...comAtividadeNova, ...aguardandoVoto];
+  const totalBadge = naoVistos.length;
+
+  const badgeEl = document.getElementById('badge-forum');
+  if(totalBadge > 0){
+    badgeEl.textContent = totalBadge > 9 ? '9+' : totalBadge;
+    badgeEl.classList.remove('hidden');
+  }else{
+    badgeEl.classList.add('hidden');
+  }
+
+  if(!totalBadge) return [];
+
+  let timestamp = ultimaAtividadePorTopico[naoVistos[0].id];
+  naoVistos.forEach(t=>{ if(ultimaAtividadePorTopico[t.id] > timestamp) timestamp = ultimaAtividadePorTopico[t.id]; });
+
+  // já tenho as 3 categorias calculadas ali em cima (nuncaVistos,
+  // comAtividadeNova, aguardandoVoto) — só monto o texto certo pra cada
+  // combinação que aparecer
+  const partesTexto = [];
+  if(nuncaVistos.length) partesTexto.push(`${nuncaVistos.length} que você ainda não viu`);
+  if(comAtividadeNova.length) partesTexto.push(`${comAtividadeNova.length} com resposta nova`);
+  if(aguardandoVoto.length) partesTexto.push(`${aguardandoVoto.length} aguardando seu voto`);
+  let texto;
+  if(partesTexto.length === 1){
+    if(nuncaVistos.length) texto = nuncaVistos.length===1 ? '1 discussão que você ainda não viu' : `${nuncaVistos.length} discussões que você ainda não viu`;
+    else if(comAtividadeNova.length) texto = comAtividadeNova.length===1 ? '1 discussão com resposta nova' : `${comAtividadeNova.length} discussões com resposta nova`;
+    else texto = aguardandoVoto.length===1 ? '1 discussão aguardando seu voto' : `${aguardandoVoto.length} discussões aguardando seu voto`;
+  }else{
+    texto = `${totalBadge} discussões (${partesTexto.join(', ')})`;
+  }
+  const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="trocarAba('forum')">
+        <div style="font-weight:600;font-size:var(--fs-d);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h4a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1v3l-3-3h-6a1 1 0 0 1-1-1v-2"/><path d="M14 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h1v3l4-3h6a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1z"/></svg> Novidades no Fórum</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">${texto}</div>
+      </button>
+    </div>`;
+  return [{timestamp, html}];
+}
+
+/* 7. PDF novo no banco – questões de outras pessoas desde a última vez
+   que você viu esse aviso, agrupadas por módulo */
+async function coletarNotificacaoPdfNovo(){
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('questoes').select('id, criado_em, modulo_pscpp, capitulo, bibliografia_id, autor_id', {count: 'exact'}).neq('autor_id', usuarioAtual.id).order('id'));
+  const total = (data||[]).length;
+  if(!total) return [];
+
+  // busca o nome só dos autores que realmente aparecem aqui (geralmente
+  // pouquíssimos), em vez de fazer join linha a linha — evita que essa
+  // consulta fique pesada só porque o total de questões novas cresceu
+  const idsAutores = [...new Set(data.map(q=>q.autor_id).filter(Boolean))];
+  const [{data: autoresInfo}, {data: vistosPorModulo}] = await Promise.all([
+    idsAutores.length ? sb.from('usuarios').select('id, nome').in('id', idsAutores) : Promise.resolve({data: []}),
+    sb.from('modulos_novidade_vista').select('modulo, visto_em').eq('usuario_id', usuarioAtual.id)
+  ]);
+  const mapaNomes = {};
+  (autoresInfo||[]).forEach(a => { mapaNomes[a.id] = a.nome; });
+  const mapaVisto = {};
+  (vistosPorModulo||[]).forEach(v => { mapaVisto[v.modulo] = v.visto_em; });
+  const mapaBibliografiaTitulo = {};
+  bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
+
+  // agrupa por módulo (rastreando também a atividade mais recente de cada
+  // um, pra comparar com a última vez que esse módulo específico foi visto)
+  // — dentro de cada módulo, agrupa por publicação+capítulo+autor (não só
+  // autor), porque um módulo pode ter mais de uma publicação, e "capítulo
+  // 1" sozinho não diz de qual livro — além disso, a mesma pessoa pode ter
+  // mandado capítulos diferentes, e isso merece linhas separadas
+  const porModulo = {};
+  data.forEach(q=>{
+    const modulo = q.modulo_pscpp || 'Sem módulo';
+    const nome = mapaNomes[q.autor_id] || 'Alguém';
+    const capitulo = q.capitulo ? String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '') : null;
+    const publicacao = q.bibliografia_id ? (mapaBibliografiaTitulo[q.bibliografia_id] || null) : null;
+    const chaveGrupo = publicacao + '|' + capitulo + '|' + nome;
+    if(!porModulo[modulo]) porModulo[modulo] = {grupos:{}, ultimaAtividade: q.criado_em};
+    if(!porModulo[modulo].grupos[chaveGrupo]) porModulo[modulo].grupos[chaveGrupo] = {capitulo, publicacao, nome, qtd:0};
+    porModulo[modulo].grupos[chaveGrupo].qtd++;
+    if(q.criado_em > porModulo[modulo].ultimaAtividade) porModulo[modulo].ultimaAtividade = q.criado_em;
+  });
+
+  // cada módulo vira um card independente, só se ainda não foi visto (ou
+  // teve questão nova depois da última vez que foi visto) — clicar num não
+  // afeta mais os outros, porque cada um tem seu próprio registro de "visto"
+  const itens = [];
+  Object.entries(porModulo).forEach(([modulo, info])=>{
+    const ultimoVisto = mapaVisto[modulo];
+    if(ultimoVisto && info.ultimaAtividade <= ultimoVisto) return;
+    // ordena por publicação primeiro (agrupa visualmente o mesmo livro),
+    // depois por número do capítulo dentro dela — capítulo 10 vem depois
+    // do 8, não entre o 1 e o 4 como ordenação alfabética faria. sem
+    // capítulo identificado vai pro final de cada publicação
+    const gruposOrdenados = Object.values(info.grupos).sort((a,b)=>{
+      const pubCompare = (a.publicacao||'').localeCompare(b.publicacao||'', 'pt');
+      if(pubCompare !== 0) return pubCompare;
+      const na = parseInt(a.capitulo, 10), nb = parseInt(b.capitulo, 10);
+      if(isNaN(na) && isNaN(nb)) return 0;
+      if(isNaN(na)) return 1;
+      if(isNaN(nb)) return -1;
+      return na - nb;
+    });
+    const linhas = gruposOrdenados.map(g=>{
+      const qtdFormatada = String(g.qtd).padStart(2, '0');
+      const qtdTexto = g.qtd===1 ? `${qtdFormatada} questão` : `${qtdFormatada} questões`;
+      const partes = [];
+      // publicações do tipo "Circ.1053 – Explanatory Notes..." mostram só a
+      // parte de antes do travessão aqui — o nome completo já é longo
+      // demais pra uma notificação, o código sozinho já identifica bem
+      const publicacaoResumida = g.publicacao ? g.publicacao.split(' – ')[0] : null;
+      if(publicacaoResumida) partes.push(escapeHtml(publicacaoResumida));
+      if(g.capitulo) partes.push(`Capítulo ${escapeHtml(g.capitulo)}`);
+      const origemTexto = partes.length ? ` de ${partes.join(' · ')}` : '';
+      return `<div>${qtdTexto}${origemTexto} adicionadas por ${escapeHtml(g.nome)}</div>`;
+    }).join('');
+    const idCard = 'notif-pdf-modulo-' + modulo.replace(/[^a-zA-Z0-9]/g, '');
+    const moduloEscapadoJs = modulo.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const html = `
+    <div id="${idCard}">
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="marcarModuloNovidadeVisto('${moduloEscapadoJs}', this)">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> Questões de ${escapeHtml(modulo)} novas no banco</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">${linhas}</div>
+      </button>
+    </div>`;
+    itens.push({timestamp: info.ultimaAtividade, html});
+    // marca como visto automaticamente já na coleta (mesmo princípio do
+    // Fórum: abrir/ver a notificação já conta como visto, não precisa de
+    // um clique específico) — usa o timestamp da ÚLTIMA atividade desse
+    // módulo (não "agora"), pra uma questão nova que chegue LOGO DEPOIS
+    // continuar sendo detectada como não vista da próxima vez. Dispara em
+    // paralelo, sem esperar (não atrasa a tela aparecer)
+    sb.from('modulos_novidade_vista').upsert({usuario_id: usuarioAtual.id, modulo, visto_em: info.ultimaAtividade}, {onConflict:'usuario_id,modulo'});
+  });
+  return itens;
+}
+
+/* 8. Proposta nova (edição ou anulação) que alguém abriu numa discussão –
+   some quando você vota (mesma lógica de "resolve por engajamento" do Fórum) */
+async function coletarNotificacaoPropostaNova(){
+  const {data} = await sb.from('propostas_edicao').select('*, topicos(titulo), usuarios(nome), questoes(modulo_pscpp)').eq('status','pendente').neq('criado_por', usuarioAtual.id);
+  if(!data || !data.length) return [];
+
+  const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id);
+  const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
+
+  const pendentes = data.filter(p => !idsVotados.has(p.topico_id));
+  return pendentes.map(p=>{
+    const acao = p.tipo==='anulacao' ? 'propôs anular' : 'propôs corrigir';
+    const modulo = p.questoes?.modulo_pscpp ? ` de ${escapeHtml(p.questoes.modulo_pscpp)}` : '';
+    const texto = `${escapeHtml(p.usuarios?.nome||'Alguém')} ${acao} uma questão${modulo}: "${escapeHtml(p.topicos?.titulo||'')}"`;
+    const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirTopicoNotificado('${p.topico_id}')">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Nova proposta no Fórum</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">${texto}</div>
+      </button>
+    </div>`;
+    return {timestamp: p.criado_em, html};
+  });
+}
+// remove o cartão da tela IMEDIATAMENTE ao clicar (sem esperar o banco
+// responder) — a gravação em si acontece depois, por trás, sem travar a
+// sensação de "clicou, sumiu na hora". Cada módulo tem seu próprio registro
+// de "visto", então clicar num não afeta os outros
+async function marcarModuloNovidadeVisto(modulo, btnEl){
+  const card = btnEl?.closest('[id^="notif-pdf-modulo-"]');
+  if(card) card.remove();
+  await sb.from('modulos_novidade_vista').upsert({usuario_id: usuarioAtual.id, modulo, visto_em: new Date().toISOString()}, {onConflict:'usuario_id,modulo'});
+}
+
+/* 9. Rascunhos pendentes de revisão (bibliografia não identificada num
+   upload de PDF) — admin vê de todo mundo, os outros só veem os próprios,
+   já que só o autor ou o admin pode resolver */
+async function coletarNotificacaoRascunhoPendente(){
+  let query = sb.from('questoes_rascunho').select('id, criado_em, nome_arquivo_origem, usuarios(nome)');
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  const {data} = await query;
+  const total = (data||[]).length;
+  if(!total) return [];
+  const timestamp = data.reduce((max,r)=> r.criado_em > max ? r.criado_em : max, data[0].criado_em);
+  const arquivos = [...new Set(data.map(r=>r.nome_arquivo_origem).filter(Boolean))];
+  const textoArquivos = arquivos.length ? ` (${arquivos.slice(0,2).map(a=>escapeHtml(a)).join(', ')}${arquivos.length>2?'...':''})` : '';
+  const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirRevisaoRascunho()">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B8860B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg> ${total} ${total>1?'questões':'questão'} esperando revisão</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">Bibliografia não identificada automaticamente${textoArquivos}</div>
+      </button>
+    </div>`;
+  return [{timestamp, html}];
+}
+
+// 9b. Mesma coisa, pro rascunho do V/F (questoes_vf_rascunho) - card
+// separado, já que os dois fluxos são independentes e podem ter
+// pendências ao mesmo tempo
+async function coletarNotificacaoRascunhoPendenteVF(){
+  let query = sb.from('questoes_vf_rascunho').select('id, criado_em, nome_arquivo_origem, usuarios(nome)');
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  const {data} = await query;
+  const total = (data||[]).length;
+  if(!total) return [];
+  const timestamp = data.reduce((max,r)=> r.criado_em > max ? r.criado_em : max, data[0].criado_em);
+  const arquivos = [...new Set(data.map(r=>r.nome_arquivo_origem).filter(Boolean))];
+  const textoArquivos = arquivos.length ? ` (${arquivos.slice(0,2).map(a=>escapeHtml(a)).join(', ')}${arquivos.length>2?'...':''})` : '';
+  const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirRevisaoRascunhoVF()">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B8860B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg> ${total} ${total>1?'afirmação(ões) V/F':'afirmação V/F'} esperando revisão</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">Bibliografia não identificada automaticamente${textoArquivos}</div>
+      </button>
+    </div>`;
+  return [{timestamp, html}];
+}
+
+/* 10. Relatos de problema de formatação — só o admin vê. Uma questão =
+   um card, mesmo que várias pessoas tenham reportado a mesma */
+async function coletarNotificacaoRelatoFormatacao(){
+  if(!usuarioAtual?.is_admin) return [];
+  const {data} = await sb.from('relatos_formatacao').select('id, questao_id, criado_em, usuarios(nome), questoes(enunciado)').eq('visto', false);
+  if(!data || !data.length) return [];
+
+  const porQuestao = {};
+  data.forEach(r => {
+    if(!porQuestao[r.questao_id]) porQuestao[r.questao_id] = [];
+    porQuestao[r.questao_id].push(r);
+  });
+
+  return Object.entries(porQuestao).map(([questaoId, relatos]) => {
+    const nomes = [...new Set(relatos.map(r=>r.usuarios?.nome).filter(Boolean))];
+    const verbo = nomes.length===1 ? 'reportou' : 'reportaram';
+    const timestamp = relatos.reduce((max,r)=> r.criado_em > max ? r.criado_em : max, relatos[0].criado_em);
+    const preview = (relatos[0].questoes?.enunciado || '').slice(0, 70);
+    const texto = `${formatarListaNomes(nomes)} ${verbo} problema de formatação: "${escapeHtml(preview)}${preview.length>=70?'...':''}"`;
+    const html = `
+    <div>
+      <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirQuestaoReportadaFormatacao('${questaoId}')">
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B8860B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg> Problema de formatação reportado</div>
+        <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">${texto}</div>
+      </button>
+    </div>`;
+    return {timestamp, html};
+  });
+}
+async function abrirQuestaoReportadaFormatacao(questaoId){
+  await sb.from('relatos_formatacao').update({visto:true}).eq('questao_id', questaoId);
+  abrirDetalheQuestao(questaoId, 'Início');
+  await atualizarNotificacoesOrdenadas();
+}
+
+function retomarCaderno(){
+  trocarAba('quests');
+  const conteudo = document.getElementById('lista-cadernos-andamento');
+  const chev = document.getElementById('chev-andamento');
+  if(conteudo && !conteudo.classList.contains('open')){
+    conteudo.classList.add('open');
+    chev.classList.add('open');
+  }
+  requestAnimationFrame(()=>{
+    conteudo.scrollIntoView({block:'start', behavior:'smooth'});
+    const totalPaginas = Math.ceil(totalCadernosAndamento / ITENS_POR_PAGINA_CADERNO);
+    initCarrosselCaderno('carrossel-andamento', totalPaginas);
+  });
+}
+
+/* ============================================================
+   GERAR QUESTS – filtros em cascata
+   ============================================================ */
+let modulosComQuestao = new Set();
+let publicacoesComQuestao = new Set();
+let tiposComQuestao = new Set();
+let temasCache = [];
+
+async function carregarBibliografia(){
+  const [{data}, {data: dadosQuestoes}, {data: dadosTemas}] = await Promise.all([
+    sb.from('bibliografia').select('*'),
+    buscarTudoPaginadoVF(() => sb.from('questoes').select('modulo_pscpp, bibliografia_id, tipo_questao', {count: 'exact'}).eq('anulada', false).order('id')),
+    sb.from('temas').select('*, tema_bibliografia(bibliografia_id)')
+  ]);
+  bibliografiaCache = data || [];
+  temasCache = (dadosTemas || []).map(t => ({...t, bibliografiaIds: (t.tema_bibliografia||[]).map(tb=>tb.bibliografia_id)}));
+  modulosPscpp = [...new Set(bibliografiaCache.map(b=>b.modulo_pscpp))].sort((a,b)=>a.localeCompare(b,'pt'));
+
+  // pra saber quais módulos/publicações/tipos realmente têm pelo menos 1
+  // questão — usado pra escurecer/desabilitar as opções vazias nos
+  // filtros, e a pessoa não ficar tentando selecionar algo que não tem nada
+  modulosComQuestao = new Set((dadosQuestoes||[]).map(q=>q.modulo_pscpp));
+  publicacoesComQuestao = new Set((dadosQuestoes||[]).map(q=>q.bibliografia_id));
+  tiposComQuestao = new Set((dadosQuestoes||[]).map(q=>q.tipo_questao).filter(Boolean));
+
+  renderizarFiltroModulo();
+  renderizarFiltroTipoQuestao();
+  // independentes entre si (tabelas diferentes) – rodar em paralelo
+  await Promise.all([carregarFiltroUsuarioAdmin(), carregarCadernosExistentes()]);
+  atualizarContadorDisponiveis(); // mostra o total desde o início, sem esperar filtro nenhum
+}
+
+// desenha o dropdown de módulo com o estado atual de modulosComQuestao —
+// função à parte porque precisa ser chamada de novo quando o filtro de
+// usuário muda (módulos vazios pra ESSA pessoa ficam desabilitados,
+// não só módulos vazios pro banco inteiro)
+function renderizarFiltroModulo(){
+  const el = document.getElementById('filtro-modulo');
+  el.innerHTML = '<option value="">Todos os módulos</option>' + modulosPscpp.map(m=>{
+    const vazio = !modulosComQuestao.has(m);
+    return `<option value="${escapeHtml(m)}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(m)}</option>`;
+  }).join('');
+}
+
+// mesmo padrão do módulo - tipos de questão sem nenhuma questão cadastrada
+// pro usuário filtrado ficam desabilitados/escurecidos. Preserva o valor
+// selecionado (se ainda válido) ao regenerar, já que o filtro de tipo não
+// é resetado quando outros filtros mudam, diferente de módulo/publicação
+const TIPOS_QUESTAO_FIXOS = ['Conceitual', 'Cálculo', 'Número', 'Lista', 'Identificação'];
+function renderizarFiltroTipoQuestao(){
+  const el = document.getElementById('filtro-tipo-questao');
+  const valorAtual = el.value;
+  el.innerHTML = '<option value="todos">Todos os tipos de questão</option>' + TIPOS_QUESTAO_FIXOS.map(t=>{
+    const vazio = !tiposComQuestao.has(t);
+    return `<option value="${escapeHtml(t)}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(t)}</option>`;
+  }).join('');
+  // só restaura o valor se ele ainda for uma opção válida (não vazia) -
+  // sem essa checagem, filtrar por um usuário que não tem esse tipo
+  // deixava o dropdown "preso" numa opção agora desabilitada
+  if(valorAtual === 'todos' || tiposComQuestao.has(valorAtual)) el.value = valorAtual;
+  else{ el.value = 'todos'; filtroSelecionado.tipoQuestao = null; }
+}
+
+// filtro de usuário na aba Quest — antes só pro admin, agora liberado
+// pra todo mundo. Fica antes de todos os outros filtros na cadeia
+// (usuário → módulo → publicação → capítulo → tipo)
+async function carregarFiltroUsuarioAdmin(){
+  const elFiltro = document.getElementById('filtro-usuario-admin');
+  // usa uma função no banco que já devolve só os autores distintos, em vez
+  // de buscar toda questão do banco pra filtrar aqui — isso cresceria sem
+  // necessidade conforme o banco de questões aumenta (bug real: com 100
+  // questões novas da Pantoja, essa consulta ficou visivelmente mais pesada
+  // antes dessa correção)
+  const {data, error} = await sb.rpc('usuarios_com_questoes');
+  if(error){ console.error('erro ao carregar filtro de usuário:', error); return; }
+  const autores = (data||[]).map(r=>[r.autor_id, r.nome]).sort((a,b)=>a[1].localeCompare(b[1],'pt'));
+  elFiltro.innerHTML = '<option value="">Todos os usuários</option>' + autores.map(([id,nome])=>`<option value="${id}">${escapeHtml(nome)}</option>`).join('');
+  elFiltro.classList.remove('hidden');
+}
+
+let filtroSelecionado = {usuario:null, origem:'usuarios', concurso:null, ano:null, modulo:null, publicacao:null, capitulo:null, tipoQuestao:null};
+let quantidadeSelecionada = 15;
+
+// consulta o campo real do banco (bibliografia.rotulo_capitulo) primeiro -
+// a versão antiga tentava ADIVINHAR isso com regex de palavras-chave no
+// título, mesma fragilidade já corrigida antes em ehFonteCapituloUnico
+// (fica desatualizado sempre que uma publicação nova não bate com essas
+// palavras). O regex some só como fallback defensivo, se por algum
+// motivo a bibliografia não estiver na cache ainda
+function rotuloCapituloDoLivro(titulo){
+  const bib = (bibliografiaCache || []).find(b => b.titulo === titulo);
+  if(bib?.rotulo_capitulo) return bib.rotulo_capitulo;
+  if(/resistance and flow/i.test(titulo || '')) return 'Section';
+  const palavrasInglesas = /\b(the|of|and|for|in|on|ship|guide|practice|practices|principles|design|resistance|flow|hydrodynamics|dimensions|data|infrastructure|channels|approach)\b/i;
+  return palavrasInglesas.test(titulo || '') ? 'Chapter' : 'Capítulo';
+}
+
+// filtro de origem — fica no início da cadeia, visível pra todo mundo.
+// "usuarios" (padrão) exclui as questões de Marinha; "marinha" mostra só
+// elas (com os 2 dropdowns extras de concurso/ano); "todas" mistura tudo
+async function mudarOrigemFiltro(valor){
+  filtroSelecionado.origem = valor;
+  filtroSelecionado.concurso = null;
+  filtroSelecionado.ano = null;
+  const bloco = document.getElementById('bloco-filtro-marinha');
+  if(valor === 'marinha'){
+    bloco.classList.remove('hidden');
+    const {data} = await sb.rpc('concursos_disponiveis');
+    const el = document.getElementById('filtro-concurso');
+    el.innerHTML = '<option value="">Todos os concursos</option>' + (data||[]).map(c=>`<option value="${escapeHtml(c.concurso)}">${escapeHtml(c.concurso)}</option>`).join('');
+    document.getElementById('filtro-ano-prova').innerHTML = '<option value="">Todos os anos</option>';
+    document.getElementById('filtro-ano-prova').disabled = false;
+  }else{
+    bloco.classList.add('hidden');
+  }
+  atualizarContadorDisponiveis();
+}
+
+async function atualizarAnosDoConcurso(){
+  const concurso = document.getElementById('filtro-concurso').value;
+  filtroSelecionado.concurso = concurso || null;
+  filtroSelecionado.ano = null;
+  const elAno = document.getElementById('filtro-ano-prova');
+  if(!concurso){
+    elAno.innerHTML = '<option value="">Todos os anos</option>';
+  }else{
+    const {data} = await sb.rpc('anos_disponiveis_do_concurso', {p_concurso: concurso});
+    elAno.innerHTML = '<option value="">Todos os anos</option>' + (data||[]).map(a=>`<option value="${a.ano}">${a.ano}</option>`).join('');
+  }
+  atualizarContadorDisponiveis();
+}
+function selecionarAnoProva(valor){
+  filtroSelecionado.ano = valor || null;
+  atualizarContadorDisponiveis();
+}
+
+async function selecionarFiltroSelect(nivel, valor){
+  filtroSelecionado[nivel] = (valor && valor!=='todos') ? valor : null;
+
+  if(nivel==='usuario'){
+    // módulo/publicação/capítulo dependiam de modulosComQuestao/
+    // publicacoesComQuestao calculados uma vez só, com TODO o banco — sem
+    // reescopar aqui, trocar de usuário nunca mudava quais módulos
+    // apareciam habilitados no dropdown seguinte (bug real: filtrar por
+    // Altair mostrava módulo de todo mundo, não só dele)
+    filtroSelecionado.modulo = null;
+    filtroSelecionado.publicacao = null;
+    filtroSelecionado.capitulo = null;
+    document.getElementById('filtro-publicacao').innerHTML = '<option value="">Todas as publicações</option>';
+    document.getElementById('filtro-publicacao').disabled = true;
+    document.getElementById('filtro-capitulo').innerHTML = '<option value="">Todos os capítulos</option>';
+    document.getElementById('filtro-capitulo').disabled = true;
+    document.getElementById('filtro-modulo').value = '';
+
+    let montarQuery = () => {
+      let q = sb.from('questoes').select('modulo_pscpp, bibliografia_id, tipo_questao', {count: 'exact'});
+      if(filtroSelecionado.usuario) q = q.eq('autor_id', filtroSelecionado.usuario);
+      return q.order('id');
+    };
+    const {data} = await buscarTudoPaginadoVF(montarQuery);
+    modulosComQuestao = new Set((data||[]).map(q=>q.modulo_pscpp));
+    publicacoesComQuestao = new Set((data||[]).map(q=>q.bibliografia_id));
+    tiposComQuestao = new Set((data||[]).map(q=>q.tipo_questao).filter(Boolean));
+    renderizarFiltroModulo();
+    renderizarFiltroTipoQuestao();
+  }
+
+  if(nivel==='modulo'){
+    filtroSelecionado.publicacao = null;
+    filtroSelecionado.capitulo = null;
+    const elPub = document.getElementById('filtro-publicacao');
+    const elCap = document.getElementById('filtro-capitulo');
+    elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+    elCap.disabled = true;
+    if(valor){
+      const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===valor).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+      const temasDoModulo = temasCache.filter(t=>t.modulo_pscpp===valor);
+      const opcoesTemas = temasDoModulo.length
+        ? temasDoModulo.map(t=>`<option value="tema:${t.id}">🔵 ${escapeHtml(t.nome)} (junta ${t.bibliografiaIds.length} publicações)</option>`).join('') + '<option disabled>──────────</option>'
+        : '';
+      elPub.innerHTML = '<option value="">Todas as publicações</option>' + opcoesTemas + pubs.map(p=>{
+        const vazio = !publicacoesComQuestao.has(p.id);
+        return `<option value="${p.id}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(p.nome_exibicao || p.titulo)}</option>`;
+      }).join('');
+      elPub.disabled = false;
+    }else{
+      elPub.innerHTML = '<option value="">Todas as publicações</option>';
+      elPub.disabled = true;
+    }
+    elPub.value = '';
+  }
+
+  if(nivel==='publicacao'){
+    filtroSelecionado.capitulo = null;
+    const elCap = document.getElementById('filtro-capitulo');
+    if(valor && valor.startsWith('tema:')){
+      // tema junta várias publicações — busca capítulo em todas elas juntas
+      const temaId = valor.slice(5);
+      const tema = temasCache.find(t=>t.id===temaId);
+      const idsPublicacoes = tema?.bibliografiaIds || [];
+      const montarQueryCapTema = () => {
+        let q = sb.from('questoes').select('capitulo', {count: 'exact'}).in('bibliografia_id', idsPublicacoes);
+        if(filtroSelecionado.usuario) q = q.eq('autor_id', filtroSelecionado.usuario);
+        return q.order('id');
+      };
+      buscarTudoPaginadoVF(montarQueryCapTema).then(({data})=>{
+        const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
+        // tema junta publicações relacionadas, normalmente do mesmo
+        // idioma - usa o rótulo da primeira como aproximação razoável
+        const primeiraPubDoTema = bibliografiaCache.find(b => idsPublicacoes.includes(b.id));
+        const rotuloTema = rotuloCapituloDoLivro(primeiraPubDoTema?.titulo);
+        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotuloTema + ' ' + c)}</option>`).join('');
+        elCap.disabled = false;
+        atualizarContadorDisponiveis();
+      });
+    }else if(valor){
+      // capítulos vêm das próprias questões já cadastradas com essa bibliografia (campo livre por questão)
+      const montarQueryCap = () => {
+        let q = sb.from('questoes').select('capitulo', {count: 'exact'}).eq('bibliografia_id', valor);
+        if(filtroSelecionado.usuario) q = q.eq('autor_id', filtroSelecionado.usuario);
+        return q.order('id');
+      };
+      buscarTudoPaginadoVF(montarQueryCap).then(({data})=>{
+        const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a-b);
+        const livro = bibliografiaCache.find(b=>b.id===valor);
+        const rotulo = rotuloCapituloDoLivro(livro?.titulo);
+        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + ' ' + c)}</option>`).join('');
+        elCap.disabled = false;
+        atualizarContadorDisponiveis();
+      });
+    }else{
+      elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+      elCap.disabled = true;
+    }
+  }
+
+  atualizarContadorDisponiveis();
+}
+
+function selecionarQuantidade(botao, valor){
+  quantidadeSelecionada = valor;
+  document.querySelectorAll('#filtro-quantidade .filter-btn').forEach(b=>b.classList.remove('active'));
+  if(botao) botao.classList.add('active');
+  else document.getElementById('quantidade-customizada').value = valor;
+}
+
+// busca as questões que batem com os filtros atuais, sem criar caderno – reaproveitada
+// pelo contador ao vivo e pelo montarCaderno de verdade, pra nunca ficarem dessincronizados
+async function buscarQuestoesFiltradas(apenasContagem = false){
+  const montarQuery = () => {
+    let query = sb.from('questoes').select(apenasContagem ? 'id' : '*', {count: 'exact'}).eq('anulada', false);
+    if(filtroSelecionado.usuario) query = query.eq('autor_id', filtroSelecionado.usuario);
+    if(filtroSelecionado.origem === 'usuarios') query = query.is('concurso_origem', null);
+    else if(filtroSelecionado.origem === 'marinha'){
+      query = query.not('concurso_origem', 'is', null);
+      if(filtroSelecionado.concurso) query = query.eq('concurso_origem', filtroSelecionado.concurso);
+      if(filtroSelecionado.ano) query = query.eq('ano_prova', filtroSelecionado.ano);
+    }
+    // 'todas' não filtra por origem nenhuma – mistura tudo de propósito
+    if(filtroSelecionado.modulo) query = query.eq('modulo_pscpp', filtroSelecionado.modulo);
+    if(filtroSelecionado.publicacao){
+      if(filtroSelecionado.publicacao.startsWith('tema:')){
+        const tema = temasCache.find(t=>t.id===filtroSelecionado.publicacao.slice(5));
+        query = query.in('bibliografia_id', tema?.bibliografiaIds || []);
+      }else{
+        query = query.eq('bibliografia_id', filtroSelecionado.publicacao);
+      }
+    }
+    if(filtroSelecionado.capitulo) query = query.eq('capitulo', filtroSelecionado.capitulo);
+    if(filtroSelecionado.tipoQuestao) query = query.eq('tipo_questao', filtroSelecionado.tipoQuestao);
+    return query.order('id'); // obrigatório pra paginação com .range() ser estável
+  };
+
+  // paginado - sem isso, com mais de 1000 questões no banco (chegando em
+  // semanas, ~460/mês entrando), essa busca truncava silenciosamente e
+  // tanto o contador de disponíveis quanto o sorteio do caderno ficavam
+  // errados, ignorando questões que existem de verdade
+  const {data: todasQuestoes, error} = await buscarTudoPaginadoVF(montarQuery);
+  if(error){ console.error(error); return []; }
+
+  const {data: exclusoes} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).is('resolvido_em', null);
+  const idsExcluidos = new Set((exclusoes||[]).map(e=>e.questao_id));
+  let questoesFiltradas = (todasQuestoes||[]).filter(q=>!idsExcluidos.has(q.id));
+
+  if(document.getElementById('toggle-ineditas').checked){
+    const {data: respondidas} = await sb.from('respostas').select('questao_id').eq('usuario_id', usuarioAtual.id);
+    const idsRespondidos = new Set((respondidas||[]).map(r=>r.questao_id));
+    questoesFiltradas = questoesFiltradas.filter(q=>!idsRespondidos.has(q.id));
+  }
+
+  return questoesFiltradas;
+}
+
+let contadorDebounce = null;
+async function contarDisponiveisAgora(){
+  const el = document.getElementById('contador-disponiveis');
+  el.textContent = 'Contando...';
+  try{
+    const questoes = await buscarQuestoesFiltradas(true); // leve — só conta, não precisa das colunas todas
+    el.textContent = `${questoes.length} ${questoes.length===1?'questão disponível':'questões disponíveis'} com esses filtros`;
+  }catch(erro){
+    el.textContent = 'Não consegui contar as questões disponíveis agora.';
+    console.error('erro ao contar questões disponíveis:', erro);
+  }
+}
+function atualizarContadorDisponiveis(){
+  clearTimeout(contadorDebounce);
+  contadorDebounce = setTimeout(contarDisponiveisAgora, 300);
+}
+
+// ============================================================
+// MODO V/F — beta, só visível pro Carlos por enquanto (ver
+// nav-item-vf e o gate em mostrarAppShell). Pega um bloco de
+// questoes_vf, embaralha (Fisher-Yates) e apresenta um por vez,
+// pedindo Verdadeiro/Falso — igual explicado no botão ℹ️ abaixo.
+// ============================================================
+// formatação leve pro texto de um item V/F isolado — diferente de
+// formatarEnunciado (feita pra enunciado completo, com lógica de
+// estrutura/alternativas/trechos da fonte que não se aplica aqui e
+// causava uma linha em branco sobrando no topo). Só escapa e aplica
+// sub/sobrescrito, sem nenhuma estrutura extra
+// mapas compartilhados entre V/F e Quest - letras gregas e operadores
+// matemáticos via marcação ASCII estilo LaTeX (\Delta, \approx, etc). Por
+// que ASCII e não o caractere Unicode direto: a fonte usada na geração do
+// PDF nem sempre tem o glifo - quando falta, o caractere se perde ou vira
+// outra coisa na extração. Já aconteceu de duas afirmações de uma mesma
+// família (V e F, diferindo só no expoente) virarem texto idêntico depois
+// dessa corrupção, e a UNIQUE(texto) engoliu uma em silêncio. Com
+// marcação ASCII isso nunca acontece - esses caracteres existem em
+// qualquer fonte, em qualquer etapa da extração
+const VF_LETRAS_GREGAS = {
+  'Delta':'Δ','delta':'δ','Phi':'Φ','phi':'φ','Alpha':'Α','alpha':'α',
+  'Beta':'Β','beta':'β','Gamma':'Γ','gamma':'γ','Theta':'Θ','theta':'θ',
+  'Lambda':'Λ','lambda':'λ','Mu':'Μ','mu':'μ','Nu':'Ν','nu':'ν',
+  'Pi':'Π','pi':'π','Rho':'Ρ','rho':'ρ','Sigma':'Σ','sigma':'σ',
+  'Tau':'Τ','tau':'τ','Omega':'Ω','omega':'ω',
+  'Epsilon':'Ε','epsilon':'ε','varepsilon':'ϵ','Zeta':'Ζ','zeta':'ζ',
+  'Eta':'Η','eta':'η','Iota':'Ι','iota':'ι','Kappa':'Κ','kappa':'κ',
+  'Xi':'Ξ','xi':'ξ','Upsilon':'Υ','upsilon':'υ','Chi':'Χ','chi':'χ',
+  'Psi':'Ψ','psi':'ψ'
+};
+const VF_OPERADORES_MATEMATICOS = {
+  // comparação e aproximação
+  'approx':'≈','le':'≤','leq':'≤','ge':'≥','geq':'≥','ne':'≠','neq':'≠',
+  'll':'≪','gg':'≫','sim':'∼','simeq':'≃','cong':'≅','propto':'∝','equiv':'≡',
+  // operadores aritméticos e de cálculo
+  'pm':'±','mp':'∓','times':'×','div':'÷','cdot':'·','ast':'∗',
+  'partial':'∂','nabla':'∇','infty':'∞',
+  // somatórios, integrais, produtos
+  'sum':'∑','prod':'∏','int':'∫','iint':'∬','iiint':'∭','oint':'∮',
+  // setas
+  'to':'→','rightarrow':'→','leftarrow':'←','leftrightarrow':'↔',
+  'Rightarrow':'⇒','Leftarrow':'⇐','Leftrightarrow':'⇔','mapsto':'↦',
+  // conjuntos e lógica
+  'in':'∈','notin':'∉','subset':'⊂','supset':'⊃','subseteq':'⊆','supseteq':'⊇',
+  'cup':'∪','cap':'∩','emptyset':'∅','forall':'∀','exists':'∃','nexists':'∄',
+  'therefore':'∴','because':'∵',
+  // geometria
+  'perp':'⊥','parallel':'∥','angle':'∠','circ':'∘','degree':'°',
+  // outros símbolos comuns em textos técnicos
+  'otimes':'⊗','oplus':'⊕','prime':'′','hbar':'ℏ','ell':'ℓ',
+  'aleph':'ℵ','top':'⊤','bot':'⊥','dagger':'†'
+};
+// nomes conhecidos (gregas + operadores), do mais longo pro mais curto -
+// evita que um nome mais curto "roube" o início de um mais longo (ex:
+// "pi" vs um hipotético "pint"). Usado pra reconhecer só os nomes de
+// verdade em vez de "qualquer sequência de letras" - sem isso, \infty
+// colado direto (sem espaço) com outra coisa que começa com letra, tipo
+// k_s em "U_\infty k_s" virando "U_\inftyk_s", fazia o regex genérico
+// "comer" letras demais (leria "inftyk" como nome, não reconhecido,
+// texto quebrado) - com a lista fechada, sabe exatamente onde "infty"
+// termina, sem precisar de espaço ou separador nenhum
+const VF_NOMES_MATEMATICOS_REGEX = Object.keys({...VF_LETRAS_GREGAS, ...VF_OPERADORES_MATEMATICOS}).sort((a,b) => b.length-a.length).join('|');
+// recebe o texto JÁ escapado (depois do escapeHtml) - \, {, } não são
+// caracteres especiais de HTML, então processar essas marcações depois
+// do escape é seguro, sem conflito nenhum
+// regex construídas a partir da lista fechada de nomes conhecidos (não
+// "qualquer sequência de letras") - ver VF_NOMES_MATEMATICOS_REGEX acima
+const VF_REGEX_NOME_COM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')\\{([^}]*)\\}', 'g');
+const VF_REGEX_NOME_SEM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')', 'g');
+function vfAplicarMarcacaoMatematicaVF(textoEscapado){
+  return textoEscapado
+    // \nome{conteudo} - letra grega/operador seguido de chaves SEM
+    // expoente (ex: \delta{V_P}) - converte o símbolo e remove as
+    // chaves, deixando só o conteúdo (que ainda passa pelas outras
+    // regras depois, tipo subscrito). Roda ANTES da regra de gregas sem
+    // chaves logo abaixo, senão essa já teria consumido o \nome antes de
+    // chegar aqui, deixando as chaves sobrando literalmente no texto.
+    // Chaves vazias {} são aceitas de propósito - servem como separador
+    // explícito quando o símbolo precisa ficar colado sem espaço no que
+    // vem depois (ex: \infty{}k_s), sem isso o próximo caractere (tipo
+    // "k") ficava "grudado" no nome e quebrava o reconhecimento
+    .replace(VF_REGEX_NOME_COM_CHAVES, (match, nome, conteudo) => {
+      const simbolo = VF_LETRAS_GREGAS[nome] || VF_OPERADORES_MATEMATICOS[nome];
+      return simbolo ? simbolo + conteudo : match;
+    })
+    // gregas/operadores via \nome - roda ANTES do sqrt/superscript, pra
+    // esses símbolos resolvidos poderem participar deles depois (ex:
+    // \Delta^{2} precisa que \Delta já tenha virado Δ antes do ^ agir)
+    .replace(VF_REGEX_NOME_SEM_CHAVES, (match, nome) => (VF_LETRAS_GREGAS[nome] || VF_OPERADORES_MATEMATICOS[nome] || match))
+    // \sqrt{...} depois das gregas (pode ter grega dentro, tipo \sqrt{\Delta})
+    .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
+    // sobrescrito com chaves: X^{Y...} - qualquer conteúdo dentro,
+    // inclusive sinal de menos e múltiplos caracteres (ex: 10^{-1})
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9)\]])\^\{([^}]+)\}/g, '$1<sup>$2</sup>');
+}
+
+function formatarTextoItemVF(texto){
+  if(!texto) return '';
+  let resultado = escapeHtml(texto)
+    // travessão longo (—) sempre vira curto (–) — o extrator às vezes
+    // ainda manda o longo por engano, mesmo pedindo o curto; corrigir
+    // aqui na exibição resolve de vez, sem precisar reeditar o PDF nem
+    // reenviar o pedido toda vez que acontecer
+    .replace(/—/g, '–')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
+  return resultado
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
+}
+
+// ============================================================
+// ALGORITMO DE REPETIÇÃO ESPAÇADA CONTÍNUA — ver
+// ALGORITMO_REPETICAO_VF.md no projeto pro raciocínio completo.
+// Três estados por questão (nova/aprendendo/revisão), fila
+// contínua sem "rodada" de tamanho fixo, degraus de curto prazo
+// medidos em QUANTIDADE DE RESPOSTAS (não minutos de relógio) —
+// isso é o que garante que uma errada nunca aparece seguidamente,
+// em qualquer ritmo de uso (maratona ou espalhado).
+// ============================================================
+// busca TODAS as linhas de uma tabela, paginando — o Supabase corta em
+// 1000 por padrão, sem erro nenhum avisando. Sem isso, questões fora das
+// primeiras 1000 simplesmente nunca apareceriam pro algoritmo, quebrando
+// a garantia de "nada é esquecido" quando o banco crescer (apontado pelo
+// Fable na análise do algoritmo)
+async function buscarTudoPaginadoVF(queryBuilder, aoCarregarRestanteVF){
+  const TAMANHO_PAGINA = 1000;
+  // primeira página já vem com o count total EMBUTIDO (queryBuilder
+  // define {count:'exact'} no próprio select) - zero requisições extras
+  // pra descobrir quantas páginas existem. Antes eu fazia uma segunda
+  // chamada só pra contar, e isso ainda pagava uma viagem inteira de ida
+  // e volta ao servidor (a query em si é rápida no banco, uns 6ms, mas o
+  // ROUND-TRIP de rede é o que pesa de verdade, principalmente no
+  // celular) - agora não tem mais essa etapa a mais nenhuma
+  const primeira = await queryBuilder().range(0, TAMANHO_PAGINA - 1);
+  if(primeira.error) return {data: null, error: primeira.error};
+  let todosOsDados = primeira.data || [];
+  const totalReal = primeira.count;
+
+  if(!primeira.data || primeira.data.length < TAMANHO_PAGINA){
+    return {data: todosOsDados, error: null, count: totalReal}; // já é tudo, sem mais nada a buscar
+  }
+
+  if(typeof totalReal === 'number' && totalReal > 0){
+    const totalPaginas = Math.ceil(totalReal / TAMANHO_PAGINA);
+    const buscarPaginasRestantesVF = async () => {
+      const promessas = [];
+      for(let pagina = 1; pagina < totalPaginas; pagina++){
+        promessas.push(queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1));
+      }
+      const resultados = await Promise.all(promessas);
+      let extras = [];
+      for(const {data, error} of resultados){
+        if(error) return null;
+        extras = extras.concat(data || []);
+      }
+      return extras;
+    };
+
+    if(aoCarregarRestanteVF){
+      // ENTRADA PROGRESSIVA (ideia do Carlos, confirmada pelo Fable): não
+      // espera o resto - retorna JÁ com a primeira leva de 1000, e quando
+      // o resto chegar (em paralelo, em segundo plano), entrega via
+      // callback pra quem chamou anexar sozinho. Só a busca de questões
+      // usa isso hoje; quem não passar o callback mantém o comportamento
+      // de sempre (espera tudo, retorna tudo de uma vez)
+      buscarPaginasRestantesVF().then(extras => { if(extras) aoCarregarRestanteVF(extras); });
+    }else{
+      const extras = await buscarPaginasRestantesVF();
+      if(extras === null) return {data: null, error: {message: 'erro ao buscar páginas seguintes'}};
+      todosOsDados = todosOsDados.concat(extras);
+    }
+  }else{
+    // sem count (queryBuilder não pediu {count:'exact'}) - continua
+    // sequencial a partir da página 2, sempre funciona de qualquer jeito
+    let pagina = 1;
+    while(true){
+      const {data, error} = await queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1);
+      if(error) return {data: null, error};
+      todosOsDados = todosOsDados.concat(data || []);
+      if(!data || data.length < TAMANHO_PAGINA) break;
+      pagina++;
+    }
+  }
+  // deduplica por id - proteção barata (apontada pelo Fable) contra um
+  // upload inserir linhas no meio da busca, deslocando o que cada página
+  // pega e trazendo a mesma linha duas vezes. Se a linha não tiver 'id'
+  // (tabelas sem PK simples), não deduplica - mantém como está
+  if(todosOsDados.length && todosOsDados[0]?.id !== undefined){
+    const vistos = new Map();
+    todosOsDados.forEach(linha => vistos.set(linha.id, linha));
+    todosOsDados = [...vistos.values()];
+  }
+  return {data: todosOsDados, error: null, count: totalReal};
+}
+
+// horário corrigido pelo relógio do SERVIDOR, não do aparelho — um
+// celular com relógio errado bagunçaria as razões do algoritmo (intervalo
+// calculado sobre um "agora" que não é o agora de verdade). Busca o
+// desvio uma vez por sessão (ver entrarNoModoVF) e aplica esse desvio
+// toda vez que precisar do "agora" daqui pra frente, sem precisar de mais
+// idas ao banco a cada resposta
+let offsetRelogioVF = 0;
+function agoraCorrigidoVF(){ return Date.now() + offsetRelogioVF; }
+
+const VF_ALGO = {
+  FATOR_INI: 2.2, FATOR_MIN: 1.3, FATOR_MAX: 2.8,
+  PRIMEIRO_ACERTO_H: 24,
+  GRADUA_NOVA_H: 12,
+  QUEDA_MANTEM: 0.30, QUEDA_MIN_H: 12, QUEDA_MAX_H: 72,
+  DEGRAUS_NOVA: [6, 20],
+  DEGRAUS_QUEDA: [6],
+  TMIN_DEGRAU_MIN: [2, 10],
+  ESCAPE_H: [6, 12],
+  TETO_H: 2160,
+  FUZZ: 0.05,
+  JITTER_FILA: 0.02,
+  BOOST_FAVORITO: 1.25, // favorita "vence" a fila mais cedo (~80% do intervalo em vez de 100%) - calibrado pelo Fable pra não virar spam nem dominar o topo
+  NOVA_A_CADA: 3, // Regra 1 - fluxo garantido de novas (1 a cada 3 respostas), evita represar novas atrás de um backlog de revisões vencidas
+  GAP_FAMILIA: 15 // Regra 2 - anti-irmãs, intervalo mínimo (em respostas) entre duas questões da mesma família (mesmo fato gerador)
+};
+
+function clampVF(v, min, max){ return Math.max(min, Math.min(max, v)); }
+function esperadoSegundosVF(nPalavras){ return 1.5 + 0.35 * (nPalavras || 10); }
+
+// ao registrar uma resposta: recebe o estado ATUAL da questão pra esse
+// usuário e devolve o NOVO estado. Não mexe no banco — quem chama decide
+// persistir (ver responderVF)
+function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraMs, contadorGlobal){
+  const tempo_s = clampVF(tempoSRaw, 0.3, 180);
+  const nPalavras = estadoAnterior.n_palavras || 10;
+  const v = tempo_s / esperadoSegundosVF(nPalavras);
+  const bonus = clampVF(1.2 - 0.3 * Math.log2(Math.max(v, 1e-6)), 0.6, 1.3);
+
+  const q = {...estadoAnterior};
+  if(!q.estado) q.estado = 'nova';
+  if(q.fator == null) q.fator = VF_ALGO.FATOR_INI;
+
+  if(q.estado === 'nova'){
+    if(acertou){
+      q.estado = 'revisao';
+      q.intervalo_horas = VF_ALGO.PRIMEIRO_ACERTO_H * bonus;
+      if(v < 0.8) q.fator = Math.min(VF_ALGO.FATOR_MAX, q.fator + 0.1);
+    }else{
+      q.estado = 'aprendendo'; q.degrau = 0; q.total_degraus = 2;
+      q.intervalo_pendente = VF_ALGO.GRADUA_NOVA_H;
+      q.fator = Math.max(VF_ALGO.FATOR_MIN, q.fator - 0.2);
+    }
+  }else if(q.estado === 'aprendendo'){
+    if(acertou){
+      q.degrau = (q.degrau || 0) + 1;
+      if(q.degrau >= q.total_degraus){
+        q.estado = 'revisao';
+        q.intervalo_horas = q.intervalo_pendente;
+        q.degrau = 0; q.total_degraus = null; q.intervalo_pendente = null;
+      }
+    }else{
+      q.degrau = 0;
+      q.fator = Math.max(VF_ALGO.FATOR_MIN, q.fator - 0.2);
+    }
+  }else{ // revisao
+    const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
+    const r = decorridoH / q.intervalo_horas;
+    if(acertou){
+      const base = r < 1 ? decorridoH : q.intervalo_horas + (decorridoH - q.intervalo_horas) / 2;
+      let novo = Math.max(q.intervalo_horas, base * q.fator * bonus);
+      if(r >= 0.5){
+        const delta = v < 0.8 ? 0.1 : (v > 1.5 ? -0.05 : 0);
+        q.fator = clampVF(q.fator + delta, VF_ALGO.FATOR_MIN, VF_ALGO.FATOR_MAX);
+      }
+      const fuzz = 1 + (Math.random()*2 - 1) * VF_ALGO.FUZZ;
+      q.intervalo_horas = Math.min(VF_ALGO.TETO_H, novo * fuzz);
+    }else{
+      q.estado = 'aprendendo'; q.degrau = 0; q.total_degraus = 1;
+      q.intervalo_pendente = clampVF(VF_ALGO.QUEDA_MANTEM * q.intervalo_horas, VF_ALGO.QUEDA_MIN_H, VF_ALGO.QUEDA_MAX_H);
+      q.fator = Math.max(VF_ALGO.FATOR_MIN, q.fator - 0.2);
+    }
+  }
+
+  q.ultima_resposta_em = new Date(agoraMs).toISOString();
+  q.marca_contador = contadorGlobal;
+  q.total_respostas = (q.total_respostas || 0) + 1;
+  if(!acertou) q.total_erros = (q.total_erros || 0) + 1;
+  return q;
+}
+
+function elegibilidadeAprendendoVF(q, agoraMs, contadorGlobal, tamanhoPool){
+  const degraus = q.total_degraus === 2 ? VF_ALGO.DEGRAUS_NOVA : VF_ALGO.DEGRAUS_QUEDA;
+  const K = degraus[q.degrau];
+  const K_eff = Math.min(K, tamanhoPool - 1);
+  const outras = contadorGlobal - (q.marca_contador || 0);
+  const decH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
+  const i = Math.min(q.degrau, 1);
+  return (outras >= K_eff && decH >= VF_ALGO.TMIN_DEGRAU_MIN[i] / 60) || decH >= VF_ALGO.ESCAPE_H[i];
+}
+
+// gerador determinístico simples, semeado por sessão+id — jitter estável
+// dentro da mesma sessão (a ordem das "novas" não muda se trocar de aba e voltar)
+function pseudoAleatorioVF(semente, id){
+  let h = 0;
+  const str = semente + '|' + id;
+  for(let i = 0; i < str.length; i++){ h = (h * 31 + str.charCodeAt(i)) | 0; }
+  return (Math.abs(h) % 10000) / 10000;
+}
+
+// ---- Regra 2 (anti-irmãs): família de questões geradas do mesmo fato ----
+// a normalização (lowercase, remover pontuação, colapsar espaços) e o
+// recorte (120 chars do trecho / 10 primeiras palavras do texto) agora
+// acontecem no banco, via coluna gerada (chave_familia_trecho,
+// chave_familia_texto - hashes md5 prontos). O JS só recebe os hashes e
+// faz o union-find em cima deles - nada de texto bruto trafega mais aqui
+function vfCalcularFamiliasNoPoolVF(pool){
+  // proteção: md5('') = hash de string vazia. Hoje nenhuma questão tem
+  // trechos_fonte vazio (confirmado no banco), mas se um upload futuro
+  // vier sem esse campo preenchido, todas as questões vazias
+  // compartilhariam esse MESMO hash e virariam uma família gigante falsa
+  // - questões sem nenhuma relação real se adiando mutuamente por causa
+  // de um campo em branco. Ignorar esse hash específico deixa o sistema
+  // imune a isso, sem custo nenhum nos casos normais
+  const HASH_STRING_VAZIA_VF = 'd41d8cd98f00b204e9800998ecf8427e';
+  const pai = new Map();
+  function encontrar(id){
+    if(!pai.has(id)) pai.set(id, id);
+    let raiz = id;
+    while(pai.get(raiz) !== raiz) raiz = pai.get(raiz);
+    let atual = id;
+    while(pai.get(atual) !== raiz){ const prox = pai.get(atual); pai.set(atual, raiz); atual = prox; }
+    return raiz;
+  }
+  function unir(a, b){
+    const ra = encontrar(a), rb = encontrar(b);
+    if(ra !== rb) pai.set(ra, rb);
+  }
+  const primeiroPorTrecho = new Map(), primeiroPorTexto = new Map();
+  pool.forEach(q => {
+    encontrar(q.id);
+    const ct = q.chave_familia_trecho === HASH_STRING_VAZIA_VF ? null : q.chave_familia_trecho;
+    const ctx = q.chave_familia_texto === HASH_STRING_VAZIA_VF ? null : q.chave_familia_texto;
+    if(ct){ if(primeiroPorTrecho.has(ct)) unir(q.id, primeiroPorTrecho.get(ct)); else primeiroPorTrecho.set(ct, q.id); }
+    if(ctx){ if(primeiroPorTexto.has(ctx)) unir(q.id, primeiroPorTexto.get(ctx)); else primeiroPorTexto.set(ctx, q.id); }
+  });
+  pool.forEach(q => { q.familiaId = encontrar(q.id); });
+}
+
+// escolhe a próxima questão do pool
+function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendizado, sementeSessao, respostasDesdeUltimaNova, familiasRecentesVF){
+  const aprendendo = pool.filter(q => q.estado === 'aprendendo' && elegibilidadeAprendendoVF(q, agoraMs, contadorGlobal, pool.length));
+  aprendendo.sort((a,b) => (a.marca_contador||0) - (b.marca_contador||0));
+
+  const rn = [];
+  const novas = [];
+  pool.forEach(q => {
+    if(q.estado === 'revisao'){
+      const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
+      // favorita "vence" a fila mais cedo - multiplica a razão ANTES do
+      // jitter, não depois (a ordem importa: isso desloca quando ela passa
+      // a competir de verdade, o jitter só embaralha um pouco por cima)
+      const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
+      const razao = (decorridoH / q.intervalo_horas) * boost;
+      const jitter = 1 + (pseudoAleatorioVF(sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
+      rn.push({score: razao * jitter, item: q});
+    }else if(!q.estado || q.estado === 'nova'){
+      // favorita nova fica em 1.0 normal (na prática nem acontece, só dá
+      // pra favoritar o que já foi visto) - sem boost aqui de propósito
+      const jitter = 1 + (pseudoAleatorioVF(sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
+      const entrada = {score: 1.0 * jitter, item: q};
+      rn.push(entrada);
+      novas.push(entrada);
+    }
+  });
+  rn.sort((a,b) => b.score - a.score);
+  novas.sort((a,b) => b.score - a.score);
+
+  // Regra 2 (anti-irmãs): acha a melhor candidata pulando quem tem
+  // família presente no buffer das últimas GAP_FAMILIA respostas. Regra
+  // suave - se TODAS estiverem no buffer (pool esgotado/filtro estreito),
+  // devolve a melhor mesmo assim, nunca trava/devolve null por causa disso
+  function melhorForaDaFamiliaVF(candidatosOrdenados){
+    if(!candidatosOrdenados.length) return null;
+    for(const c of candidatosOrdenados){
+      if(!c.item.familiaId || !familiasRecentesVF.includes(c.item.familiaId)) return c;
+    }
+    return candidatosOrdenados[0];
+  }
+
+  if(aprendendo.length && !(anteriorVeioDeAprendizado && rn.length)){
+    // fila de aprendizado ignora a família DE PROPÓSITO - questão
+    // voltando pelos degraus é o mesmo cartão se reforçando, isso é
+    // intencional e não pode ser bloqueado pela Regra 2
+    return {item: aprendendo[0], veioDeAprendizado: true};
+  }
+
+  // Regra 1 (fluxo garantido de novas): se já faz tempo sem servir uma
+  // nova e existe alguma disponível no pool, prioriza ela - ainda
+  // respeitando a Regra 2 dentro do grupo de novas
+  if(respostasDesdeUltimaNova >= VF_ALGO.NOVA_A_CADA - 1 && novas.length){
+    const escolhida = melhorForaDaFamiliaVF(novas);
+    if(escolhida) return {item: escolhida.item, veioDeAprendizado: false};
+  }
+
+  if(rn.length){
+    const escolhida = melhorForaDaFamiliaVF(rn);
+    return {item: escolhida.item, veioDeAprendizado: false};
+  }
+  const todosAprendendo = pool.filter(q => q.estado === 'aprendendo');
+  if(todosAprendendo.length){
+    todosAprendendo.sort((a,b) => (a.marca_contador||0) - (b.marca_contador||0));
+    return {item: todosAprendendo[0], veioDeAprendizado: true};
+  }
+  return null;
+}
+
+// ============================================================
+// TELA DE PRÁTICA — estado, filtro, fila, resposta, ações
+// ============================================================
+let estadoVF = null;
+let filtroVF = (function(){
+  // restaura o filtro salvo do fechamento anterior do app - sem isso,
+  // fechar e reabrir sempre voltava sem filtro nenhum, mesmo que a
+  // sessão pausada continuasse a mesma
+  try{
+    const salvo = localStorage.getItem('pscpp_vf_filtro');
+    if(salvo) return JSON.parse(salvo);
+  }catch(e){}
+  return {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false};
+})();
+function vfSalvarFiltroNoStorageVF(){
+  try{ localStorage.setItem('pscpp_vf_filtro', JSON.stringify(filtroVF)); }catch(e){}
+}
+let favoritosVF = new Set();
+// tags: cache de TODAS as tags existentes (nome + id), carregado uma vez
+// por sessão, pra a busca no popup ser instantânea sem consultar o banco
+// a cada letra digitada - mesmo espírito do vfBibliografiaCache abaixo.
+// tagsPorQuestaoVF é o mapa questao_vf_id -> array de {id, nome}
+let vfTodasTagsCacheVF = []; // [{id, nome}]
+let vfTagsPorQuestaoVF = new Map();
+// bibliografia é uma tabela pequena (dezenas/centenas de linhas, não
+// milhares) - buscar ela inteira uma vez e guardar em memória é muito
+// mais leve que fazer join em toda query de 7.700+ questões. Dá pra
+// mostrar o nome da publicação e filtrar por módulo instantaneamente,
+// sem esperar o conteúdo pesado de cada questão (ideia do Fable)
+let vfBibliografiaCache = new Map(); // id -> {titulo, modulo_pscpp}
+// conteúdo pesado (texto/explicação/correção) de cada questão, buscado
+// SOB DEMANDA só quando a questão é de fato escolhida pra aparecer -
+// nunca faz parte da busca inicial do pool inteiro
+let vfConteudoCompletoCache = new Map(); // id -> {texto, resposta, explicacao, correcao, dificuldade, inconsistente}
+let vfTotalAfirmacoesNoBanco = null; // total geral no banco, buscado uma vez só ao entrar na sessão
+let flashsSalvosVF = new Map(); // questao_vf_id -> motivo ('estudar' ou 'corrigir')
+let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual que o banco, enquanto o upsert está em voo
+// questao_vf_id -> promise do upsert da resposta ainda em voo. Usado pra
+// evitar corrida (C2): favoritar uma questão logo após respondê-la podia
+// disparar um segundo update (encolhimento de intervalo) que competia com
+// o upsert original ainda não confirmado - quem chegasse por último no
+// banco vencia, não necessariamente o mais recente
+let vfRespostasEmVooVF = new Map();
+
+// ---- desenho com a caneta (Apple Pencil) por cima da questão ----
+// Reescrito usando Touch Events nativos (não Pointer Events) — pesquisa
+// confirmou que no Safari, pointermove tem taxa de amostragem MENOR que
+// touchmove pra Apple Pencil (é o que causava o efeito "quadradão", traço
+// em segmentos retos em vez de curva suave). Touch Events também dão o
+// campo touch.touchType ('stylus' vs 'direct'), que é a forma certa de
+// distinguir caneta de dedo no Safari.
+//
+// O canvas fica pointer-events:none PRA SEMPRE — dedo/mouse nunca são
+// interceptados, passam direto pros botões/scroll por baixo. A escuta
+// roda no document inteiro (não no canvas), filtrando só touchType
+// 'stylus', e desenha direto no contexto 2D usando curva quadrática
+// suavizada (não linha reta simples) — é a mesma técnica usada por apps
+// de desenho de verdade.
+let vfCtxDesenho = null;
+// contexto do canvas temporário exclusivo pro popup de explicação - nunca
+// tem histórico/desfazer próprio, é sempre limpo do zero ao abrir o
+// popup e descartado ao fechar. Fica numa camada acima do modal
+// (z-index:320 > 300 dos modais), enquanto o canvas principal da questão
+// fica numa camada abaixo (z-index:280 < 300) - assim, o que já estava
+// desenhado na questão fica escondido atrás do popup quando ele abre
+// (comportamento normal de qualquer modal), e o que é desenhado NOVO
+// enquanto o popup está aberto fica visível por cima dele, sem nunca
+// persistir de volta pro desenho real da questão
+let vfCtxDesenhoExplicacaoVF = null;
+// retorna qual contexto de canvas usar AGORA pra um traço em andamento -
+// o temporário da explicação quando o popup dela está aberto, senão o
+// principal da questão. Usado só nos pontos que desenham em tempo real
+// (início de traço, processamento de cada ponto, fusão do destaque) -
+// as funções de histórico/desfazer/recortar continuam usando o principal
+// direto, já que a explicação nunca tem histórico próprio
+function vfCtxDesenhoAtivoAgoraVF(){
+  const modalExplicacao = document.getElementById('modal-explicacao-vf');
+  if(modalExplicacao && !modalExplicacao.classList.contains('hidden')) return vfCtxDesenhoExplicacaoVF;
+  return vfCtxDesenho;
+}
+let vfCanvasTracoTemp = null; // canvas à parte só durante um traço de destaque, funde no final
+// canvas persistentes reutilizados entre traços de destaque - antes eram
+// criados do zero (document.createElement) a cada início de traço, o que
+// tem custo real de alocação. Reaproveitar os mesmos elementos (só
+// limpando/redimensionando) evita esse custo repetido - é o que fazia o
+// desenho "esquentar"/ficar mais rápido só depois de um tempo de uso
+let vfCanvasTracoTempPersistenteVF = null;
+let vfCanvasBaseSnapshotPersistenteVF = null;
+// prepara (ou reaproveita) os dois canvas do modo destaque pro tamanho
+// atual - chamada no início de cada traço, em vez de criar elementos novos
+function vfPrepararCanvasDestaqueVF(larguraBuffer, alturaBuffer){
+  if(!vfCanvasTracoTempPersistenteVF) vfCanvasTracoTempPersistenteVF = document.createElement('canvas');
+  if(!vfCanvasBaseSnapshotPersistenteVF) vfCanvasBaseSnapshotPersistenteVF = document.createElement('canvas');
+  vfCanvasTracoTempPersistenteVF.width = larguraBuffer;
+  vfCanvasTracoTempPersistenteVF.height = alturaBuffer;
+  vfCanvasBaseSnapshotPersistenteVF.width = larguraBuffer;
+  vfCanvasBaseSnapshotPersistenteVF.height = alturaBuffer;
+  // setar width/height (mesmo pro mesmo valor) já limpa o canvas sozinho -
+  // não precisa de clearRect extra
+  return {tracoTemp: vfCanvasTracoTempPersistenteVF, baseSnapshot: vfCanvasBaseSnapshotPersistenteVF};
+}
+let vfScrollTopNoInicioTracoVF = 0; // scroll de #content quando o traço de destaque começou - usado pra desenhar os canvas temporários só do tamanho da área visível, não do conteúdo inteiro (que pode ser bem maior, causando lentidão real ao criar/copiar canvas enormes)
+let vfCanvasBaseSnapshot = null; // retrato do canvas ANTES do traço atual começar, pra multiply de verdade no preview
+let vfCtxTracoTemp = null;
+let vfCtxPreviewDestaque = null; // canvas visível por cima, mostra o resultado final em tempo real enquanto desenha
+let vfDesenhandoAgora = false;
+// controla o "modo de visualização" ao abrir uma questão salva que não é
+// da sessão atual - guarda de onde saiu pra poder voltar quando o usuário
+// clicar Próxima/Anterior/sair, em vez de continuar navegando a partir
+// da posição antiga da questão salva (que pode ser bem "pra trás")
+let vfVisualizandoSalvoInfoVF = null;
+let vfSeletorCorNativoAberto = false; // true enquanto o seletor de cor nativo (roda-viva) está aberto
+// checagem GERAL - qualquer pop-up (modal de anotação, notas, explicação,
+// excluir, o que for) bloqueia o início de um traço novo. Cobre todos os
+// pop-ups de uma vez, não só o seletor de cor nativo especificamente
+function vfAlgumModalAbertoVF(){
+  if(vfSeletorCorNativoAberto) return true;
+  // ':not(#modal-explicacao-vf)' - exceção específica: esse modal
+  // precisa deixar a caneta desenhar em cima dele (pedido explícito do
+  // Carlos, pra poder escrever sobre a explicação), diferente de todos
+  // os outros modais/popups, que continuam bloqueando normalmente
+  if(document.querySelector('.modal-overlay:not(.hidden):not(#modal-explicacao-vf)')) return true;
+  const paginaSalvos = document.getElementById('pagina-flash-salvos-vf');
+  if(paginaSalvos && !paginaSalvos.classList.contains('hidden')) return true;
+  const paginaFavoritos = document.getElementById('pagina-favoritos-vf');
+  if(paginaFavoritos && !paginaFavoritos.classList.contains('hidden')) return true;
+  // overlay de "retomar sessão" (aparece ao voltar pro app com uma
+  // sessão pausada) também bloqueia - não usa a classe .modal-overlay,
+  // então sem essa checagem específica a caneta tentava iniciar um traço
+  // em cima dos botões Retomar/Finalizar, em vez de deixar o clique
+  // acontecer normalmente. Só checado DENTRO do Flash - esses overlays
+  // são exclusivos dele conceitualmente, e seu estado interno (hidden ou
+  // não) pode ficar dessincronizado entre navegações; checar isso fora
+  // do Flash bloqueava o desenho no Quest por causa de um overlay que
+  // nem estava fisicamente na tela
+  if(vfTelaAtualVF() === 'flash'){
+    const overlayRetomar = document.getElementById('vf-overlay-retomar-sessao');
+    if(overlayRetomar && !overlayRetomar.classList.contains('hidden')) return true;
+    const overlayIniciar = document.getElementById('vf-overlay-iniciar-sessao');
+    if(overlayIniciar && !overlayIniciar.classList.contains('hidden')) return true;
+  }
+  // os painéis de configuração (Caneta/Borracha/Marcador/marcação de
+  // texto) também bloqueiam - sem isso, a caneta continuava desenhando
+  // por baixo do balãozinho quando você tentava escolher uma cor nova
+  const idsPaineis = ['vf-painel-caneta', 'vf-painel-borracha', 'vf-painel-destaque', 'vf-painel-marcacao-texto'];
+  for(const id of idsPaineis){
+    const painel = document.getElementById(id);
+    if(painel && !painel.classList.contains('hidden')) return true;
+  }
+  return false;
+}
+let vfTimerSeletorCorTravado = null;
+// função única pra marcar "aberto" - sempre arma um cão de guarda junto.
+// Não importa por qual caminho o seletor foi fechado (toque na página,
+// foco mudando, ou algum jeito que eu não previ) - se nada me avisar em
+// alguns segundos, o próprio timer destrava sozinho. Isso evita a trava
+// ficar presa pra sempre e corromper o layout permanentemente
+function vfMarcarSeletorCorAbertoVF(){
+  vfSeletorCorNativoAberto = true;
+  clearTimeout(vfTimerSeletorCorTravado);
+  vfTimerSeletorCorTravado = setTimeout(() => {
+    vfSeletorCorNativoAberto = false;
+    ajustarViewportReal();
+  }, 4000);
+}
+function vfDesmarcarSeletorCorAbertoVF(){
+  if(!vfSeletorCorNativoAberto) return; // já estava fechado - nada a fazer, evita recalcular a toa em QUALQUER toque da tela
+  vfSeletorCorNativoAberto = false;
+  clearTimeout(vfTimerSeletorCorTravado);
+  ajustarViewportReal();
+}
+// sinal muito mais confiável que só o "blur" do input: se ESSE listener
+// está rodando, é porque o toque chegou até o JS da página — e isso só
+// acontece se o seletor nativo NÃO estiver mais capturando a tela por
+// cima (enquanto ele está de fato aberto, nenhum toque na página chega
+// aqui). O blur sozinho não disparava em arrastos de slider, por exemplo
+document.addEventListener('touchstart', vfDesmarcarSeletorCorAbertoVF, {capture: true, passive: true});
+let vfTouchIdAtivo = null;
+let vfCorDesenhoAtual = '#1A40A1';
+let vfEspessuraDesenhoAtual = 4.5;
+let vfForcaSuavizada = 0.5; // suaviza a força entre um touchmove e outro, evita a espessura "pulando" abrupto
+let vfModoBorracha = false;
+let vfModoDestaque = false; // highlighter - traço translúcido, tipo marca-texto de verdade
+let vfCorDestaqueAtual = '#FFD84D';
+let vfEspessuraDestaqueAtual = 20;
+let vfOpacidadeDestaqueAtual = 0.45;
+let vfCorMarcacaoTextoAtual = '#FFD84D'; // compartilhada pelos 3 (grifar/sublinhar/riscar) - amarelo como padrão, mesma cor já usada no destaque de caneta
+let vfUltimoPontoDesenho = null;
+// duplo toque leve (sem virar traço) alterna caneta <-> borracha, mesmo
+// espírito do gesto nativo do Apple Pencil - já que a lógica de desenho
+// mudou bastante, essa detecção precisa ser própria do app agora
+let vfPontoInicialTracoAtualVF = null;
+// rastreiam a "forma" do traço em andamento, pra detectar um gesto de
+// rasurão (várias idas e vindas cobrindo boa parte da tela) - a caixa
+// delimitadora (bounding box) e o comprimento total do caminho
+// percorrido. Um traço normal (uma linha, uma letra) tem comprimento
+// perto da diagonal da própria caixa; um rasurão tem comprimento MUITO
+// maior que a caixa, porque fica indo e voltando repetidas vezes
+let vfFormaTracoAtualVF = null; // {minX, maxX, minY, maxY, comprimento, ultimoX, ultimoY}
+// região suja acumulada desde a última atualização do preview do destaque
+// - {minX, minY, maxX, maxY} em coordenadas do canvas (não da tela). Só o
+// segmento novo, não o traço inteiro - preencher uma área grande (tipo um
+// coração) gerava dezenas de redesenhos da TELA VISÍVEL INTEIRA por
+// segundo, mesmo cada segmento novo sendo pequeno - isso travava a
+// interface. Null = nada acumulado ainda desde a última atualização
+let vfRegiaoSujaDestaqueVF = null;
+let vfUltimoTapLeveCanetaVF = null; // {x, y, quando} - só o tap anterior mais recente
+let vfSnapshotRegiaoTapLeveVF = null; // {ctx, x, y, lado, imageData} - região capturada no touchstart, restaurada se o toque virar um tap leve
+let vfPontoMedioAnterior = null;
+let vfPosicaoSuavizada = null; // suavização leve de x,y - reseta a cada novo traço (touchstart), ver uso em touchmove
+
+function inicializarCanvasDesenhoVF(){
+  const canvas = document.getElementById('vf-canvas-desenho');
+  if(!canvas) return;
+  redimensionarCanvasDesenhoVF();
+}
+
+let vfRedimensionandoCanvasAgoraVF = false; // proteção contra reentrância - impede loop cíclico caso essa função dispare o próprio observer que a chama
+function redimensionarCanvasDesenhoVF(){
+  if(vfRedimensionandoCanvasAgoraVF) return; // já está rodando - evita empilhar/repetir
+  vfRedimensionandoCanvasAgoraVF = true;
+  try{
+    vfRedimensionarCanvasDesenhoInternoVF();
+  }finally{
+    vfRedimensionandoCanvasAgoraVF = false;
+  }
+}
+function vfRedimensionarCanvasDesenhoInternoVF(){
+  const canvas = document.getElementById('vf-canvas-desenho');
+  if(!canvas) return;
+  const content = document.getElementById('content');
+  const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
+  // mede a altura de #content DEPOIS de zerar a altura dos DOIS canvas
+  // (principal e preview) - achado real: os dois (position:absolute
+  // dentro de #content, que tem overflow-y:auto) contavam a própria
+  // altura na hora de medir scrollHeight, criando um ciclo que só
+  // crescia (Math.max nunca diminui) - cada rotação de tela deixava um
+  // espaço vazio extra acumulado logo abaixo do conteúdo real. Zerar só
+  // o canvas principal não bastava - o preview, atualizado só depois da
+  // medição, ainda carregava a altura antiga (já inflada) nesse momento
+  if(content){
+    canvas.style.height = '0px';
+    if(canvasPreview) canvasPreview.style.height = '0px';
+    if(vfTelaAtualVF() === 'flash'){
+      // fixed, cobre só a viewport visível - o conteúdo do Flash nunca
+      // é grande o bastante pra precisar de scroll, então não faz
+      // sentido medir scrollHeight aqui (isso inclusive era a causa do
+      // canvas ficar "maior que a tela" sem necessidade nesse contexto)
+      canvas.style.height = window.innerHeight + 'px';
+    }else{
+      // teto de segurança: mesmo que outra causa de crescimento apareça no
+      // futuro, o canvas nunca passa de 4x a altura da viewport - um
+      // canvas gigante (buffer de pixels enorme) deixa toda operação de
+      // desenho pesada e lenta, sintoma real já visto quando esse bug
+      // ainda não tinha sido corrigido de vez
+      const alturaMaxima = window.innerHeight * 8;
+      canvas.style.height = Math.min(Math.max(content.scrollHeight, content.offsetHeight), alturaMaxima) + 'px';
+    }
+  }
+  const rect = canvas.getBoundingClientRect();
+  if(rect.width === 0 || rect.height === 0) return; // aba ainda escondida, não tem o que medir
+  // supersampling: renderiza em resolução MAIOR que o DPR nativo da tela
+  // pede, e deixa o navegador comprimir na exibição — isso deixa curvas e
+  // bordas mais suaves/nítidas do que renderizar exatamente 1:1 com os
+  // pixels físicos, principalmente em curvas (menos serrilhado)
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  // {desynchronized:true} reduz a latência de render — recomendado pra
+  // desenho em tempo real, evita a sensação de atraso entre a caneta e a linha
+  const ctx = canvas.getContext('2d', {desynchronized: true});
+  // setTransform SUBSTITUI a matriz de transformação, nunca acumula — usar
+  // ctx.scale() repetidas vezes (o bug de antes) ia compondo a escala a
+  // cada redimensionamento, distorcendo a resolução real do traço
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  vfCtxDesenho = ctx;
+  // redimensionar SEMPRE limpa os pixels do canvas, mesmo que o tamanho
+  // não tenha mudado de verdade — isso podia apagar silenciosamente um
+  // desenho em andamento (o histórico nunca soube desse apagão, então o
+  // desfazer ficava fora de sincronia com o que estava realmente na
+  // tela). Redesenha o último estado salvo, se existir, pra nunca perder
+  // o que já estava lá por causa de um resize disparado por qualquer motivo.
+  // Aplica um fator de correção real (não "esticar tudo pra viewport
+  // inteira", nem "não escalar nada") - a largura do conteúdo muda numa
+  // proporção exata e conhecida ao girar a tela, então escalar X por
+  // essa razão é correto. A altura não estica de verdade (o texto só
+  // reflui, quebrando diferente), mas escalar Y pela razão real entre a
+  // altura ANTIGA do conteúdo (guardada junto com o desenho) e a altura
+  // NOVA aproxima bem o quanto cada ponto "desceu" ou "subiu" por causa
+  // do reflow - testado com fotos reais lado a lado (portrait vs
+  // landscape), a posição relativa dos traços ficou bem mais próxima do
+  // texto certo do que sem nenhuma correção
+  if(typeof vfIndiceHistoricoVF !== 'undefined' && vfIndiceHistoricoVF >= 0 && vfHistoricoDesenho[vfIndiceHistoricoVF]){
+    const entradaHistorico = vfHistoricoDesenho[vfIndiceHistoricoVF];
+    const img = new Image();
+    img.onload = () => {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      let larguraDestino = img.width/dpr, alturaDestino = img.height/dpr;
+      if(content && entradaHistorico.larguraConteudo && entradaHistorico.alturaConteudo){
+        const novaLargura = content.clientWidth;
+        const novaAltura = Math.min(Math.max(content.scrollHeight, content.offsetHeight), window.innerHeight * 8);
+        const fatorX = novaLargura / entradaHistorico.larguraConteudo;
+        const fatorY = novaAltura / entradaHistorico.alturaConteudo;
+        larguraDestino = (img.width/dpr) * fatorX;
+        alturaDestino = (img.height/dpr) * fatorY;
+      }
+      ctx.drawImage(img, 0, 0, larguraDestino, alturaDestino);
+    };
+    img.src = entradaHistorico.dataUrl;
+  }
+  // canvas de prévia do destaque - mesmo tamanho/resolução, sempre em
+  // branco (só recebe conteúdo durante um traço de destaque em andamento)
+  if(canvasPreview){
+    canvasPreview.style.height = canvas.style.height;
+    canvasPreview.width = rect.width * dpr;
+    canvasPreview.height = rect.height * dpr;
+    vfCtxPreviewDestaque = canvasPreview.getContext('2d');
+    vfCtxPreviewDestaque.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+}
+
+// mostra o canvas temporário da explicação, já limpo do zero - chamado
+// toda vez que o popup de explicação abre. Sem histórico próprio (não
+// precisa de desfazer/refazer aqui, é sempre descartado ao fechar)
+function vfAbrirCanvasExplicacaoVF(){
+  const canvas = document.getElementById('vf-canvas-desenho-explicacao');
+  if(!canvas) return;
+  // mostra ANTES de medir - com display:none, getBoundingClientRect
+  // sempre retorna 0x0, o que faria a função voltar sem nunca inicializar
+  canvas.style.display = 'block';
+  const rect = canvas.getBoundingClientRect();
+  if(rect.width === 0 || rect.height === 0) return;
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d', {desynchronized: true});
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  vfCtxDesenhoExplicacaoVF = ctx;
+}
+
+// esconde e limpa o canvas temporário da explicação - o que foi rabiscado
+// em cima do texto some, nunca persiste no desenho real da questão
+function vfFecharCanvasExplicacaoVF(){
+  const canvas = document.getElementById('vf-canvas-desenho-explicacao');
+  if(!canvas) return;
+  canvas.style.display = 'none';
+  if(vfCtxDesenhoExplicacaoVF) vfCtxDesenhoExplicacaoVF.clearRect(0, 0, canvas.width, canvas.height);
+  vfCtxDesenhoExplicacaoVF = null;
+}
+
+// NOTA: chegou a existir aqui uma checagem extra "vfDentroDaAreaDesenho"
+// (media se o toque caía dentro do retângulo do canvas via
+// getBoundingClientRect antes de aceitar o traço). Removida: o canvas
+// cobre 100% da tela (inset:0) sempre que está visível, então essa
+// checagem nunca acrescentava nada de útil - só forçava um recálculo de
+// layout síncrono (caro) em TODO toque de caneta, e criava risco de
+// bloquear o início de um traço se a medição saísse errada por qualquer
+// motivo de timing. As checagens que seguem (barra, botão resposta,
+// ícones) já cobrem tudo que realmente precisa ser excluído
+
+// true se o toque caiu em cima da própria barrinha de ferramentas — nesse
+// caso NÃO é início de traço, é um toque normal de botão (bug corrigido:
+// antes, tocar a barrinha com a caneta era interpretado como "começar a
+// desenhar aqui", porque a barrinha fica geometricamente dentro da área
+// do canvas)
+function vfTocouNaBarra(target){
+  const barra = document.getElementById('vf-barra-desenho');
+  const painelCaneta = document.getElementById('vf-painel-caneta');
+  const painelBorracha = document.getElementById('vf-painel-borracha');
+  const painelDestaque = document.getElementById('vf-painel-destaque');
+  const painelMarcacaoTexto = document.getElementById('vf-painel-marcacao-texto');
+  return !!((barra && (barra === target || barra.contains(target))) ||
+            (painelCaneta && (painelCaneta === target || painelCaneta.contains(target))) ||
+            (painelBorracha && (painelBorracha === target || painelBorracha.contains(target))) ||
+            (painelDestaque && (painelDestaque === target || painelDestaque.contains(target))) ||
+            (painelMarcacaoTexto && (painelMarcacaoTexto === target || painelMarcacaoTexto.contains(target))));
+}
+
+function vfEhToqueDeCaneta(touch){
+  // touchType é a API certa do Safari pra isso: 'stylus' = Apple Pencil,
+  // 'direct' = dedo. Em navegadores sem esse campo (não-Safari), cai pra
+  // não desenhar — esse recurso é mesmo só pensado pro Safari/iPad
+  return touch && touch.touchType === 'stylus';
+}
+
+// proteção contra a palma da mão nos campos de edição (correção/
+// explicação) - um <textarea> nativo sempre "ganha" o toque pra seleção
+// de texto, mesmo com user-select:none no container pai (comportamento
+// nativo de campo de entrada, não é algo que CSS consiga bloquear). Se a
+// pessoa está escrevendo/corrigindo usando a caneta, qualquer toque que
+// não seja da própria caneta dentro desses textareas é quase sempre a
+// palma da mão apoiada sem querer - bloqueado antes que o navegador
+// selecione/copie o texto. Capture phase pra interceptar ANTES do
+// comportamento nativo de seleção do textarea
+document.addEventListener('touchstart', (e) => {
+  const dentroDeTextareaEdicao = e.target.closest('#vf-textarea-correcao, #vf-textarea-explicacao');
+  if(!dentroDeTextareaEdicao) return;
+  const touch = e.touches[0];
+  if(vfEhToqueDeCaneta(touch)) return; // a própria caneta sempre funciona normal (posicionar cursor, selecionar de propósito)
+  e.preventDefault();
+}, {capture: true, passive: false});
+
+// PointerEvent.getCoalescedEvents() dá acesso às amostras de toque REAIS
+// que o hardware gerou entre um touchmove e outro (não é interpolação/
+// suposição nenhuma - são pontos de verdade que o Apple Pencil reportou,
+// só "represados" pelo navegador por otimização). Suportado no Safari
+// desde a versão 18.2 (dez/2024). Guarda o pointerId mais recente de um
+// toque tipo caneta - touchstart usa ele pra saber qual pointerId
+// corresponde ao toque que acabou de iniciar o traço (pointerdown sempre
+// dispara antes do touchstart correspondente, ordem garantida pelo spec)
+const VF_SUPORTA_COALESCED_VF = typeof PointerEvent !== 'undefined' && typeof PointerEvent.prototype.getCoalescedEvents === 'function';
+let vfUltimoPointerIdCanetaVF = null;
+let vfPointerIdAtivoVF = null;
+if(VF_SUPORTA_COALESCED_VF){
+  document.addEventListener('pointerdown', (e) => {
+    if(e.pointerType === 'pen') vfUltimoPointerIdCanetaVF = e.pointerId;
+  }, {capture: true, passive: true});
+}
+
+let vfBotaoPendenteToqueInfo = null; // {x, y, identifier, limiar} - toque começou num ícone pequeno, decisão adiada até ver se vira arrasto
+// achado real: 8px era sensível demais - o tremor natural da mão/caneta
+// ao tocar (mesmo sem intenção nenhuma de arrastar) já ultrapassava esse
+// limiar, cancelando o clique e virando traço de desenho, fazendo botões
+// normais ficarem quase impossíveis de clicar com a caneta
+const VF_LIMIAR_ARRASTO_BOTAO_PX = 16;
+// menu lateral/de baixo usa um limiar bem mais generoso - a Apple Pencil
+// tem um tremor natural mesmo parada (documentado antes), e isso fazia
+// clicar no menu com a caneta falhar com mais frequência que com o dedo
+const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 20;
+
+document.addEventListener('touchstart', (e) => {
+  if(!vfEstaVisivelAgora()) return;
+  const noFlash = !document.getElementById('aba-vf').classList.contains('hidden');
+  if(noFlash && !vfSessaoAtivaVF) return; // sem sessão ativa NO FLASH, a tela está bloqueada pelo overlay de "Iniciar sessão" - a caneta não desenha por cima dele. No Quest não existe esse conceito, não bloqueia
+  if(vfAlgumModalAbertoVF()) return; // nenhum pop-up (modal, seletor de cor nativo, etc) deixa desenhar através dele
+  if(vfModoMarcacaoTextoAtivo) return; // marcação de texto ativa = a caneta também marca texto, não desenha livre
+  const touch = e.changedTouches[0];
+  if(!vfEhToqueDeCaneta(touch)) return; // só a caneta desenha
+  if(vfTocouNaBarra(e.target)) return; // deixa o toque chegar no botão normalmente
+  if(e.target.closest('.vf-btn-resposta')) return; // idem pros botões Verdadeiro/Falso - nunca viram início de traço
+  if(e.target.closest('#vf-sessao-balao')) return; // balão da sessão (arrastar, Pausar, Finalizar, fechar) - nunca vira início de traço, tem seu próprio sistema de arrasto/clique
+  if(vfBalaoArrastoInfoVF) return; // proteção redundante - nunca desenha enquanto o balão está sendo arrastado, mesmo que o toque não esteja mais fisicamente sobre ele
+  if(e.target.closest('textarea')) return; // nunca vira início de traço - dentro de qualquer textarea (edição de explicação/enunciado/correção), o toque (caneta ou dedo) precisa ficar livre pro comportamento nativo de seleção/cursor, sem competir com o sistema de desenho
+  if(e.target.closest('select')) return; // qualquer <select> nativo (filtros do Flash, e futuros) - nunca vira início de traço, o dropdown nativo do Safari precisa do toque limpo
+  // Favoritar/Salvar já têm sistema PRÓPRIO completo (toque curto=clique,
+  // toque longo=abrir lista, ver vfIniciarPressionarFavoritar/Salvar) -
+  // achado real: o sistema genérico abaixo (só ativo pra caneta) competia
+  // com esse sistema próprio pela mesma caneta, quebrando os dois. Deixa
+  // esses 2 botões inteiramente por conta do próprio sistema deles
+  if(e.target.closest('[onclick^="toggleFavoritoVF"], [onclick^="vfAbrirEscolhaMotivoSalvarVF"]')) return;
+  // ícones pequenos, itens de menu (barra de baixo/sidebar), botões do
+  // cabeçalho, e QUALQUER botão/link clicável na tela (alternativas do
+  // Quest, Anterior/Próxima, pills de navegação, Confirmar resposta,
+  // Excluir/Favoritar/Discutir/Notas, etc): não decide na hora - um
+  // TOQUE rápido deixa o clique funcionar normal (trocar de aba, marcar
+  // alternativa, navegar), mas se virar ARRASTO de verdade, continua
+  // como traço - dá liberdade total pra desenhar em cima de qualquer
+  // coisa, sem perder a interação normal com toque rápido. Generalizado
+  // pra <button>/[onclick] em vez de listar cada classe manualmente -
+  // cobre automaticamente Flash e Quest sem precisar manter duas listas
+  const itemMenu = e.target.closest('.nav-item');
+  const botaoIcone = itemMenu || e.target.closest('button, [onclick]');
+  if(botaoIcone){
+    vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX, elemento: botaoIcone};
+    // suprime o efeito de "apertar" (button:active) já desde o primeiro
+    // instante do toque, só pra caneta - achado real: a classe só era
+    // adicionada depois que o movimento já tivesse passado do limiar de
+    // arrasto, mas o :active nativo do navegador dispara imediatamente
+    // no toque, bem antes disso - causava um "pulo" visual mesmo em
+    // toques que iam virar traço de escrita em cima da alternativa.
+    // Removida logo abaixo se for confirmado que virou clique de
+    // verdade (vfFinalizarTracoDesenho), ou pelo caminho normal de
+    // desenho se virar traço - dedo nunca entra aqui, mantém o efeito normal
+    if(vfEhToqueDeCaneta(touch)) document.body.classList.add('vf-tracando-agora');
+    return;
+  }
+  if(!vfCtxDesenhoAtivoAgoraVF()){
+    const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
+    if(!modalExplicacaoAberto) inicializarCanvasDesenhoVF();
+  }
+  if(!vfCtxDesenhoAtivoAgoraVF()) return;
+  e.preventDefault();
+  vfDesenhandoAgora = true;
+  document.body.classList.add('vf-tracando-agora'); // desliga o efeito de toque dos botões só ENQUANTO esse traço específico dura, não a sessão de desenho inteira
+  vfTouchIdAtivo = touch.identifier;
+  vfPointerIdAtivoVF = vfUltimoPointerIdCanetaVF;
+  vfPontoInicialTracoAtualVF = {x: touch.clientX, y: touch.clientY};
+  vfFormaTracoAtualVF = {minX: touch.clientX, maxX: touch.clientX, minY: touch.clientY, maxY: touch.clientY, comprimento: 0, ultimoX: touch.clientX, ultimoY: touch.clientY};
+  const canvas = document.getElementById('vf-canvas-desenho');
+
+  const rect = canvas.getBoundingClientRect();
+  const ponto = {x: touch.clientX - rect.left, y: touch.clientY - rect.top};
+  // snapshot pequeno (não o canvas inteiro, que agora pode ser bem grande)
+  // da região ao redor do toque - se isso virar um tap leve (não um
+  // traço de verdade), restaura essa região depois, desfazendo qualquer
+  // marquinha que o tremor natural da mão/caneta tenha desenhado durante
+  // o toque antes do touchend perceber que era só um tap
+  try{
+    const ctxAtivoSnapshot = vfCtxDesenhoAtivoAgoraVF();
+    const dprSnapshot = (window.devicePixelRatio || 1) * 1.5;
+    const ladoSnapshot = 120 * dprSnapshot; // margem generosa - um tap leve não deveria se mover mais que isso
+    const xSnapshot = Math.round(ponto.x * dprSnapshot - ladoSnapshot/2);
+    const ySnapshot = Math.round(ponto.y * dprSnapshot - ladoSnapshot/2);
+    vfSnapshotRegiaoTapLeveVF = {
+      ctx: ctxAtivoSnapshot,
+      x: xSnapshot, y: ySnapshot, lado: ladoSnapshot,
+      imageData: ctxAtivoSnapshot.getImageData(xSnapshot, ySnapshot, ladoSnapshot, ladoSnapshot)
+    };
+  }catch(e){ vfSnapshotRegiaoTapLeveVF = null; } // fora dos limites do canvas ou outro erro - sem snapshot, o pior caso é a marquinha residual antiga (não regride nada)
+  vfUltimoPontoDesenho = ponto;
+  vfPontoMedioAnterior = ponto;
+  vfPosicaoSuavizada = ponto; // reseta - não herda do traço anterior, senão o primeiro ponto "saltaria"
+  vfForcaSuavizada = typeof touch.force === 'number' && touch.force > 0 ? touch.force : 0.5; // começa do zero, não herda do traço anterior
+  // modo destaque desenha num canvas TEMPORÁRIO à parte, em opacidade
+  // cheia (sem transparência nenhuma durante o arrasto) - e só funde no
+  // canvas de verdade quando solta o dedo, com a opacidade escolhida
+  // aplicada UMA VEZ SÓ. Sem isso, cada pedacinho do traço curvo (um
+  // stroke() por movimento) empilhava opacidade nas emendas, criando
+  // aquele efeito de "salsicha"/conta em vez de uma linha lisa e única
+  if(vfModoDestaque){
+    const contentParaDestaque = document.getElementById('content');
+    vfScrollTopNoInicioTracoVF = contentParaDestaque ? contentParaDestaque.scrollTop : 0;
+    const alturaVisivelBruta = contentParaDestaque ? contentParaDestaque.clientHeight : canvas.height;
+    // limita à menor dimensão da tela (não à altura visível inteira) -
+    // achado real: em retrato a altura visível é bem maior que em
+    // paisagem, deixando o canvas temporário maior e cada redesenho mais
+    // caro - só em retrato o desenho ficava mais lento. Um traço de
+    // destaque raramente precisa de mais altura que isso de qualquer forma
+    const alturaVisivel = Math.min(alturaVisivelBruta, Math.min(window.innerWidth, window.innerHeight));
+    const dpr = (window.devicePixelRatio || 1) * 1.5;
+    const alturaBufferDestaque = alturaVisivel * dpr;
+    const canvasPrep = vfPrepararCanvasDestaqueVF(canvas.width, alturaBufferDestaque);
+    vfCanvasTracoTemp = canvasPrep.tracoTemp;
+    vfCtxTracoTemp = vfCanvasTracoTemp.getContext('2d');
+    // desloca a origem pelo scroll atual (negativo) - assim as MESMAS
+    // coordenadas (x,y) que o resto do sistema já calcula em relação ao
+    // conteúdo inteiro caem no lugar certo dentro desse canvas menor,
+    // sem precisar duplicar/mudar a lógica de cálculo de coordenadas
+    vfCtxTracoTemp.setTransform(dpr, 0, 0, dpr, 0, -vfScrollTopNoInicioTracoVF * dpr);
+    vfCtxTracoTemp.lineCap = 'round';
+    vfCtxTracoTemp.lineJoin = 'round';
+    // retrato do que já existe no canvas ANTES desse traço começar - usado
+    // no preview pra escurecer de verdade em tempo real ao passar por cima
+    // de linhas já desenhadas (sem isso, o multiply do preview não tinha
+    // nada real pra misturar, só o próprio traço novo sozinho). Copia só
+    // a fatia visível do canvas principal, não ele inteiro
+    vfCanvasBaseSnapshot = canvasPrep.baseSnapshot;
+    vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, vfScrollTopNoInicioTracoVF * dpr, canvas.width, alturaBufferDestaque, 0, 0, canvas.width, alturaBufferDestaque);
+    vfRegiaoSujaDestaqueVF = null; // começo de traço novo - nunca herda região suja de um traço anterior
+    // esconde o canvas REAL enquanto o traço está em andamento - ele já
+    // foi copiado pro snapshot (que o preview usa por cima). Mantendo os
+    // dois visíveis ao mesmo tempo, cada traço já feito (semi-transparente
+    // por natureza) aparecia DUAS VEZES empilhado - uma vez no canvas real
+    // por baixo (normal), outra vez na cópia do snapshot no preview por
+    // cima - duas camadas semi-transparentes do MESMO traço juntas ficam
+    // mais escuras que uma só. É por isso que só escurecia DURANTE o
+    // traço, e voltava ao normal ao soltar (quando o preview some e só
+    // sobra uma camada de novo)
+    canvas.style.opacity = '0';
+    vfDesenharSnapshotCompletoNoPreviewVF(); // preview já nasce mostrando tudo, antes mesmo do primeiro ponto do traço
+  }
+  // trava o scroll da página inteira enquanto o traço está em andamento —
+  // duas camadas (touch-action E overflow), pra fechar o máximo de portas
+  // possível contra a tela tremendo atrás da caneta. Some ao soltar o traço
+  document.body.style.touchAction = 'none';
+  document.documentElement.style.overflow = 'hidden';
+  // o bloqueio de #content é só no Quest, de propósito - lá que o bug
+  // "a caneta rola a página" foi relatado (questão longa, precisa de
+  // scroll). No Flash isso não era necessário e mexer nesse scroll ali
+  // causava efeito colateral real (voltar ao comportamento de antes)
+  if(vfTelaAtualVF() === 'quest'){
+    vfTravarScrollContentVF();
+  }
+  mostrarBarraDesenhoVF();
+}, {passive: false});
+
+document.addEventListener('touchmove', (e) => {
+  // decide o destino do toque que começou em cima de um ícone pequeno
+  if(vfBotaoPendenteToqueInfo){
+    const touchPendente = Array.from(e.changedTouches).find(t => t.identifier === vfBotaoPendenteToqueInfo.identifier);
+    if(touchPendente){
+      const dx = touchPendente.clientX - vfBotaoPendenteToqueInfo.x, dy = touchPendente.clientY - vfBotaoPendenteToqueInfo.y;
+      if(Math.hypot(dx, dy) > vfBotaoPendenteToqueInfo.limiar){
+        // virou arrasto de verdade - começa o traço retroativamente a
+        // partir do ponto onde o dedo/caneta tocou primeiro, não de onde
+        // está agora (senão nasceria um pedacinho de traço faltando)
+        if(!vfCtxDesenhoAtivoAgoraVF()){
+          const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
+          if(!modalExplicacaoAberto) inicializarCanvasDesenhoVF();
+        }
+        if(vfCtxDesenhoAtivoAgoraVF()){
+          vfDesenhandoAgora = true;
+          document.body.classList.add('vf-tracando-agora');
+          if(typeof cancelarPressionarAlternativa === 'function') cancelarPressionarAlternativa(); // sem isso, o toque longo do próprio botão podia riscar a alternativa sozinho no meio da escrita
+          vfTouchIdAtivo = vfBotaoPendenteToqueInfo.identifier;
+          vfPointerIdAtivoVF = vfUltimoPointerIdCanetaVF;
+          const canvas = document.getElementById('vf-canvas-desenho');
+          const rect = canvas.getBoundingClientRect();
+          const ponto = {x: vfBotaoPendenteToqueInfo.x - rect.left, y: vfBotaoPendenteToqueInfo.y - rect.top};
+          vfUltimoPontoDesenho = ponto;
+          vfPontoMedioAnterior = ponto;
+          vfFormaTracoAtualVF = {minX: vfBotaoPendenteToqueInfo.x, maxX: vfBotaoPendenteToqueInfo.x, minY: vfBotaoPendenteToqueInfo.y, maxY: vfBotaoPendenteToqueInfo.y, comprimento: 0, ultimoX: vfBotaoPendenteToqueInfo.x, ultimoY: vfBotaoPendenteToqueInfo.y};
+          vfPosicaoSuavizada = ponto; // reseta - mesmo motivo do outro caminho de início de traço
+          vfForcaSuavizada = typeof touchPendente.force === 'number' && touchPendente.force > 0 ? touchPendente.force : 0.5;
+          if(vfModoDestaque){
+            const contentParaDestaque2 = document.getElementById('content');
+            vfScrollTopNoInicioTracoVF = contentParaDestaque2 ? contentParaDestaque2.scrollTop : 0;
+            const alturaVisivel2Bruta = contentParaDestaque2 ? contentParaDestaque2.clientHeight : canvas.height;
+            const alturaVisivel2 = Math.min(alturaVisivel2Bruta, Math.min(window.innerWidth, window.innerHeight));
+            const dpr = (window.devicePixelRatio || 1) * 1.5;
+            const alturaBufferDestaque2 = alturaVisivel2 * dpr;
+            const canvasPrep2 = vfPrepararCanvasDestaqueVF(canvas.width, alturaBufferDestaque2);
+            vfCanvasTracoTemp = canvasPrep2.tracoTemp;
+            vfCtxTracoTemp = vfCanvasTracoTemp.getContext('2d');
+            vfCtxTracoTemp.setTransform(dpr, 0, 0, dpr, 0, -vfScrollTopNoInicioTracoVF * dpr);
+            vfCtxTracoTemp.lineCap = 'round';
+            vfCtxTracoTemp.lineJoin = 'round';
+            vfCanvasBaseSnapshot = canvasPrep2.baseSnapshot;
+            vfCanvasBaseSnapshot.getContext('2d').drawImage(canvas, 0, vfScrollTopNoInicioTracoVF * dpr, canvas.width, alturaBufferDestaque2, 0, 0, canvas.width, alturaBufferDestaque2);
+            vfRegiaoSujaDestaqueVF = null; // mesma garantia no segundo caminho de início de traço
+            canvas.style.opacity = '0'; // mesma correção do outro caminho - evita dupla camada semi-transparente
+            vfDesenharSnapshotCompletoNoPreviewVF(); // mesma garantia do outro caminho
+          }
+          document.body.style.touchAction = 'none';
+          document.documentElement.style.overflow = 'hidden';
+          if(vfTelaAtualVF() === 'quest'){
+            vfTravarScrollContentVF();
+          }
+          mostrarBarraDesenhoVF();
+        }
+        vfBotaoPendenteToqueInfo = null;
+      }
+    }
+  }
+  if(!vfDesenhandoAgora) return;
+  const touch = Array.from(e.changedTouches).find(t => t.identifier === vfTouchIdAtivo);
+  if(!touch) return;
+  e.preventDefault();
+  // quando o navegador suporta coalesced events, o desenho em si é feito
+  // pelo listener de pointermove abaixo (pega os pontos reais extras que
+  // o touchmove sozinho não vê) - aqui só cuida de prevenir o scroll/
+  // gesto padrão do navegador, sem desenhar duas vezes o mesmo traço
+  if(VF_SUPORTA_COALESCED_VF) return;
+  const canvas = document.getElementById('vf-canvas-desenho');
+  const rect = canvas.getBoundingClientRect();
+  vfProcessarPontoDesenhoVF(touch.clientX, touch.clientY, touch.force, rect);
+  vfAtualizarPreviewDestaqueVF();
+}, {passive: false});
+
+// toda a lógica de desenhar UM ponto (suavização de posição, força,
+// espessura, interpolação de salto grande, curva quadrática, preview do
+// destaque) extraída pra uma função só - chamada tanto pelo touchmove
+// (fallback, navegadores sem coalesced events) quanto pelo pointermove
+// novo (com coalesced events, dados reais extras do hardware). Mesmo
+// código de desenho nos dois caminhos, só muda de onde os pontos vêm
+function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect, dentroDeLote){
+  // suavização ADAPTATIVA de posição (não peso fixo) - a primeira versão
+  // usava peso fixo (90% novo/10% suavizado anterior) em TODO evento de
+  // toque, mas isso faz o atraso introduzido crescer junto com a
+  // velocidade do traço (testado: ~0.2px de atraso num traço lento, mas
+  // >5px num traço rápido - perceptível, ficava "cortando curva" e
+  // parecendo menos fiel quanto mais rápido a caneta se movia). Ajustar o
+  // peso pela distância do movimento resolve isso: suaviza forte só
+  // quando o movimento é pequeno (onde o ruído do sensor realmente
+  // aparece), e quase não suaviza quando o movimento é grande (onde a
+  // responsividade importa mais que o ruído, que já é desprezível
+  // perto da distância percorrida) - testado isoladamente antes de
+  // aplicar: atraso ficou baixo e estável (~0.3-0.5px) em qualquer
+  // velocidade, ao invés de crescer com ela.
+  // Recalibrado pra densidade de amostragem dos coalesced events: o
+  // ruído físico do sensor (Apple Pencil) não muda com mais amostras,
+  // mas cada segmento entre pontos ficou muito mais curto - o mesmo
+  // ruído passou a dominar proporcionalmente cada segmento, aparecendo
+  // como pequenas "facetas"/retinhas dentro de curvas lentas e finas
+  // (tipo um "c" cursivo). Peso mínimo mais baixo (0.10, era 0.85) e
+  // raio de transição menor (8px, era 20px) cortam esse facetamento em
+  // ~47% nos traços finos, com desvio geométrico ainda imperceptível
+  // (testado: ~0.1px) e sem NENHUM efeito em gestos rápidos (círculos
+  // grandes ficaram idênticos nos testes, já que a distância sempre
+  // ultrapassa o raio de transição de qualquer forma nesses casos)
+  const xBruto = clientX - rect.left, yBruto = clientY - rect.top;
+  let x = xBruto, y = yBruto;
+  if(vfFormaTracoAtualVF){
+    vfFormaTracoAtualVF.minX = Math.min(vfFormaTracoAtualVF.minX, clientX);
+    vfFormaTracoAtualVF.maxX = Math.max(vfFormaTracoAtualVF.maxX, clientX);
+    vfFormaTracoAtualVF.minY = Math.min(vfFormaTracoAtualVF.minY, clientY);
+    vfFormaTracoAtualVF.maxY = Math.max(vfFormaTracoAtualVF.maxY, clientY);
+    vfFormaTracoAtualVF.comprimento += Math.hypot(clientX - vfFormaTracoAtualVF.ultimoX, clientY - vfFormaTracoAtualVF.ultimoY);
+    vfFormaTracoAtualVF.ultimoX = clientX;
+    vfFormaTracoAtualVF.ultimoY = clientY;
+  }
+  if(vfPosicaoSuavizada){
+    const distanciaBruta = Math.hypot(xBruto - vfPosicaoSuavizada.x, yBruto - vfPosicaoSuavizada.y);
+    const pesoNovo = 0.10 + Math.min(distanciaBruta / 8, 1) * (0.99 - 0.10);
+    x = vfPosicaoSuavizada.x * (1 - pesoNovo) + xBruto * pesoNovo;
+    y = vfPosicaoSuavizada.y * (1 - pesoNovo) + yBruto * pesoNovo;
+  }
+  vfPosicaoSuavizada = {x, y};
+
+  // durante o arrasto, o destaque desenha em opacidade CHEIA no canvas
+  // temporário (sem multiply, sem alpha reduzido) - a mistura translúcida
+  // só acontece uma vez, no final do traço inteiro
+  const ctxAtivo = (vfModoDestaque && vfCtxTracoTemp) ? vfCtxTracoTemp : vfCtxDesenhoAtivoAgoraVF();
+  if(vfModoDestaque){
+    ctxAtivo.globalCompositeOperation = 'source-over';
+    ctxAtivo.strokeStyle = vfCorDestaqueAtual;
+    ctxAtivo.globalAlpha = 1;
+  }else{
+    ctxAtivo.globalCompositeOperation = vfModoBorracha ? 'destination-out' : 'source-over';
+    ctxAtivo.strokeStyle = vfCorDesenhoAtual;
+    ctxAtivo.globalAlpha = 1;
+  }
+  let espessuraFinal = vfEspessuraDesenhoAtual;
+  const forcaBruta = typeof forcaTouch === 'number' && forcaTouch > 0 ? forcaTouch : 0.5;
+  // suaviza a força entre um touchmove e outro (média móvel exponencial) -
+  // evita a espessura "pulando" abrupto de um segmento pro outro se a
+  // força reportada oscilar rápido, deixa a transição mais orgânica.
+  // Peso recalibrado (era 0.3, mais fraco que a suavização posicional de
+  // 0.10) - o sensor de pressão real tem seu próprio ruído/jitter, e
+  // combinado com a faixa ampla de variação de espessura (35%-220% do
+  // valor base), isso criava uma textura sutil ao longo do traço -
+  // pontinhos de espessura levemente irregular, tipo absorção de tinta
+  // nanquim no papel. Testado: peso 0.2 corta essa variação em ~18%
+  // sem atraso perceptível pra responder a uma mudança REAL e
+  // deliberada de pressão (14 pontos pra assentar contra 9 antes, a
+  // diferença é uma fração de segundo com a amostragem densa atual)
+  vfForcaSuavizada = vfForcaSuavizada * 0.8 + forcaBruta * 0.2;
+  const forca = vfForcaSuavizada;
+  if(vfModoDestaque){
+    // marca-texto de verdade não varia muito de espessura com a força -
+    // é uma ponta chata e larga, diferente da caneta. Usa o valor real do
+    // slider do painel, não mais um número fixo
+    espessuraFinal = vfEspessuraDestaqueAtual + forca * 4;
+  }else if(vfModoBorracha){
+    // usa o tamanho escolhido no painel Borracha — Total borra mais forte
+    // (multiplicador maior) que Parcial, e ainda responde um pouco à força
+    const multiplicadorModo = vfModoErasePDF === 'total' ? 1.3 : 0.85;
+    espessuraFinal = vfTamanhoBorracha * multiplicadorModo * (0.7 + forca * 0.5);
+  }else if(vfSensibilidadePonta === 'variavel'){
+    // o slider é a espessura na força MÉDIA (0.5), não o teto — força
+    // forte de verdade passa bem do valor setado, força fraca fica bem
+    // mais fina. Diferença mais dramática entre leve e forte
+    espessuraFinal = Math.max(0.8, vfEspessuraDesenhoAtual * (0.35 + forca * 1.85));
+  }
+  ctxAtivo.lineWidth = Math.max(1, espessuraFinal);
+
+  // interpolação pra traço rápido: quando a caneta se move rápido, a
+  // amostragem de toque chega mais espaçada (é uma limitação do
+  // hardware/Safari, não tem como pedir mais amostras) — sem isso, um
+  // salto grande vira um segmento quase reto, com leve efeito facetado
+  // na curva. Subdivide o salto em pontos intermediários antes de
+  // desenhar, suavizando exatamente onde a suavização por si só não
+  // ajuda (ela já roda em cima desses pontos extras também). Com
+  // coalesced events, isso vira principalmente uma rede de segurança -
+  // os pontos já chegam mais densos, então essa subdivisão entra em
+  // ação com menos frequência (mas continua aqui pro fallback)
+  const distancia = Math.hypot(x - vfUltimoPontoDesenho.x, y - vfUltimoPontoDesenho.y);
+  const LIMIAR_INTERPOLACAO_PX = 14;
+  let numEtapas = distancia > LIMIAR_INTERPOLACAO_PX ? Math.ceil(distancia / LIMIAR_INTERPOLACAO_PX) : 1;
+  // curvas MUITO fechadas (mudança de direção grande, tipo o topo de um
+  // laço de caligrafia) precisam de mais pontos intermediários mesmo com
+  // pouca distância entre eles - a interpolação por distância sozinha não
+  // cobre isso (a distância pode ser pequena mesmo numa virada apertada).
+  // Sem essa checagem extra, a curva quadrática não tinha pontos
+  // suficientes pra suavizar o ápice de verdade, sobrando um ângulo sutil
+  // no topo de letras cursivas - confirmado ampliando uma foto real de
+  // escrita bem de perto
+  const vAnteriorDirecao = {x: vfUltimoPontoDesenho.x - vfPontoMedioAnterior.x, y: vfUltimoPontoDesenho.y - vfPontoMedioAnterior.y};
+  const vNovaDirecao = {x: x - vfUltimoPontoDesenho.x, y: y - vfUltimoPontoDesenho.y};
+  const magAnteriorDirecao = Math.hypot(vAnteriorDirecao.x, vAnteriorDirecao.y), magNovaDirecao = Math.hypot(vNovaDirecao.x, vNovaDirecao.y);
+  if(magAnteriorDirecao > 0.5 && magNovaDirecao > 0.5){
+    const cosAnguloDirecao = (vAnteriorDirecao.x*vNovaDirecao.x + vAnteriorDirecao.y*vNovaDirecao.y) / (magAnteriorDirecao * magNovaDirecao);
+    if(cosAnguloDirecao < 0.5) numEtapas = Math.max(numEtapas, 3); // virada de mais de ~60° - garante pontos suficientes pra suavizar o ápice
+  }
+
+  // beginPath/moveTo/stroke só rodam aqui quando NÃO está dentro de um
+  // lote (fallback sem coalesced events, ou chamada avulsa) - dentro de
+  // um lote, o chamador já abriu o path antes do primeiro ponto e só
+  // fecha com um stroke() no final, depois de TODOS os pontos coalescidos
+  // processados. Antes, cada ponto (mesmo os extras do coalesced) gerava
+  // seu próprio beginPath+stroke - um traço rápido podia disparar 3-4x
+  // mais chamadas de stroke() que o necessário, pesando na renderização
+  // e dando uma sensação de traço "menos nítido"/mais lento
+  if(!dentroDeLote){
+    ctxAtivo.beginPath();
+    ctxAtivo.moveTo(vfPontoMedioAnterior.x, vfPontoMedioAnterior.y);
+  }
+  for(let i = 1; i <= numEtapas; i++){
+    const t = i / numEtapas;
+    const xEtapa = vfUltimoPontoDesenho.x + (x - vfUltimoPontoDesenho.x) * t;
+    const yEtapa = vfUltimoPontoDesenho.y + (y - vfUltimoPontoDesenho.y) * t;
+    // suavização por curva quadrática: o ponto médio entre o anterior e o
+    // atual vira o destino da curva, o ponto anterior vira o "cabo" de
+    // controle. Evita o efeito de segmentos retos colados, mesma técnica
+    // usada em apps de desenho de verdade
+    const pontoMedio = {x: (vfUltimoPontoDesenho.x + xEtapa) / 2, y: (vfUltimoPontoDesenho.y + yEtapa) / 2};
+    ctxAtivo.quadraticCurveTo(vfUltimoPontoDesenho.x, vfUltimoPontoDesenho.y, pontoMedio.x, pontoMedio.y);
+    if(vfModoDestaque){
+      // acumula a região suja com margem suficiente pra cobrir a
+      // espessura da linha (e a curva do quadraticCurveTo, que pode
+      // "arquear" um pouco além da linha reta entre os dois pontos)
+      const margemLinha = espessuraFinal + 20;
+      if(!vfRegiaoSujaDestaqueVF){
+        vfRegiaoSujaDestaqueVF = {minX: pontoMedio.x - margemLinha, maxX: pontoMedio.x + margemLinha, minY: pontoMedio.y - margemLinha, maxY: pontoMedio.y + margemLinha};
+      }else{
+        vfRegiaoSujaDestaqueVF.minX = Math.min(vfRegiaoSujaDestaqueVF.minX, pontoMedio.x - margemLinha, vfUltimoPontoDesenho.x - margemLinha);
+        vfRegiaoSujaDestaqueVF.maxX = Math.max(vfRegiaoSujaDestaqueVF.maxX, pontoMedio.x + margemLinha, vfUltimoPontoDesenho.x + margemLinha);
+        vfRegiaoSujaDestaqueVF.minY = Math.min(vfRegiaoSujaDestaqueVF.minY, pontoMedio.y - margemLinha, vfUltimoPontoDesenho.y - margemLinha);
+        vfRegiaoSujaDestaqueVF.maxY = Math.max(vfRegiaoSujaDestaqueVF.maxY, pontoMedio.y + margemLinha, vfUltimoPontoDesenho.y + margemLinha);
+      }
+    }
+    vfPontoMedioAnterior = pontoMedio;
+    vfUltimoPontoDesenho = {x: xEtapa, y: yEtapa};
+  }
+  if(!dentroDeLote) ctxAtivo.stroke();
+
+}
+
+// mostra o resultado FINAL (com a mistura já aplicada) em tempo real no
+// canvas de prévia por cima - recalcula do zero a partir do traço "puro"
+// guardado em vfCanvasTracoTemp, nunca acumula. É por isso que o destaque
+// não pode mais "só aparecer no final": agora ele já mostra com a
+// qualidade certa desde o primeiro toque. Extraída de dentro de
+// vfProcessarPontoDesenhoVF - achado real: antes rodava uma vez POR PONTO
+// coalescido (a Apple Pencil pode entregar vários pontos reais num único
+// evento pointermove), então um redesenho completo do preview podia
+// acontecer 5-10 vezes numa única atualização de tela. Chamada só 1x
+// por evento agora, não mais 1x por ponto individual
+// desenha o snapshot inteiro (toda a fatia visível) no canvas de preview,
+// de uma vez, no instante em que o canvas principal é escondido - achado
+// real: como só a "região suja" (pequena, por otimização de performance)
+// é redesenhada a cada movimento, sem esse desenho inicial completo
+// qualquer área ainda não tocada pelo traço atual ficava vazia/transparente
+// (o canvas principal por baixo está com opacity:0), fazendo parecer que
+// traços já existentes "sumiam" até o traço atual passar por cima deles
+function vfDesenharSnapshotCompletoNoPreviewVF(){
+  if(!vfCanvasBaseSnapshot || !vfCtxPreviewDestaque) return;
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  const larguraTotal = vfCanvasBaseSnapshot.width/dpr;
+  const alturaVisivel = vfCanvasBaseSnapshot.height/dpr;
+  vfCtxPreviewDestaque.globalCompositeOperation = 'source-over';
+  vfCtxPreviewDestaque.globalAlpha = 1;
+  vfCtxPreviewDestaque.drawImage(vfCanvasBaseSnapshot, 0, vfScrollTopNoInicioTracoVF, larguraTotal, alturaVisivel);
+}
+
+function vfAtualizarPreviewDestaqueVF(){
+  if(vfModoDestaque && vfCanvasTracoTemp && vfCtxPreviewDestaque){
+    const dpr = (window.devicePixelRatio || 1) * 1.5;
+    const larguraTotal = vfCanvasTracoTemp.width/dpr;
+    const alturaVisivelBuffer = vfCanvasTracoTemp.height/dpr;
+    // acumulada em vfProcessarPontoDesenhoVF - a bounding box (com
+    // margem) de só o segmento novo desenhado desde a última chamada,
+    // não o traço inteiro. Achado real: preencher uma área grande (tipo
+    // um coração) gerava dezenas de redesenhos da TELA VISÍVEL INTEIRA
+    // por segundo - cada segmento é pequeno, só precisa redesenhar a
+    // vizinhança dele, não a tela toda
+    let regiao = vfRegiaoSujaDestaqueVF;
+    vfRegiaoSujaDestaqueVF = null; // consumida - a próxima chamada acumula do zero
+    if(!regiao){
+      // sem região acumulada (não deveria acontecer no fluxo normal, mas
+      // por segurança cai pro comportamento antigo - redesenha tudo)
+      regiao = {minX: 0, maxX: larguraTotal, minY: vfScrollTopNoInicioTracoVF, maxY: vfScrollTopNoInicioTracoVF + alturaVisivelBuffer};
+    }
+    // recorta pros limites reais do buffer - clamping evita desenhar fora
+    // da área alocada (o que silenciosamente não desenharia nada útil)
+    const regiaoXInicio = Math.max(0, Math.min(regiao.minX, larguraTotal));
+    const regiaoXFim = Math.max(0, Math.min(regiao.maxX, larguraTotal));
+    const regiaoYInicio = Math.max(vfScrollTopNoInicioTracoVF, Math.min(regiao.minY, vfScrollTopNoInicioTracoVF + alturaVisivelBuffer));
+    const regiaoYFim = Math.max(vfScrollTopNoInicioTracoVF, Math.min(regiao.maxY, vfScrollTopNoInicioTracoVF + alturaVisivelBuffer));
+    const larguraRegiao = regiaoXFim - regiaoXInicio;
+    const alturaRegiao = regiaoYFim - regiaoYInicio;
+    if(larguraRegiao <= 0 || alturaRegiao <= 0) return; // região vazia (traço todo fora da área visível) - nada a atualizar
+    vfCtxPreviewDestaque.clearRect(regiaoXInicio, regiaoYInicio, larguraRegiao, alturaRegiao);
+    // primeiro desenha o que já existia (retrato de antes do traço
+    // começar) em opacidade normal - dá ao multiply seguinte algo de
+    // verdade pra misturar, não um fundo vazio. É isso que faz escurecer
+    // de verdade, em tempo real, ao passar por cima de uma linha já
+    // desenhada antes (sem essa base, o multiply não tinha contra o que
+    // multiplicar, e só mostrava o traço novo sozinho até soltar o dedo)
+    const origemYNoBuffer = (regiaoYInicio - vfScrollTopNoInicioTracoVF) * dpr; // posição dentro do buffer (que só cobre a fatia visível), em pixels reais
+    const alturaRegiaoBuffer = alturaRegiao * dpr;
+    const larguraRegiaoBuffer = larguraRegiao * dpr;
+    if(vfCanvasBaseSnapshot){
+      vfCtxPreviewDestaque.globalCompositeOperation = 'source-over';
+      vfCtxPreviewDestaque.globalAlpha = 1;
+      vfCtxPreviewDestaque.drawImage(vfCanvasBaseSnapshot, regiaoXInicio*dpr, origemYNoBuffer, larguraRegiaoBuffer, alturaRegiaoBuffer, regiaoXInicio, regiaoYInicio, larguraRegiao, alturaRegiao);
+    }
+    vfCtxPreviewDestaque.globalCompositeOperation = 'multiply';
+    vfCtxPreviewDestaque.globalAlpha = vfOpacidadeDestaqueAtual;
+    vfCtxPreviewDestaque.drawImage(vfCanvasTracoTemp, regiaoXInicio*dpr, origemYNoBuffer, larguraRegiaoBuffer, alturaRegiaoBuffer, regiaoXInicio, regiaoYInicio, larguraRegiao, alturaRegiao);
+  }
+}
+
+// novo caminho, só ativo quando o navegador suporta coalesced events:
+// pega TODAS as amostras reais que o Apple Pencil gerou entre um evento e
+// outro (getCoalescedEvents), não só a última - resolve a causa raiz do
+// "facetamento" em curvas rápidas/grandes (círculos), sem inventar nem
+// atrasar nada, ao contrário de tentar adivinhar a curvatura
+if(VF_SUPORTA_COALESCED_VF){
+  document.addEventListener('pointermove', (e) => {
+    if(!vfDesenhandoAgora) return;
+    if(e.pointerId !== vfPointerIdAtivoVF) return;
+    const canvas = document.getElementById('vf-canvas-desenho');
+    const rect = canvas.getBoundingClientRect();
+    const eventos = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    // getCoalescedEvents() pode devolver lista vazia em alguns casos raros
+    // (ex: primeiro pointermove depois do pointerdown) - usa o evento
+    // principal como fallback pra nunca perder o ponto
+    const lista = eventos.length ? eventos : [e];
+    for(const ev of lista){
+      vfProcessarPontoDesenhoVF(ev.clientX, ev.clientY, ev.pressure, rect);
+    }
+    vfAtualizarPreviewDestaqueVF(); // 1x por evento, não 1x por ponto coalescido - era o gargalo real de performance
+  }, {passive: true});
+}
+
+function vfFinalizarTracoDesenho(e){
+  // toque em cima do ícone terminou sem virar arrasto - o clique nativo
+  // não dispara mais sozinho com a Apple Pencil (touch-action:none nos
+  // botões do Flash/Quest, necessário pra caneta não competir com o
+  // scroll nativo, também suprime o clique sintético) - dispara manual
+  if(vfBotaoPendenteToqueInfo && vfBotaoPendenteToqueInfo.elemento){
+    const elementoParaClicar = vfBotaoPendenteToqueInfo.elemento;
+    vfBotaoPendenteToqueInfo = null;
+    document.body.classList.remove('vf-tracando-agora'); // tinha sido suprimido no toque (só pra caneta) - se confirmou que foi clique de verdade (não virou traço), libera de novo
+    if(e && e.preventDefault) e.preventDefault();
+    elementoParaClicar.click();
+  }else{
+    vfBotaoPendenteToqueInfo = null;
+  }
+  if(!vfDesenhandoAgora) return;
+  // duplo toque leve (tap, sem arrastar de verdade) com a caneta alterna
+  // caneta <-> borracha - detectado aqui, antes de qualquer outra coisa,
+  // porque precisa saber se o traço andou pouco (tap) ou muito (traço
+  // de verdade) antes de vfDesenhandoAgora virar false
+  if(vfPontoInicialTracoAtualVF && e.changedTouches && e.changedTouches[0]){
+    const touchFinal = e.changedTouches[0];
+    const distanciaTotal = Math.hypot(touchFinal.clientX - vfPontoInicialTracoAtualVF.x, touchFinal.clientY - vfPontoInicialTracoAtualVF.y);
+    const LIMIAR_TAP_LEVE_PX = 8;
+    if(distanciaTotal < LIMIAR_TAP_LEVE_PX){
+      const agora = Date.now();
+      const pontoAtual = vfPontoInicialTracoAtualVF;
+      const tapAnterior = vfUltimoTapLeveCanetaVF;
+      // janela e distância reduzidas de propósito (eram 350ms/30px) -
+      // achado real: sensível demais, qualquer coisa feita rápido perto
+      // do lugar anterior virava duplo toque sem intenção real. Exige
+      // agora um gesto mais preciso: rápido e no mesmo lugar de verdade
+      const virouDuploTap = tapAnterior && (agora - tapAnterior.quando) < 280 && Math.hypot(pontoAtual.x - tapAnterior.x, pontoAtual.y - tapAnterior.y) < 22;
+      vfPontoInicialTracoAtualVF = null;
+      vfFormaTracoAtualVF = null;
+      vfDesenhandoAgora = false;
+      document.body.classList.remove('vf-tracando-agora');
+      vfTouchIdAtivo = null;
+      vfPointerIdAtivoVF = null;
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+      vfLiberarScrollContentVF();
+      if(virouDuploTap){
+        // duplo toque CONFIRMADO - agora sim desfaz as marquinhas dos dois
+        // toques (essa e a do toque anterior, que tinha ficado guardada
+        // esperando pra ver se um segundo toque chegaria)
+        if(vfSnapshotRegiaoTapLeveVF){
+          try{ vfSnapshotRegiaoTapLeveVF.ctx.putImageData(vfSnapshotRegiaoTapLeveVF.imageData, vfSnapshotRegiaoTapLeveVF.x, vfSnapshotRegiaoTapLeveVF.y); }catch(err){}
+          vfSnapshotRegiaoTapLeveVF = null;
+        }
+        if(tapAnterior.snapshot){
+          try{ tapAnterior.snapshot.ctx.putImageData(tapAnterior.snapshot.imageData, tapAnterior.snapshot.x, tapAnterior.snapshot.y); }catch(err){}
+        }
+        clearTimeout(tapAnterior.timeoutId);
+        vfUltimoTapLeveCanetaVF = null; // consumido - não encadeia um terceiro tap como se fosse outro duplo toque
+        if(vfModoBorracha) selecionarFerramentaCanetaVF(); else selecionarFerramentaBorrachaVF();
+        return;
+      }
+      // toque isolado (ainda não virou duplo) - NÃO apaga a marquinha.
+      // Pode ser (a) uma marca pequena de propósito (um ponto, um
+      // pingo) ou (b) o primeiro dos dois toques de um duplo toque
+      // ainda em andamento - guarda o snapshot pra poder desfazer
+      // depois SE um segundo toque confirmar o duplo toque, e agenda o
+      // "compromisso" da marca no histórico se isso não acontecer
+      // dentro do prazo (achado real: apagar todo toque pequeno de
+      // propósito, sem essa espera, quebrava desenhar pontos/marcas
+      // pequenas de verdade)
+      const snapshotDesseTap = vfSnapshotRegiaoTapLeveVF;
+      vfSnapshotRegiaoTapLeveVF = null;
+      const timeoutId = setTimeout(() => {
+        if(vfUltimoTapLeveCanetaVF && vfUltimoTapLeveCanetaVF.quando === agora){
+          vfUltimoTapLeveCanetaVF = null;
+          vfSalvarEstadoHistoricoVF(); // marca pequena confirmada como traço de verdade - agora sim entra no histórico
+        }
+      }, 360);
+      vfUltimoTapLeveCanetaVF = {x: pontoAtual.x, y: pontoAtual.y, quando: agora, snapshot: snapshotDesseTap, timeoutId};
+      return;
+    }
+  }
+  vfPontoInicialTracoAtualVF = null;
+  vfSnapshotRegiaoTapLeveVF = null; // traço de verdade - não precisa mais do snapshot de restauração
+  // detecta um gesto de "rasurão" - a caixa que envolve o traço cobre
+  // boa parte da tela visível E o comprimento total percorrido é bem
+  // maior que a diagonal dessa caixa (só acontece com idas e vindas
+  // repetidas, tipo riscar de propósito - uma linha ou letra normal tem
+  // comprimento parecido com a própria diagonal). Se bater, limpa a tela
+  // toda em vez de salvar o rasurão como um traço normal - com
+  // segurança: o estado de antes continua acessível pelo Desfazer, caso
+  // tenha sido sem querer
+  if(vfFormaTracoAtualVF && !vfModoBorracha && !vfModoDestaque){
+    const larguraCaixa = vfFormaTracoAtualVF.maxX - vfFormaTracoAtualVF.minX;
+    const alturaCaixa = vfFormaTracoAtualVF.maxY - vfFormaTracoAtualVF.minY;
+    const diagonalCaixa = Math.hypot(larguraCaixa, alturaCaixa);
+    const cobreLarguraTela = larguraCaixa > window.innerWidth * 0.55;
+    const cobreAlturaTela = alturaCaixa > window.innerHeight * 0.35;
+    const temIdasEVindas = diagonalCaixa > 0 && vfFormaTracoAtualVF.comprimento > diagonalCaixa * 3;
+    if(cobreLarguraTela && cobreAlturaTela && temIdasEVindas){
+      vfFormaTracoAtualVF = null;
+      vfDesenhandoAgora = false;
+      document.body.classList.remove('vf-tracando-agora');
+      vfTouchIdAtivo = null;
+      vfPointerIdAtivoVF = null;
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+      vfLiberarScrollContentVF();
+      const canvasRasurao = document.getElementById('vf-canvas-desenho');
+      const ctxRasurao = vfCtxDesenhoAtivoAgoraVF();
+      if(canvasRasurao && ctxRasurao){
+        const dprRasurao = (window.devicePixelRatio || 1) * 1.5;
+        ctxRasurao.globalCompositeOperation = 'source-over';
+        ctxRasurao.globalAlpha = 1;
+        ctxRasurao.clearRect(0, 0, canvasRasurao.width/dprRasurao, canvasRasurao.height/dprRasurao);
+        vfSalvarEstadoHistoricoVF();
+      }
+      canvasRasurao.style.opacity = ''; // caso o modo destaque tivesse deixado o canvas real invisível durante o traço
+      vfCanvasTracoTemp = null;
+      vfCtxTracoTemp = null;
+      vfCanvasBaseSnapshot = null;
+      const canvasPreviewRasurao = document.getElementById('vf-canvas-preview-destaque');
+      if(canvasPreviewRasurao && vfCtxPreviewDestaque){
+        const dprPreviewRasurao = (window.devicePixelRatio || 1) * 1.5;
+        vfCtxPreviewDestaque.clearRect(0, 0, canvasPreviewRasurao.width/dprPreviewRasurao, canvasPreviewRasurao.height/dprPreviewRasurao);
+      }
+      fecharBarraDesenhoVF();
+      return;
+    }
+  }
+  vfFormaTracoAtualVF = null;
+  // sempre libera, mesmo que o identifier não bata exatamente (evita a
+  // trava de scroll ficar presa ligada por algum caso raro do navegador)
+  vfDesenhandoAgora = false;
+  document.body.classList.remove('vf-tracando-agora');
+  vfTouchIdAtivo = null;
+  vfPointerIdAtivoVF = null;
+  document.body.style.touchAction = '';
+  document.documentElement.style.overflow = '';
+  vfLiberarScrollContentVF();
+  // funde o traço de destaque (que foi desenhado em opacidade cheia no
+  // canvas temporário) no canvas de verdade - multiply + opacidade
+  // escolhida aplicados UMA VEZ SÓ pro traço inteiro, garantindo que ele
+  // saia como uma coisa só, uniforme, sem as emendas mais escuras. Vai
+  // pro canvas certo (temporário da explicação, se ela estiver aberta -
+  // nunca mexe no canvas principal nem salva histórico nesse caso, já
+  // que a explicação não tem histórico/desfazer próprio)
+  if(vfCanvasTracoTemp){
+    const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
+    const ctxDestino = vfCtxDesenhoAtivoAgoraVF();
+    ctxDestino.globalCompositeOperation = 'multiply';
+    ctxDestino.globalAlpha = vfOpacidadeDestaqueAtual;
+    const dpr = (window.devicePixelRatio || 1) * 1.5;
+    ctxDestino.drawImage(vfCanvasTracoTemp, 0, vfScrollTopNoInicioTracoVF, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
+    ctxDestino.globalAlpha = 1;
+    vfCanvasTracoTemp = null;
+    vfCtxTracoTemp = null;
+    vfCanvasBaseSnapshot = null;
+    // mostra o canvas real de novo, já com o traço fundido nele - feito
+    // ANTES de limpar o preview, pra não ter um instante em branco entre
+    // "esconder o preview" e "mostrar o real" (as duas coisas acontecem
+    // no mesmo frame, sem intervalo perceptível). Só mexe na opacidade
+    // do canvas principal quando é ele que está mesmo em uso
+    if(!modalExplicacaoAberto) document.getElementById('vf-canvas-desenho').style.opacity = '1';
+    // limpa a prévia - senão o traço ficaria "duplicado" visualmente (uma
+    // cópia ainda no preview, outra já fundida de vez no canvas principal)
+    if(vfCtxPreviewDestaque){
+      const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
+      vfCtxPreviewDestaque.clearRect(0, 0, canvasPreview.width/dpr, canvasPreview.height/dpr);
+    }
+    // histórico (desfazer/refazer) só existe pro canvas principal - a
+    // explicação nunca grava histórico, é sempre descartada ao fechar
+    if(!modalExplicacaoAberto) vfSalvarEstadoHistoricoVF();
+  }else{
+    const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
+    if(!modalExplicacaoAberto) vfSalvarEstadoHistoricoVF();
+  }
+}
+document.addEventListener('touchend', vfFinalizarTracoDesenho);
+document.addEventListener('touchcancel', vfFinalizarTracoDesenho);
+
+// ---- histórico de desenho (Desfazer/Refazer) ----
+// guarda um "retrato" (dataURL) do canvas depois de cada traço completo,
+// junto com QUANDO aconteceu - o timestamp é usado pra decidir, entre
+// desenho e marcação de texto (histórico próprio, ver mais abaixo), qual
+// dos dois foi a ação mais recente na hora de desfazer/refazer.
+// Limite de 20 pra não pesar demais a memória
+let vfHistoricoDesenho = [];
+let vfIndiceHistoricoVF = -1;
+const VF_LIMITE_HISTORICO = 20;
+
+function vfSalvarEstadoHistoricoVF(){
+  const canvas = document.getElementById('vf-canvas-desenho');
+  if(!canvas || !vfCtxDesenho) return;
+  const content = document.getElementById('content');
+  // se o usuário tinha desfeito e desenhou algo novo, descarta o "futuro"
+  // que ficou pra trás - não faz mais sentido poder refazer aquilo
+  vfHistoricoDesenho = vfHistoricoDesenho.slice(0, vfIndiceHistoricoVF + 1);
+  // guarda a largura/altura REAIS do conteúdo (não da tela toda) junto
+  // com a imagem - é o que permite calcular depois, ao girar a tela, um
+  // fator de correção proporcional (não um "não faz nada" nem um
+  // "estica pra viewport inteira", os dois já tentados e errados)
+  vfHistoricoDesenho.push({
+    dataUrl: canvas.toDataURL(),
+    timestamp: Date.now(),
+    larguraConteudo: content ? content.clientWidth : null,
+    alturaConteudo: content ? content.scrollHeight : null
+  });
+  if(vfHistoricoDesenho.length > VF_LIMITE_HISTORICO) vfHistoricoDesenho.shift();
+  vfIndiceHistoricoVF = vfHistoricoDesenho.length - 1;
+  vfAtualizarBotoesHistoricoVF();
+}
+
+// ---- histórico PARALELO pra marcação de texto (grifar/sublinhar/riscar)
+// - o botão Desfazer da barrinha até agora só conhecia o desenho da
+// caneta (pixels no canvas), nunca sabia nada sobre marcação de texto
+// (spans no DOM). Guarda um "retrato" do HTML de dentro do enunciado e
+// da correção depois de cada marcação, com timestamp - igual o desenho ----
+let vfHistoricoMarcacaoTexto = [];
+let vfIndiceHistoricoMarcacaoTexto = -1;
+
+function vfSalvarEstadoMarcacaoTextoVF(){
+  const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
+  const correcao = document.getElementById('vf-correcao-atual');
+  vfHistoricoMarcacaoTexto = vfHistoricoMarcacaoTexto.slice(0, vfIndiceHistoricoMarcacaoTexto + 1);
+  vfHistoricoMarcacaoTexto.push({
+    enunciadoHtml: enunciado ? enunciado.innerHTML : null,
+    correcaoHtml: correcao ? correcao.innerHTML : null,
+    timestamp: Date.now()
+  });
+  if(vfHistoricoMarcacaoTexto.length > VF_LIMITE_HISTORICO) vfHistoricoMarcacaoTexto.shift();
+  vfIndiceHistoricoMarcacaoTexto = vfHistoricoMarcacaoTexto.length - 1;
+  vfAtualizarBotoesHistoricoVF();
+}
+
+function vfRestaurarEstadoMarcacaoTextoVF(estado){
+  const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
+  const correcao = document.getElementById('vf-correcao-atual');
+  if(!estado){
+    // não tem nenhum estado anterior - desfaz TODAS as marcações de
+    // texto atuais (volta pro texto puro, sem span nenhum)
+    [enunciado, correcao].forEach(el => {
+      if(!el) return;
+      [...el.querySelectorAll('.vf-marcacao-texto-sessao')].forEach(span => {
+        const pai = span.parentNode;
+        while(span.firstChild) pai.insertBefore(span.firstChild, span);
+        pai.removeChild(span);
+        pai.normalize();
+      });
+    });
+    return;
+  }
+  if(enunciado && estado.enunciadoHtml !== null) enunciado.innerHTML = estado.enunciadoHtml;
+  if(correcao && estado.correcaoHtml !== null) correcao.innerHTML = estado.correcaoHtml;
+}
+
+let vfSequenciaRestauracaoVF = 0; // protege contra 2 restaurações se cruzando se clicar rápido demais
+function vfRestaurarEstadoHistoricoVF(estado){
+  const canvas = document.getElementById('vf-canvas-desenho');
+  if(!canvas || !vfCtxDesenho) return;
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  const minhaSequencia = ++vfSequenciaRestauracaoVF;
+  if(!estado){
+    // não tem nenhum estado anterior - só limpa mesmo (volta ao vazio)
+    vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+    vfAtualizarBotoesHistoricoVF();
+    return;
+  }
+  // carrega a imagem ANTES de limpar - limpar e desenhar acontecem juntos,
+  // sem deixar um instante de canvas vazio visível entre os dois (era
+  // isso que causava o "piscar" ao clicar em desfazer/refazer)
+  const img = new Image();
+  img.onload = () => {
+    if(minhaSequencia !== vfSequenciaRestauracaoVF) return; // já tem uma chamada mais nova, descarta essa
+    vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+    // o modo de composição fica "destination-out" (apagar) depois de usar
+    // a borracha, e ISSO NUNCA SE DESFAZIA SOZINHO — desenhar (restaurar)
+    // em cima de um canvas já limpo usando modo "apagar" não pinta nada
+    // de volta (apagar algo que já está transparente não muda nada).
+    // Essa era a causa real do desfazer "parecer" apagar tudo em vez de
+    // restaurar: a imagem restaurada simplesmente nunca era pintada
+    vfCtxDesenho.globalCompositeOperation = 'source-over';
+    vfCtxDesenho.globalAlpha = 1; // mesma lição do bug do modo "apagar" - o destaque deixa alpha reduzido, precisa resetar antes de restaurar
+    vfCtxDesenho.drawImage(img, 0, 0, canvas.width/dpr, canvas.height/dpr);
+    vfAtualizarBotoesHistoricoVF();
+  };
+  img.src = estado.dataUrl;
+}
+
+// desfazer/refazer decide ENTRE os dois sistemas (desenho no canvas e
+// marcação de texto no DOM) qual foi a ação mais recente, comparando os
+// timestamps guardados em cada histórico - antes só existia o do
+// desenho, então grifar/sublinhar/riscar nunca eram desfeitos por aqui
+let vfUltimoDesfazerRefazerMs = 0; // debounce contra disparo duplo (reforço de clique da caneta + clique nativo no mesmo toque)
+function vfDesfazerDesenho(){
+  // a explicação nunca teve histórico próprio (ver vfFinalizarTracoDesenho)
+  // - sem essa checagem, desfazer aqui dentro acabava agindo no histórico
+  // da tela de baixo (o canvas principal), apagando o que tinha lá
+  const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
+  if(modalExplicacaoAberto) return;
+  const agora = Date.now();
+  if(agora - vfUltimoDesfazerRefazerMs < 250) return;
+  vfUltimoDesfazerRefazerMs = agora;
+
+  const topoDesenho = vfIndiceHistoricoVF >= 0 ? vfHistoricoDesenho[vfIndiceHistoricoVF] : null;
+  const topoTexto = vfIndiceHistoricoMarcacaoTexto >= 0 ? vfHistoricoMarcacaoTexto[vfIndiceHistoricoMarcacaoTexto] : null;
+  if(!topoDesenho && !topoTexto) return; // nada pra desfazer em nenhum dos dois
+
+  // desfaz o sistema com o timestamp mais RECENTE - foi a última coisa feita
+  const desfazerTexto = topoTexto && (!topoDesenho || topoTexto.timestamp > topoDesenho.timestamp);
+  if(desfazerTexto){
+    vfIndiceHistoricoMarcacaoTexto--;
+    const estadoAnterior = vfIndiceHistoricoMarcacaoTexto >= 0 ? vfHistoricoMarcacaoTexto[vfIndiceHistoricoMarcacaoTexto] : null;
+    vfRestaurarEstadoMarcacaoTextoVF(estadoAnterior);
+    vfAtualizarBotoesHistoricoVF();
+  }else{
+    vfIndiceHistoricoVF--;
+    const estadoAnterior = vfIndiceHistoricoVF >= 0 ? vfHistoricoDesenho[vfIndiceHistoricoVF] : null;
+    vfRestaurarEstadoHistoricoVF(estadoAnterior);
+  }
+}
+
+function vfRefazerDesenho(){
+  // mesma proteção do desfazer - ver comentário lá
+  const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
+  if(modalExplicacaoAberto) return;
+  const agora = Date.now();
+  if(agora - vfUltimoDesfazerRefazerMs < 250) return;
+  vfUltimoDesfazerRefazerMs = agora;
+
+  const proximoDesenho = vfIndiceHistoricoVF < vfHistoricoDesenho.length - 1 ? vfHistoricoDesenho[vfIndiceHistoricoVF + 1] : null;
+  const proximoTexto = vfIndiceHistoricoMarcacaoTexto < vfHistoricoMarcacaoTexto.length - 1 ? vfHistoricoMarcacaoTexto[vfIndiceHistoricoMarcacaoTexto + 1] : null;
+  if(!proximoDesenho && !proximoTexto) return; // nada pra refazer em nenhum dos dois
+
+  // refaz o sistema cujo próximo passo tem o timestamp mais ANTIGO - foi
+  // a ação desfeita mais recentemente na sequência cronológica original
+  const refazerTexto = proximoTexto && (!proximoDesenho || proximoTexto.timestamp < proximoDesenho.timestamp);
+  if(refazerTexto){
+    vfIndiceHistoricoMarcacaoTexto++;
+    vfRestaurarEstadoMarcacaoTextoVF(vfHistoricoMarcacaoTexto[vfIndiceHistoricoMarcacaoTexto]);
+    vfAtualizarBotoesHistoricoVF();
+  }else{
+    vfIndiceHistoricoVF++;
+    vfRestaurarEstadoHistoricoVF(vfHistoricoDesenho[vfIndiceHistoricoVF]);
+  }
+}
+
+function vfAtualizarBotoesHistoricoVF(){
+  const btnDesfazer = document.getElementById('vf-btn-desfazer');
+  const btnRefazer = document.getElementById('vf-btn-refazer');
+  if(!btnDesfazer || !btnRefazer) return;
+  const podeDesfazer = vfIndiceHistoricoVF >= 0 || vfIndiceHistoricoMarcacaoTexto >= 0;
+  const podeRefazer = vfIndiceHistoricoVF < vfHistoricoDesenho.length - 1 || vfIndiceHistoricoMarcacaoTexto < vfHistoricoMarcacaoTexto.length - 1;
+  btnDesfazer.disabled = !podeDesfazer;
+  btnDesfazer.style.opacity = podeDesfazer ? '1' : '0.4';
+  btnDesfazer.style.color = podeDesfazer ? '#555' : '#ccc';
+  btnRefazer.disabled = !podeRefazer;
+  btnRefazer.style.opacity = podeRefazer ? '1' : '0.4';
+  btnRefazer.style.color = podeRefazer ? '#555' : '#ccc';
+}
+
+// feedback visual (flash cinza) ao tocar - via JS porque :active puro do
+// CSS nem sempre dispara de forma confiável no Safari iOS
+function vfAplicarFeedbackToqueVF(botao){
+  const ligar = () => { if(!botao.disabled) botao.style.background = '#eee'; };
+  const desligar = () => { botao.style.background = 'none'; };
+  botao.addEventListener('touchstart', ligar, {passive: true});
+  botao.addEventListener('touchend', desligar);
+  botao.addEventListener('touchcancel', desligar);
+  botao.addEventListener('mousedown', ligar);
+  botao.addEventListener('mouseup', desligar);
+  botao.addEventListener('mouseleave', desligar);
+}
+// dispara a ação direto no toque/clique, com trava contra disparo duplo -
+// nada de onclick solto competindo com reforço nenhum, só essa via única
+function vfLigarBotaoHistoricoVF(id, funcaoAcao){
+  const botao = document.getElementById(id);
+  if(!botao) return;
+  vfAplicarFeedbackToqueVF(botao);
+  let jaProcessou = false;
+  const acionar = (e) => {
+    if(botao.disabled) return;
+    if(jaProcessou) return;
+    jaProcessou = true;
+    e.preventDefault();
+    funcaoAcao();
+    setTimeout(() => { jaProcessou = false; }, 250); // libera pro próximo toque de verdade
+  };
+  botao.addEventListener('touchend', acionar, {passive: false});
+  botao.addEventListener('click', acionar);
+}
+vfLigarBotaoHistoricoVF('vf-btn-desfazer', () => vfDesfazerDesenho());
+vfLigarBotaoHistoricoVF('vf-btn-refazer', () => vfRefazerDesenho());
+
+function vfLimparHistoricoVF(){
+  vfHistoricoDesenho = [];
+  vfIndiceHistoricoVF = -1;
+  vfHistoricoMarcacaoTexto = [];
+  vfIndiceHistoricoMarcacaoTexto = -1;
+  vfAtualizarBotoesHistoricoVF();
+}
+
+// ao responder, a anotação (se tiver alguma) atrapalha a leitura do
+// resultado — guarda ela como imagem na própria entrada do histórico da
+// sessão, limpa o canvas, e um botãozinho no resultado deixa rever depois
+// se quiser
+// varre os pixels pra achar só a área que tem desenho de verdade (não
+// varre os pixels pra achar só a área que tem desenho de verdade (não
+// transparente), e recorta só ela - em vez de guardar o quadro inteiro
+// (que na maioria das vezes está quase todo vazio). Usado pelo Salvar
+// deliberado (Estudar/Corrigir depois) - captura highlight + caneta juntos,
+// já que os dois vivem no mesmo canvas
+function vfRecortarAreaDesenhadaVF(canvas){
+  const ctx = canvas.getContext('2d');
+  const { width, height } = canvas;
+  const dados = ctx.getImageData(0, 0, width, height).data;
+  let minX = width, minY = height, maxX = 0, maxY = 0;
+  let achouAlgo = false;
+  const PASSO = 2; // varre de 2 em 2 pixels pra ir mais rápido
+  for(let y = 0; y < height; y += PASSO){
+    for(let x = 0; x < width; x += PASSO){
+      const alpha = dados[(y * width + x) * 4 + 3];
+      if(alpha > 10){
+        achouAlgo = true;
+        if(x < minX) minX = x;
+        if(x > maxX) maxX = x;
+        if(y < minY) minY = y;
+        if(y > maxY) maxY = y;
+      }
+    }
+  }
+  if(!achouAlgo) return null; // nada desenhado de verdade
+  const PADDING = 24;
+  minX = Math.max(0, minX - PADDING);
+  minY = Math.max(0, minY - PADDING);
+  maxX = Math.min(width, maxX + PADDING);
+  maxY = Math.min(height, maxY + PADDING);
+  const larguraRecorte = maxX - minX, alturaRecorte = maxY - minY;
+  const canvasRecorte = document.createElement('canvas');
+  canvasRecorte.width = larguraRecorte;
+  canvasRecorte.height = alturaRecorte;
+  const ctxRecorte = canvasRecorte.getContext('2d');
+  ctxRecorte.drawImage(canvas, minX, minY, larguraRecorte, alturaRecorte, 0, 0, larguraRecorte, alturaRecorte);
+  return canvasRecorte.toDataURL();
+}
+
+function vfSalvarEClimparAnotacaoVF(entrada){
+  const canvas = document.getElementById('vf-canvas-desenho');
+  if(!canvas || !vfCtxDesenho || vfIndiceHistoricoVF < 0) return; // nada desenhado, nada a fazer
+  // guarda só na memória da sessão atual (nunca no banco) - dá pra rever
+  // logo depois de responder, mas some ao trocar de questão/recarregar,
+  // sem virar lixo acumulado. Recorte inteligente (só a área com desenho
+  // de verdade, com uma margem) - o canvas inteiro agora é do tamanho do
+  // conteúdo rolável, capturar tudo geraria uma imagem enorme e majoritariamente em branco
+  entrada.anotacaoDataUrl = vfRecortarAreaDesenhadaVF(canvas);
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+  vfLimparHistoricoVF();
+}
+
+function vfAbrirAnotacaoSalvaVF(){
+  if(!estadoVF || estadoVF.posicao < 0) return;
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  if(!entrada || !entrada.anotacaoDataUrl) return;
+  document.getElementById('vf-img-anotacao-sessao').src = entrada.anotacaoDataUrl;
+  abrirModal('modal-anotacao-sessao-vf');
+}
+
+
+
+async function vfAbrirFavoritosVF(){
+  pausarTimerVF(); // a pendente continua rodando em background senão - agora alcança ela certo, seja qual for a posição de visualização
+  const el = document.getElementById('vf-lista-favoritos');
+  el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
+  document.getElementById('pagina-favoritos-vf').classList.remove('hidden');
+  // a tabela favoritos_vf não tem coluna 'id' própria - a chave é o par
+  // (usuario_id, questao_vf_id). Pedir 'id' no select quebrava a página
+  // inteira (erro de coluna inexistente) - achado testando direto no banco
+  const {data, error} = await sb.from('favoritos_vf')
+    .select('criado_em, questao_vf_id, questoes_vf(texto, bibliografia(titulo, nome_exibicao))')
+    .eq('usuario_id', usuarioAtual.id)
+    .order('criado_em', {ascending: false});
+  if(error){ el.innerHTML = '<p style="color:#A32D2D;text-align:center;padding:20px 0">Erro ao carregar.</p>'; return; }
+  if(!data || !data.length){ el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Nenhuma questão favoritada ainda.</p>'; return; }
+  el.innerHTML = data.map(f => {
+    const publicacao = f.questoes_vf?.bibliografia?.nome_exibicao || f.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
+    const dataFormatada = new Date(f.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
+    return `
+      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${f.questao_vf_id}')" ontouchend="event.preventDefault();vfIrParaQuestaoSalvaVF('${f.questao_vf_id}')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div>
+            <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
+            <p style="color:#999;font-size:var(--fs-a);margin:2px 0 0 0">${dataFormatada}</p>
+          </div>
+          <button class="btn-icone-pequeno" onclick="event.stopPropagation();vfDesfavoritarDaListaVF('${f.questao_vf_id}')" title="Desfavoritar">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
+          </button>
+        </div>
+        ${f.questoes_vf?.texto ? `<p style="color:#666;font-size:var(--fs-b);margin:6px 0 0 0;line-height:1.4">${formatarTextoItemVF(f.questoes_vf.texto)}</p>` : ''}
+      </div>`;
+  }).join('');
+}
+
+async function vfDesfavoritarDaListaVF(questaoVfId){
+  await sb.from('favoritos_vf').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
+  favoritosVF.delete(questaoVfId);
+  // atualiza o ícone na barra de ações se a questão desfavoritada for a
+  // mesma sendo exibida agora - sem isso, o coração continuava "aceso"
+  // atrás do modal até a página recarregar do zero
+  const entradaAtual = estadoVF?.historico[estadoVF.posicao];
+  if(entradaAtual && entradaAtual.item.id === questaoVfId){
+    const botaoFavoritar = document.querySelector('.banco-acao-btn[onclick*="toggleFavoritoVF"]');
+    if(botaoFavoritar){
+      botaoFavoritar.classList.remove('favoritada');
+      const svg = botaoFavoritar.querySelector('svg');
+      if(svg) svg.setAttribute('fill', 'none');
+    }
+  }
+  vfAbrirFavoritosVF(); // recarrega a lista
+}
+
+function vfFecharFavoritosVF(){
+  document.getElementById('pagina-favoritos-vf').classList.add('hidden');
+  retomarOuDescartarPendenteVF(); // retoma a pendente (ou descarta se passou de 30 min parada)
+}
+
+async function vfAbrirFlashSalvosVF(){
+  pausarTimerVF();
+  const el = document.getElementById('vf-lista-flash-salvos');
+  el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
+  document.getElementById('pagina-flash-salvos-vf').classList.remove('hidden');
+  const {data, error} = await sb.from('flashs_salvos_vf')
+    .select('id, motivo, criado_em, imagem_anotacao, questao_vf_id, questoes_vf(texto, bibliografia(titulo, nome_exibicao))')
+    .eq('usuario_id', usuarioAtual.id)
+    .order('criado_em', {ascending: false});
+  if(error){ el.innerHTML = '<p style="color:#A32D2D;text-align:center;padding:20px 0">Erro ao carregar.</p>'; return; }
+  if(!data || !data.length){ el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Nenhum Flash salvo ainda. Toque o botão "Salvar" numa questão pra guardar ela aqui.</p>'; return; }
+
+  const iconeEstudar = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>';
+  const iconeCorrigir = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>';
+
+  function renderizarItemSalvo(s){
+    const publicacao = s.questoes_vf?.bibliografia?.nome_exibicao || s.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
+    const dataFormatada = new Date(s.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
+    return `
+      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${s.questao_vf_id}')" ontouchend="event.preventDefault();vfIrParaQuestaoSalvaVF('${s.questao_vf_id}')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div>
+            <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
+            <p style="color:#999;font-size:var(--fs-a);margin:2px 0 0 0">${dataFormatada}</p>
+          </div>
+          <button class="btn-icone-pequeno" onclick="event.stopPropagation();vfExcluirFlashSalvoVF('${s.id}','${s.questao_vf_id}')" title="Remover dos salvos">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </div>
+        ${s.questoes_vf?.texto ? `<p style="color:#666;font-size:var(--fs-b);margin:6px 0 0 0;line-height:1.4">${formatarTextoItemVF(s.questoes_vf.texto)}</p>` : ''}
+        ${s.imagem_anotacao ? `<img src="${s.imagem_anotacao}" style="width:100%;border-radius:8px;border:0.5px solid #eee;background:#fff;margin-top:10px" alt="O que foi marcado nessa questão">` : ''}
+      </div>`;
+  }
+
+  function renderizarSecao(titulo, icone, itens){
+    if(!itens.length) return '';
+    return `
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          ${icone}
+          <h3 style="margin:0;font-size:var(--fs-e);font-weight:700;color:#B23A34">${titulo}</h3>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">${itens.map(renderizarItemSalvo).join('')}</div>
+      </div>`;
+  }
+
+  const itensEstudar = data.filter(s => s.motivo === 'estudar');
+  const itensCorrigir = data.filter(s => s.motivo === 'corrigir');
+  el.innerHTML = renderizarSecao('Estudar depois', iconeEstudar, itensEstudar) + renderizarSecao('Corrigir depois', iconeCorrigir, itensCorrigir);
+}
+
+async function vfIrParaQuestaoSalvaVF(questaoVfId){
+  pausarTimerVF(); // pausa a pendente ANTES de sair dela - senão continuava rodando escondida em background
+  document.getElementById('pagina-flash-salvos-vf').classList.add('hidden');
+  document.getElementById('pagina-favoritos-vf').classList.add('hidden');
+  const indiceExistente = estadoVF.historico.findIndex(h => h.item.id === questaoVfId);
+  if(indiceExistente >= 0){
+    // já está no histórico da sessão atual - guarda de onde saiu, mas não
+    // precisa criar entrada nova nem buscar nada
+    vfVisualizandoSalvoInfoVF = {posicaoOriginal: estadoVF.posicao, indiceTemporario: null};
+    limparCanvasDesenhoVF();
+    estadoVF.posicao = indiceExistente;
+    renderizarItemVF();
+    return;
+  }
+  // não está no histórico atual (foi respondida em outra sessão) - busca
+  // os dados completos da questão + a última resposta real dada a ela,
+  // monta uma entrada só pra visualização e adiciona temporariamente no
+  // fim do histórico. Isso NÃO mexe na fila de repetição espaçada de
+  // verdade (não é uma resposta nova, só uma consulta)
+  const posicaoOriginal = estadoVF.posicao;
+  document.getElementById('vf-conteudo').innerHTML = `<div style="padding:60px 20px;text-align:center;color:#999">Carregando...</div>`;
+  const [{data: questao, error: erroQuestao}, {data: ultimaResposta}] = await Promise.all([
+    sb.from('questoes_vf').select('*').eq('id', questaoVfId).single(),
+    sb.from('log_respostas_vf').select('acertou, criado_em').eq('questao_vf_id', questaoVfId).eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending: false}).limit(1).maybeSingle()
+  ]);
+  if(erroQuestao || !questao){
+    alert('Não consegui carregar essa questão agora. Tenta de novo.');
+    renderizarItemVF(); // volta a mostrar o que já estava na tela
+    return;
+  }
+  const acertou = ultimaResposta ? ultimaResposta.acertou : true; // sem log algum (raro) - assume acerto pra não colorir de vermelho à toa
+  const entradaVisualizacao = {
+    item: questao,
+    resposta: acertou ? questao.resposta : !questao.resposta, // deduz o que foi respondido a partir do gabarito + se acertou
+    acertou,
+    anotacaoDataUrl: null
+  };
+  estadoVF.historico.push(entradaVisualizacao);
+  const indiceTemporario = estadoVF.historico.length - 1;
+  vfVisualizandoSalvoInfoVF = {posicaoOriginal, indiceTemporario};
+  limparCanvasDesenhoVF();
+  estadoVF.posicao = indiceTemporario;
+  renderizarItemVF();
+}
+
+// chamada antes de qualquer navegação (Próxima/Anterior) ou saída da tela
+// do Flash - se estava em modo de visualização de um salvo, desfaz e
+// volta pra posição de onde a pessoa realmente estava na sessão, em vez
+// de deixar a navegação continuar a partir da posição antiga do salvo
+function vfSairDoModoVisualizacaoSalvoVF(){
+  if(!vfVisualizandoSalvoInfoVF) return;
+  const {posicaoOriginal, indiceTemporario} = vfVisualizandoSalvoInfoVF;
+  if(indiceTemporario !== null) estadoVF.historico.splice(indiceTemporario, 1); // remove a entrada temporária criada só pra essa visualização
+  estadoVF.posicao = posicaoOriginal;
+  vfVisualizandoSalvoInfoVF = null;
+}
+
+function vfFecharFlashSalvosVF(){
+  document.getElementById('pagina-flash-salvos-vf').classList.add('hidden');
+  retomarOuDescartarPendenteVF();
+}
+
+async function vfExcluirFlashSalvoVF(salvoId, questaoVfId){
+  const {error} = await sb.from('flashs_salvos_vf').delete().eq('id', salvoId);
+  if(error){ alert('Erro ao excluir: '+error.message); return; }
+  // remove do estado em memória também - sem isso, o botão "Salvar" da
+  // questão continuava "aceso" até a página recarregar do zero, mesmo já
+  // tendo sido excluída da lista
+  flashsSalvosVF.delete(questaoVfId);
+  const entradaAtual = estadoVF?.historico[estadoVF.posicao];
+  if(entradaAtual && entradaAtual.item.id === questaoVfId){
+    const botaoSalvar = document.querySelector('.banco-acao-btn[onclick*="vfAbrirEscolhaMotivoSalvarVF"]');
+    if(botaoSalvar){
+      botaoSalvar.classList.remove('favoritada');
+      const svg = botaoSalvar.querySelector('svg');
+      if(svg) svg.setAttribute('fill', 'none');
+    }
+  }
+  vfAbrirFlashSalvosVF(); // recarrega a lista
+}
+
+// ---- toque longo no botão Salvar: abre a lista de tudo que já foi
+// salvo. Toque normal (sem segurar) salva a questão atual direto (abre a
+// escolha rápida Estudar depois / Corrigir depois). Esse botão é
+// ignorado pelo sistema genérico de toque com caneta (ver o touchstart
+// global) - fica inteiramente autossuficiente aqui, incluindo disparar o
+// clique manualmente quando necessário (só pra caneta: dedo/mouse já
+// clicam sozinhos normalmente, sem precisar de nada disso) ----
+let vfTimerPressionarSalvar = null;
+let vfFoiToqueLongoSalvar = false;
+let vfPosicaoInicialPressionarSalvarVF = null;
+function vfIniciarPressionarSalvar(evento){
+  vfFoiToqueLongoSalvar = false;
+  clearTimeout(vfTimerPressionarSalvar);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarSalvarVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
+  vfTimerPressionarSalvar = setTimeout(() => {
+    vfTimerPressionarSalvar = null;
+    vfFoiToqueLongoSalvar = true;
+    if(navigator.vibrate) navigator.vibrate(15); // feedback tátil de "ativou o toque longo"
+    vfAbrirFlashSalvosVF();
+  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+}
+// tolerância generosa pro tremor natural da Apple Pencil "parada" (mesma
+// razão documentada em VF_LIMIAR_ARRASTO_NAV_ITEM_PX) - sem isso, segurar
+// esse botão com a caneta cancelava o toque longo quase sempre antes dos
+// 500ms completarem
+function vfCancelarPressionarSalvar(evento, id){
+  // touchmove: só verifica se já moveu demais - se ainda está dentro da
+  // tolerância, não faz nada ainda (deixa o toque longo pendente rodando)
+  if(evento && evento.type === 'touchmove' && vfPosicaoInicialPressionarSalvarVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarSalvarVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarSalvarVF.y;
+      if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela nada ainda
+    }
+  }
+  // chegou aqui: ou é touchend/mouseup (toque acabou de vez), ou moveu
+  // demais no touchmove (arrasto de verdade) - cancela o toque longo pendente
+  const foiToqueLongo = vfFoiToqueLongoSalvar;
+  clearTimeout(vfTimerPressionarSalvar);
+  vfTimerPressionarSalvar = null;
+  vfPosicaoInicialPressionarSalvarVF = null;
+  // só dispara o clique manualmente se: é touchend de verdade (tem id) +
+  // não foi toque longo + foi realmente a caneta (touch-action:none nos
+  // botões do Flash suprime o clique sintético só dela, dedo/mouse
+  // continuam clicando sozinhos normalmente sem precisar disso)
+  if(id && !foiToqueLongo && evento && evento.type === 'touchend' && vfEhToqueDeCaneta(evento.changedTouches?.[0])){
+    evento.preventDefault();
+    vfAbrirEscolhaMotivoSalvarVF(id);
+  }
+}
+
+function vfAbrirEscolhaMotivoSalvarVF(questaoId){
+  if(vfFoiToqueLongoSalvar) return; // já virou toque longo (abriu a lista) - não também salva
+  pausarTimerVF(); // a pendente continua rodando escondida atrás do modal senão
+  document.getElementById('vf-escolha-motivo-questao-id').value = questaoId;
+  abrirModal('modal-escolha-motivo-salvar-vf');
+}
+
+function vfFecharModalMotivoSalvarVF(){
+  fecharModal('modal-escolha-motivo-salvar-vf');
+  retomarOuDescartarPendenteVF(); // fechou sem escolher motivo - retoma a pendente (ou descarta se passou de 30 min)
+}
+
+async function vfSalvarFlashComMotivoVF(motivo){
+  const questaoId = document.getElementById('vf-escolha-motivo-questao-id').value;
+  fecharModal('modal-escolha-motivo-salvar-vf');
+  retomarOuDescartarPendenteVF(); // retoma a pendente (ou descarta se passou de 30 min parada no modal)
+  if(!questaoId) return;
+  // captura o que estiver marcado (highlight + caneta, os dois vivem no
+  // mesmo canvas) - só faz sentido guardar aqui porque é uma decisão
+  // deliberada de salvar, não um rabisco de raciocínio no meio da questão
+  const canvas = document.getElementById('vf-canvas-desenho');
+  const imagemAnotacao = (canvas && vfCtxDesenho && vfIndiceHistoricoVF >= 0) ? vfRecortarAreaDesenhadaVF(canvas) : null;
+  const dadosParaSalvar = {usuario_id: usuarioAtual.id, questao_vf_id: questaoId, motivo};
+  // só inclui a imagem se tiver uma nova de verdade - senão o upsert ia
+  // sobrescrever com null uma imagem que já estava salva de um save anterior
+  if(imagemAnotacao) dadosParaSalvar.imagem_anotacao = imagemAnotacao;
+  // otimista: o ícone muda JÁ, o upsert acontece em segundo plano - "meio
+  // lento" antes era esperar o banco confirmar antes de sequer mudar o
+  // ícone na tela
+  const motivoAnterior = flashsSalvosVF.get(questaoId); // pra desfazer certo se a escrita falhar
+  flashsSalvosVF.set(questaoId, motivo);
+  renderizarItemVF(); // atualiza o ícone preenchido na hora
+  sb.from('flashs_salvos_vf').upsert(dadosParaSalvar, {onConflict: 'usuario_id,questao_vf_id'}).then(({error}) => {
+    if(error){
+      // escrita falhou de verdade - desfaz o otimismo
+      if(motivoAnterior === undefined) flashsSalvosVF.delete(questaoId);
+      else flashsSalvosVF.set(questaoId, motivoAnterior);
+      renderizarItemVF();
+      alert('Erro ao salvar: '+error.message);
+    }
+  });
+}
+
+// reforço: dentro da barra/painel, dispara o clique manualmente no
+// touchend da caneta, em vez de confiar só na síntese automática de
+// toque->clique do Safari. Suspeita: um tremor mínimo da caneta entre
+// tocar e soltar pode fazer o Safari interpretar como arrasto em vez de
+// toque, cancelando o clique — o slider não sofre disso porque já espera
+// arrasto por natureza
+document.addEventListener('touchend', (e) => {
+  const touch = e.changedTouches[0];
+  if(!vfEhToqueDeCaneta(touch)) return;
+  if(!vfTocouNaBarra(e.target)) return;
+  if(e.target.closest('#vf-btn-desfazer, #vf-btn-refazer')) return; // esses 2 não precisam do reforço - causava disparo duplo
+  const btn = e.target.closest('button');
+  if(btn){
+    e.preventDefault();
+    btn.click();
+  }
+}, {passive: false});
+
+// mesmo reforço, mas pros botões de responder Verdadeiro/Falso — eles
+// nunca tiveram essa proteção, e a caneta tem a mesma fragilidade de
+// síntese de toque->clique em qualquer botão do app, não só na barrinha
+document.addEventListener('touchend', (e) => {
+  const touch = e.changedTouches[0];
+  if(!vfEhToqueDeCaneta(touch)) return;
+  const btn = e.target.closest('.vf-btn-resposta');
+  if(btn){
+    e.preventDefault();
+    btn.click();
+  }
+}, {passive: false});
+
+// mostra a barrinha perto de onde a caneta tocou — só aparece ao começar
+// a desenhar, mas depois disso FICA na tela até trocar de questão (nunca
+// some sozinha entre um traço e outro)
+function mostrarBarraDesenhoVF(){
+  const barra = document.getElementById('vf-barra-desenho');
+  barra.classList.remove('hidden');
+  document.body.classList.add('vf-desenho-ativo');
+  vfRestaurarPosicaoBarraVF();
+  // monta as 3 grades de cor do zero (cores fixas + customizadas salvas
+  // + seletor arco-íris) - idempotente, seguro de chamar toda vez que a
+  // barrinha aparece
+  vfRenderizarGradeCoresVF('vf-grade-cores-caneta', vfCorDesenhoAtual);
+  vfRenderizarGradeCoresVF('vf-grade-cores-destaque', vfCorDestaqueAtual);
+  vfRenderizarGradeCoresVF('vf-grade-cores-marcacao-texto', vfCorMarcacaoTextoAtual);
+  vfRecolorirIconeMarcador(vfCorDesenhoAtual);
+  vfRecolorirIconeDestaqueVF(vfCorDestaqueAtual);
+  vfRecolorirIconesMarcacaoTextoVF(vfCorMarcacaoTextoAtual);
+}
+
+// restaura a posição que ficou salva da última vez que a barrinha foi
+// arrastada — "onde eu fechar por último, ali tem que ficar até eu mudar
+// de novo". Usa localStorage, então sobrevive até fechar o app inteiro
+function vfRestaurarPosicaoBarraVF(){
+  const barra = document.getElementById('vf-barra-desenho');
+  let pos = null;
+  try{ pos = JSON.parse(localStorage.getItem('vf_barra_desenho_pos') || 'null'); }catch(e){}
+  if(pos && typeof pos.left === 'number' && typeof pos.top === 'number'){
+    // reconfere que ainda cabe na tela atual (pode ter girado o aparelho
+    // ou mudado de dispositivo desde a última vez)
+    const largura = barra.offsetWidth || 260;
+    const altura = barra.offsetHeight || 40;
+    const left = Math.min(Math.max(4, pos.left), window.innerWidth - largura - 4);
+    const top = Math.min(Math.max(4, pos.top), window.innerHeight - altura - 4);
+    barra.style.left = left + 'px';
+    barra.style.top = top + 'px';
+    barra.style.transform = 'none';
+  }
+}
+
+// ---- arrastar a barrinha pela alça de pontinhos ----
+let vfArrastandoBarra = false;
+let vfArrastoOffsetX = 0, vfArrastoOffsetY = 0;
+
+function vfIniciarArrastoBarra(clientX, clientY){
+  const barra = document.getElementById('vf-barra-desenho');
+  const rect = barra.getBoundingClientRect();
+  vfArrastandoBarra = true;
+  vfArrastoOffsetX = clientX - rect.left;
+  vfArrastoOffsetY = clientY - rect.top;
+  barra.style.left = rect.left + 'px';
+  barra.style.top = rect.top + 'px';
+  barra.style.transform = 'none';
+  document.getElementById('vf-alca-arrastar').style.cursor = 'grabbing';
+}
+
+function vfMoverBarraArrasto(clientX, clientY){
+  if(!vfArrastandoBarra) return;
+  const barra = document.getElementById('vf-barra-desenho');
+  const largura = barra.offsetWidth, altura = barra.offsetHeight;
+  const left = Math.min(Math.max(4, clientX - vfArrastoOffsetX), window.innerWidth - largura - 4);
+  const top = Math.min(Math.max(4, clientY - vfArrastoOffsetY), window.innerHeight - altura - 4);
+  barra.style.left = left + 'px';
+  barra.style.top = top + 'px';
+  vfReposicionarPainelSobreBarraVF();
+}
+
+function vfFinalizarArrastoBarra(){
+  if(!vfArrastandoBarra) return;
+  vfArrastandoBarra = false;
+  document.getElementById('vf-alca-arrastar').style.cursor = 'grab';
+  const barra = document.getElementById('vf-barra-desenho');
+  try{
+    localStorage.setItem('vf_barra_desenho_pos', JSON.stringify({
+      left: parseFloat(barra.style.left),
+      top: parseFloat(barra.style.top)
+    }));
+  }catch(e){}
+}
+
+// o painel precisa seguir a barrinha, já que ela pode estar em qualquer
+// lugar da tela agora (não mais sempre no topo centralizado)
+function vfReposicionarPainelSobreBarraVF(idBotaoAncora, idPainel){
+  const botao = document.getElementById(idBotaoAncora);
+  const painel = document.getElementById(idPainel);
+  if(!botao || !painel) return;
+  const rect = botao.getBoundingClientRect();
+  const larguraPainel = 280;
+  let left = rect.left + rect.width/2 - larguraPainel/2; // centraliza embaixo do botão que foi tocado
+  left = Math.min(Math.max(4, left), window.innerWidth - larguraPainel - 4);
+  let abrePraBaixo = true;
+  let top = rect.bottom + 14; // espaço extra pra caber a setinha
+  if(top + 320 > window.innerHeight){ top = rect.top - 320 - 14; abrePraBaixo = false; }
+  painel.style.left = left + 'px';
+  painel.style.top = Math.max(4, top) + 'px';
+  painel.style.transform = 'none';
+
+  // setinha estilo balão de fala, alinhada horizontalmente com o centro
+  // do botão que foi tocado - igual o PDF Expert
+  const seta = painel.querySelector('.vf-seta-painel');
+  if(seta){
+    const centroBotaoX = rect.left + rect.width/2;
+    const offsetSeta = centroBotaoX - left;
+    seta.style.left = Math.min(Math.max(16, offsetSeta), larguraPainel - 16) + 'px';
+    if(abrePraBaixo){
+      seta.style.top = '-6px';
+      seta.style.bottom = 'auto';
+    }else{
+      seta.style.top = 'auto';
+      seta.style.bottom = '-6px';
+    }
+  }
+}
+
+document.getElementById('vf-alca-arrastar')?.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  vfIniciarArrastoBarra(t.clientX, t.clientY);
+  e.preventDefault();
+}, {passive: false});
+document.addEventListener('touchmove', (e) => {
+  if(!vfArrastandoBarra) return;
+  const t = e.touches[0];
+  vfMoverBarraArrasto(t.clientX, t.clientY);
+  e.preventDefault();
+}, {passive: false});
+document.addEventListener('touchend', () => { if(vfArrastandoBarra) vfFinalizarArrastoBarra(); });
+// mouse também, pra funcionar testando em desktop
+document.getElementById('vf-alca-arrastar')?.addEventListener('mousedown', (e) => {
+  vfIniciarArrastoBarra(e.clientX, e.clientY);
+});
+document.addEventListener('mousemove', (e) => { if(vfArrastandoBarra) vfMoverBarraArrasto(e.clientX, e.clientY); });
+document.addEventListener('mouseup', () => { if(vfArrastandoBarra) vfFinalizarArrastoBarra(); });
+
+// fecha só a barrinha — o desenho que já está no canvas continua lá
+// intacto. Diferente de limparCanvasDesenhoVF (que apaga tudo e roda só
+// na troca de questão), esse aqui é pra fechar no meio da questão, sem
+// perder o rascunho. Se tocar com a caneta de novo depois, a barrinha
+// volta a aparecer normalmente (mostrarBarraDesenhoVF já cobre isso)
+function fecharBarraDesenhoVF(){
+  document.getElementById('vf-barra-desenho').classList.add('hidden');
+  document.getElementById('vf-painel-caneta').classList.add('hidden');
+  document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
+  document.getElementById('vf-painel-marcacao-texto').classList.add('hidden');
+  document.body.classList.remove('vf-desenho-ativo');
+  vfDesativarModoMarcacaoTextoVF();
+}
+
+// abre/fecha só o painel de configuração (Cor/Espessura/Sensibilidade) —
+// a barra fina continua visível o tempo todo, igual o PDF Expert: barra
+// permanente, painel temporário que aparece só pra mudar algo e volta
+// clicar no grupo Caneta sempre SELECIONA caneta como ferramenta (nunca
+// alterna) — igual clicar na Borracha sempre seleciona borracha. É assim
+// que o PDF Expert funciona: cada ícone escolhe sua própria ferramenta
+// direto, sem precisar "desmarcar" a outra primeiro
+// clicar no ÍCONE só seleciona a ferramenta - nunca abre painel de
+// configuração. Igual o PDF Expert: a bolinha (cor ou tamanho) só
+// aparece DEPOIS que a ferramenta já está selecionada, e é nela que se
+// clica pra configurar
+function vfDesativarModoMarcacaoTextoVF(){
+  vfModoMarcacaoTextoAtivo = null;
+  vfLimparPreviewMarcacaoVF(); // se desativou no meio de um arrasto, não deixa o preview visual preso na tela
+  vfMarcacaoTextoArrastandoVF = false;
+  vfMarcacaoTextoRangeAtualVF = null;
+  document.querySelectorAll('.vf-btn-marcacao-texto').forEach(btn => { btn.style.background = 'none'; });
+  // o fundo azul do grifar fica no GRUPO PAI (vf-grupo-grifar), não no
+  // próprio botão "A" - resetar só os .vf-btn-marcacao-texto não bastava,
+  // o grupo (e a bolinha de cor dentro dele) ficavam presos "ligados"
+  const grupoGrifar = document.getElementById('vf-grupo-grifar');
+  const swatchGrifarBtn = document.getElementById('vf-swatch-cor-marcacao-texto-btn');
+  if(grupoGrifar){
+    grupoGrifar.style.background = 'none';
+    grupoGrifar.style.gap = '0px';
+    grupoGrifar.style.padding = '2px 0px';
+  }
+  if(swatchGrifarBtn){
+    swatchGrifarBtn.style.width = '0px';
+    swatchGrifarBtn.style.opacity = '0';
+  }
+  document.getElementById('vf-painel-marcacao-texto')?.classList.add('hidden');
+  document.body.classList.remove('vf-marcacao-texto-ativa');
+  vfAtualizarEstiloBotaoBorracha();
+}
+
+function selecionarFerramentaCanetaVF(){
+  vfModoBorracha = false;
+  vfModoDestaque = false;
+  document.body.classList.remove('vf-modo-destaque-ativo');
+  vfDesativarModoMarcacaoTextoVF();
+  vfAtualizarEstiloBotaoBorracha();
+  document.getElementById('vf-painel-caneta').classList.add('hidden');
+  document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
+}
+
+function selecionarFerramentaBorrachaVF(){
+  vfModoBorracha = true;
+  vfModoDestaque = false;
+  document.body.classList.remove('vf-modo-destaque-ativo');
+  vfDesativarModoMarcacaoTextoVF();
+  vfAtualizarEstiloBotaoBorracha();
+  document.getElementById('vf-painel-caneta').classList.add('hidden');
+  document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
+}
+
+function selecionarFerramentaDestaqueVF(){
+  vfModoBorracha = false;
+  vfModoDestaque = true;
+  document.body.classList.add('vf-modo-destaque-ativo');
+  vfDesativarModoMarcacaoTextoVF();
+  vfAtualizarEstiloBotaoBorracha();
+  document.getElementById('vf-painel-caneta').classList.add('hidden');
+  document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
+}
+
+// ---- marcação de texto de verdade (grifar/sublinhar/riscar) ----
+// modelo novo: toca no botão pra ATIVAR o modo (fica destacado, igual as
+// outras ferramentas), depois só arrasta o DEDO sobre as palavras - a
+// marcação se aplica sozinha ao soltar o dedo, sem precisar de mais
+// nenhum toque em botão nenhum (evita o bug de perder a seleção ao tentar
+// clicar em algo fora dela). A caneta nunca acorda esse modo - ela já tem
+// função reservada de desenho/destaque/borracha
+let vfModoMarcacaoTextoAtivo = null; // 'grifar' | 'sublinhar' | 'riscar' | null
+
+function vfAtivarModoMarcacaoTextoVF(tipo){
+  vfModoMarcacaoTextoAtivo = (vfModoMarcacaoTextoAtivo === tipo) ? null : tipo; // clicar de novo desativa
+  // ferramenta ativa é sempre uma coisa só - reseta caneta/borracha/
+  // destaque de verdade (não só esconde visualmente) quando um modo de
+  // marcação de texto entra em ação
+  if(vfModoMarcacaoTextoAtivo){
+    vfModoBorracha = false;
+    vfModoDestaque = false;
+    document.body.classList.remove('vf-modo-destaque-ativo');
+  }
+  // grifar segue a MESMA técnica dos outros 3 grupos (caneta/borracha/
+  // destaque): fundo azul no GRUPO inteiro (ícone + bolinha), bolinha só
+  // aparece quando selecionado. Antes o fundo só cobria o ícone sozinho,
+  // e a bolinha ficava sempre visível, mesmo sem grifar selecionado
+  const grupoGrifar = document.getElementById('vf-grupo-grifar');
+  const swatchGrifarBtn = document.getElementById('vf-swatch-cor-marcacao-texto-btn');
+  const grifarAtivo = vfModoMarcacaoTextoAtivo === 'grifar';
+  if(grupoGrifar && swatchGrifarBtn){
+    grupoGrifar.style.background = grifarAtivo ? '#D2E7FA' : 'none';
+    grupoGrifar.style.gap = grifarAtivo ? '4px' : '0px';
+    grupoGrifar.style.padding = grifarAtivo ? '2px 4px 2px 2px' : '2px 0px';
+    swatchGrifarBtn.style.width = grifarAtivo ? '20px' : '0px';
+    swatchGrifarBtn.style.opacity = grifarAtivo ? '1' : '0';
+  }
+  // sublinhar e riscar não têm bolinha (cor sempre fixa vermelha) -
+  // continuam simples, fundo azul só no próprio botão
+  document.querySelectorAll('.vf-btn-marcacao-texto[data-tipo-marcacao="sublinhar"], .vf-btn-marcacao-texto[data-tipo-marcacao="riscar"]').forEach(btn => {
+    const ativo = btn.dataset.tipoMarcacao === vfModoMarcacaoTextoAtivo;
+    btn.style.background = ativo ? '#D2E7FA' : 'none';
+  });
+  // a caneta precisa "desmarcar" visualmente quando um modo de marcação
+  // de texto entra em ação - sem essa chamada, o grupo da caneta nunca
+  // atualizava (ficava sempre com o fundo azul preso, mesmo não sendo
+  // mais o modo de verdade em uso)
+  vfAtualizarEstiloBotaoBorracha();
+  // seleção de texto só fica disponível ENQUANTO um modo de marcação
+  // está ativo - fora disso, a tela volta a bloquear seleção normal
+  // (você só consegue marcar de propósito, nunca selecionar sem querer)
+  document.body.classList.toggle('vf-marcacao-texto-ativa', !!vfModoMarcacaoTextoAtivo);
+  // fecha os painéis de configuração das ferramentas de desenho, se
+  // algum estiver aberto - não faz sentido os dois contextos juntos
+  document.getElementById('vf-painel-caneta')?.classList.add('hidden');
+  document.getElementById('vf-painel-borracha')?.classList.add('hidden');
+  document.getElementById('vf-painel-destaque')?.classList.add('hidden');
+}
+
+// ---- seleção de texto CUSTOMIZADA por arrasto - não depende da seleção
+// nativa do iOS, que normalmente exige segurar antes pra abrir as alças
+// de seleção e SÓ DEPOIS conseguir arrastar. Aqui o range é construído
+// diretamente pelas coordenadas do dedo a cada movimento, então um
+// simples arrasto direto sobre o texto já basta ----
+let vfMarcacaoTextoPontoInicialVF = null; // {x, y} de onde o dedo tocou primeiro
+let vfMarcacaoTextoContainerVF = null; // container válido guardado no início do gesto - usado pra "grampear" o arrasto dentro dele
+let vfMarcacaoTextoArrastandoVF = false;
+let vfMarcacaoTextoDirecaoApagarVF = false; // calculada 1x por movimento, reaproveitada no touchend
+
+document.addEventListener('touchstart', (e) => {
+  if(!vfModoMarcacaoTextoAtivo) return;
+  if(vfAlgumModalAbertoVF()) return; // painel de configuração de cor aberto - nunca interfere com toques nele
+  const touch = e.touches[0];
+  if(!touch) return;
+  if(!vfEhToqueDeCaneta(touch)) return; // só a caneta marca - dedo continua rolando a página normalmente, mesmo com o modo ativo
+  const elemento = document.elementFromPoint(touch.clientX, touch.clientY);
+  const containerValido = elemento && elemento.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual');
+  if(!containerValido) return;
+  // bloqueia o comportamento nativo de seleção desde o toque inicial -
+  // sem isso, o Safari/iOS pode acionar a lupa de seleção de texto e
+  // reajustar zoom/layout pra facilitar a seleção precisa, causando
+  // reflow visível bem no meio da frase logo ao começar a arrastar
+  e.preventDefault();
+  vfLimparPreviewMarcacaoVF(); // segurança extra - nunca começa um gesto novo com resíduo visual de um anterior
+  vfMarcacaoTextoPontoInicialVF = {x: touch.clientX, y: touch.clientY};
+  vfMarcacaoTextoContainerVF = containerValido; // guardado pra "grampear" o arrasto dentro dele, mesmo que o dedo saia (ex: em cima de uma alternativa logo abaixo)
+  vfMarcacaoTextoArrastandoVF = true;
+  vfMarcacaoTextoDirecaoApagarVF = false; // reseta - até mover de verdade, assume "marcando" (mais seguro como padrão)
+}, {passive: false});
+
+document.addEventListener('touchmove', (e) => {
+  if(!vfModoMarcacaoTextoAtivo || !vfMarcacaoTextoArrastandoVF || !vfMarcacaoTextoPontoInicialVF) return;
+  const touch = e.touches[0];
+  if(!touch) return;
+  if(typeof document.caretRangeFromPoint !== 'function') return; // API não suportada nesse navegador - sem seleção customizada
+  const rangeInicio = document.caretRangeFromPoint(vfMarcacaoTextoPontoInicialVF.x, vfMarcacaoTextoPontoInicialVF.y);
+  let rangeFim = document.caretRangeFromPoint(touch.clientX, touch.clientY);
+  if(!rangeInicio || !rangeFim) return;
+  // se o ponto atual caiu fora do container válido (ex: o dedo escorregou
+  // pra cima de uma alternativa logo abaixo do enunciado), grampeia pra
+  // borda mais próxima do container em vez de usar o ponto real - sem
+  // isso, a seleção podia "vazar" pra dentro de outro elemento (um botão
+  // inteiro, por exemplo), não só o texto puro do enunciado
+  const elementoNoPontoFim = document.elementFromPoint(touch.clientX, touch.clientY);
+  const dentroDoContainer = elementoNoPontoFim && vfMarcacaoTextoContainerVF && elementoNoPontoFim.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual') === vfMarcacaoTextoContainerVF;
+  if(!dentroDoContainer && vfMarcacaoTextoContainerVF){
+    const rectContainer = vfMarcacaoTextoContainerVF.getBoundingClientRect();
+    const rangeLimite = document.createRange();
+    rangeLimite.selectNodeContents(vfMarcacaoTextoContainerVF);
+    // acima do container = grampeia no início; abaixo (ou de lado) = no fim
+    rangeLimite.collapse(touch.clientY < rectContainer.top);
+    rangeFim = rangeLimite;
+  }
+  e.preventDefault(); // impede o scroll da página enquanto arrasta selecionando
+  const range = document.createRange();
+  // o dedo pode arrastar tanto pra frente quanto pra trás no texto -
+  // compara as posições reais no documento pra montar o range na ordem certa
+  const ordem = rangeInicio.compareBoundaryPoints(Range.START_TO_START, rangeFim);
+  // guarda a direção JÁ CALCULADA aqui (mesmo compareBoundaryPoints que
+  // monta a seleção) - reaproveitada direto no touchend, sem precisar
+  // chamar caretRangeFromPoint de novo lá. Duas chamadas separadas (uma
+  // no touchmove, outra no touchend) podiam dar resultado levemente
+  // diferente por qualquer variação mínima de timing/layout entre os
+  // dois momentos, fazendo a direção sair errada mesmo a lógica em si
+  // estando certa - calcular 1x só e reaproveitar elimina essa brecha
+  vfMarcacaoTextoDirecaoApagarVF = ordem > 0; // ponto inicial veio DEPOIS do atual = arrastando pra trás = apagando
+  if(ordem <= 0){
+    range.setStart(rangeInicio.startContainer, rangeInicio.startOffset);
+    range.setEnd(rangeFim.startContainer, rangeFim.startOffset);
+  }else{
+    range.setStart(rangeFim.startContainer, rangeFim.startOffset);
+    range.setEnd(rangeInicio.startContainer, rangeInicio.startOffset);
+  }
+  // seleção nativa de novo pro preview visual - já confirmado que ela
+  // não causava a quebra de linha (o culpado real era outro, já
+  // corrigido). A seleção nativa lida sozinha com estruturas complexas
+  // cruzando múltiplos elementos (como selecionar do item I até o item
+  // II), o que o sistema manual de retângulos não fazia direito
+  vfMarcacaoTextoRangeAtualVF = range;
+  const selecao = window.getSelection();
+  selecao.removeAllRanges();
+  selecao.addRange(range);
+}, {passive: false});
+
+document.addEventListener('touchend', (e) => {
+  if(!vfModoMarcacaoTextoAtivo) return;
+  const apagando = vfMarcacaoTextoDirecaoApagarVF;
+  vfMarcacaoTextoArrastandoVF = false;
+  vfMarcacaoTextoPontoInicialVF = null;
+  vfMarcacaoTextoContainerVF = null;
+  const touch = e.changedTouches[0];
+  const range = vfMarcacaoTextoRangeAtualVF;
+  vfMarcacaoTextoRangeAtualVF = null;
+  window.getSelection().removeAllRanges();
+  if(!touch || !range || range.collapsed) return; // caneta apenas (dedo já é filtrado no touchstart). Sem range formado nesse toque, nada a fazer
+  const noContainer = range.commonAncestorContainer;
+  const elementoContainer = noContainer.nodeType === 3 ? noContainer.parentElement : noContainer;
+  const areaValida = elementoContainer.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual');
+  if(!areaValida) return;
+  vfAplicarMarcacaoNoRangeVF(vfModoMarcacaoTextoAtivo, range, apagando);
+  // Quest: marcação já vale imediatamente, vinculada ao caderno atual -
+  // diferente do Flash, que só persiste depois de responder (ver
+  // avancarParaProximaVF/registrarRespostaVF)
+  if(vfTelaAtualVF() === 'quest' && cadernoAtual && questoesCaderno[indiceQuestaoAtual]){
+    vfPersistirMarcacoesTextoVF('quest', cadernoAtual.id, questoesCaderno[indiceQuestaoAtual].id);
+  }
+  // Flash: só persiste se a questão atual JÁ foi respondida (já existe um
+  // idRespostaVF pra vincular) - grifar na tela de explicação/resultado,
+  // depois de já ter respondido, também precisa salvar
+  if(vfTelaAtualVF() === 'flash' && estadoVF){
+    const entradaAtual = estadoVF.historico[estadoVF.posicao];
+    if(entradaAtual && entradaAtual.idRespostaVF) vfPersistirMarcacoesTextoVF('flash', entradaAtual.idRespostaVF, entradaAtual.item.id);
+  }
+});
+
+// sem esse handler, se o sistema cancelasse o gesto no meio (touchcancel
+// em vez de touchend - pode acontecer com Apple Pencil, interrupções do
+// sistema, etc), a seleção nativa nunca era limpa, ficando "presa" na tela
+document.addEventListener('touchcancel', (e) => {
+  if(!vfModoMarcacaoTextoAtivo) return;
+  vfMarcacaoTextoArrastandoVF = false;
+  vfMarcacaoTextoPontoInicialVF = null;
+  vfMarcacaoTextoContainerVF = null;
+  vfMarcacaoTextoRangeAtualVF = null;
+  window.getSelection().removeAllRanges();
+});
+
+// preview visual manual da seleção de texto em andamento - desenha
+// retângulos translúcidos por cima do texto correspondente ao range,
+// sem nunca acionar a API nativa de seleção do navegador (ver motivo
+// acima). Reaproveita os mesmos elementos entre atualizações, só
+// reposicionando - evita criar/destruir DOM a cada movimento
+let vfMarcacaoTextoRangeAtualVF = null;
+let vfDivsPreviewMarcacaoVF = [];
+function vfMostrarPreviewMarcacaoVF(range){
+  const retangulos = Array.from(range.getClientRects());
+  // remove divs excedentes (a seleção diminuiu)
+  while(vfDivsPreviewMarcacaoVF.length > retangulos.length){
+    const div = vfDivsPreviewMarcacaoVF.pop();
+    div.remove();
+  }
+  retangulos.forEach((rect, i) => {
+    let div = vfDivsPreviewMarcacaoVF[i];
+    if(!div){
+      div = document.createElement('div');
+      div.style.cssText = 'position:fixed;pointer-events:none;z-index:260;background:rgba(178,58,52,0.28);border-radius:2px;';
+      document.body.appendChild(div);
+      vfDivsPreviewMarcacaoVF.push(div);
+    }
+    div.style.left = rect.left + 'px';
+    div.style.top = rect.top + 'px';
+    div.style.width = rect.width + 'px';
+    div.style.height = rect.height + 'px';
+  });
+}
+function vfLimparPreviewMarcacaoVF(){
+  vfDivsPreviewMarcacaoVF.forEach(div => div.remove());
+  vfDivsPreviewMarcacaoVF = [];
+}
+
+// converte um (node, offset) do DOM pra uma posição de caractere GLOBAL
+// dentro do container - usado pra reconstruir ranges depois de mexer no
+// DOM (desfazer uma marcação existente muda os nós de texto via
+// normalize(), invalidando qualquer referência de nó guardada antes)
+function vfOffsetGlobalVF(container, node, offset){
+  let total = 0;
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  let atual;
+  while((atual = walker.nextNode())){
+    if(atual === node) return total + offset;
+    total += atual.textContent.length;
+  }
+  return total; // não achado (não deveria acontecer) - melhor esforço
+}
+
+// offset de início/fim de um ELEMENTO (não um nó de texto) dentro do
+// container - soma quantos caracteres de texto vêm ANTES dele, mais o
+// tamanho do próprio texto. Direto e confiável, diferente de tentar usar
+// range.selectNodeContents(elemento) + vfOffsetGlobalVF: selectNodeContents
+// aponta pro ELEMENTO PAI contando FILHOS como offset (0, 1, 2...), não
+// caracteres de texto - vfOffsetGlobalVF nunca achava o elemento (só
+// procura nós de TEXTO), caindo sempre no fallback (fim do documento)
+function vfOffsetDoElementoVF(container, elemento){
+  const inicio = vfOffsetGlobalVF(container, elemento.firstChild, 0);
+  return {inicio, fim: inicio + elemento.textContent.length};
+}
+
+// o inverso: acha o Range real que corresponde a duas posições de
+// caractere GLOBAIS dentro do container
+function vfRangeDoOffsetGlobalVF(container, offsetInicio, offsetFim){
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  let total = 0, noInicio = null, offInicio = 0, noFim = null, offFim = 0;
+  let atual;
+  while((atual = walker.nextNode())){
+    const tamanho = atual.textContent.length;
+    // prefere avançar pro INÍCIO do próximo nó em vez de ficar "colado"
+    // no FIM do nó atual quando o offset cai exatamente na fronteira
+    // entre dois nós de texto irmãos - achado real: sem isso, o range
+    // podia começar dentro de um nó de espaço em branco/quebra de linha
+    // (comum entre dois <span> irmãos no HTML gerado), e surroundContents
+    // falhava por cruzar essa fronteira de forma ambígua
+    if(noInicio === null && total + tamanho > offsetInicio){ noInicio = atual; offInicio = offsetInicio - total; }
+    if(noInicio === null && tamanho === 0 && total === offsetInicio){ noInicio = atual; offInicio = 0; }
+    if(noFim === null && total + tamanho >= offsetFim){ noFim = atual; offFim = offsetFim - total; }
+    total += tamanho;
+    if(noInicio && noFim) break;
+  }
+  if(!noInicio || !noFim) return null;
+  const range = document.createRange();
+  range.setStart(noInicio, offInicio);
+  range.setEnd(noFim, offFim);
+  return range;
+}
+
+// cria de fato o span de marcação (extraído pra função própria - usado
+// tanto no caminho normal quanto depois de mesclar/substituir marcas)
+// divide um intervalo de offsets [inicio, fim) nos pedaços correspondentes
+// a cada "linha" (filho direto de bloco do container, tipo .enunciado-linha
+// ou .linha-numerada) que ele toca - um span de marcação nunca pode cruzar
+// a fronteira entre duas dessas divs. Achado real: um único span tentando
+// cobrir texto de duas linhas diferentes falhava no caminho normal
+// (surroundContents) e caía num fallback que prendia divs inteiras dentro
+// de um span inline, corrompendo a estrutura e fazendo o texto "quebrar"
+// e se reorganizar errado
+function vfSegmentosPorLinhaVF(container, inicio, fim){
+  const segmentos = [];
+  let cursor = 0;
+  vfColetarSegmentosRecursivoVF(container, inicio, fim, {valor: cursor}, segmentos);
+  return segmentos;
+}
+// desce recursivamente até elementos "folha" (sem filhos de elemento,
+// só texto) antes de fechar um segmento - achado real: parar só no
+// primeiro nível (os itens I/II/III direto) não bastava, porque cada
+// item tem sua própria estrutura interna (span do numeral + span do
+// texto). Um segmento que cruzava essa fronteira interna fazia
+// surroundContents falhar, caindo no fallback que reorganiza/achata a
+// estrutura - e isso quebrava o layout flex do item
+function vfColetarSegmentosRecursivoVF(elemento, inicio, fim, cursorRef, segmentos){
+  // numerais de item (I., II., III.) nunca entram na marcação, mesmo que
+  // o arrasto cruze de um item pro outro - só avança o cursor (contando
+  // os caracteres dele normalmente, pra não desalinhar os offsets), mas
+  // nunca cria segmento nenhum aqui dentro
+  if(elemento.classList && (elemento.classList.contains('vf-numeral-item-nao-marcavel') || elemento.classList.contains('linha-marcador'))){
+    cursorRef.valor += elemento.textContent.length;
+    return;
+  }
+  const filhosDeElemento = [...elemento.childNodes].filter(n => n.nodeType === 1);
+  if(filhosDeElemento.length === 0){
+    // folha - todo o texto dele é UM segmento candidato, sem dividir mais
+    const tamanho = elemento.textContent.length;
+    const elInicio = cursorRef.valor, elFim = cursorRef.valor + tamanho;
+    const segInicio = Math.max(inicio, elInicio), segFim = Math.min(fim, elFim);
+    // nunca cria segmento pra trecho que é só espaço em branco/quebra de
+    // linha (comum entre dois <span> irmãos no HTML gerado, formatado com
+    // indentação) - evita spans de marcação vazios/invisíveis inúteis
+    if(segInicio < segFim && elemento.textContent.slice(segInicio-elInicio, segFim-elInicio).trim()) segmentos.push({inicio: segInicio, fim: segFim});
+    cursorRef.valor = elFim;
+    return;
+  }
+  // tem filhos de elemento - desce em cada um, na ordem, incluindo
+  // texto solto entre eles (nó de texto direto, sem elemento em volta)
+  for(const no of elemento.childNodes){
+    if(no.nodeType === 3){ // texto solto direto - trata como folha própria
+      const tamanho = no.textContent.length;
+      const elInicio = cursorRef.valor, elFim = cursorRef.valor + tamanho;
+      const segInicio = Math.max(inicio, elInicio), segFim = Math.min(fim, elFim);
+      if(segInicio < segFim && no.textContent.slice(segInicio-elInicio, segFim-elInicio).trim()) segmentos.push({inicio: segInicio, fim: segFim});
+      cursorRef.valor = elFim;
+    }else if(no.nodeType === 1){
+      vfColetarSegmentosRecursivoVF(no, inicio, fim, cursorRef, segmentos);
+    }
+  }
+}
+
+function vfCriarSpanMarcaVF(tipo, cor, range){
+  const span = document.createElement('span');
+  span.className = 'vf-marcacao-texto-sessao';
+  span.dataset.tipoMarca = tipo;
+  span.dataset.corMarca = cor;
+  if(tipo === 'grifar'){
+    span.style.backgroundColor = cor;
+    span.style.borderRadius = '2px';
+    span.style.boxDecorationBreak = 'clone';
+    span.style.webkitBoxDecorationBreak = 'clone';
+  }else if(tipo === 'sublinhar'){
+    span.style.textDecorationLine = 'underline';
+    span.style.textDecorationColor = cor;
+    span.style.textDecorationThickness = '2.5px';
+    // empurra o traço pra baixo dos descendentes (y, g, p, q, j) - sem
+    // isso, o traço fica na posição padrão (perto da linha de base) e
+    // cruza essas letras, ficando quebrado/difícil de ler nelas
+    span.style.textUnderlinePosition = 'under';
+  }else if(tipo === 'riscar'){
+    span.style.textDecorationLine = 'line-through';
+    span.style.textDecorationColor = cor;
+    span.style.textDecorationThickness = '2.5px';
+  }
+  // achado real (confirmado em vídeo): o caminho de reserva que existia
+  // aqui antes (extractContents + insertNode, usado quando surroundContents
+  // falhava) causava dano PERMANENTE na estrutura do DOM em itens com
+  // layout complexo (como os itens numerados I/II/III, que têm um <div>
+  // flex com sub-elementos internos) - e esse dano não desfazia nem
+  // removendo a marcação depois. Prefere não aplicar a marcação nesse
+  // segmento a arriscar quebrar o layout permanentemente
+  try{
+    range.surroundContents(span);
+  }catch(e){
+    return; // não consegue marcar esse segmento com segurança - melhor pular do que arriscar dano permanente
+  }
+  // limpeza: surroundContents em texto com aninhamento (outro tipo de
+  // marca já dentro do range) às vezes deixa um span vazio residual pra
+  // trás - some visualmente (sem conteúdo, nada renderiza), mas é lixo
+  // desnecessário no HTML se não limpar
+  const pai = span.parentNode;
+  if(pai){
+    [...pai.querySelectorAll('.vf-marcacao-texto-sessao')].forEach(s => {
+      if(!s.textContent) s.remove();
+    });
+  }
+}
+
+// regra por DIREÇÃO do arrasto (não mais por trecho individual - aquilo
+// criava e apagava ao mesmo tempo de um jeito confuso): arrastar no
+// sentido normal de leitura (esquerda pra direita) sempre MARCA/ESTENDE
+// com a cor atual, fundindo com o que já existir. Arrastar ao contrário
+// (direita pra esquerda) sempre APAGA a marcação de tudo que for tocado,
+// não importa a cor - simples e previsível
+function vfAplicarMarcacaoNoRangeVF(tipo, range, apagando){
+  const VERMELHO_FIXO_SUBLINHAR_RISCAR = '#F03E14'; // sempre essa cor - nunca segue a cor escolhida pro grifar
+  const corAplicar = (tipo === 'grifar' ? vfCorMarcacaoTextoAtual : VERMELHO_FIXO_SUBLINHAR_RISCAR).toUpperCase();
+
+  let containerEl = range.commonAncestorContainer;
+  if(containerEl.nodeType === 3) containerEl = containerEl.parentElement;
+  const container = containerEl.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual');
+  if(!container){
+    if(!apagando) vfCriarSpanMarcaVF(tipo, corAplicar, range);
+    vfSalvarEstadoMarcacaoTextoVF();
+    return;
+  }
+
+  const offsetRangeInicio = vfOffsetGlobalVF(container, range.startContainer, range.startOffset);
+  const offsetRangeFim = vfOffsetGlobalVF(container, range.endContainer, range.endOffset);
+
+  // acha marcas do MESMO tipo que tocam (mesmo que só um pouquinho) o
+  // trecho arrastado - sobreposição de intervalos [a,b) e [c,d): a<d && c<b
+  const todasDoTipo = [...container.querySelectorAll(`.vf-marcacao-texto-sessao[data-tipo-marca="${tipo}"]`)];
+  const marcasExistentes = [];
+  todasDoTipo.forEach(span => {
+    const {inicio: oInicio, fim: oFim} = vfOffsetDoElementoVF(container, span);
+    const sobrepoe = offsetRangeInicio < oFim && oInicio < offsetRangeFim;
+    if(sobrepoe) marcasExistentes.push({inicio: oInicio, fim: oFim, cor: (span.dataset.corMarca||'').toUpperCase(), span});
+  });
+
+  if(apagando){
+    if(!marcasExistentes.length) return; // nada pra apagar ali, não faz nada
+    // desfaz as marcas tocadas e recria só as PARTES que ficam FORA do
+    // trecho arrastado (a parte que sobra de cada lado, se houver) -
+    // a parte que foi tocada nunca é recriada, fica sem marca mesmo
+    marcasExistentes.forEach(m => {
+      const pai = m.span.parentNode;
+      while(m.span.firstChild) pai.insertBefore(m.span.firstChild, m.span);
+      pai.removeChild(m.span);
+      pai.normalize();
+    });
+    marcasExistentes.forEach(m => {
+      const antesInicio = m.inicio, antesFim = Math.min(m.fim, offsetRangeInicio);
+      const depoisInicio = Math.max(m.inicio, offsetRangeFim), depoisFim = m.fim;
+      if(antesInicio < antesFim){
+        vfSegmentosPorLinhaVF(container, antesInicio, antesFim).forEach(seg => { const r = vfRangeDoOffsetGlobalVF(container, seg.inicio, seg.fim); if(r) vfCriarSpanMarcaVF(tipo, m.cor, r); });
+      }
+      if(depoisInicio < depoisFim){
+        vfSegmentosPorLinhaVF(container, depoisInicio, depoisFim).forEach(seg => { const r = vfRangeDoOffsetGlobalVF(container, seg.inicio, seg.fim); if(r) vfCriarSpanMarcaVF(tipo, m.cor, r); });
+      }
+    });
+  }else{
+    // marca/estende: desfaz as marcas tocadas e recria TUDO (união do
+    // trecho arrastado + todas as marcas que ele tocou) como UMA marca
+    // só, contínua, com a cor atual - isso já cobre "estender" (juntar
+    // com o que já tinha) e "substituir" (trocar de cor) ao mesmo tempo
+    let uniaoInicio = offsetRangeInicio, uniaoFim = offsetRangeFim;
+    marcasExistentes.forEach(m => {
+      if(m.inicio < uniaoInicio) uniaoInicio = m.inicio;
+      if(m.fim > uniaoFim) uniaoFim = m.fim;
+    });
+    marcasExistentes.forEach(m => {
+      const pai = m.span.parentNode;
+      while(m.span.firstChild) pai.insertBefore(m.span.firstChild, m.span);
+      pai.removeChild(m.span);
+      pai.normalize();
+    });
+    const segmentos = vfSegmentosPorLinhaVF(container, uniaoInicio, uniaoFim);
+    segmentos.forEach(seg => {
+      const r = vfRangeDoOffsetGlobalVF(container, seg.inicio, seg.fim);
+      if(r) vfCriarSpanMarcaVF(tipo, corAplicar, r);
+    });
+  }
+
+  vfMesclarSpansAdjacentesVF(container, tipo);
+  vfSalvarEstadoMarcacaoTextoVF();
+}
+
+// depois de criar/recriar vários pedaços, spans ADJACENTES do MESMO tipo
+// e MESMA cor (sem nada entre eles) viram várias "peças" separadas de
+// uma marca que deveria ser uma coisa só - funde elas visualmente e
+// estruturalmente numa única marca contínua
+function vfMesclarSpansAdjacentesVF(container, tipo){
+  let mudou = true;
+  while(mudou){
+    mudou = false;
+    const spans = [...container.querySelectorAll(`.vf-marcacao-texto-sessao[data-tipo-marca="${tipo}"]`)];
+    for(const span of spans){
+      const proximo = span.nextSibling;
+      if(proximo && proximo.nodeType === 1 && proximo.classList && proximo.classList.contains('vf-marcacao-texto-sessao')
+         && proximo.dataset.tipoMarca === tipo && proximo.dataset.corMarca === span.dataset.corMarca){
+        while(proximo.firstChild) span.appendChild(proximo.firstChild);
+        proximo.remove();
+        mudou = true;
+        break; // reconsulta do zero - a lista mudou
+      }
+    }
+  }
+}
+
+// ---- persistência de marcações de texto (grifar/sublinhar/riscar) no
+// Supabase - compartilhada entre Flash e Quest. Cada um identifica sua
+// própria "tentativa" (escopoId): no Flash é o id da linha em
+// log_respostas_vf daquela resposta específica, no Quest é o id do
+// caderno. Isso garante que a mesma questão aparecendo de novo numa
+// rodada/caderno diferente vem sem marcação nenhuma - só a MESMA
+// tentativa/visualização específica mantém o que foi marcado.
+//
+// Cache em memória por escopo, carregado de uma vez só (1 busca) quando
+// o caderno/sessão abre - achado real: buscar no banco a cada questão
+// individual criava um atraso perceptível de rede ao navegar (a marcação
+// "chegava depois" do resto do conteúdo). Com o cache, navegar entre
+// questões já visitadas aplica a marcação instantaneamente, sem espera
+// nenhuma ----
+let vfCacheMarcacoesVF = new Map(); // chave "${origem}:${escopoId}" -> Map<questaoId, array de marcações>
+
+// lê as marcações atuais de um container (enunciado ou correção) e
+// devolve como array de {container, tipo, cor, offsetInicio, offsetFim} -
+// formato pronto pra gravar no banco
+function vfExtrairMarcacoesAtuaisVF(container, nomeContainer){
+  if(!container) return [];
+  return [...container.querySelectorAll('.vf-marcacao-texto-sessao')].map(span => {
+    const {inicio, fim} = vfOffsetDoElementoVF(container, span);
+    return {container: nomeContainer, tipo: span.dataset.tipoMarca, cor: span.dataset.corMarca, offsetInicio: inicio, offsetFim: fim};
+  });
+}
+
+// busca de uma vez só TODAS as marcações de um escopo inteiro (um
+// caderno completo, ou uma resposta específica do Flash) e monta o
+// cache em memória - chamado 1x ao abrir o caderno/questão, não a cada
+// navegação entre questões
+async function vfCarregarCacheMarcacoesDoEscopoVF(origem, escopoId){
+  const chaveCache = `${origem}:${escopoId}`;
+  if(!usuarioAtual || !escopoId) return;
+  const {data, error} = await sb.from('marcacoes_texto_vf').select('*').eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId);
+  const porQuestao = new Map();
+  if(!error && data){
+    data.forEach(m => {
+      if(!porQuestao.has(m.questao_id)) porQuestao.set(m.questao_id, []);
+      porQuestao.get(m.questao_id).push(m);
+    });
+  }
+  vfCacheMarcacoesVF.set(chaveCache, porQuestao);
+}
+
+// substitui todas as marcações salvas daquela tentativa específica pelo
+// estado atual da tela - mais simples e resistente a falha parcial do
+// que tentar sincronizar incrementalmente marca por marca. Também
+// atualiza o cache em memória na hora, pra navegar pra frente e voltar
+// na mesma sessão já refletir sem precisar esperar o banco de novo
+async function vfPersistirMarcacoesTextoVF(origem, escopoId, questaoId){
+  if(!usuarioAtual || !escopoId || !questaoId) return;
+  const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
+  const correcao = document.getElementById('vf-correcao-atual');
+  const marcacoes = [
+    ...vfExtrairMarcacoesAtuaisVF(enunciado, 'enunciado'),
+    ...vfExtrairMarcacoesAtuaisVF(correcao, 'correcao'),
+  ];
+  // atualiza o cache em memória imediatamente (otimista) - não espera o
+  // banco confirmar pra já refletir localmente
+  const chaveCache = `${origem}:${escopoId}`;
+  if(!vfCacheMarcacoesVF.has(chaveCache)) vfCacheMarcacoesVF.set(chaveCache, new Map());
+  vfCacheMarcacoesVF.get(chaveCache).set(questaoId, marcacoes.map(m => ({
+    container: m.container, tipo_marca: m.tipo, cor: m.cor, offset_inicio: m.offsetInicio, offset_fim: m.offsetFim
+  })));
+  await sb.from('marcacoes_texto_vf').delete().eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId).eq('questao_id', questaoId);
+  if(marcacoes.length){
+    await sb.from('marcacoes_texto_vf').insert(marcacoes.map(m => ({
+      usuario_id: usuarioAtual.id, origem, escopo_id: escopoId, questao_id: questaoId,
+      container: m.container, tipo_marca: m.tipo, cor: m.cor, offset_inicio: m.offsetInicio, offset_fim: m.offsetFim
+    })));
+  }
+}
+
+// versão instantânea (síncrona, sem rede) - lê do cache já carregado em
+// memória e aplica na hora. Usada na navegação normal entre questões já
+// visitadas dentro do mesmo caderno/sessão
+function vfAplicarMarcacoesDoCacheVF(origem, escopoId, questaoId){
+  const chaveCache = `${origem}:${escopoId}`;
+  const porQuestao = vfCacheMarcacoesVF.get(chaveCache);
+  if(!porQuestao) return;
+  const marcacoesDaQuestao = porQuestao.get(questaoId);
+  if(!marcacoesDaQuestao || !marcacoesDaQuestao.length) return;
+  const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
+  const correcao = document.getElementById('vf-correcao-atual');
+  // ordena do fim pro início - aplicar marcações mexe no DOM (spans
+  // novos), o que pode alterar a contagem de nós de texto restante;
+  // aplicar de trás pra frente evita que uma marcação já aplicada
+  // desalinhe os offsets das marcações seguintes no mesmo container
+  const ordenadas = [...marcacoesDaQuestao].sort((a,b) => b.offset_inicio - a.offset_inicio);
+  ordenadas.forEach(m => {
+    const container = m.container === 'correcao' ? correcao : enunciado;
+    if(!container) return;
+    const range = vfRangeDoOffsetGlobalVF(container, m.offset_inicio, m.offset_fim);
+    if(range) vfCriarSpanMarcaVF(m.tipo_marca, m.cor, range);
+  });
+}
+
+// versão que busca direto no banco (com espera de rede) - usada só
+// quando o cache do escopo ainda não foi carregado (ex: primeira vez
+// entrando numa questão do Flash antes do cache existir)
+async function vfCarregarMarcacoesTextoVF(origem, escopoId, questaoId){
+  if(!usuarioAtual || !escopoId || !questaoId) return;
+  const chaveCache = `${origem}:${escopoId}`;
+  if(vfCacheMarcacoesVF.has(chaveCache)){
+    vfAplicarMarcacoesDoCacheVF(origem, escopoId, questaoId);
+    return;
+  }
+  const {data, error} = await sb.from('marcacoes_texto_vf').select('*').eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId).eq('questao_id', questaoId);
+  if(error || !data || !data.length) return;
+  const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
+  const correcao = document.getElementById('vf-correcao-atual');
+  const ordenadas = [...data].sort((a,b) => b.offset_inicio - a.offset_inicio);
+  ordenadas.forEach(m => {
+    const container = m.container === 'correcao' ? correcao : enunciado;
+    if(!container) return;
+    const range = vfRangeDoOffsetGlobalVF(container, m.offset_inicio, m.offset_fim);
+    if(range) vfCriarSpanMarcaVF(m.tipo_marca, m.cor, range);
+  });
+}
+
+// clicar na BOLINHA (só existe/aparece quando a ferramenta já está
+// selecionada) abre/fecha o painel de configuração daquela ferramenta
+function abrirPainelCanetaVF(){
+  if(vfModoBorracha || vfModoDestaque) return; // segurança - a bolinha só devia aparecer clicável quando ativa
+  const painel = document.getElementById('vf-painel-caneta');
+  document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
+  document.getElementById('vf-painel-marcacao-texto').classList.add('hidden');
+  painel.classList.toggle('hidden');
+  if(!painel.classList.contains('hidden')){
+    vfReposicionarPainelSobreBarraVF('vf-swatch-cor-atual-btn', 'vf-painel-caneta');
+    // mesma sincronização do painel de destaque - sem isso o slider podia
+    // abrir com a cor de antes, não a atualmente selecionada
+    document.getElementById('vf-preview-espessura').style.background = vfCorDesenhoAtual;
+    vfAtualizarPreenchimentoSliderVF('vf-slider-espessura', '--preenchimento-slider-caneta', vfCorDesenhoAtual);
+  }
+}
+
+function abrirPainelBorrachaVF(){
+  if(!vfModoBorracha) return;
+  const painel = document.getElementById('vf-painel-borracha');
+  document.getElementById('vf-painel-caneta').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
+  document.getElementById('vf-painel-marcacao-texto').classList.add('hidden');
+  painel.classList.toggle('hidden');
+  if(!painel.classList.contains('hidden')) vfReposicionarPainelSobreBarraVF('vf-circulo-borracha-btn', 'vf-painel-borracha');
+}
+
+function abrirPainelDestaqueVF(){
+  if(!vfModoDestaque) return;
+  const painel = document.getElementById('vf-painel-destaque');
+  document.getElementById('vf-painel-caneta').classList.add('hidden');
+  document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-marcacao-texto').classList.add('hidden');
+  painel.classList.toggle('hidden');
+  if(!painel.classList.contains('hidden')){
+    vfReposicionarPainelSobreBarraVF('vf-circulo-destaque-btn', 'vf-painel-destaque');
+    // sincroniza o slider/preview com a cor ATUAL - sem isso, o HTML
+    // vinha sempre com azul fixo, e só corrigia quando uma cor era
+    // clicada. Se o painel abria sem clicar em nada, ficava preso na
+    // cor de antes (às vezes azul, mesmo com amarelo selecionado)
+    document.getElementById('vf-preview-espessura-destaque').style.background = vfCorDestaqueAtual;
+    vfAtualizarPreenchimentoSliderVF('vf-slider-espessura-destaque', '--preenchimento-slider-destaque', vfCorDestaqueAtual);
+  }
+}
+
+// ---- conversão hex <-> HSL, pra girar só a matiz das cores do ícone do
+// marcador e manter a saturação/luminosidade (preserva toda a sombra e
+// luz do desenho original, só troca a "família de cor") ----
+function vfHexParaHSL(hex){
+  const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h, s, l = (max+min)/2;
+  if(max === min){ h = s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h = (g-b)/d + (g<b?6:0); break;
+      case g: h = (b-r)/d + 2; break;
+      default: h = (r-g)/d + 4;
+    }
+    h /= 6;
+  }
+  return {h: h*360, s: s*100, l: l*100};
+}
+function vfHslParaHex(h, s, l){
+  s /= 100; l /= 100;
+  const c = (1-Math.abs(2*l-1))*s;
+  const x = c*(1-Math.abs((h/60)%2-1));
+  const m = l - c/2;
+  let r,g,b;
+  if(h<60){r=c;g=x;b=0;} else if(h<120){r=x;g=c;b=0;} else if(h<180){r=0;g=c;b=x;}
+  else if(h<240){r=0;g=x;b=c;} else if(h<300){r=x;g=0;b=c;} else {r=c;g=0;b=x;}
+  const R = Math.round((r+m)*255), G = Math.round((g+m)*255), B = Math.round((b+m)*255);
+  return '#' + [R,G,B].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+// cada ícone (marcador é azul, persistente/variável vieram vermelhos)
+// tem sua própria "família de cor original" — não dá pra usar uma
+// referência global. Agrupa os paths pelo <svg> pai. A camada PRINCIPAL
+// de cada grupo (a primeira) vira a cor alvo EXATA (H, S e L, não só o
+// matiz) — as demais camadas (se houver mais de uma) preservam a
+// diferença relativa de saturação/luminosidade que tinham em relação à
+// principal, pra manter alguma sombra/luz sem nunca desviar da cor pedida
+function vfRecolorirIconeMarcador(corAlvoHex){
+  const alvo = vfHexParaHSL(corAlvoHex);
+  const grupos = new Map();
+  document.querySelectorAll('.vf-tinta-marcador').forEach(path => {
+    const svgPai = path.closest('svg');
+    if(!grupos.has(svgPai)) grupos.set(svgPai, []);
+    grupos.get(svgPai).push(path);
+  });
+  grupos.forEach(paths => {
+    const principal = vfHexParaHSL(paths[0].dataset.corOriginal);
+    paths.forEach(path => {
+      const hsl = vfHexParaHSL(path.dataset.corOriginal);
+      const deltaS = hsl.s - principal.s; // 0 pra a própria principal
+      const deltaL = hsl.l - principal.l; // 0 pra a própria principal
+      const novaSaturacao = Math.min(100, Math.max(0, alvo.s + deltaS));
+      const novaLuminosidade = Math.min(100, Math.max(0, alvo.l + deltaL));
+      path.setAttribute('fill', vfHslParaHex(alvo.h, novaSaturacao, novaLuminosidade));
+    });
+  });
+}
+
+// mesma lógica da caneta, mas com classe própria (.vf-tinta-destaque) -
+// isolado de propósito. Se reaproveitasse .vf-tinta-marcador, chamar essa
+// função pra recolorir o highlight ia RECOLORIR A CANETA JUNTO (a função
+// busca por classe em TODO o DOM, não só dentro de um ícone específico)
+function vfRecolorirIconeDestaqueVF(corAlvoHex){
+  const alvo = vfHexParaHSL(corAlvoHex);
+  const grupos = new Map();
+  document.querySelectorAll('.vf-tinta-destaque').forEach(path => {
+    const svgPai = path.closest('svg');
+    if(!grupos.has(svgPai)) grupos.set(svgPai, []);
+    grupos.get(svgPai).push(path);
+  });
+  grupos.forEach(paths => {
+    const principal = vfHexParaHSL(paths[0].dataset.corOriginal);
+    paths.forEach(path => {
+      const hsl = vfHexParaHSL(path.dataset.corOriginal);
+      const deltaS = hsl.s - principal.s;
+      const deltaL = hsl.l - principal.l;
+      const novaSaturacao = Math.min(100, Math.max(0, alvo.s + deltaS));
+      const novaLuminosidade = Math.min(100, Math.max(0, alvo.l + deltaL));
+      path.setAttribute('fill', vfHslParaHex(alvo.h, novaSaturacao, novaLuminosidade));
+    });
+  });
+}
+
+// mesma técnica, classe própria isolada - os 3 ícones (grifar/sublinhar/
+// riscar) têm cada um só 1 path colorido (a "A" em si nunca muda, fica
+// sempre no tom neutro escuro original)
+function vfRecolorirIconesMarcacaoTextoVF(corAlvoHex){
+  const alvo = vfHexParaHSL(corAlvoHex);
+  const grupos = new Map();
+  document.querySelectorAll('.vf-tinta-marcacao-icone').forEach(path => {
+    const svgPai = path.closest('svg');
+    if(!grupos.has(svgPai)) grupos.set(svgPai, []);
+    grupos.get(svgPai).push(path);
+  });
+  grupos.forEach(paths => {
+    const principal = vfHexParaHSL(paths[0].dataset.corOriginal);
+    paths.forEach(path => {
+      const hsl = vfHexParaHSL(path.dataset.corOriginal);
+      const deltaS = hsl.s - principal.s;
+      const deltaL = hsl.l - principal.l;
+      const novaSaturacao = Math.min(100, Math.max(0, alvo.s + deltaS));
+      const novaLuminosidade = Math.min(100, Math.max(0, alvo.l + deltaL));
+      path.setAttribute('fill', vfHslParaHex(alvo.h, novaSaturacao, novaLuminosidade));
+    });
+  });
+}
+
+function selecionarCorDesenhoVF(cor){
+  vfCorDesenhoAtual = cor;
+  // moldura QUADRADA ao redor (pseudo-elemento próprio, não box-shadow
+  // direto) - igual o quadrado que aparece ao redor da bolinha escolhida
+  // no PDF Expert, não um anel circular seguindo o formato da bolinha
+  document.querySelectorAll('.vf-cor-desenho').forEach(btn => {
+    btn.classList.toggle('vf-cor-selecionada', btn.dataset.cor === cor);
+  });
+  document.getElementById('vf-swatch-cor-atual').style.background = cor;
+  document.getElementById('vf-preview-espessura').style.background = cor;
+  vfAtualizarPreenchimentoSliderVF('vf-slider-espessura', '--preenchimento-slider-caneta', cor);
+  // o marcador, e agora também os ícones de Persistente/Variável, seguem
+  // a cor escolhida de verdade, girando a matiz de cada tom (mantém toda
+  // a sombra/luz dos ícones reais)
+  vfRecolorirIconeMarcador(cor);
+}
+
+
+// fecha os painéis ao tocar fora deles (e fora da barra fina) - substitui
+// o botão "Concluído", que não existe mais. Roda no TOUCHSTART, em fase
+// de CAPTURA (antes de qualquer outro handler, incluindo o do desenho) -
+// importante: fechar cedo o suficiente pro MESMO toque já poder iniciar
+// um traço de desenho, se for o caso. Fechar só no touchend (como era
+// antes) chegava tarde demais - o touchstart do desenho já tinha rodado
+// e sido bloqueado pelo painel ainda aberto, então o primeiro toque
+// fechava o painel mas nunca desenhava nada
+document.addEventListener('touchstart', (e) => {
+  if(vfTocouNaBarra(e.target)) return; // toque dentro da barra/painel não fecha nada
+  document.getElementById('vf-painel-caneta')?.classList.add('hidden');
+  document.getElementById('vf-painel-borracha')?.classList.add('hidden');
+  document.getElementById('vf-painel-destaque')?.classList.add('hidden');
+  document.getElementById('vf-painel-marcacao-texto')?.classList.add('hidden');
+}, {capture: true, passive: true});
+document.addEventListener('click', (e) => {
+  // mesma lógica, mas pro caso de clique de mouse (não touch) - dedo e
+  // caneta já são cobertos pelo touchstart acima
+  if(vfTocouNaBarra(e.target)) return;
+  document.getElementById('vf-painel-caneta')?.classList.add('hidden');
+  document.getElementById('vf-painel-borracha')?.classList.add('hidden');
+  document.getElementById('vf-painel-destaque')?.classList.add('hidden');
+  document.getElementById('vf-painel-marcacao-texto')?.classList.add('hidden');
+});
+
+// o input de cor nativo fica sempre invisível, sobreposto ao arco-íris
+// decorativo — o toque é sempre direto no controle nativo (mais confiável
+// com a caneta que indireção via .click() programático). oninput só
+// aplica a cor temporariamente enquanto arrasta (preview) - NÃO salva
+// nada ainda, só onchange (soltar o dedo) confirma de verdade via
+// corNativaConfirmadaVF. Essa função tinha uma versão antiga aqui que
+// tentava criar uma bolinha nova a CADA movimento do dedo, salvando
+// várias cores só de passar por cima delas sem escolher - esse era o
+// bug real ("vai salvando todas as cores")
+function corNativaEscolhidaVF(valor){
+  selecionarCorDesenhoVF(valor.toUpperCase());
+}
+
+// slider de espessura, valor ao vivo (formato "2,5 pt" igual o PDF Expert)
+function mudarEspessuraSliderVF(valor){
+  vfEspessuraDesenhoAtual = parseFloat(valor);
+  document.getElementById('vf-espessura-valor').textContent = vfEspessuraDesenhoAtual.toFixed(1).replace('.', ',') + ' pt';
+  vfAtualizarPreenchimentoSliderVF('vf-slider-espessura', '--preenchimento-slider-caneta', vfCorDesenhoAtual);
+}
+
+// Persistente = espessura fixa, ignora a força da caneta. Variável = a
+// força de verdade influencia a espessura — mesmo conceito do PDF Expert.
+// Selecionado = fundo BRANCO com borda azul, não fundo tingido (era o que
+// eu tinha errado antes)
+let vfSensibilidadePonta = 'variavel';
+function selecionarSensibilidadeVF(modo){
+  vfSensibilidadePonta = modo;
+  const btnPersistente = document.getElementById('vf-btn-persistente');
+  const btnVariavel = document.getElementById('vf-btn-variavel');
+  function aplicarEstiloBotao(btn, ativo){
+    btn.style.borderColor = ativo ? '#5B9BD5' : '#ddd';
+    btn.style.background = '#fff';
+  }
+  aplicarEstiloBotao(btnPersistente, modo === 'persistente');
+  aplicarEstiloBotao(btnVariavel, modo === 'variavel');
+}
+
+// Modo da borracha — Total (apaga tudo que a ponta encostar, mais forte) e
+// Parcial (mais sutil, tira só um pouco por passada). Vistas nas fotos do
+// PDF Expert como um painel próprio da Borracha, separado da Caneta
+let vfModoErasePDF = 'parcial';
+function selecionarModoBorrachaVF(modo){
+  vfModoErasePDF = modo;
+  const btnTotal = document.getElementById('vf-btn-borracha-total');
+  const btnParcial = document.getElementById('vf-btn-borracha-parcial');
+  btnTotal.style.borderColor = modo === 'total' ? '#5B9BD5' : '#ddd';
+  btnParcial.style.borderColor = modo === 'parcial' ? '#5B9BD5' : '#ddd';
+}
+
+// Tamanho da borracha — 3 opções fixas (pequena/média/grande), igual as 3
+// bolinhas vistas no painel real
+let vfTamanhoBorracha = 28;
+function mudarTamanhoBorrachaVF(valor){
+  vfTamanhoBorracha = Number(valor);
+  // a bolinha de preview CRESCE de diâmetro junto com o valor - o próprio
+  // valor do slider já é usado direto como tamanho em pixels, então o
+  // crescimento reflete o tamanho real da borracha, não uma escala
+  // arbitrária. align-items:center no container garante que o eixo da
+  // bolinha sempre fique alinhado com o eixo da barrinha, mesmo ela
+  // crescendo - o flexbox recalcula a centralização sozinho a cada frame
+  const preview = document.getElementById('vf-preview-tamanho-borracha');
+  if(preview){ preview.style.width = vfTamanhoBorracha + 'px'; preview.style.height = vfTamanhoBorracha + 'px'; }
+  vfAtualizarPreenchimentoSliderVF('vf-slider-tamanho-borracha', '--preenchimento-slider-borracha', '#999');
+}
+
+// ---- painel do Marcador/Highlight - cor, espessura, opacidade ----
+function abrirPainelMarcacaoTextoVF(){
+  const painel = document.getElementById('vf-painel-marcacao-texto');
+  document.getElementById('vf-painel-caneta').classList.add('hidden');
+  document.getElementById('vf-painel-borracha').classList.add('hidden');
+  document.getElementById('vf-painel-destaque').classList.add('hidden');
+  painel.classList.toggle('hidden');
+  if(!painel.classList.contains('hidden')) vfReposicionarPainelSobreBarraVF('vf-swatch-cor-marcacao-texto-btn', 'vf-painel-marcacao-texto');
+}
+
+function selecionarCorMarcacaoTextoVF(cor){
+  vfCorMarcacaoTextoAtual = cor;
+  document.querySelectorAll('.vf-cor-marcacao-texto').forEach(btn => {
+    btn.classList.toggle('vf-cor-selecionada', btn.dataset.cor === cor);
+  });
+  document.getElementById('vf-swatch-cor-marcacao-texto').style.background = cor;
+  // os 3 ícones da barrinha (grifar/sublinhar/riscar) seguem a cor
+  // escolhida de verdade, mesmo espírito da caneta/destaque
+  vfRecolorirIconesMarcacaoTextoVF(cor);
+}
+
+function corNativaMarcacaoTextoEscolhidaVF(valor){
+  selecionarCorMarcacaoTextoVF(valor.toUpperCase());
+}
+
+function corNativaDestaqueEscolhidaVF(valor){
+  selecionarCorDestaqueVF(valor.toUpperCase());
+}
+
+// ---- sistema de cores dos 3 painéis (Caneta/Destaque/Marcação de texto) -
+// sempre 7 posições visíveis, espaçadas de ponta a ponta do balão
+// (justify-content:space-between no container). Ordem: cores fixas,
+// depois cores customizadas (na ordem que foram adicionadas), depois o
+// seletor arco-íris (sempre logo após a última cor). Sem limite de
+// quantidade - quebra linha sozinho, 7 colunas por linha ----
+const VF_CONFIG_GRADES_CORES = {
+  'vf-grade-cores-caneta': {
+    coresFixas: ['#000000','#CF3920','#587835','#1A40A1','#6D2A9E'],
+    classeBotao: 'vf-cor-desenho',
+    funcaoSelecionar: 'selecionarCorDesenhoVF',
+    idInputNativo: 'vf-input-cor-nativo',
+    funcaoOninput: 'corNativaEscolhidaVF'
+  },
+  'vf-grade-cores-destaque': {
+    coresFixas: ['#FF3B30','#FF9500','#FFD84D','#34C759','#5B9BD5'],
+    classeBotao: 'vf-cor-destaque',
+    funcaoSelecionar: 'selecionarCorDestaqueVF',
+    idInputNativo: 'vf-input-cor-nativo-destaque',
+    funcaoOninput: 'corNativaDestaqueEscolhidaVF'
+  },
+  'vf-grade-cores-marcacao-texto': {
+    coresFixas: ['#F08080','#FFB84D','#FFD84D','#8FD97A','#8FCBEE'],
+    classeBotao: 'vf-cor-marcacao-texto',
+    funcaoSelecionar: 'selecionarCorMarcacaoTextoVF',
+    idInputNativo: 'vf-input-cor-marcacao-texto',
+    funcaoOninput: 'corNativaMarcacaoTextoEscolhidaVF'
+  }
+};
+// limpeza ÚNICA das cores customizadas acumuladas durante os testes -
+// roda 1 vez só (marca com uma versão no localStorage pra nunca repetir,
+// nem apagar cores que o usuário for adicionando de verdade depois)
+(function vfLimpezaUnicaCoresDeTesteVF(){
+  const VERSAO_LIMPEZA = '1';
+  if(localStorage.getItem('vf_limpeza_cores_teste_v') === VERSAO_LIMPEZA) return;
+  Object.keys(VF_CONFIG_GRADES_CORES).forEach(idGrid => {
+    try{ localStorage.removeItem('vf_cores_custom_' + idGrid); }catch(e){}
+  });
+  try{ localStorage.setItem('vf_limpeza_cores_teste_v', VERSAO_LIMPEZA); }catch(e){}
+})();
+
+function vfCoresCustomizadasSalvasVF(idGrid){
+  try{ return JSON.parse(localStorage.getItem('vf_cores_custom_' + idGrid) || '[]'); }catch(e){ return []; }
+}
+
+// renderiza a grade INTEIRA do zero - chamada sempre que algo muda
+// (adicionar cor, excluir cor, abrir o painel) em vez de mexer em
+// elementos individuais, bem mais simples de manter os 7 slots sempre
+// corretos e na ordem certa
+function vfRenderizarGradeCoresVF(idGrid, corAtual){
+  const config = VF_CONFIG_GRADES_CORES[idGrid];
+  const grade = document.getElementById(idGrid);
+  if(!config || !grade) return;
+  const coresCustomizadas = vfCoresCustomizadasSalvasVF(idGrid);
+  const todasAsCores = [...config.coresFixas, ...coresCustomizadas];
+
+  // impede seleção de texto/callout nativo do iOS ao segurar uma bolinha
+  // (sem isso, segurar pra excluir uma cor customizada abria a seleção
+  // nativa de texto do Safari em vez de ativar o gesto de excluir)
+  const SEM_SELECAO = 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;';
+
+  let html = '';
+  todasAsCores.forEach((cor, indice) => {
+    const ehCustomizada = indice >= config.coresFixas.length;
+    const selecionada = cor.toUpperCase() === (corAtual||'').toUpperCase();
+    const classeExtra = selecionada ? ' vf-cor-selecionada' : '';
+    // segurar uma cor customizada (dedo ou caneta) não exclui direto -
+    // só ARMA o modo excluir nessa bolinha específica, mostrando um X no
+    // canto. Só tocar o X de fato apaga; tocar em qualquer outro lugar
+    // sai do modo sem mexer em nada
+    const emModoExcluir = ehCustomizada && vfCorEmModoExcluirVF && vfCorEmModoExcluirVF.idGrid === idGrid && vfCorEmModoExcluirVF.cor.toUpperCase() === cor.toUpperCase();
+    const atributosSegurar = (ehCustomizada && !emModoExcluir)
+      ? ` ontouchstart="vfIniciarPressionarCorCustomizadaVF('${idGrid}','${cor}',event)" ontouchend="vfCancelarPressionarCorCustomizadaVF()" ontouchmove="vfCancelarPressionarCorCustomizadaVF(event)" onmousedown="vfIniciarPressionarCorCustomizadaVF('${idGrid}','${cor}',event)" onmouseup="vfCancelarPressionarCorCustomizadaVF()" onmouseleave="vfCancelarPressionarCorCustomizadaVF()"`
+      : '';
+    const onclickBotao = emModoExcluir ? `vfSairDoModoExcluirCorVF()` : `${config.funcaoSelecionar}('${cor}')`;
+    const botaoX = emModoExcluir
+      ? `<button type="button" onclick="event.stopPropagation();vfExcluirCorCustomizadaVF('${idGrid}','${cor}')" title="Excluir cor" style="position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:#B23A34;border:1.5px solid #fff;color:#fff;font-size:10px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.35);${SEM_SELECAO}">✕</button>`
+      : '';
+    html += `<div style="position:relative;width:26px;height:26px;flex-shrink:0">
+      <button class="${config.classeBotao}${classeExtra}" data-cor="${cor}"${ehCustomizada ? ' data-customizada="1"' : ''} onclick="${onclickBotao}"${atributosSegurar} style="width:26px;height:26px;border-radius:50%;background:${cor};border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0;${SEM_SELECAO}"></button>
+      ${botaoX}
+    </div>`;
+  });
+  // seletor arco-íris - SEMPRE mostra o gradiente, nunca a cor escolhida.
+  // O input nativo real fica por cima, invisível, ocupando o mesmo
+  // espaço - toque sempre direto no controle nativo. clip-path FORÇA o
+  // recorte circular de verdade - só -webkit-appearance:none às vezes
+  // deixava um resquício quadrado/acinzentado por baixo no Safari (o
+  // mesmo bug que já tinha aparecido na caneta antes)
+  html += `<div style="position:relative;width:26px;height:26px">
+    <div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);border:2px solid #fff;box-shadow:0 0 0 1px #ddd;pointer-events:none"></div>
+    <input type="color" id="${config.idInputNativo}" value="${corAtual||'#000000'}" oninput="${config.funcaoOninput}(this.value)" onchange="corNativaConfirmadaVF(this.value, '${idGrid}')" ontouchstart="vfMarcarSeletorCorAbertoVF()" onfocus="vfMarcarSeletorCorAbertoVF()" onblur="vfDesmarcarSeletorCorAbertoVF()" title="Adicionar cor" style="position:absolute;inset:0;width:26px;height:26px;border-radius:50%;clip-path:circle(50%);border:none;opacity:0;cursor:pointer;padding:0;-webkit-appearance:none;appearance:none;background:transparent">
+  </div>`;
+  // sem slots vazios/tracejados - o resto do espaço da linha simplesmente
+  // fica em branco (o grid de 7 colunas já reserva o lugar certo sozinho)
+  grade.innerHTML = html;
+}
+
+// quando o usuário CONFIRMA uma cor no seletor nativo (soltar o dedo,
+// evento change - diferente do oninput que dispara a cada arraste), ela
+// passa a existir de verdade: vira uma bolinha nova no grid (persistida,
+// sobrevive a fechar e abrir o app) - antes só aplicava a cor na hora e
+// esquecia, o balãozinho nunca guardava nada de fato
+function corNativaConfirmadaVF(valorBruto, idGrid){
+  const config = VF_CONFIG_GRADES_CORES[idGrid];
+  if(!config) return;
+  const cor = valorBruto.toUpperCase();
+  const coresCustomizadas = vfCoresCustomizadasSalvasVF(idGrid);
+  const jaExiste = [...config.coresFixas, ...coresCustomizadas].some(c => c.toUpperCase() === cor);
+  // sem limite de 7 mais - o grid agora quebra linha sozinho, aceita
+  // quantas cores quiser. Só um teto de segurança bem folgado, pra nunca
+  // crescer infinitamente por engano
+  if(!jaExiste && coresCustomizadas.length < 100){
+    coresCustomizadas.push(cor);
+    try{ localStorage.setItem('vf_cores_custom_' + idGrid, JSON.stringify(coresCustomizadas)); }catch(e){}
+  }
+  vfRenderizarGradeCoresVF(idGrid, cor); // re-renderiza com a nova cor já incluída E selecionada
+  window[config.funcaoSelecionar](cor); // aplica de verdade (ícone da barrinha, variável de estado, etc)
+}
+
+// ---- excluir cor customizada: segura a bolinha por um instante pra
+// ARMAR o modo excluir (mostra um X no canto dela) - só tocar o X de
+// fato apaga. Segurar sozinho nunca excluí direto, só oferece a opção ----
+let vfTimerPressionarCorCustomizadaVF = null;
+let vfPosicaoInicialPressionarCorVF = null;
+let vfCorEmModoExcluirVF = null; // {idGrid, cor} da bolinha mostrando o X agora, ou null
+
+function vfCorAtualDoGridVF(idGrid){
+  const mapa = {
+    'vf-grade-cores-caneta': () => vfCorDesenhoAtual,
+    'vf-grade-cores-destaque': () => vfCorDestaqueAtual,
+    'vf-grade-cores-marcacao-texto': () => vfCorMarcacaoTextoAtual
+  };
+  return mapa[idGrid] ? mapa[idGrid]() : null;
+}
+
+function vfIniciarPressionarCorCustomizadaVF(idGrid, cor, evento){
+  clearTimeout(vfTimerPressionarCorCustomizadaVF);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarCorVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
+  vfTimerPressionarCorCustomizadaVF = setTimeout(() => {
+    vfTimerPressionarCorCustomizadaVF = null;
+    vfPosicaoInicialPressionarCorVF = null;
+    if(navigator.vibrate) navigator.vibrate(15); // feedback tátil de "ativou o toque longo"
+    vfCorEmModoExcluirVF = {idGrid, cor};
+    vfRenderizarGradeCoresVF(idGrid, vfCorAtualDoGridVF(idGrid));
+  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+}
+// tolerância generosa pro tremor natural da Apple Pencil "parada" (mesma
+// razão documentada em VF_LIMIAR_ARRASTO_NAV_ITEM_PX, nesse mesmo
+// arquivo) - sem isso, segurar com a caneta cancelava o toque longo quase
+// sempre antes dos 500ms completarem (o tremor gera touchmove mesmo sem
+// mover de propósito), e só funcionava de verdade com o dedo, que é mais
+// estável naturalmente. touchend (soltar de vez) sempre cancela, não tem
+// tolerância - só o touchmove (ainda segurando) é que precisa dela
+const VF_LIMIAR_CANCELAR_PRESSIONAR_COR_PX = 25;
+function vfCancelarPressionarCorCustomizadaVF(evento){
+  if(evento && vfPosicaoInicialPressionarCorVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarCorVF.x;
+      const dy = ponto.clientY - vfPosicaoInicialPressionarCorVF.y;
+      if(Math.hypot(dx, dy) < VF_LIMIAR_CANCELAR_PRESSIONAR_COR_PX) return; // ainda dentro da tolerância, não cancela
+    }
+  }
+  clearTimeout(vfTimerPressionarCorCustomizadaVF);
+  vfTimerPressionarCorCustomizadaVF = null;
+  vfPosicaoInicialPressionarCorVF = null;
+}
+// toca em qualquer lugar fora do X (inclusive na própria bolinha que
+// estava mostrando o X) sai do modo excluir sem apagar nada
+function vfSairDoModoExcluirCorVF(){
+  if(!vfCorEmModoExcluirVF) return;
+  const {idGrid} = vfCorEmModoExcluirVF;
+  vfCorEmModoExcluirVF = null;
+  vfRenderizarGradeCoresVF(idGrid, vfCorAtualDoGridVF(idGrid));
+}
+function vfExcluirCorCustomizadaVF(idGrid, cor){
+  const restantes = vfCoresCustomizadasSalvasVF(idGrid).filter(c => c.toUpperCase() !== cor.toUpperCase());
+  try{ localStorage.setItem('vf_cores_custom_' + idGrid, JSON.stringify(restantes)); }catch(e){}
+  vfCorEmModoExcluirVF = null;
+  vfRenderizarGradeCoresVF(idGrid, vfCorAtualDoGridVF(idGrid));
+}
+// toque em QUALQUER lugar fora do botão X cancela o modo excluir - sem
+// isso, o X ficava preso na tela pra sempre se o usuário mudasse de ideia
+document.addEventListener('touchstart', (e) => {
+  if(!vfCorEmModoExcluirVF) return;
+  if(e.target.closest('button[onclick*="vfExcluirCorCustomizadaVF"]')) return; // deixa o toque no X seguir normal
+  vfSairDoModoExcluirCorVF();
+}, {capture: true, passive: true});
+
+
+// preenchimento colorido da trilha (do início até o valor atual) - visual
+// que o accent-color já dava de graça, mas precisa ser refeito à mão já
+// que accent-color foi trocado por causa do bug de resíduo de cor no
+// Safari. Um gradiente de 2 cores, com o corte exatamente na porcentagem
+// do valor atual, imita o mesmo efeito. Nome da variável CSS muda
+// conforme o slider (caneta ou destaque), já que cada um tem sua própria
+// cor de preenchimento - o thumb (pílula) em si é sempre neutro/branco
+// fixo agora, não muda de cor (visual único, igual nos dois sliders)
+function vfAtualizarPreenchimentoSliderVF(idSlider, nomePropriedade, cor){
+  const slider = document.getElementById(idSlider);
+  if(!slider) return;
+  const min = Number(slider.min), max = Number(slider.max), valor = Number(slider.value);
+  const pct = max > min ? ((valor - min) / (max - min)) * 100 : 0;
+  slider.style.setProperty(nomePropriedade, `linear-gradient(to right, ${cor} 0%, ${cor} ${pct}%, #ddd ${pct}%, #ddd 100%)`);
+}
+
+function selecionarCorDestaqueVF(cor){
+  vfCorDestaqueAtual = cor;
+  document.querySelectorAll('.vf-cor-destaque').forEach(btn => {
+    btn.classList.toggle('vf-cor-selecionada', btn.dataset.cor === cor);
+  });
+  document.getElementById('vf-preview-espessura-destaque').style.background = cor;
+  vfAtualizarPreenchimentoSliderVF('vf-slider-espessura-destaque', '--preenchimento-slider-destaque', cor);
+  document.getElementById('vf-swatch-destaque-atual').style.background = cor;
+  // as prévias de opacidade mostram a cor escolhida, não fica travado no amarelo
+  document.querySelectorAll('.vf-bolinha-opacidade-preview').forEach(prev => { prev.style.background = cor; });
+  // o ícone da ferramenta na barrinha segue a cor escolhida de verdade,
+  // mesma técnica de girar a matiz usada na caneta
+  vfRecolorirIconeDestaqueVF(cor);
+}
+
+function mudarEspessuraSliderDestaqueVF(valor){
+  vfEspessuraDestaqueAtual = Number(valor);
+  document.getElementById('vf-espessura-valor-destaque').textContent = `${valor} pt`;
+  vfAtualizarPreenchimentoSliderVF('vf-slider-espessura-destaque', '--preenchimento-slider-destaque', vfCorDestaqueAtual);
+}
+
+function selecionarOpacidadeDestaqueVF(opacidade){
+  vfOpacidadeDestaqueAtual = opacidade;
+  document.querySelectorAll('.vf-opacidade-destaque').forEach(btn => {
+    btn.style.borderColor = Number(btn.dataset.opacidade) === opacidade ? '#5B9BD5' : '#ddd';
+  });
+}
+
+// alterna o fundo azul entre o grupo Caneta e a Borracha - só um dos dois
+// fica marcado como ativo por vez, nunca os dois juntos
+function vfAtualizarEstiloBotaoBorracha(){
+  const grupoCaneta = document.getElementById('vf-grupo-caneta');
+  const grupoBorracha = document.getElementById('vf-grupo-borracha');
+  const grupoDestaque = document.getElementById('vf-grupo-destaque');
+  const swatchCanetaBtn = document.getElementById('vf-swatch-cor-atual-btn');
+  const circuloBorrachaBtn = document.getElementById('vf-circulo-borracha-btn');
+  const circuloDestaqueBtn = document.getElementById('vf-circulo-destaque-btn');
+  if(!grupoCaneta || !grupoBorracha || !grupoDestaque || !swatchCanetaBtn || !circuloBorrachaBtn || !circuloDestaqueBtn) return;
+
+  function aplicar(grupo, circulo, ativo, larguraCirculo){
+    grupo.style.background = ativo ? '#D2E7FA' : 'none';
+    grupo.style.gap = ativo ? '10px' : '0px';
+    circulo.style.width = ativo ? larguraCirculo : '0px';
+    circulo.style.opacity = ativo ? '1' : '0';
+    // força o navegador a aplicar/repintar AGORA, não numa próxima
+    // oportunidade preguiçosa - defesa contra o indicador de uma
+    // ferramenta ficar "preso" visualmente com o fundo azul, mesmo
+    // depois do valor real já ter mudado (mesma categoria de bug do
+    // slider "mostarda", resolvido à força lendo uma propriedade de volta)
+    void grupo.offsetHeight;
+  }
+
+  aplicar(grupoCaneta, swatchCanetaBtn, !vfModoBorracha && !vfModoDestaque && !vfModoMarcacaoTextoAtivo, '22px');
+  aplicar(grupoBorracha, circuloBorrachaBtn, vfModoBorracha && !vfModoMarcacaoTextoAtivo, '20px');
+  aplicar(grupoDestaque, circuloDestaqueBtn, vfModoDestaque && !vfModoMarcacaoTextoAtivo, '20px');
+}
+
+// chamada sempre que a questão muda de verdade (próxima/anterior/nova) —
+// nunca ao só re-renderizar a mesma questão (por exemplo ao responder),
+// senão apagaria um rascunho no meio de uma conta
+function limparCanvasDesenhoVF(){
+  const canvas = document.getElementById('vf-canvas-desenho');
+  const barra = document.getElementById('vf-barra-desenho');
+  const painel = document.getElementById('vf-painel-caneta');
+  const painelBorracha = document.getElementById('vf-painel-borracha');
+  const painelDestaque = document.getElementById('vf-painel-destaque');
+  if(barra) barra.classList.add('hidden');
+  if(painel) painel.classList.add('hidden');
+  if(painelBorracha) painelBorracha.classList.add('hidden');
+  if(painelDestaque) painelDestaque.classList.add('hidden');
+  document.body.classList.remove('vf-desenho-ativo');
+  vfDesativarModoMarcacaoTextoVF();
+  vfLimparHistoricoVF();
+  if(!canvas || !vfCtxDesenho) return;
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+  vfModoBorracha = false;
+  vfAtualizarEstiloBotaoBorracha();
+}
+
+window.addEventListener('resize', () => { if(vfEstaVisivelAgora() && !vfDesenhandoAgora) redimensionarCanvasDesenhoVF(); });
+let ultimaSincronizacaoVF = null; // ISO string, horário do SERVIDOR da última sincronização bem-sucedida
+const LIMITE_PAUSA_MS_VF = 30 * 60 * 1000; // pausa maior que isso numa pendente = descarta, "não lembra mais o que leu"
+
+// ---- cronômetro por entrada do histórico (pausar/retomar) ----
+// tempoAtivoMs acumula só o tempo com a questão de fato na frente dos
+// olhos; ativoDesdeMs é o instante em que a contagem atual começou (null =
+// pausado agora). apareceuEmMs nunca muda, é só pro tempo bruto do log.
+
+// a questão PENDENTE de verdade é sempre a última do histórico ainda sem
+// resposta - independente de onde o usuário esteja "olhando" agora
+// (Salvos, Favoritos, um modal, ou até "Anterior" revendo uma questão já
+// respondida). Antes, pausarTimerVF/retomarTimerVF usavam
+// historico[posicao] (a posição de VISUALIZAÇÃO atual) - assim que o
+// usuário navegava pra qualquer lugar que mudasse posicao sem responder,
+// a pendente ficava "imortal": nenhum ponto de pausa conseguia mais
+// alcançar ela, e o cronômetro dela continuava contando pra sempre
+function vfUltimaEntradaPendenteVF(){
+  if(!estadoVF || !estadoVF.historico.length) return null;
+  const ultima = estadoVF.historico[estadoVF.historico.length - 1];
+  return (ultima && ultima.resposta === null) ? ultima : null;
+}
+
+function pausarTimerVF(){
+  const entrada = vfUltimaEntradaPendenteVF();
+  if(!entrada) return; // nada pendente, nada a pausar
+  if(entrada.ativoDesdeMs != null){
+    const agoraMs = agoraCorrigidoVF();
+    entrada.tempoAtivoMs = (entrada.tempoAtivoMs||0) + (agoraMs - entrada.ativoDesdeMs);
+    entrada.ativoDesdeMs = null;
+    entrada.pausadoEmMs = agoraMs; // guarda quando parou, pra medir a pausa depois
+  }
+}
+
+// arma o cronômetro de novo — só deve ser chamada depois da questão já
+// estar renderizada na tela, nunca antes
+function retomarTimerVF(){
+  const entrada = vfUltimaEntradaPendenteVF();
+  if(!entrada) return;
+  if(entrada.ativoDesdeMs == null) entrada.ativoDesdeMs = agoraCorrigidoVF();
+}
+
+// decide entre retomar normal ou descartar a pendente, se ela ficou
+// pausada por mais de 30 min — mesma regra da entrada órfã: descarta sem
+// registrar nada (questão não respondida não gerou estado) e avança
+async function retomarOuDescartarPendenteVF(){
+  const entrada = vfUltimaEntradaPendenteVF();
+  if(!entrada) return;
+  if(entrada.ativoDesdeMs != null) return; // já ativa, nada a fazer
+
+  const agoraMs = agoraCorrigidoVF();
+  const pausadoDesdeMs = entrada.pausadoEmMs != null ? entrada.pausadoEmMs : (entrada.apareceuEmMs != null ? entrada.apareceuEmMs : agoraMs);
+  if(agoraMs - pausadoDesdeMs > LIMITE_PAUSA_MS_VF){
+    // só ajusta a posição de visualização se o usuário estava mesmo
+    // olhando pra essa pendente (senão bagunçaria quem está vendo uma
+    // questão anterior via "Anterior", ou numa tela tipo Salvos/Favoritos)
+    const usuarioEstavaVendoEla = estadoVF.posicao === estadoVF.historico.length - 1;
+    estadoVF.historico.pop();
+    if(usuarioEstavaVendoEla) estadoVF.posicao--;
+    await avancarParaProximaVF();
+    return;
+  }
+  entrada.ativoDesdeMs = agoraMs;
+}
+
+// ---- sincronização incremental entre aparelhos ----
+
+// trava própria da função — protege qualquer chamador (tanto o
+// aoVoltarParaVF quanto a chamada direta em avancarParaProximaVF), não só
+// os listeners de "voltar pra tela". Chamada concorrente reaproveita a
+// mesma promessa em vez de rodar de novo
+let sincronizandoPoolVF = null;
+function sincronizarPoolVF(){
+  if(sincronizandoPoolVF) return sincronizandoPoolVF;
+  sincronizandoPoolVF = sincronizarPoolVFReal().finally(() => { sincronizandoPoolVF = null; });
+  return sincronizandoPoolVF;
+}
+
+async function sincronizarPoolVFReal(){
+  if(!estadoVF || !ultimaSincronizacaoVF) return;
+  const marcaAnterior = ultimaSincronizacaoVF;
+  // as 3 consultas não dependem do resultado umas das outras — rodavam em
+  // sequência (3 idas-e-voltas ao banco somadas), agora rodam juntas em
+  // paralelo, cortando o tempo total pro tempo da mais lenta das 3
+  const [{data: horarioServidorMs}, {data: estadosNovos}, {data: userRow}] = await Promise.all([
+    sb.rpc('now_ms'),
+    sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id).gt('atualizado_em', marcaAnterior),
+    sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single()
+  ]);
+  const novaMarca = typeof horarioServidorMs === 'number' ? new Date(horarioServidorMs).toISOString() : null;
+
+  if(estadosNovos && estadosNovos.length){
+    const porId = {};
+    estadosNovos.forEach(e => { porId[e.questao_vf_id] = e; });
+
+    // sobrescreve os itens do pool com o que mudou em outro aparelho — mas
+    // escrita local em voo (ainda não confirmada) tem prioridade sobre o
+    // que acabou de vir do banco
+    estadoVF.pool.forEach(item => {
+      if(escritasPendentesVF.has(item.id)) return;
+      const novo = porId[item.id];
+      if(novo){
+        Object.assign(item, {
+          estado: novo.estado, intervalo_horas: novo.intervalo_horas, fator: novo.fator,
+          ultima_resposta_em: novo.ultima_resposta_em, degrau: novo.degrau,
+          total_degraus: novo.total_degraus, intervalo_pendente: novo.intervalo_pendente,
+          marca_contador: novo.marca_contador, total_respostas: novo.total_respostas, total_erros: novo.total_erros
+        });
+      }
+    });
+
+    // a pendente atual foi respondida em outro aparelho nesse meio tempo?
+    // "intercambiável a qualquer hora" vale até no meio de uma questão —
+    // descarta e avança, mesma regra da órfã. Reconfere ANTES de mexer:
+    // a janela do await acima pode ter deixado outra coisa mudar essa
+    // mesma entrada (ex: a pessoa respondeu ela rapidinho enquanto
+    // sincronizava) — se não for mais a mesma entrada pendente, não mexe
+    const entradaAtual = estadoVF.posicao >= 0 ? estadoVF.historico[estadoVF.posicao] : null;
+    const aindaEhAMesma = entradaAtual && estadoVF.historico[estadoVF.posicao] === entradaAtual && entradaAtual.resposta === null;
+    // não basta a linha ter mudado no banco (porId[id] existir) - isso
+    // também acontece quando SÓ o favorito mexeu no intervalo (encolhe
+    // pra 24h se tava em revisão), sem responder nada. Só total_respostas
+    // realmente maior confirma que essa questão foi respondida de
+    // verdade em outro aparelho - sem essa checagem, favoritar a própria
+    // pendente e voltar de outro app descartava ela por engano e caía
+    // num ciclo de avançar preso (a mesma entrada sempre "nova" de novo)
+    const foiRespondidaDeVerdadeEmOutroLugar = porId[entradaAtual?.item.id] &&
+      (porId[entradaAtual.item.id].total_respostas || 0) > (entradaAtual.item.total_respostas || 0);
+    if(aindaEhAMesma && foiRespondidaDeVerdadeEmOutroLugar){
+      estadoVF.historico.pop();
+      estadoVF.posicao--;
+      if(novaMarca) ultimaSincronizacaoVF = novaMarca;
+      // SEM await de propósito - chamar com await aqui era exatamente o
+      // ciclo do deadlock: essa função (sincronizarPoolVFReal) ainda em
+      // voo, esperando avancarParaProximaVF, que por sua vez esperava a
+      // MESMA promise de sincronização de volta (nunca resolvia, a tela
+      // V/F congelava até dar F5). Agora avancarParaProximaVF nem espera
+      // mais sync nenhuma, então nunca mais cria esse ciclo
+      avancarParaProximaVF();
+      return;
+    }
+  }
+
+  if(userRow?.contador_respostas_vf != null) estadoVF.contadorGlobal = Math.max(estadoVF.contadorGlobal, userRow.contador_respostas_vf);
+  if(novaMarca) ultimaSincronizacaoVF = novaMarca;
+}
+let notasVF = new Set();
+
+// busca todas as questões do pool atual (respeitando filtro), já com o
+// estado de repetição de cada uma (ou 'nova' implícito se nunca respondida)
+// carrega a tabela bibliografia inteira UMA VEZ (é pequena) - dá pra
+// mostrar nome de publicação, capítulo e filtrar por módulo sem precisar
+// de join nenhum na query pesada das 7.700+ questões
+async function vfCarregarBibliografiaCacheVF(){
+  if(vfBibliografiaCache.size > 0) return; // já carregado nessa sessão
+  const {data, error} = await sb.from('bibliografia').select('id, titulo, nome_exibicao, modulo_pscpp');
+  if(error || !data) return;
+  vfBibliografiaCache = new Map(data.map(b => [b.id, {titulo: b.nome_exibicao || b.titulo, modulo_pscpp: b.modulo_pscpp}]));
+}
+
+// busca o conteúdo PESADO (texto/explicação/correção) de uma questão sob
+// demanda - só quando ela é de fato escolhida pra aparecer na tela, nunca
+// como parte da busca inicial do pool inteiro. Idempotente: se já tem o
+// conteúdo (seja porque já foi mostrada, seja porque foi pré-buscada em
+// segundo plano), não busca de novo
+async function vfGarantirConteudoCompletoVF(item){
+  if(item.explicacao !== undefined) return; // já carregado nesse próprio objeto (explicacao é o sinal certo agora - texto já vem preenchido desde o pool leve, por causa da Regra 2/família)
+  const emCache = vfConteudoCompletoCache.get(item.id);
+  if(emCache){ Object.assign(item, emCache); return; }
+  const {data, error} = await sb.from('questoes_vf').select('texto, resposta, explicacao, correcao, dificuldade, inconsistente').eq('id', item.id).single();
+  if(error || !data) return;
+  vfConteudoCompletoCache.set(item.id, data);
+  Object.assign(item, data);
+}
+
+// mesma coisa, mas em LOTE - uma única query com .in('id', [...]) pra
+// várias questões de uma vez, em vez de uma viagem de rede por questão.
+// Usada pela pré-busca (que hoje tenta preparar até 8 candidatas de uma
+// vez - virar 8 queries separadas seria o oposto do que a otimização
+// inteira está tentando resolver)
+async function vfBuscarConteudoEmLoteVF(itens){
+  const pendentes = itens.filter(item => item.explicacao === undefined && !vfConteudoCompletoCache.has(item.id));
+  if(!pendentes.length) return;
+  const ids = pendentes.map(item => item.id);
+  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente').in('id', ids);
+  if(error || !data) return;
+  const porId = new Map(data.map(d => [d.id, d]));
+  pendentes.forEach(item => {
+    const conteudo = porId.get(item.id);
+    if(!conteudo) return;
+    const {id, ...resto} = conteudo;
+    vfConteudoCompletoCache.set(item.id, resto);
+    Object.assign(item, resto);
+  });
+}
+
+// enquanto o usuário lê a questão atual, busca em segundo plano o
+// conteúdo das candidatas mais prováveis a vir em seguida. Cobre os 3
+// estados que o algoritmo real considera (aprendendo tem prioridade
+// máxima quando existe alguma elegível; revisão por razão decorrido/
+// intervalo; novas com a MESMA fórmula de score do algoritmo real -
+// score determinístico via jitter semeado por sessão+id, então dá pra
+// saber com certeza quais 3 novas ele escolheria a seguir, não é só uma
+// estimativa). Não bloqueia nada, roda solta; se errar, a busca ao vivo
+// ainda cobre (agora em lote também, ver vfGarantirConteudoCompletoVF)
+function vfPreBuscarProximasVF(){
+  if(!estadoVF || !estadoVF.pool) return;
+  const agoraMs = agoraCorrigidoVF();
+  const idAtual = estadoVF.historico[estadoVF.posicao]?.item?.id;
+  const jaCarregadosOuAtual = new Set([idAtual]);
+  // mesmo filtro de família (Regra 2) que o algoritmo real usa em
+  // escolherProximaVF - sem isso, a pré-busca podia preparar o conteúdo
+  // de uma questão que o algoritmo de verdade nunca ia escolher por
+  // causa do intervalo mínimo entre irmãs, desperdiçando a viagem de rede
+  const familiasRecentesParaPreBuscaVF = estadoVF.familiasRecentesVF || [];
+  const foraDoGapFamiliaVF = (q) => !q.familiaId || !familiasRecentesParaPreBuscaVF.includes(q.familiaId);
+
+  // 'aprendendo' tem PRIORIDADE MÁXIMA no algoritmo real (escolherProximaVF
+  // sempre pega dali primeiro, quando tem alguma elegível) - toda vez que
+  // uma questão recém-respondida volta pouco depois (é assim que
+  // aprendendo funciona, por natureza), o conteúdo precisa estar pronto.
+  // IGNORA o filtro de família de propósito, igual o algoritmo real faz
+  const aprendendoElegiveis = estadoVF.pool
+    .filter(q => q.id !== idAtual && q.estado === 'aprendendo' && q.explicacao === undefined
+      && elegibilidadeAprendendoVF(q, agoraMs, estadoVF.contadorGlobal, estadoVF.pool.length))
+    .sort((a,b) => (a.marca_contador||0) - (b.marca_contador||0))
+    .slice(0, 3);
+  aprendendoElegiveis.forEach(q => jaCarregadosOuAtual.add(q.id));
+
+  const revisaoPorScore = estadoVF.pool
+    .filter(q => !jaCarregadosOuAtual.has(q.id) && q.estado === 'revisao' && q.intervalo_horas && q.ultima_resposta_em && q.explicacao === undefined && foraDoGapFamiliaVF(q))
+    .map(q => {
+      const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
+      const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
+      const jitter = 1 + (pseudoAleatorioVF(estadoVF.sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
+      return {q, score: (decorridoH / q.intervalo_horas) * boost * jitter};
+    })
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 5)
+    .map(c => c.q);
+  revisaoPorScore.forEach(q => jaCarregadosOuAtual.add(q.id));
+
+  // com um banco majoritariamente de questões NUNCA respondidas, a
+  // próxima é quase sempre uma nova - a fórmula é a MESMA que
+  // escolherProximaVF usa (1.0 × jitter da semente), então dá pra saber
+  // com certeza quais ela escolheria, não é um chute
+  const novasPorScore = estadoVF.pool
+    .filter(q => !jaCarregadosOuAtual.has(q.id) && (!q.estado || q.estado === 'nova') && q.explicacao === undefined && foraDoGapFamiliaVF(q))
+    .map(q => {
+      const jitter = 1 + (pseudoAleatorioVF(estadoVF.sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
+      return {q, score: 1.0 * jitter};
+    })
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 3)
+    .map(c => c.q);
+
+  vfBuscarConteudoEmLoteVF([...aprendendoElegiveis, ...revisaoPorScore, ...novasPorScore]).catch(() => {});
+}
+
+// token de geração - incrementa toda vez que uma carga de pool começa.
+// Se uma página atrasada (chegando em segundo plano, entrada progressiva)
+// responder depois que o filtro já mudou (nova geração começou), ela é
+// descartada em vez de ser anexada por cima do pool errado
+let vfTokenGeracaoPoolVF = 0;
+
+// processa questões cruas (metadados) em itens de pool prontos - extraído
+// pra função própria porque agora roda duas vezes: na primeira leva (que
+// já aparece na tela) e nas páginas que chegam depois em segundo plano
+// (entrada progressiva)
+function vfProcessarQuestoesCruasVF(questoesCruas, estadoPorId, idsExcluidos){
+  return (questoesCruas||[])
+    .filter(q => !idsExcluidos.has(q.id) && (!filtroVF.modulo || vfBibliografiaCache.get(q.bibliografia_id)?.modulo_pscpp === filtroVF.modulo))
+    .map(q => {
+      // se essa questão tem uma escrita em voo (respondida agora mesmo, mas
+      // o upsert ainda não confirmou), o estado local já é mais atual que
+      // o que acabou de vir do banco — usa ele em vez do que a query trouxe
+      const pendente = escritasPendentesVF.get(q.id);
+      if(pendente) return {...q, ...pendente};
+      const e = estadoPorId[q.id];
+      // blindagem contra linha corrompida (migração ou bug antigo): se diz
+      // 'revisao' mas não tem intervalo, ou 'aprendendo' sem total_degraus,
+      // trata como segura em vez de propagar NaN pro cálculo e de volta pro banco
+      let estado = e?.estado || 'nova';
+      let totalDegraus = e?.total_degraus ?? null;
+      if(estado === 'revisao' && !e?.intervalo_horas) estado = 'nova';
+      if(estado === 'aprendendo' && !totalDegraus) totalDegraus = 1;
+      return {
+        ...q, estado,
+        intervalo_horas: e?.intervalo_horas ?? null,
+        fator: e?.fator ?? VF_ALGO.FATOR_INI,
+        ultima_resposta_em: e?.ultima_resposta_em ?? null,
+        degrau: e?.degrau ?? 0,
+        total_degraus: totalDegraus,
+        intervalo_pendente: e?.intervalo_pendente ?? null,
+        marca_contador: e?.marca_contador ?? null,
+        total_respostas: e?.total_respostas ?? 0,
+        total_erros: e?.total_erros ?? 0
+      };
+    });
+}
+
+async function carregarPoolVF(incluirDadosEntradaVF){
+  const tokenDestaCargaVF = ++vfTokenGeracaoPoolVF;
+  const montarQueryQuestoesVF = () => {
+    // só os campos que o ALGORITMO precisa pra escolher a próxima questão -
+    // nada de texto/explicação/correção aqui. Isso é ~95% menos dados
+    // trafegados (ideia do Fable): antes baixava o conteúdo pesado de
+    // TODAS as 7.700+ questões toda vez que entrava no Flash, mesmo só
+    // mostrando uma de cada vez. O conteúdo pesado é buscado sob demanda,
+    // só da questão que realmente vai aparecer (vfGarantirConteudoCompletoVF)
+    // trechos_fonte e texto NÃO entram mais aqui - a chave de família
+    // (Regra 2, anti-irmãs) agora é calculada no banco via coluna gerada
+    // (chave_familia_trecho, chave_familia_texto - dois hashes md5 de 32
+    // caracteres cada), então só esses dois hashes prontos entram na
+    // query, não o conteúdo pesado inteiro. Ideia do Fable: evita trazer
+    // de volta os ~10MB que a otimização original tinha eliminado
+    let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, capitulo, n_palavras, bibliografia_id, chave_familia_trecho, chave_familia_texto, anulada', {count: 'exact'}).eq('anulada', false);
+    if(filtroVF.publicacao) q = q.eq('bibliografia_id', filtroVF.publicacao);
+    if(filtroVF.capitulo) q = q.eq('capitulo', filtroVF.capitulo);
+    // Número + Lista juntos = UNIÃO (ou uma coisa ou outra), não interseção —
+    // decisão explícita do Carlos. Só um dos dois ativo continua sendo um
+    // filtro direto e sem ambiguidade
+    if(filtroVF.numero && filtroVF.lista) q = q.or('eh_numero.eq.true,eh_lista.eq.true');
+    else if(filtroVF.numero) q = q.eq('eh_numero', true);
+    else if(filtroVF.lista) q = q.eq('eh_lista', true);
+    return q.order('id'); // obrigatório pra paginação com .range() ser estável — sem
+    // ordem definida o Postgres não garante a mesma sequência entre uma
+    // página e outra, podendo pular ou duplicar linha acima de 1000
+  };
+
+  // na entrada inicial, as consultas de userRow/now_ms entram NO MESMO
+  // Promise.all do pool - antes eram uma rodada sequencial separada,
+  // pagando uma viagem de rede inteira a mais só na primeira abertura
+  const consultasEntradaVF = incluirDadosEntradaVF ? [
+    sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single(),
+    sb.rpc('now_ms')
+  ] : [];
+
+  // ENTRADA PROGRESSIVA (ideia do Carlos, confirmada pelo Fable): na
+  // entrada inicial, não espera as 7.700+ questões todas chegarem - a
+  // primeira leva de 1000 já é suficiente pra escolher e mostrar a
+  // primeira questão. O resto continua chegando em segundo plano e vai
+  // sendo ANEXADO ao pool já em uso (com dedup), a fila recalcula
+  // sozinha a cada escolha, então as que chegarem depois entram na
+  // disputa naturalmente. Fora da entrada (troca de filtro, por
+  // exemplo), continua esperando tudo de uma vez, mais simples e seguro
+  // as questões extras (páginas seguintes) também precisam respeitar
+  // exclusões - só sei quais são DEPOIS que o Promise.all principal
+  // resolver, mas o callback é definido ANTES (precisa ser passado já
+  // pronto pra buscarTudoPaginadoVF). Uma variável de closure resolve:
+  // o callback só EXECUTA de fato mais tarde (quando as páginas
+  // seguintes chegarem, depois da primeira leva já ter voltado), e lê o
+  // valor mais atual dessa variável nesse momento
+  let idsExcluidosParaCallbackVF = new Set();
+  let estadoPorIdParaCallbackVF = {};
+  const aoCarregarRestanteQuestoesVF = incluirDadosEntradaVF ? (questoesCruasExtras) => {
+    if(tokenDestaCargaVF !== vfTokenGeracaoPoolVF) return; // filtro mudou no meio - descarta, é de uma carga velha
+    if(!estadoVF || !estadoVF.pool) return;
+    const idsJaNoPool = new Set(estadoVF.pool.map(q => q.id));
+    const processadas = vfProcessarQuestoesCruasVF(questoesCruasExtras, estadoPorIdParaCallbackVF, idsExcluidosParaCallbackVF)
+      .filter(q => !idsJaNoPool.has(q.id));
+    if(processadas.length){
+      estadoVF.pool = estadoVF.pool.concat(processadas);
+      vfCalcularFamiliasNoPoolVF(estadoVF.pool); // recalcula pro pool inteiro - as recém-chegadas podem formar família com quem já estava lá
+    }
+  } : undefined;
+
+  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, {data: todasTagsData}, {data: questoesTagsData}, , ...resultadosEntradaVF] = await Promise.all([
+    buscarTudoPaginadoVF(montarQueryQuestoesVF, aoCarregarRestanteQuestoesVF),
+    buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
+    sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
+    sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
+    sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
+    sb.from('flashs_salvos_vf').select('questao_vf_id, motivo').eq('usuario_id', usuarioAtual.id),
+    sb.from('tags_vf').select('id, nome').order('nome'),
+    sb.from('questoes_vf_tags').select('questao_vf_id, tags_vf(id, nome)'),
+    vfCarregarBibliografiaCacheVF(), // idempotente - só busca de verdade na primeira vez da sessão
+    ...consultasEntradaVF
+  ]);
+  // se a busca do progresso (estado de cada questão) falhar, NUNCA degrada
+  // silenciosamente pra "todas são novas" - isso faria uma resposta
+  // subsequente gravar por cima do progresso real que já existia no
+  // banco, só porque o cliente não conseguiu buscá-lo dessa vez (F2 do
+  // relatório da Fable). Aborta com aviso claro em vez disso
+  if(erroEstados){
+    document.getElementById('vf-conteudo').innerHTML = `<p style="padding:24px 4px;color:#A32D2D">Não consegui carregar seu progresso no Flash agora (${escapeHtml(erroEstados.message||'erro de rede')}). Tenta de novo – responder assim, sem isso, arriscaria apagar seu progresso real.</p>`;
+    throw new Error('Falha ao buscar repeticao_vf: ' + erroEstados.message);
+  }
+  favoritosVF = new Set((favData||[]).map(f=>f.questao_vf_id));
+  notasVF = new Set((notaData||[]).map(n=>n.questao_vf_id));
+  flashsSalvosVF = new Map((salvosData||[]).map(s=>[s.questao_vf_id, s.motivo]));
+  vfTodasTagsCacheVF = todasTagsData || [];
+  vfTagsPorQuestaoVF = new Map();
+  (questoesTagsData||[]).forEach(r => {
+    if(!r.tags_vf) return; // tag pode ter sido apagada por outro caminho, join vem null nesse caso
+    if(!vfTagsPorQuestaoVF.has(r.questao_vf_id)) vfTagsPorQuestaoVF.set(r.questao_vf_id, []);
+    vfTagsPorQuestaoVF.get(r.questao_vf_id).push(r.tags_vf);
+  });
+  const idsExcluidos = new Set((excluidas||[]).map(e=>e.questao_vf_id));
+  const estadoPorId = {};
+  (estados||[]).forEach(e => { estadoPorId[e.questao_vf_id] = e; });
+  // agora sim os valores reais - o callback das páginas seguintes (mais
+  // lentas, ainda rodando em segundo plano nesse momento) vai ler essas
+  // variáveis via closure só quando for chamado de fato, o que acontece
+  // bem depois daqui
+  idsExcluidosParaCallbackVF = idsExcluidos;
+  estadoPorIdParaCallbackVF = estadoPorId;
+
+  const poolPronto = vfProcessarQuestoesCruasVF(questoes, estadoPorId, idsExcluidos);
+  vfCalcularFamiliasNoPoolVF(poolPronto);
+  // anexa os dados de entrada como propriedades extras no próprio array
+  // (arrays são objetos em JS) - preserva a assinatura de retorno pra
+  // quem já chama sem esse parâmetro (recarga por filtro, por exemplo)
+  if(incluirDadosEntradaVF){
+    poolPronto.dadosEntradaVF = {
+      userRow: resultadosEntradaVF[0]?.data,
+      horarioServidorMs: resultadosEntradaVF[1]?.data,
+      totalGeralQuestoesVF // só faz sentido como "total geral" aqui porque a entrada roda sem filtro nenhum ativo ainda
+    };
+  }
+  // token dessa carga específica - quem chama compara com o valor global
+  // atual depois do await, pra saber se essa resposta ainda é a mais
+  // recente ou se já ficou velha (F1 do relatório da Fable: dois toques
+  // rápidos em filtros disparavam duas cargas concorrentes, e a mais
+  // lenta podia escrever por cima com dados do filtro ANTERIOR)
+  poolPronto.tokenDestaCargaVF = tokenDestaCargaVF;
+  return poolPronto;
+}
+
+// entrada na aba — se já tem uma sessão em andamento NESSA aba do
+// navegador (trocou pra Quest e voltou, por exemplo), só re-renderiza,
+// sem perder nada. Só busca do zero na primeira vez
+// ---- sessão manual do Flash: iniciar/pausar/retomar/finalizar ----
+// tempo calculado a partir de timestamps reais (Date.now()), não por
+// incremento ingênuo a cada tick - isso é o que garante que o tempo
+// continua certo mesmo se o app ficar em segundo plano um tempão sem
+// nenhum tick de setInterval rodar de verdade (testado isoladamente
+// antes de aplicar: perder ticks intermediários não afeta o resultado)
+const VF_SESSAO_LOCALSTORAGE_KEY = 'vf_sessao_ativa';
+let vfSessaoAtivaVF = null; // {iniciadoEm, pausado, tempoAcumuladoMs, ultimoResumeEm} ou null
+let vfIntervalSessaoVF = null;
+let vfSessaoBalaoEscondidoTimeoutVF = null;
+
+function vfCarregarSessaoDoStorageVF(){
+  try{
+    const bruto = localStorage.getItem(VF_SESSAO_LOCALSTORAGE_KEY);
+    return bruto ? JSON.parse(bruto) : null;
+  }catch(e){ return null; }
+}
+function vfSalvarSessaoNoStorageVF(){
+  try{
+    if(vfSessaoAtivaVF) localStorage.setItem(VF_SESSAO_LOCALSTORAGE_KEY, JSON.stringify(vfSessaoAtivaVF));
+    else localStorage.removeItem(VF_SESSAO_LOCALSTORAGE_KEY);
+  }catch(e){}
+}
+function vfCalcularElapsedMsVF(){
+  if(!vfSessaoAtivaVF) return 0;
+  if(vfSessaoAtivaVF.pausado) return vfSessaoAtivaVF.tempoAcumuladoMs;
+  return vfSessaoAtivaVF.tempoAcumuladoMs + (Date.now() - vfSessaoAtivaVF.ultimoResumeEm);
+}
+function vfFormatarTempoSessaoVF(ms){
+  const totalSegundos = Math.floor(ms / 1000);
+  const h = Math.floor(totalSegundos / 3600);
+  const min = Math.floor((totalSegundos % 3600) / 60);
+  const seg = totalSegundos % 60;
+  // sempre HH:MM:SS, igual o Tracker faz sempre - não alterna formato
+  // dependendo de ter ou não hora (o que eu fazia antes, errado)
+  return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}`;
+}
+
+async function vfIniciarSessaoFlashVF(){
+  const agora = Date.now();
+  vfSessaoAtivaVF = {iniciadoEm: agora, pausado: false, tempoAcumuladoMs: 0, ultimoResumeEm: agora};
+  vfSalvarSessaoNoStorageVF();
+  vfAtualizarOverlaySessaoVF();
+  // só é sessão NOVA de verdade quando ainda não existe pool/progresso em
+  // andamento - nesse caso, e só nesse caso, carrega de fato. Continuando
+  // uma sessão que já existia, o filtro escolhido lá atrás continua
+  // valendo, intocado
+  if(!estadoVF || estadoVF.posicao < 0){
+    await vfCarregarPoolInicialVF(); // só agora carrega de verdade - antes disso não fazia sentido nenhum trabalho pesado rodar
+  }
+  // o balão só aparece DEPOIS da questão (e a barra de resposta dela) já
+  // estarem renderizadas - achado real: mostrar o balão antes disso fazia
+  // ele nascer usando --vf-barra-fixa-altura ainda com o valor padrão
+  // (0px, a barra real ainda nem existia), e só "pulava" pra posição
+  // certa depois que a barra fosse medida de verdade. Em retrato, isso
+  // aparecia como o balão nascendo mais embaixo e subindo alguns
+  // instantes depois - agora já nasce direto na posição final
+  vfMostrarBalaoSessaoFlashVF();
+}
+
+// zera o filtro e fecha a caixinha visual - usado ao iniciar uma sessão
+// nova (ver vfIniciarSessaoFlashVF), pra a próxima vez que a tela de
+// filtros aparecer vir sempre limpa, não com a escolha da sessão anterior
+function vfLimparFiltroVF(){
+  filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false};
+  vfSalvarFiltroNoStorageVF();
+  const elModulo = document.getElementById('vf-filtro-modulo');
+  const elPub = document.getElementById('vf-filtro-publicacao');
+  const elCap = document.getElementById('vf-filtro-capitulo');
+  if(elModulo) elModulo.value = '';
+  if(elPub){ elPub.innerHTML = '<option value="">Todas as publicações</option>'; elPub.disabled = true; }
+  if(elCap){ elCap.innerHTML = '<option value="">Todos os capítulos</option>'; elCap.disabled = true; }
+  ['numero', 'lista'].forEach(tipo => {
+    const btn = document.getElementById('vf-filtro-'+tipo);
+    if(!btn) return;
+    btn.style.background = '#fff';
+    btn.style.color = '#888';
+    btn.style.borderColor = '#ddd';
+  });
+  const conteudo = document.getElementById('vf-filtros-conteudo');
+  const chevron = document.getElementById('vf-chevron-filtros');
+  if(conteudo && !conteudo.classList.contains('vf-filtros-fechado')){
+    conteudo.classList.add('vf-filtros-fechado');
+    if(chevron) chevron.style.transform = 'rotate(0deg)';
+  }
+}
+
+function vfTogglePausarSessaoFlashVF(e){
+  if(e) e.stopPropagation();
+  if(!vfSessaoAtivaVF) return;
+  const agora = Date.now();
+  if(vfSessaoAtivaVF.pausado){
+    vfSessaoAtivaVF.pausado = false;
+    vfSessaoAtivaVF.ultimoResumeEm = agora;
+  }else{
+    vfSessaoAtivaVF.tempoAcumuladoMs += (agora - vfSessaoAtivaVF.ultimoResumeEm);
+    vfSessaoAtivaVF.pausado = true;
+  }
+  vfSalvarSessaoNoStorageVF();
+  vfAtualizarDisplayBalaoSessaoVF();
+}
+
+// despausa automaticamente se a sessão estiver pausada - chamada ao
+// responder uma questão ou avançar pra próxima. Se a pessoa está de fato
+// interagindo com a questão, ficar pausado só significava um esquecimento
+// de apertar "Retomar" antes, não uma escolha de continuar parado
+function vfDespausarSeNecessarioVF(){
+  if(!vfSessaoAtivaVF || !vfSessaoAtivaVF.pausado) return;
+  vfSessaoAtivaVF.pausado = false;
+  vfSessaoAtivaVF.ultimoResumeEm = Date.now();
+  vfSalvarSessaoNoStorageVF();
+  vfAtualizarDisplayBalaoSessaoVF();
+}
+
+// monta o "retrato" da sessão do Flash pro Tracker, no mesmo espírito do
+// que já existe pro caderno do Quest - reaproveita o MESMO modal de
+// confirmação e a mesma edge function, só o formato da questão muda
+// (V/F não tem alternativas múltiplas)
+function vfMontarRetratoParaTrackerVF(inicioSessaoMs, fimSessaoMs, sessaoVfId){
+  const respondidas = estadoVF?.historico?.filter(h => h.resposta !== null) || [];
+  if(!respondidas.length) return null;
   return {
-    ...q,
-    enunciado: limparApostrofoUnderscore(q.enunciado),
-    alternativas: limparApostrofoUnderscore(q.alternativas),
-    explicacao: limparApostrofoUnderscore(q.explicacao),
+    origemFlash: true,
+    sessaoVfId: sessaoVfId || null,
+    criadoEm: new Date(inicioSessaoMs).toISOString(),
+    finalizadoEm: new Date(fimSessaoMs).toISOString(),
+    entradas: respondidas.map(h => ({...h}))
   };
 }
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ erro: 'Método não permitido' });
-  }
-  const { pdfBase64, nomeArquivo } = req.body || {};
-  if (!pdfBase64) {
-    return res.status(400).json({ erro: 'Nenhum PDF enviado' });
-  }
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ erro: 'ANTHROPIC_API_KEY não configurada no projeto Vercel' });
-  }
-  const prompt = `Você vai receber um PDF com questões de múltipla escolha pra um processo seletivo de praticagem (PSCPP). Extraia TODAS as questões do PDF inteiro numa lista JSON.
-Pra cada questão, devolva um objeto com estes campos exatos:
-- enunciado: texto limpo do enunciado, sem "GABARITO:", sem ícones, sem casca visual da fonte
-- alternativas: as 5 alternativas normalizadas no formato "(a) texto. (b) texto. (c) texto. (d) texto. (e) texto."
-- gabarito: só a letra correta, minúscula (ex: "c")
-- capitulo: se identificável no PDF, o número/nome do capítulo da publicação de origem; senão null
-- tipo_questao: um destes valores exatos — "Conceitual", "Cálculo", "Número", "Lista", "Identificação", "Outro". Use "Lista" quando as alternativas finais combinarem assertivas romanas (ex: "apenas I e III corretas").
-- modulo_pscpp: um destes valores exatos — "Manobrabilidade", "Arte Naval", "Navegação em Águas Restritas", "Legislação", "Meteorologia e Oceanografia", "Comunicações", "Conhecimentos Gerais"
-- explicacao: se o PDF já trouxer uma explicação/resolução pronta pra essa questão, o texto dela (corrido, não estruturado por alternativa); senão null
+function vfConfirmarFinalizarSessaoFlashVF(e){
+  if(e) e.stopPropagation();
+  abrirModal('modal-confirmar-finalizar-vf');
+}
 
-Atenção especial a apóstrofos em contrações (d'Alembert, o'clock e similares): reproduza exatamente o apóstrofo seguido da letra, sem inserir nenhum caractere entre eles.
+async function vfFinalizarSessaoFlashVF(e){
+  if(e) e.stopPropagation();
+  if(!vfSessaoAtivaVF) return;
+  fecharModal('modal-confirmar-finalizar-vf'); // fecha se veio desse caminho - inofensivo se já estava fechado
+  const iniciadoEmMs = vfSessaoAtivaVF.iniciadoEm;
+  const finalizadoEmMs = Date.now();
+  const tempoTotalMs = vfCalcularElapsedMsVF();
+  // total de questões respondidas nessa sessão - agora é exato, não uma
+  // aproximação: como estadoVF reseta por completo ao finalizar (ver
+  // abaixo), o histórico contado aqui É de fato só dessa sessão, nunca
+  // mistura com uma sessão anterior que tenha rodado na mesma aba
+  const totalRespondidas = estadoVF?.historico?.filter(h => h.resposta !== null).length || 0;
+  // espera o insert completar (antes só disparava sem esperar) - precisa
+  // do id da sessão criada pra poder marcar enviado_tracker_em/
+  // id_atividade_tracker nela depois do envio ao Tracker, mesmo padrão
+  // que já existe pra cadernos
+  const {data: sessaoInserida, error: erroInsertSessao} = await sb.from('sessoes_vf').insert({
+    usuario_id: usuarioAtual.id,
+    iniciado_em: new Date(iniciadoEmMs).toISOString(),
+    finalizado_em: new Date(finalizadoEmMs).toISOString(),
+    tempo_efetivo_ms: tempoTotalMs,
+    total_questoes_respondidas: totalRespondidas
+  }).select('id').single();
+  if(erroInsertSessao) console.error('[Flash] Erro ao salvar sessão:', erroInsertSessao);
+  // retrato pro Tracker montado ANTES de zerar a sessão - precisa do
+  // início real dela (vfSessaoAtivaVF.iniciadoEm), que se perde depois
+  const retratoParaTracker = podeUsarIntegracaoTracker() ? vfMontarRetratoParaTrackerVF(iniciadoEmMs, finalizadoEmMs, sessaoInserida?.id) : null;
+  limparCanvasDesenhoVF(); // finalizar é finalizar tudo - o risco que estava na tela some junto, não fica "esquecido" por cima do resultado
+  vfSessaoAtivaVF = null;
+  vfSessaoRestauradaAguardandoDecisaoVF = false;
+  // o pool/histórico/fila inteiros são dessa sessão que acabou de
+  // terminar - reseta pra null, pra que a PRÓXIMA sessão (quando "Iniciar"
+  // for clicado de novo) comece de um pool fresco, não continue de onde
+  // essa parou. O Flash não é mais "eterno" - cada sessão é um bloco
+  // delimitado, o estado não deveria vazar de uma pra outra
+  estadoVF = null;
+  // limpa o filtro AQUI (ao finalizar), não ao iniciar a próxima - achado
+  // real: limpar só depois de carregar o pool da sessão seguinte era
+  // tarde demais, essa sessão nova já tinha carregado com o filtro da
+  // anterior, mesmo sem o usuário escolher nada. Limpando já ao
+  // finalizar, a tela de "Iniciar sessão" seguinte já nasce com os
+  // filtros limpos, e uma escolha feita ali antes de "Iniciar" continua
+  // funcionando normalmente (só é limpo de novo na PRÓXIMA finalização)
+  vfLimparFiltroVF();
+  vfSalvarSessaoNoStorageVF();
+  // esconde a barra fixa (Anterior/Próxima, Excluir/Favoritar/Notas/
+  // Salvar) explicitamente - achado real: sem isso, ela continuava
+  // visível por cima da tela de "Iniciar sessão", já que essa barra fica
+  // fora da área que o overlay de início cobre
+  document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden';
+  document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
+  if(vfIntervalSessaoVF){ clearInterval(vfIntervalSessaoVF); vfIntervalSessaoVF = null; }
+  clearTimeout(vfSessaoBalaoEscondidoTimeoutVF);
+  const balao = document.getElementById('vf-sessao-balao');
+  if(balao) balao.classList.add('hidden');
+  vfAtualizarOverlaySessaoVF();
+  if(retratoParaTracker) abrirConfirmacaoEnvioTracker(retratoParaTracker); // mesmo modal/fluxo já usado no Quest
+}
 
-Responda APENAS com um JSON válido no formato {"questoes": [...]}, sem nenhum texto antes ou depois, sem marcação markdown, sem \`\`\`json.`;
-  try {
-    const respostaAnthropic = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 8192,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
-            { type: 'text', text: prompt }
-          ]
-        }]
-      })
+function vfMostrarBalaoSessaoFlashVF(){
+  const balao = document.getElementById('vf-sessao-balao');
+  if(!balao) return;
+  // volta pro local padrão (definido no CSS) sempre que reabre - não
+  // mantém a posição de um arrasto anterior à última vez que foi escondido
+  balao.style.left = '';
+  balao.style.top = '';
+  balao.style.right = '';
+  balao.style.bottom = '';
+  balao.classList.remove('hidden');
+  vfAplicarPreferenciaOcultarTempoBalaoVF();
+  vfAtualizarDisplayBalaoSessaoVF();
+  if(vfIntervalSessaoVF) clearInterval(vfIntervalSessaoVF);
+  vfIntervalSessaoVF = setInterval(vfAtualizarDisplayBalaoSessaoVF, 1000);
+}
+
+// a posição do balão é salva em pixels absolutos (arrasto livre) - isso
+// nunca se recalcula sozinho quando a orientação da tela muda (retrato
+// ↔ paisagem), então um balão arrastado pro canto podia ficar fora da
+// tela nova, ou "flutuando" no meio dela. Reseta pro local padrão do CSS
+// toda vez que o tamanho da janela muda de verdade - mesmo comportamento
+// de quando o balão reabre do zero
+window.addEventListener('resize', () => {
+  // recalcula a altura real da barra fixa primeiro - ela pode mudar entre
+  // retrato e paisagem (os botões reorganizam), e sem isso a variável CSS
+  // ficava com o valor da orientação anterior, empurrando o balão pra
+  // posição errada (ficava "mais em cima", como se ainda estivesse
+  // considerando a barra mais alta do retrato, mesmo já em paisagem)
+  medirAlturaBarraFixaVF();
+  const balao = document.getElementById('vf-sessao-balao');
+  if(!balao || balao.classList.contains('hidden')) return;
+  balao.style.left = '';
+  balao.style.top = '';
+  balao.style.right = '';
+  balao.style.bottom = '';
+});
+
+function vfAtualizarDisplayBalaoSessaoVF(){
+  if(!vfSessaoAtivaVF) return;
+  const balao = document.getElementById('vf-sessao-balao');
+  if(!balao) return;
+  balao.classList.toggle('pausado', vfSessaoAtivaVF.pausado);
+  document.getElementById('vf-sessao-balao-tempo').textContent = vfFormatarTempoSessaoVF(vfCalcularElapsedMsVF());
+  document.getElementById('vf-sessao-balao-tag').textContent = vfSessaoAtivaVF.pausado ? 'PAUSADO' : '';
+  document.getElementById('vf-sessao-balao-btn-pausar').textContent = vfSessaoAtivaVF.pausado ? 'Retomar' : 'Pausar';
+}
+
+// esconde/mostra só a contagem do tempo dentro do balão - o balão em si
+// nunca fecha mais, mas o tempo rodando pode incomodar/distrair, então
+// vira opcional. Preferência salva no aparelho, aplicada de novo toda
+// vez que o balão aparece (troca de aba, nova sessão, etc)
+const VF_ICONE_OLHO_ABERTO = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>';
+const VF_ICONE_OLHO_FECHADO = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.06 21.06 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.32 21.32 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+function vfAplicarPreferenciaOcultarTempoBalaoVF(){
+  const tempoEl = document.getElementById('vf-sessao-balao-tempo');
+  const btnToggle = document.getElementById('vf-sessao-balao-toggle-tempo');
+  if(!tempoEl || !btnToggle) return;
+  let oculto = false;
+  try{ oculto = localStorage.getItem('pscpp_vf_ocultar_tempo_balao') === '1'; }catch(e){}
+  tempoEl.style.visibility = oculto ? 'hidden' : ''; // visibility, não display - mantém o espaço reservado, o balão não encolhe
+  btnToggle.innerHTML = oculto ? VF_ICONE_OLHO_FECHADO : VF_ICONE_OLHO_ABERTO;
+}
+function vfToggleOcultarTempoBalaoVF(e){
+  if(e) e.stopPropagation();
+  const tempoEl = document.getElementById('vf-sessao-balao-tempo');
+  const btnToggle = document.getElementById('vf-sessao-balao-toggle-tempo');
+  if(!tempoEl || !btnToggle) return;
+  const vaiOcultar = tempoEl.style.visibility !== 'hidden';
+  tempoEl.style.visibility = vaiOcultar ? 'hidden' : '';
+  btnToggle.innerHTML = vaiOcultar ? VF_ICONE_OLHO_FECHADO : VF_ICONE_OLHO_ABERTO;
+  try{ localStorage.setItem('pscpp_vf_ocultar_tempo_balao', vaiOcultar ? '1' : '0'); }catch(err){}
+}
+
+// mostra o botão "Iniciar sessão" quando não tem sessão ativa, esconde
+// o conteúdo normal do Flash até o Carlos apertar iniciar. Quando uma
+// sessão foi restaurada do fechamento anterior (pausada), mostra um
+// overlay diferente - Retomar/Finalizar - em vez de reabrir o balão
+// sozinho (nada acontece automaticamente, é sempre uma escolha)
+let vfSessaoRestauradaAguardandoDecisaoVF = false;
+function vfAtualizarOverlaySessaoVF(){
+  const overlayIniciar = document.getElementById('vf-overlay-iniciar-sessao');
+  const overlayRetomar = document.getElementById('vf-overlay-retomar-sessao');
+  if(vfSessaoRestauradaAguardandoDecisaoVF && vfSessaoAtivaVF){
+    if(overlayIniciar) overlayIniciar.classList.add('hidden');
+    if(overlayRetomar){
+      overlayRetomar.classList.remove('hidden');
+      const spanTempo = document.getElementById('vf-overlay-retomar-tempo');
+      if(spanTempo) spanTempo.textContent = vfFormatarTempoSessaoVF(vfCalcularElapsedMsVF());
+    }
+    return;
+  }
+  if(overlayRetomar) overlayRetomar.classList.add('hidden');
+  if(overlayIniciar) overlayIniciar.classList.toggle('hidden', !!vfSessaoAtivaVF);
+}
+// "Retomar" nesse overlay só reabre o balão (ainda pausado) - despausar
+// de vez é decidido dentro do próprio balão, que já tem esse botão
+function vfRetomarSessaoRestauradaVF(){
+  vfSessaoRestauradaAguardandoDecisaoVF = false;
+  if(vfSessaoAtivaVF && vfSessaoAtivaVF.pausado) vfTogglePausarSessaoFlashVF(); // "Retomar" tem que retomar de verdade - despausa, não só mostra o balão ainda parado
+  vfMostrarBalaoSessaoFlashVF();
+  vfAtualizarOverlaySessaoVF();
+  if(!estadoVF || estadoVF.posicao < 0) vfCarregarPoolInicialVF();
+}
+
+// ---- arraste do balão (mesmo padrão já usado pros paineis: limiar de
+// 6px antes de soltar a âncora do canto; toque simples sem arrastar
+// reabre a aba do Flash de onde estiver) ----
+let vfBalaoArrastoInfoVF = null; // {xInicio, yInicio, leftInicio, topInicio, moveu}
+function vfIniciarArrastoBalaoVF(clientX, clientY){
+  const balao = document.getElementById('vf-sessao-balao');
+  const rect = balao.getBoundingClientRect();
+  vfBalaoArrastoInfoVF = {xInicio: clientX, yInicio: clientY, leftInicio: rect.left, topInicio: rect.top, moveu: false};
+}
+function vfMoverArrastoBalaoVF(clientX, clientY){
+  if(!vfBalaoArrastoInfoVF) return;
+  const dx = clientX - vfBalaoArrastoInfoVF.xInicio, dy = clientY - vfBalaoArrastoInfoVF.yInicio;
+  if(!vfBalaoArrastoInfoVF.moveu && Math.hypot(dx,dy) < 6) return;
+  vfBalaoArrastoInfoVF.moveu = true;
+  const balao = document.getElementById('vf-sessao-balao');
+  balao.style.right = 'auto';
+  balao.style.bottom = 'auto';
+  balao.style.left = (vfBalaoArrastoInfoVF.leftInicio + dx) + 'px';
+  balao.style.top = (vfBalaoArrastoInfoVF.topInicio + dy) + 'px';
+}
+function vfFinalizarArrastoBalaoVF(){
+  if(vfBalaoArrastoInfoVF && !vfBalaoArrastoInfoVF.moveu){
+    vfAbrirPainelSessaoVF(); // toque simples, sem arrastar - expande o balão no painel de estatísticas
+  }
+  vfBalaoArrastoInfoVF = null;
+}
+// ---- painel expandido de estatísticas da sessão - "morph" a partir do
+// balão: o painel nasce na posição/tamanho exatos do balão (medidos na
+// hora), e transiciona (via CSS, ver #vf-painel-sessao-vf) pro tamanho/
+// posição final. Fechar reverte a mesma animação, encolhendo de volta ----
+// controla se foi o próprio painel quem pausou a sessão ao abrir - só
+// nesse caso ele retoma ao fechar. Se a sessão já estava pausada antes
+// (o usuário tinha pausado manualmente), o painel não mexe nisso: abre
+// e fecha sem alterar esse estado, continua pausada como já estava
+let vfPainelPausouAutomaticamenteVF = false;
+function vfAbrirPainelSessaoVF(){
+  const balao = document.getElementById('vf-sessao-balao');
+  const painel = document.getElementById('vf-painel-sessao-vf');
+  const fundo = document.getElementById('vf-painel-sessao-fundo');
+  if(!balao || !painel || !fundo) return;
+  const rectBalao = balao.getBoundingClientRect();
+
+  if(vfSessaoAtivaVF && !vfSessaoAtivaVF.pausado){
+    vfTogglePausarSessaoFlashVF();
+    vfPainelPausouAutomaticamenteVF = true;
+  }else{
+    vfPainelPausouAutomaticamenteVF = false;
+  }
+
+  vfRenderizarConteudoPainelSessaoVF(); // monta o HTML das estatísticas antes de mostrar
+
+  // nasce exatamente onde o balão está - sem isso, o navegador já pintaria
+  // o painel no tamanho final no primeiro frame, sem transição nenhuma
+  painel.style.transition = 'none';
+  painel.style.top = rectBalao.top + 'px';
+  painel.style.left = rectBalao.left + 'px';
+  painel.style.width = rectBalao.width + 'px';
+  painel.style.height = rectBalao.height + 'px';
+  painel.style.borderRadius = '14px';
+  painel.classList.remove('hidden');
+  fundo.classList.remove('hidden');
+  balao.style.visibility = 'hidden'; // o painel "é" o balão nesse instante - evita ver os dois sobrepostos
+
+  // força o navegador a aplicar o estado inicial antes de reativar a
+  // transição - sem isso, o navegador pode agrupar as mudanças de estilo
+  // e pular direto pro estado final, sem morph nenhum
+  requestAnimationFrame(() => {
+    painel.style.transition = '';
+    const larguraFinal = Math.min(440, window.innerWidth * 0.92);
+    // altura pelo conteúdo real, não um valor fixo - achado real: com a
+    // seção de panorama sempre presente agora, um valor fixo (era 560px)
+    // não cabia mais tudo, forçando rolagem interna à toa. Cap de 90% da
+    // tela só como proteção pra telas pequenas/conteúdo muito grande
+    const alturaConteudoReal = document.getElementById('vf-painel-sessao-conteudo').scrollHeight;
+    const alturaFinal = Math.min(alturaConteudoReal, window.innerHeight * 0.9);
+    painel.style.top = ((window.innerHeight - alturaFinal) / 2) + 'px';
+    painel.style.left = ((window.innerWidth - larguraFinal) / 2) + 'px';
+    painel.style.width = larguraFinal + 'px';
+    painel.style.height = alturaFinal + 'px';
+    painel.style.borderRadius = '18px';
+    painel.classList.add('aberto');
+    fundo.classList.add('aberto');
+  });
+}
+
+function vfFecharPainelSessaoVF(){
+  const balao = document.getElementById('vf-sessao-balao');
+  const painel = document.getElementById('vf-painel-sessao-vf');
+  const fundo = document.getElementById('vf-painel-sessao-fundo');
+  if(!balao || !painel || !fundo) return;
+  if(vfPainelPausouAutomaticamenteVF){
+    vfTogglePausarSessaoFlashVF();
+    vfPainelPausouAutomaticamenteVF = false;
+  }
+  const rectBalao = balao.getBoundingClientRect();
+  painel.classList.remove('aberto');
+  fundo.classList.remove('aberto');
+  // encolhe de volta pra posição/tamanho atual do balão (pode ter mudado
+  // de lugar - orientação, arrasto - desde que o painel abriu)
+  painel.style.top = rectBalao.top + 'px';
+  painel.style.left = rectBalao.left + 'px';
+  painel.style.width = rectBalao.width + 'px';
+  painel.style.height = rectBalao.height + 'px';
+  painel.style.borderRadius = '14px';
+  setTimeout(() => {
+    painel.classList.add('hidden');
+    fundo.classList.add('hidden');
+    balao.style.visibility = '';
+  }, 340); // um pouco mais que a duração da transição CSS (320ms), garante que o encolhimento termine antes de sumir
+}
+
+// monta o HTML das estatísticas - "nessa rodada" sempre calculado do que
+// já está em memória (sem busca nenhuma), "panorama do filtro" só
+// aparece se houver filtro ativo, e busca no banco só nesse caso
+async function vfRenderizarConteudoPainelSessaoVF(){
+  const el = document.getElementById('vf-painel-sessao-conteudo');
+  if(!el || !estadoVF) return;
+  const respondidas = estadoVF.historico.filter(h => h.resposta !== null);
+  const novas = respondidas.filter(h => !h.estadoAntesDeResponder || h.estadoAntesDeResponder === 'nova').length;
+  const repeticoes = respondidas.length - novas;
+  const temposValidos = respondidas.map(h => h.tempoAtivoMs).filter(t => typeof t === 'number' && t > 0);
+  const tempoMedioMs = temposValidos.length ? temposValidos.reduce((a,b)=>a+b,0) / temposValidos.length : 0;
+  const tempoMedioTexto = tempoMedioMs >= 60000 ? `${Math.round(tempoMedioMs/60000)}min` : `${Math.round(tempoMedioMs/1000)}s`;
+  const taxaAcerto = estadoVF.respondidasSessao ? Math.round((estadoVF.acertosSessao / estadoVF.respondidasSessao) * 100) : 0;
+  const pctNovas = respondidas.length ? Math.round((novas/respondidas.length)*100) : 0;
+
+  el.innerHTML = `
+    <div class="vf-painel-topo">
+      <div>
+        <div class="vf-painel-rotulo-topo">Sessão em andamento</div>
+        <div class="vf-painel-tempo-grande">${vfFormatarTempoSessaoVF(vfCalcularElapsedMsVF())}</div>
+      </div>
+      <button class="btn-icone-pequeno" style="background:rgba(255,255,255,0.18);border:none;color:#fff;width:38px;height:38px;font-size:20px;flex-shrink:0" onclick="vfFecharPainelSessaoVF()">✕</button>
+    </div>
+    <div class="vf-painel-corpo">
+      <div class="vf-secao-titulo">Nessa rodada</div>
+      <div class="vf-grid-stats">
+        <div class="vf-stat-card destaque">
+          <div class="vf-stat-valor">${respondidas.length}</div>
+          <div class="vf-stat-rotulo">Respondidas</div>
+        </div>
+        <div class="vf-stat-card">
+          <div class="vf-stat-valor">${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao}</div>
+          <div class="vf-stat-rotulo">Acertos</div>
+        </div>
+        <div class="vf-stat-card">
+          <div class="vf-stat-valor">${temposValidos.length ? tempoMedioTexto : '—'}</div>
+          <div class="vf-stat-rotulo">Tempo médio/questão</div>
+        </div>
+        <div class="vf-stat-card">
+          <div class="vf-stat-valor">${taxaAcerto}%</div>
+          <div class="vf-stat-rotulo">Taxa de acerto</div>
+        </div>
+      </div>
+      ${respondidas.length ? `
+      <div class="vf-secao-titulo">Novas x repetições</div>
+      <div class="vf-barra-dupla">
+        <div class="vf-novas" style="width:${pctNovas}%"></div>
+        <div class="vf-repeticoes" style="width:${100-pctNovas}%"></div>
+      </div>
+      <div class="vf-legenda-dupla">
+        <span><span class="vf-dot" style="background:#B23A34"></span>${novas} novas</span>
+        <span><span class="vf-dot" style="background:#E8B4B0"></span>${repeticoes} repetições</span>
+      </div>` : ''}
+      <div id="vf-painel-secao-filtro">${vfMontarPlaceholderPanoramaVF()}</div>
+    </div>
+  `;
+
+  vfCarregarPanoramaFiltroVF(); // sempre carrega - sem filtro nenhum, mostra o panorama do banco inteiro
+}
+
+// monta a seção de panorama já com a estrutura/altura final desde o
+// primeiro instante (linhas de módulo/publicação/capítulo/tipo, que já
+// são conhecidas sem busca nenhuma) - só os 3 números que dependem da
+// busca assíncrona (vfCarregarPanoramaFiltroVF) ficam como travessão até
+// chegarem. Achado real: sem isso, o painel abria com essa seção vazia,
+// e crescia de novo (um segundo pulo visual) assim que a busca terminava
+// - geralmente rápido o bastante pra parecer um "flash" logo após abrir
+function vfMontarPlaceholderPanoramaVF(){
+  const nomePublicacao = filtroVF.publicacao ? (bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.nome_exibicao || bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.titulo) : null;
+  const tipoTexto = filtroVF.numero && filtroVF.lista ? 'Número ou Lista' : filtroVF.numero ? 'Número' : filtroVF.lista ? 'Lista' : null;
+  const linhasFiltro = [
+    filtroVF.modulo ? `<div class="vf-filtro-linha"><span>Módulo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.modulo)}</span></div>` : '',
+    nomePublicacao ? `<div class="vf-filtro-linha"><span>Publicação</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(nomePublicacao)}</span></div>` : '',
+    filtroVF.capitulo ? `<div class="vf-filtro-linha"><span>Capítulo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.capitulo)}</span></div>` : '',
+    tipoTexto ? `<div class="vf-filtro-linha"><span>Tipo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(tipoTexto)}</span></div>` : ''
+  ].filter(Boolean).join('');
+  const tituloSecao = linhasFiltro ? 'Panorama desse filtro (todo o banco)' : 'Panorama geral (todo o banco)';
+  return `
+    <div style="height:1px;background:#eee;margin:20px 0"></div>
+    <div class="vf-secao-titulo">${tituloSecao}</div>
+    ${linhasFiltro}
+    <div class="vf-filtro-linha"><span>Total de afirmações</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha"><span>Você já viu ao menos 1 vez</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor">—</span></div>
+  `;
+}
+
+// busca só quando há filtro ativo - total de afirmações com esse
+// filtro, e quantas já têm pelo menos 1 registro em repeticao_vf (já
+// vistas alguma vez, não só nessa sessão)
+async function vfCarregarPanoramaFiltroVF(){
+  const elSecao = document.getElementById('vf-painel-secao-filtro');
+  if(!elSecao || !usuarioAtual) return;
+  // questoes_vf não tem modulo_pscpp direto - só bibliografia_id. Quando
+  // o filtro é por publicação específica, é só ela; quando é por módulo
+  // inteiro, resolve pra todas as bibliografias daquele módulo (usando o
+  // cache já em memória, sem busca nenhuma)
+  const idsBibliografia = filtroVF.publicacao
+    ? [filtroVF.publicacao]
+    : (filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null);
+  // uma única chamada RPC calcula total + já-vistas em SQL, direto no
+  // banco - achado real: buscar todos os IDs filtrados (podendo ser
+  // centenas) só pra depois cruzar com repeticao_vf era o gargalo real
+  // de lentidão nessa seção
+  const {data: panorama} = await sb.rpc('panorama_filtro_vf', {
+    p_usuario_id: usuarioAtual.id,
+    p_ids_bibliografia: idsBibliografia,
+    p_capitulo: filtroVF.capitulo || null,
+    p_numero: !!filtroVF.numero,
+    p_lista: !!filtroVF.lista
+  });
+  const totalFiltro = panorama?.[0]?.total || 0;
+  const jaVistas = panorama?.[0]?.ja_vistas || 0;
+  // se o painel já foi fechado enquanto essa busca rodava, não escreve nada
+  const elAtual = document.getElementById('vf-painel-secao-filtro');
+  if(!elAtual) return;
+  // só troca os 3 números - a estrutura (título/linhas de filtro) já foi
+  // montada pelo placeholder síncrono (vfMontarPlaceholderPanoramaVF),
+  // então a altura do painel não muda mais nesse momento, sem o pulo
+  // visual de antes
+  const valores = elAtual.querySelectorAll('.vf-filtro-valor');
+  const nValores = valores.length;
+  if(nValores >= 3){
+    valores[nValores-3].textContent = totalFiltro||0;
+    valores[nValores-2].textContent = jaVistas;
+    valores[nValores-1].textContent = Math.max(0,(totalFiltro||0)-jaVistas);
+  }
+  vfReajustarAlturaPainelSessaoVF(); // proteção extra - normalmente não muda nada agora, já que o placeholder já tinha a altura certa
+}
+
+// mede o conteúdo de novo e ajusta o painel (altura + reposição
+// vertical pra continuar centralizado) suavemente - usado depois que
+// alguma seção assíncrona (o panorama) muda o tamanho do conteúdo
+// depois do painel já estar aberto
+function vfReajustarAlturaPainelSessaoVF(){
+  const painel = document.getElementById('vf-painel-sessao-vf');
+  const conteudo = document.getElementById('vf-painel-sessao-conteudo');
+  if(!painel || !conteudo || !painel.classList.contains('aberto')) return;
+  const alturaConteudoReal = conteudo.scrollHeight;
+  const alturaFinal = Math.min(alturaConteudoReal, window.innerHeight * 0.9);
+  painel.style.height = alturaFinal + 'px';
+  painel.style.top = ((window.innerHeight - alturaFinal) / 2) + 'px';
+}
+
+(function vfConfigurarArrastoBalaoSessaoVF(){
+  const balao = document.getElementById('vf-sessao-balao');
+  if(!balao) return;
+  const alvoEhControleInterno = (target) => !!target.closest('#vf-sessao-balao-toggle-tempo') || !!target.closest('.vf-sessao-balao-btns');
+  balao.addEventListener('touchstart', (e) => {
+    if(alvoEhControleInterno(e.target)) return;
+    const t = e.touches[0];
+    vfIniciarArrastoBalaoVF(t.clientX, t.clientY);
+  }, {passive: true});
+  balao.addEventListener('touchmove', (e) => {
+    if(alvoEhControleInterno(e.target)) return;
+    const t = e.touches[0];
+    vfMoverArrastoBalaoVF(t.clientX, t.clientY);
+  }, {passive: true});
+  balao.addEventListener('touchend', (e) => {
+    if(alvoEhControleInterno(e.target)) return; // controles internos cuidam do próprio toque - não finaliza arrasto nem reabre a aba
+    vfFinalizarArrastoBalaoVF();
+  });
+  balao.addEventListener('mousedown', (e) => {
+    if(alvoEhControleInterno(e.target)) return;
+    vfIniciarArrastoBalaoVF(e.clientX, e.clientY);
+    const onMove = (ev) => vfMoverArrastoBalaoVF(ev.clientX, ev.clientY);
+    const onUp = () => { vfFinalizarArrastoBalaoVF(); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+  // Pausar/Finalizar/Fechar não dependem do clique sintético do navegador -
+  // #vf-sessao-balao tem touch-action:none (necessário pro arrasto suave),
+  // e isso pode suprimir o "click" sintético normal em qualquer descendente
+  // com a Apple Pencil. touchend explícito garante que sempre funcione,
+  // com preventDefault pra não disparar a ação de novo quando o clique
+  // sintético eventualmente também disparar
+  const controlesInternos = balao.querySelectorAll('#vf-sessao-balao-toggle-tempo, .vf-sessao-balao-btns > [onclick]');
+  controlesInternos.forEach(el => {
+    el.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      el.click();
     });
-    if (!respostaAnthropic.ok) {
-      const detalhe = await respostaAnthropic.text();
-      return res.status(502).json({ erro: 'Erro na API da Anthropic', detalhe });
+  });
+})();
+
+// restaura a sessão do Flash se havia uma ativa quando o app foi fechado -
+// chamada de dentro de mostrarAppShell(), NUNCA automaticamente na carga
+// do script (isso causava o balão aparecer até na tela de login, antes
+// do usuário ter feito qualquer autenticação). Ao restaurar, a sessão
+// sempre volta PAUSADA - fechar o app de verdade e voltar depois não
+// continua contando o tempo que ficou fechado, precisa retomar de
+// propósito. NÃO mostra o balão sozinho - fica esperando o Carlos entrar
+// na aba Flash e decidir "Retomar" ou "Finalizar" explicitamente (nada
+// acontece automaticamente, mesma filosofia do resto desse sistema)
+function vfRestaurarSessaoFlashVF(){
+  const salva = vfCarregarSessaoDoStorageVF();
+  if(!salva) return;
+  const agora = Date.now();
+  if(!salva.pausado){
+    salva.tempoAcumuladoMs += (agora - salva.ultimoResumeEm);
+    salva.pausado = true;
+  }
+  vfSessaoAtivaVF = salva;
+  vfSalvarSessaoNoStorageVF();
+  vfSessaoRestauradaAguardandoDecisaoVF = true;
+  vfAtualizarOverlaySessaoVF();
+}
+
+// pausa automaticamente quando a página é DESCARREGADA de verdade (fechar
+// a aba/app) - pagehide é mais confiável que visibilitychange pra esse
+// fim específico. visibilitychange dispara até numa simples troca rápida
+// de app (que NÃO deve pausar, só fechar de verdade deve)
+window.addEventListener('pagehide', () => {
+  if(vfSessaoAtivaVF && !vfSessaoAtivaVF.pausado){
+    const agora = Date.now();
+    vfSessaoAtivaVF.tempoAcumuladoMs += (agora - vfSessaoAtivaVF.ultimoResumeEm);
+    vfSessaoAtivaVF.pausado = true;
+    vfSalvarSessaoNoStorageVF();
+  }
+});
+
+async function entrarNoModoVF(){
+  popularFiltroModuloVF();
+  inicializarCanvasDesenhoVF(); // mede o canvas agora que a aba ficou visível de verdade
+  if(estadoVF && estadoVF.posicao >= 0){
+    // não é mais só re-renderizar: pode ter ficado pausada tempo demais
+    // (descarta se >30min) e precisa sincronizar com o que mudou em
+    // outro aparelho enquanto essa aba estava em segundo plano — usa a
+    // mesma trava dos outros pontos de entrada, pra nunca rodar em
+    // paralelo com um visibilitychange/focus disparando ao mesmo tempo
+    await aoVoltarParaVF();
+    renderizarItemVF();
+    return;
+  }
+  // sem pool carregado ainda - o Flash não é mais "eterno" (não carrega
+  // sozinho assim que a aba abre). Só busca o pool de verdade se já
+  // existe uma sessão ativa E não há decisão de Retomar/Finalizar
+  // pendente (senão carregava tudo por baixo do overlay de escolha, sem
+  // o Carlos ter decidido nada ainda). Sem sessão ativa, quem dispara
+  // isso é vfIniciarSessaoFlashVF ou vfRetomarSessaoRestauradaVF, só
+  // quando o Carlos realmente decidir começar - carregar aqui à toa
+  // seria trabalho desperdiçado se ele nunca apertar Iniciar/Retomar
+  if(vfSessaoAtivaVF && !vfSessaoRestauradaAguardandoDecisaoVF) await vfCarregarPoolInicialVF();
+}
+
+// guarda o estado essencial da sessão (histórico resumido + contadores)
+// dentro do mesmo objeto já persistido no localStorage (vfSessaoAtivaVF) -
+// leve de propósito (só id/resposta/acertou de cada questão, não o
+// conteúdo pesado inteiro), pra não pesar salvar isso a cada resposta
+function vfPersistirEstadoSessaoVF(){
+  if(!vfSessaoAtivaVF || !estadoVF) return;
+  vfSessaoAtivaVF.historicoResumido = estadoVF.historico
+    .filter(h => h.resposta !== null) // só as já respondidas - a pendente atual não precisa, o fluxo normal cria uma nova ao restaurar
+    .map(h => ({id: h.item.id, resposta: h.resposta, acertou: h.acertou}));
+  vfSessaoAtivaVF.acertosSessao = estadoVF.acertosSessao;
+  vfSessaoAtivaVF.respondidasSessao = estadoVF.respondidasSessao;
+  vfSessaoAtivaVF.sementeSessao = estadoVF.sementeSessao;
+  vfSessaoAtivaVF.respostasDesdeUltimaNova = estadoVF.respostasDesdeUltimaNova;
+  vfSessaoAtivaVF.familiasRecentesVF = estadoVF.familiasRecentesVF;
+  vfSalvarSessaoNoStorageVF();
+}
+
+// reconstrói o histórico e os contadores a partir do que foi salvo -
+// busca o conteúdo completo de cada questão já respondida (mesmo select
+// usado em vfBuscarConteudoEmLoteVF) e devolve um objeto pronto pra
+// sobrescrever os campos correspondentes do estadoVF recém-criado
+async function vfReconstruirHistoricoDaSessaoVF(){
+  const resumo = vfSessaoAtivaVF?.historicoResumido;
+  if(!resumo || !resumo.length) return null;
+  const ids = resumo.map(r => r.id);
+  const {data, error} = await sb.from('questoes_vf').select('*').in('id', ids);
+  if(error || !data) return null;
+  const porId = new Map(data.map(d => [d.id, d]));
+  const historico = resumo.map(r => {
+    const item = porId.get(r.id);
+    if(!item) return null; // questão pode ter sido excluída/anulada entre uma sessão e outra - pula sem quebrar o resto
+    return {item, resposta: r.resposta, acertou: r.acertou, tempoAtivoMs: 0, ativoDesdeMs: null, apareceuEmMs: Date.now()};
+  }).filter(Boolean);
+  if(!historico.length) return null;
+  return {
+    historico,
+    posicao: historico.length - 1,
+    acertosSessao: vfSessaoAtivaVF.acertosSessao || 0,
+    respondidasSessao: vfSessaoAtivaVF.respondidasSessao || 0,
+    sementeSessao: vfSessaoAtivaVF.sementeSessao,
+    respostasDesdeUltimaNova: vfSessaoAtivaVF.respostasDesdeUltimaNova || 0,
+    familiasRecentesVF: vfSessaoAtivaVF.familiasRecentesVF || []
+  };
+}
+
+async function vfCarregarPoolInicialVF(){
+  const el = document.getElementById('vf-conteudo');
+  el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
+  document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
+
+  estadoVF = {
+    pool: [],
+    contadorGlobal: 0,
+    sementeSessao: String(Date.now()) + '-' + Math.random(),
+    anteriorVeioDeAprendizado: false,
+    historico: [],
+    posicao: -1,
+    acertosSessao: 0,
+    respondidasSessao: 0,
+    respostasDesdeUltimaNova: 0, // Regra 1 (fluxo garantido de novas) - zera a cada SESSÃO de verdade agora, não mais a cada abertura de aba
+    familiasRecentesVF: [] // Regra 2 (anti-irmãs) - idem, zera por sessão de verdade
+  };
+  // contadores restaurados direto daqui, ANTES de tentar reconstruir o
+  // histórico detalhado - achado real: vfReconstruirHistoricoDaSessaoVF
+  // pode retornar null por vários motivos (histórico não salvo, erro de
+  // rede na busca, todas as questões excluídas/anuladas entre sessões),
+  // e nesses casos os contadores eram perdidos junto, mesmo tendo sido
+  // salvos corretamente e não dependendo de nada disso pra serem lidos
+  if(vfSessaoAtivaVF){
+    estadoVF.acertosSessao = vfSessaoAtivaVF.acertosSessao || 0;
+    estadoVF.respondidasSessao = vfSessaoAtivaVF.respondidasSessao || 0;
+  }
+  // restaura o histórico da sessão que ficou salvo antes do app fechar -
+  // sem isso, fechar e reabrir "zerava" as questões da sessão mesmo com
+  // a sessão ainda ativa/pausada, só porque estadoVF vive em memória
+  const restaurado = await vfReconstruirHistoricoDaSessaoVF();
+  if(restaurado) Object.assign(estadoVF, restaurado);
+  // userRow/now_ms/total geral agora entram NO MESMO Promise.all da busca
+  // do pool (dentro de carregarPoolVF) - antes eram uma rodada sequencial
+  // separada, pagando uma viagem de rede inteira a mais só na entrada
+  await recarregarPoolEContinuarVF(true);
+}
+
+// busca o pool de novo (com o filtro atual) e continua a fila — usado na
+// entrada e sempre que o filtro muda. NÃO reinicia nada (histórico,
+// contador, placar da sessão continuam): o estado de cada questão é
+// global, o filtro só re-recorta qual pool está visível agora
+async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
+  vfSalvarFiltroNoStorageVF(); // toda mudança de filtro passa por aqui - salva sempre, sem precisar duplicar a chamada em cada função de filtro específica
+  const el = document.getElementById('vf-conteudo');
+  // spinner sobreposto (position:absolute, por cima), NÃO substituindo o
+  // conteúdo antigo - achado real: apagar tudo e pôr só o spinner (fixed,
+  // sem altura no fluxo normal) colapsava a altura de #vf-conteudo pra
+  // quase zero de repente, um reflow grande que colidia no tempo com o
+  // usuário fechando a caixa de filtros logo em seguida (outro reflow
+  // grande), e essa combinação disparava o artefato visual da linha no
+  // Safari. Mantendo o conteúdo antigo visível (só esmaecido) até o novo
+  // chegar, a altura nunca muda abruptamente
+  el.style.opacity = '0.35';
+  el.style.pointerEvents = 'none';
+  // remove qualquer spinner que já exista ali (o estático que já vem no
+  // HTML inicial da página, antes de qualquer JS rodar, ou um overlay de
+  // uma chamada anterior) - sem isso, na entrada inicial ficavam dois
+  // spinners visíveis ao mesmo tempo, um por cima do outro
+  el.querySelectorAll('.loading-spinner').forEach(s => s.closest('div')?.remove());
+  const overlaySpinner = document.createElement('div');
+  overlaySpinner.id = 'vf-overlay-spinner-recarga';
+  overlaySpinner.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:flex-start;justify-content:center;padding-top:80px;z-index:6;pointer-events:none';
+  overlaySpinner.innerHTML = `<svg class="loading-spinner" viewBox="0 0 50 50" width="36" height="36"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>`;
+  el.appendChild(overlaySpinner);
+  document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
+
+  const pool = await carregarPoolVF(ehEntradaInicialVF);
+  // se outra chamada mais recente já rodou nesse meio tempo (dois toques
+  // rápidos em filtros diferentes, por exemplo), essa resposta já está
+  // velha - descarta sem escrever nada, pra não sobrescrever o pool
+  // certo (do filtro mais recente) com dados do filtro anterior (F1)
+  if(pool.tokenDestaCargaVF !== vfTokenGeracaoPoolVF){ vfLimparOverlayCargaFiltroVF(el); return; }
+  estadoVF.pool = pool;
+  if(ehEntradaInicialVF && pool.dadosEntradaVF){
+    const {userRow, horarioServidorMs, totalGeralQuestoesVF} = pool.dadosEntradaVF;
+    if(typeof horarioServidorMs === 'number'){
+      offsetRelogioVF = horarioServidorMs - Date.now();
+      ultimaSincronizacaoVF = new Date(horarioServidorMs).toISOString(); // marca o início da sessão como o primeiro "já sincronizado até aqui"
     }
-    const dados = await respostaAnthropic.json();
-    const textoResposta = (dados.content || []).map(b => b.text || '').join('');
-    let parsed;
-    try {
-      parsed = JSON.parse(textoResposta);
-    } catch (e) {
-      return res.status(502).json({ erro: 'Resposta da IA não veio em JSON válido', bruto: textoResposta.slice(0, 500) });
-    }
-    const questoesLimpas = (parsed.questoes || []).map(limparQuestao);
-    return res.status(200).json({ questoes: questoesLimpas });
-  } catch (erro) {
-    return res.status(500).json({ erro: 'Falha inesperada na extração', detalhe: String(erro) });
+    estadoVF.contadorGlobal = userRow?.contador_respostas_vf || 0;
+    vfTotalAfirmacoesNoBanco = totalGeralQuestoesVF ?? null;
+  }
+  if(!pool.length){
+    vfLimparOverlayCargaFiltroVF(el);
+    el.innerHTML = `<p style="padding:24px 4px;color:#888">Nenhum item disponível pra praticar com esses filtros.</p>`;
+    return;
+  }
+  // se a entrada atual ainda não foi respondida, ela é sempre a última do
+  // histórico — remove antes de empilhar uma nova em cima. Sem isso, ela
+  // fica órfã: aponta pra uma instância de item que não é mais a mesma
+  // que está em estadoVF.pool (carregarPoolVF sempre cria instâncias
+  // novas), então respondê-la depois não atualiza o pool em memória — o
+  // algoritmo podia escolher a mesma questão de novo logo em seguida,
+  // achando que ela nunca foi respondida (bug real, achado pelo Fable)
+  const entradaAtual = estadoVF.historico[estadoVF.posicao];
+  if(entradaAtual && entradaAtual.resposta === null){
+    estadoVF.historico.pop();
+    estadoVF.posicao--;
+  }
+  vfLimparOverlayCargaFiltroVF(el); // restaura opacity/pointer-events antes de renderizar a questão de verdade
+  await avancarParaProximaVF();
+}
+
+// restaura o estado normal do #vf-conteudo depois do overlay de
+// carregamento (opacity, pointer-events, remove o spinner) - chamada em
+// todos os pontos de saída de recarregarPoolEContinuarVF, pra nunca
+// ficar "travado" esmaecido/não-clicável por engano
+function vfLimparOverlayCargaFiltroVF(el){
+  el.style.opacity = '';
+  el.style.pointerEvents = '';
+  const spinner = document.getElementById('vf-overlay-spinner-recarga');
+  if(spinner) spinner.remove();
+}
+
+// sincronização com outro aparelho não pode mais bloquear CADA avanço de
+// questão (era um pedágio de rede inteiro por toque em "Próxima", e pior:
+// causava um deadlock real - ver abaixo). Dispara sem esperar, no máximo
+// 1 vez por minuto - não precisa ser instantâneo, sincronizar com outro
+// aparelho em segundo plano já cobre o caso bem
+let ultimaVezQueDisparouSyncMs = 0;
+function dispararSincronizacaoEmSegundoPlanoVF(){
+  const agora = Date.now();
+  if(agora - ultimaVezQueDisparouSyncMs < 60000) return;
+  ultimaVezQueDisparouSyncMs = agora;
+  sincronizarPoolVF().catch(() => {});
+}
+
+async function avancarParaProximaVF(){
+  dispararSincronizacaoEmSegundoPlanoVF(); // não bloqueia mais o avanço
+  const agoraMs = agoraCorrigidoVF();
+  const pick = escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao, estadoVF.respostasDesdeUltimaNova, estadoVF.familiasRecentesVF);
+  if(!pick){
+    document.getElementById('vf-conteudo').innerHTML = `<p style="padding:24px 4px;color:#888">Nada disponível agora.</p>`;
+    document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
+    return;
+  }
+  estadoVF.anteriorVeioDeAprendizado = pick.veioDeAprendizado;
+  // cronômetro por entrada — tempoAtivoMs/ativoDesdeMs em vez de um único
+  // horaInicioMs global (bug real corrigido antes: variável compartilhada
+  // ficava desatualizada se uma pendente antiga fosse respondida depois).
+  // ativoDesdeMs começa null de propósito — só arma DEPOIS de renderizar
+  estadoVF.historico.push({item: pick.item, resposta: null, acertou: null, tempoAtivoMs: 0, ativoDesdeMs: null, apareceuEmMs: agoraMs});
+  estadoVF.posicao = estadoVF.historico.length - 1;
+  // trava de segurança contra toque duplo: clicar "Próxima" e, milissegundos
+  // depois, o dedo ainda solto acertar Verdadeiro/Falso da questão nova antes
+  // mesmo dela ser lida — ignora clique nesses botões por um instante
+  estadoVF.bloqueadoAteMs = agoraMs + 400;
+  limparCanvasDesenhoVF(); // questão nova = rascunho da anterior some
+  // busca o conteúdo pesado (texto/explicação/correção) dessa questão -
+  // se já foi pré-buscada em segundo plano (vfPreBuscarProximasVF, chamada
+  // depois de renderizar a questão anterior), isso é instantâneo (já
+  // está em vfConteudoCompletoCache). Se não, é uma busca rápida de uma
+  // linha só (~50ms), não o pool inteiro como era antes
+  await vfGarantirConteudoCompletoVF(pick.item);
+  renderizarItemVF();
+  retomarTimerVF(); // só agora, com a questão já na tela, o cronômetro começa a contar
+  vfPreBuscarProximasVF(); // não espera - roda solta em segundo plano enquanto o usuário lê
+}
+
+function mudarModuloFiltroVF(){
+  const modulo = document.getElementById('vf-filtro-modulo').value;
+  filtroVF.modulo = modulo || null;
+  filtroVF.publicacao = null;
+  filtroVF.capitulo = null;
+  const elPub = document.getElementById('vf-filtro-publicacao');
+  const elCap = document.getElementById('vf-filtro-capitulo');
+  elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+  elCap.disabled = true;
+  if(!modulo){
+    elPub.innerHTML = '<option value="">Todas as publicações</option>';
+    elPub.disabled = true;
+  }else{
+    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+    elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>
+      `<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`
+    ).join('');
+    elPub.disabled = false;
+  }
+  mudarFiltroVF();
+}
+
+// capítulo é específico de cada publicação, então cascata a partir dela —
+// busca os capítulos que realmente existem em questoes_vf pra essa
+// publicação (não uma lista genérica), e ordena numericamente quando dá
+async function mudarFiltroPublicacaoVF(){
+  const publicacao = document.getElementById('vf-filtro-publicacao').value;
+  filtroVF.publicacao = publicacao || null;
+  filtroVF.capitulo = null;
+  const elCap = document.getElementById('vf-filtro-capitulo');
+  if(!publicacao){
+    elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+    elCap.disabled = true;
+  }else{
+    const bib = bibliografiaCache.find(b => b.id === publicacao);
+    const rotulo = bib?.capitulo_unico ? '' : rotuloCapituloDoLivro(bib?.titulo) + ' ';
+    const {data} = await sb.from('questoes_vf').select('capitulo').eq('bibliografia_id', publicacao).eq('anulada', false);
+    const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
+      .sort((a,b) => (parseFloat(a)||0) - (parseFloat(b)||0) || a.localeCompare(b,'pt'));
+    elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
+      `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
+    ).join('');
+    elCap.disabled = false;
+  }
+  mudarFiltroVF();
+}
+
+// espera um pouco antes de recarregar o pool de verdade - achado real:
+// configurar módulo, depois publicação, depois capítulo em sequência
+// rápida disparava uma busca pesada completa A CADA select individual,
+// cada uma descartando a anterior (que já tinha sido paga em rede/tempo
+// à toa). Cancela qualquer espera pendente e recomeça a cada mudança -
+// só dispara de verdade quando a pessoa já parou de mexer nos filtros
+let vfTimerDebounceRecarregarPoolVF = null;
+function vfRecarregarPoolComDebounceVF(){
+  clearTimeout(vfTimerDebounceRecarregarPoolVF);
+  vfTimerDebounceRecarregarPoolVF = setTimeout(() => {
+    vfTimerDebounceRecarregarPoolVF = null;
+    recarregarPoolEContinuarVF();
+  }, 500);
+}
+
+function mudarFiltroVF(){
+  filtroVF.publicacao = document.getElementById('vf-filtro-publicacao').value || null;
+  filtroVF.capitulo = document.getElementById('vf-filtro-capitulo').value || null;
+  vfRecarregarPoolComDebounceVF();
+}
+
+function toggleFiltroTagVF(tipo){
+  const campo = tipo === 'numero' ? 'numero' : 'lista';
+  filtroVF[campo] = !filtroVF[campo];
+  const btn = document.getElementById('vf-filtro-'+tipo);
+  btn.style.background = filtroVF[campo] ? '#B23A34' : '#fff';
+  btn.style.color = filtroVF[campo] ? '#fff' : '#888';
+  btn.style.borderColor = filtroVF[campo] ? '#B23A34' : '#ddd';
+  vfRecarregarPoolComDebounceVF();
+}
+
+// abre/fecha o bloco de filtros — começa fechado, pra não ocupar espaço
+// da tela à toa quando não está mexendo nele. Transição suave de altura
+// (max-height/opacity, ver CSS de .vf-filtros-fechado) em vez do
+// display:none instantâneo de antes - achado real: o salto abrupto de
+// altura (empurrando tudo abaixo pra baixo/cima de uma vez, sem
+// animação) disparava um artefato visual de 1 frame do Safari (uma
+// linha escura bem abaixo do cabeçalho), visível só durante a transição
+function alternarFiltrosVF(){
+  const conteudo = document.getElementById('vf-filtros-conteudo');
+  const chevron = document.getElementById('vf-chevron-filtros');
+  const abrindo = conteudo.classList.contains('vf-filtros-fechado');
+  chevron.style.transform = abrindo ? 'rotate(180deg)' : 'rotate(0deg)';
+  if(abrindo){
+    // mede a altura real ANTES de mexer em qualquer coisa (scrollHeight
+    // reflete o conteúdo interno de verdade, mesmo estando clipado/fechado)
+    const alturaReal = conteudo.scrollHeight;
+    conteudo.style.maxHeight = '0px'; // parte explicitamente de 0 (não do 500px genérico da regra base)
+    conteudo.classList.remove('vf-filtros-fechado'); // libera opacity/margin-top agora
+    conteudo.offsetHeight; // força o navegador a "registrar" o 0px antes de mudar - senão as duas mudanças se fundem num pulo só, sem transição
+    conteudo.style.maxHeight = alturaReal + 'px'; // agora sim anima de 0 até a altura real - sem zona morta
+    setTimeout(() => { conteudo.style.maxHeight = ''; }, 300); // depois de aberto, volta a obedecer o max-height genérico da regra base (500px) - evita ficar preso num valor antigo se a tela girar e precisar de mais espaço depois
+  }else{
+    const alturaReal = conteudo.scrollHeight;
+    conteudo.style.maxHeight = alturaReal + 'px'; // parte explicitamente da altura real atual (não do 500px genérico)
+    conteudo.offsetHeight; // mesma garantia do outro sentido
+    conteudo.style.maxHeight = '0px';
+    conteudo.classList.add('vf-filtros-fechado');
   }
 }
+
+async function popularFiltroModuloVF(){
+  const el = document.getElementById('vf-filtro-modulo');
+  if(el.dataset.populado) return;
+  await vfCarregarBibliografiaCacheVF(); // idempotente - garante que o cache de bibliografia já existe
+  // achado real: buscar bibliografia_id de cada uma das 7.700+ questões
+  // pra deduplicar no navegador era pesado e causava lentidão perceptível
+  // (inclusive um artefato visual de reflow). A função no banco já
+  // devolve só os módulos distintos, poucas linhas
+  const {data} = await sb.rpc('modulos_com_questoes_vf');
+  const modulosComVF = new Set((data||[]).map(r => r.modulo_pscpp).filter(Boolean));
+  el.innerHTML = '<option value="">Todos os módulos</option>' + [...modulosComVF].sort((a,b)=>a.localeCompare(b,'pt')).map(m=>
+    `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`
+  ).join('');
+  el.dataset.populado = '1';
+  await vfRestaurarUIFiltroVF(); // reflete visualmente o filtro que já veio restaurado do fechamento anterior do app
+}
+
+// atualiza os controles visuais (selects em cascata + botões Número/Lista)
+// pra refletir filtroVF já restaurado do localStorage - sem isso, o
+// filtro funcionava "nos bastidores" mas a tela mostrava "Todos os
+// módulos" mesmo com um filtro ativo de verdade
+async function vfRestaurarUIFiltroVF(){
+  const {modulo, publicacao, capitulo, numero, lista} = filtroVF;
+  if(modulo){
+    document.getElementById('vf-filtro-modulo').value = modulo;
+    const elPub = document.getElementById('vf-filtro-publicacao');
+    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+    elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>
+      `<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`
+    ).join('');
+    elPub.disabled = false;
+  }
+  if(publicacao){
+    document.getElementById('vf-filtro-publicacao').value = publicacao;
+    const elCap = document.getElementById('vf-filtro-capitulo');
+    const bib = bibliografiaCache.find(b => b.id === publicacao);
+    const rotulo = bib?.capitulo_unico ? '' : rotuloCapituloDoLivro(bib?.titulo) + ' ';
+    const {data} = await sb.from('questoes_vf').select('capitulo').eq('bibliografia_id', publicacao).eq('anulada', false);
+    const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
+      .sort((a,b) => (parseFloat(a)||0) - (parseFloat(b)||0) || a.localeCompare(b,'pt'));
+    elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
+      `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
+    ).join('');
+    elCap.disabled = false;
+    if(capitulo) elCap.value = capitulo;
+  }
+  if(numero || lista){
+    ['numero', 'lista'].forEach(tipo => {
+      if(!filtroVF[tipo]) return;
+      const btn = document.getElementById('vf-filtro-'+tipo);
+      btn.style.background = '#B23A34';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#B23A34';
+    });
+  }
+  // o chevron sempre começa fechado, independente de ter filtro ativo ou
+  // não - decisão do Carlos: nova sessão sem filtro, ou retomando uma
+  // sessão com filtro já aplicado, os dois casos vêm com a caixinha
+  // fechada. Os valores já ficaram refletidos nos selects acima, então
+  // se a pessoa expandir manualmente, o filtro certo já está lá
+}
+
+function renderizarItemVF(){
+  const el = document.getElementById('vf-conteudo');
+  if(!estadoVF || estadoVF.posicao < 0) return;
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  if(!entrada) return;
+  const item = entrada.item;
+  if(item.explicacao === undefined){
+    // conteúdo pesado (texto/explicação/correção) ainda não chegou - busca
+    // agora e re-renderiza assim que tiver. Na prática isso quase nunca
+    // aparece de verdade: avancarParaProximaVF já espera o conteúdo antes
+    // de chamar renderizarItemVF, e a pré-busca em segundo plano
+    // (vfPreBuscarProximasVF) geralmente já deixa a próxima pronta
+    // enquanto você ainda está lendo a atual. Essa é só uma rede de
+    // segurança pra nunca mostrar "undefined" na tela
+    el.innerHTML = `<div style="padding:60px 20px;text-align:center;color:#999">Carregando...</div>`;
+    vfGarantirConteudoCompletoVF(item).then(() => {
+      if(estadoVF.historico[estadoVF.posicao]?.item === item) renderizarItemVF();
+    });
+    return;
+  }
+  const jaRespondida = entrada.resposta !== null;
+  const publicacao = vfBibliografiaCache.get(item.bibliografia_id)?.titulo || 'Publicação não identificada';
+  // se a questão mudar (ex: clicou em Próxima) enquanto ainda estava
+  // editando algum dos três campos (afirmação/correção/explicação), força
+  // o blur ANTES de qualquer outra coisa - garante que o salvamento (que
+  // roda no blur) sempre seja disparado antes do textarea ser destruído
+  // pelo innerHTML novo mais abaixo. Achado real: sem isso, o textarea era
+  // destruído sem passar pelo blur, descartando a edição inteira em
+  // silêncio - o mesmo tipo de perda de dados já corrigido antes pro
+  // modal de explicação, mas por esse outro caminho (trocar de questão)
+  document.getElementById('vf-textarea-enunciado')?.blur();
+  document.getElementById('vf-textarea-correcao')?.blur();
+  document.getElementById('vf-textarea-explicacao')?.blur();
+  // trava de segurança: se a questão mudar (ex: clicou em Próxima) enquanto
+  // ainda estava editando a afirmação, o textarea é destruído sem passar
+  // pelo blur — sem isso, a barra de baixo podia ficar escondida pra sempre
+  document.getElementById('bottom-nav')?.classList.remove('teclado-aberto');
+  document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
+
+  let blocoResultado = '';
+  if(jaRespondida){
+    const cor = entrada.acertou ? '#3B6D11' : '#A32D2D';
+    const textoResultado = `${entrada.acertou ? 'Acertou!' : 'Errou!'} É ${item.resposta ? 'VERDADEIRO' : 'FALSO'}`;
+    const atributosEdicaoCorrecao = `id="vf-correcao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarCorrecao(event)" ontouchend="vfSoltarPressionarCorrecao(event)" ontouchmove="vfCancelarPressionarCorrecaoSilencioso(event)" onmousedown="vfIniciarPressionarCorrecao(event)" onmouseup="vfSoltarPressionarCorrecao()" onmouseleave="vfCancelarPressionarCorrecaoSilencioso()"`;
+    const botaoAnotacao = entrada.anotacaoDataUrl ? `
+        <button class="btn-icone-pequeno" style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="vfAbrirAnotacaoSalvaVF()" title="Ver o que você escreveu">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>` : '';
+    blocoResultado = `
+      <div style="height:1px;background:#eee;margin:14px 0"></div>
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:34px">
+        ${botaoAnotacao}
+        <span style="font-weight:700;font-size:var(--fs-e);text-align:center;color:${cor};letter-spacing:.02em">${textoResultado}</span>
+        <button class="btn-icone-pequeno" style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="abrirExplicacaoVF('${item.id}')" title="Ver explicação">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </button>
+      </div>
+      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;margin-left:-8px;margin-right:-8px;margin-bottom:-8px;text-align:left;font-weight:400;position:relative;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
+    `;
+  }
+
+  // preview do mnemônico/nota - card próprio, separado do card da
+  // resposta (pedido do Carlos). Convite (sem nota ainda, sabemos na
+  // hora pelo Set notasVF, sem precisar de busca) ou vazio aguardando a
+  // busca assíncrona (vfCarregarPreviewNotaVF, chamada logo abaixo, fora
+  // desse template) preencher com o texto de verdade
+  const cardNotaHtml = !jaRespondida ? '' : (notasVF.has(item.id)
+    ? `<div class="card-questao" id="vf-preview-nota" style="margin-top:14px"></div>`
+    : `<div class="card-questao" id="vf-preview-nota" onclick="abrirNotaVF('${item.id}')" style="margin-top:14px;border:1.5px dashed #ddd;box-shadow:none;display:flex;gap:6px;align-items:center;justify-content:center;color:#999;cursor:pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+        ${VF_ICONE_LAMPADA_SVG('20', '23', '#999')}
+      </div>`);
+
+
+  const tagsPublicacao = [
+    item.eh_numero ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center">NÚMERO</span>` : '',
+    item.eh_lista ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center">LISTA</span>` : '',
+    item.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''
+  ].filter(Boolean).join('');
+
+  // tags customizadas (livres, criadas pelo usuário) - borda e texto na
+  // cor de marca, fundo branco (diferencia visualmente de uma tag
+  // automática do sistema como NÚMERO/LISTA, que tem fundo sólido).
+  // Clicar em qualquer uma abre o popup de gerenciar
+  const tagsDaQuestao = vfTagsPorQuestaoVF.get(item.id) || [];
+  const tagsCustomizadasHtml = tagsDaQuestao.map(t =>
+    `<span onclick="vfAbrirPopupTagsVF('${item.id}')" style="color:#B23A34;font-weight:600;font-size:var(--fs-b);border:1.5px solid #B23A34;border-radius:8px;padding:3px 8px;white-space:nowrap;cursor:pointer">${escapeHtml(t.nome)}</span>`
+  ).join('');
+  // ícone de tag + "+" combinados - botão só de adicionar quando ainda
+  // não tem nenhuma tag customizada nessa questão
+  const iconeTagAdicionar = `<button class="btn-icone-pequeno" onclick="vfAbrirPopupTagsVF('${item.id}')" title="Adicionar tag" style="width:auto;height:24px;padding:0 8px;gap:3px;position:relative">
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12 22l-9-9V4a1 1 0 0 1 1-1h9l7.59 7.59a2 2 0 0 1 0 2.82Z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>`;
+
+  el.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:2px;padding:2px 2px 14px;color:#888;font-size:var(--fs-c)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="display:flex;align-items:center;gap:6px">${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao} certas nessa sessão <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
+      </div>
+    </div>
+    <div class="card-questao">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 6px">
+        <div>
+          <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0;line-height:1.25">${escapeHtml(publicacao)}</p>
+          ${item.capitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:1px 0 0 0;line-height:1.25">${rotuloCapituloDoLivro(publicacao)} ${escapeHtml(String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))}</p>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center;flex-shrink:0;max-width:60%">
+          ${tagsPublicacao}
+          ${tagsCustomizadasHtml}
+          ${iconeTagAdicionar}
+        </div>
+      </div>
+      <div class="enunciado" id="vf-enunciado-atual" style="margin-top:10px;position:relative" data-editavel-vf="1" ontouchstart="vfIniciarPressionarEnunciado(event)" ontouchend="vfSoltarPressionarEnunciado(event)" ontouchmove="vfCancelarPressionarEnunciadoSilencioso(event)" onmousedown="vfIniciarPressionarEnunciado(event)" onmouseup="vfSoltarPressionarEnunciado()" onmouseleave="vfCancelarPressionarEnunciadoSilencioso()">${formatarTextoItemVF(item.texto)}</div>
+      ${blocoResultado}
+    </div>
+    ${cardNotaHtml}
+  `;
+
+  renderizarBarraFixaVF(item, jaRespondida);
+  // marcação de texto só existe pra recuperar se essa questão já foi
+  // respondida ANTES (idRespostaVF já foi gravado num momento anterior) -
+  // sem isso ainda, não tem o que carregar, o enunciado já vem limpo
+  if(entrada.idRespostaVF) vfCarregarMarcacoesTextoVF('flash', entrada.idRespostaVF, item.id);
+  // preview de mnemônico/nota - só busca se já sabemos (via notasVF) que
+  // existe alguma; se não existe, o convite já foi montado direto no
+  // HTML acima, sem precisar de busca nenhuma
+  if(jaRespondida && notasVF.has(item.id)) vfCarregarPreviewNotaVF(item.id);
+}
+
+// ---- editar a afirmação segurando nela (só Carlos, é conteúdo) ----
+// abre um textarea no PRÓPRIO lugar da afirmação, sem sair da tela nem
+// abrir modal. Toque fora salva. Pausa o cronômetro da questão atual
+// enquanto edita (se não tiver nada pra pausar, as funções já existentes
+// simplesmente não fazem nada, sem risco)
+let vfTimerPressionarEnunciado = null;
+const VF_DURACAO_PRESSIONAR_ENUNCIADO_MS = 500;
+
+let vfMoveuDuranteToqueEnunciado = false;
+let vfPosicaoInicialPressionarEnunciadoVF = null;
+function vfIniciarPressionarEnunciado(evento){
+  vfMoveuDuranteToqueEnunciado = false;
+  clearTimeout(vfTimerPressionarEnunciado);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarEnunciadoVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
+  // editar (segurar) continua só depois de responder - copiar (toque
+  // rápido, sem virar edição) funciona em qualquer momento agora
+  const entradaAtual = estadoVF && estadoVF.posicao >= 0 ? estadoVF.historico[estadoVF.posicao] : null;
+  const jaRespondida = entradaAtual && entradaAtual.resposta !== null;
+  if(souCarlos() && jaRespondida){
+    vfTimerPressionarEnunciado = setTimeout(() => {
+      vfTimerPressionarEnunciado = null;
+      vfIniciarEdicaoEnunciadoVF();
+    }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+  }
+}
+// usado no touchmove/mouseleave - moveu ou saiu = não é toque limpo, só
+// cancela a espera de edição, NÃO copia (senão um arrasto/scroll ia
+// disparar cópia sem querer). Tolerância pro tremor natural da Apple
+// Pencil "parada" (mesma razão documentada em VF_LIMIAR_ARRASTO_NAV_ITEM_PX)
+function vfCancelarPressionarEnunciadoSilencioso(evento){
+  if(evento && vfPosicaoInicialPressionarEnunciadoVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarEnunciadoVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarEnunciadoVF.y;
+      if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
+    }
+  }
+  vfMoveuDuranteToqueEnunciado = true;
+  clearTimeout(vfTimerPressionarEnunciado);
+  vfTimerPressionarEnunciado = null;
+}
+// usado no touchend/mouseup - se a edição não tinha entrado (nem começou
+// a virar edição, nem já virou) e não houve movimento no meio, foi um
+// toque limpo -> copia. Funciona tanto pro Carlos (toque rápido) quanto
+// pra qualquer outro usuário (nunca vira edição, então qualquer toque
+// limpo copia)
+function vfSoltarPressionarEnunciado(evento){
+  clearTimeout(vfTimerPressionarEnunciado);
+  vfTimerPressionarEnunciado = null;
+  const div = document.getElementById('vf-enunciado-atual');
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueEnunciado){
+    if(evento) evento.preventDefault(); // evita o mouseup sintético que o Safari gera após um toque real - sem isso, a cópia disparava 2x e o selinho "Copiado" piscava (reiniciava a animação no meio)
+    vfCopiarComProtecaoDuploToqueVF(div, evento);
+  }
+}
+
+function vfIniciarEdicaoEnunciadoVF(){
+  if(!estadoVF || estadoVF.posicao < 0) return;
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  if(!entrada) return;
+  const item = entrada.item;
+  const div = document.getElementById('vf-enunciado-atual');
+  if(!div || div.dataset.editando === '1') return; // já editando, não abre de novo
+  div.dataset.editando = '1';
+  pausarTimerVF();
+  const textoOriginal = item.texto;
+  // padding:6px + margin:-6px se cancelam pra letra ficar exatamente onde
+  // estava (não é padding:0 mais) - mas o quadro/contorno em volta fica
+  // maior, com respiro de verdade entre a borda e o texto
+  div.innerHTML = `<textarea id="vf-textarea-enunciado" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:inherit;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default">${escapeHtml(textoOriginal)}</textarea>`;
+  const textarea = document.getElementById('vf-textarea-enunciado');
+  vfAutoAlturaTextareaVF(textarea);
+  textarea.addEventListener('input', () => vfAutoAlturaTextareaVF(textarea));
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.addEventListener('blur', () => vfSalvarEdicaoEnunciadoVF(item.id, textoOriginal));
+}
+
+// altura acompanha as linhas reais do texto - uma frase de 2 linhas abre
+// com o quadro do tamanho de 2 linhas, não um tamanho fixo grande demais.
+// Cresce sozinho enquanto digita, se passar pra mais linhas
+function vfAutoAlturaTextareaVF(textarea){
+  textarea.style.height = 'auto';
+  textarea.style.height = textarea.scrollHeight + 'px';
+}
+
+async function vfSalvarEdicaoEnunciadoVF(questaoId, textoOriginal){
+  const textarea = document.getElementById('vf-textarea-enunciado');
+  const div = document.getElementById('vf-enunciado-atual');
+  if(!textarea || !div) return;
+  const textoNovo = textarea.value.trim();
+  div.dataset.editando = '0';
+  // trava de segurança: troca de innerHTML no meio do blur pode atrapalhar
+  // o focusout de disparar limpo, deixando a barra de baixo escondida
+  // (mesma causa do bug que já apareceu com o seletor de cor nativo)
+  document.getElementById('bottom-nav')?.classList.remove('teclado-aberto');
+  document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
+  if(!textoNovo || textoNovo === textoOriginal){
+    // nada mudou (ou ficou vazio, o que não é válido) - só volta ao normal
+    div.innerHTML = formatarTextoItemVF(textoOriginal);
+    retomarTimerVF();
+    return;
+  }
+  // atualiza local imediatamente (sensação instantânea), salva no banco
+  // em seguida
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  const novoNPalavras = textoNovo.trim().split(/\s+/).filter(Boolean).length;
+  if(entrada && entrada.item && entrada.item.id === questaoId){
+    entrada.item.texto = textoNovo;
+    entrada.item.n_palavras = novoNPalavras; // senão o algoritmo continua estimando tempo de leitura com base no texto antigo
+  }
+  div.innerHTML = formatarTextoItemVF(textoNovo);
+  retomarTimerVF();
+  // sem isso, a próxima vez que essa questão for buscada de novo (por
+  // exemplo depois de trocar de filtro) vfGarantirConteudoCompletoVF
+  // serviria o texto ANTIGO direto do cache, e a edição "sumia" da tela
+  // pelo resto da sessão mesmo já estando salva certinho no banco (D1)
+  const cacheAtualEnunciado = vfConteudoCompletoCache.get(questaoId) || {};
+  vfConteudoCompletoCache.set(questaoId, {...cacheAtualEnunciado, texto: textoNovo});
+  const {error} = await sb.from('questoes_vf').update({texto: textoNovo, n_palavras: novoNPalavras}).eq('id', questaoId);
+  if(error){
+    alert('Erro ao salvar a edição da afirmação: '+error.message);
+  }
+}
+
+// copia só a afirmação verdadeira (o texto original se a questão é
+// verdadeira, ou a correção se for falsa) - rápido, sem formatação extra
+// copia o texto exato passado (não precisa mais buscar "afirmação
+// verdadeira" com lógica própria - agora cada bloco de texto copia
+// exatamente o que está escrito nele mesmo)
+// decide COMO copiar dependendo de quem tocou - dedo/mouse copia na
+// hora (não tem conflito nenhum ali). Caneta espera um pouco antes de
+// copiar de verdade, dando tempo do sistema de duplo toque (que troca
+// caneta<->borracha) confirmar uma troca nesse meio tempo - se isso
+// acontecer, cancela a cópia, já que aquele toque era metade de um
+// duplo toque, não um toque limpo pra copiar
+function vfCopiarComProtecaoDuploToqueVF(elemento, evento){
+  const tocouComCaneta = evento && vfEhToqueDeCaneta(evento.changedTouches?.[0]);
+  if(!tocouComCaneta){
+    vfCopiarTextoElementoVF(elemento);
+    return;
+  }
+  // guarda o estado da ferramenta agora - se um duplo toque confirmar
+  // troca antes do timeout disparar, vfModoBorracha vai ter mudado
+  const modoBorrachaAntes = vfModoBorracha;
+  // um pouco maior que a janela de duplo toque (280ms) - margem de
+  // segurança pra garantir que a confirmação (se vier) já aconteceu
+  setTimeout(() => {
+    if(vfModoBorracha !== modoBorrachaAntes) return; // duplo toque confirmou troca - não copia
+    vfCopiarTextoElementoVF(elemento);
+  }, 320);
+}
+
+async function vfCopiarTextoElementoVF(elemento){
+  // remove qualquer selinho "Copiado" que ainda esteja lá (de um clique
+  // duplo rápido, antes do anterior sumir) ANTES de ler o texto - senão
+  // o textContent incluía a palavra "Copiado" junto no texto copiado
+  elemento.querySelector(':scope > .vf-selinho-copiado')?.remove();
+  const texto = elemento.textContent;
+  try{
+    await navigator.clipboard.writeText(texto.trim());
+    vfMostrarSelinhoCopiadoVF(elemento);
+  }catch(e){
+    alert('Não consegui copiar automaticamente. Tenta selecionar o texto manualmente.');
+  }
+}
+
+// copiar tocando numa linha da explicação do Quest ("Correto: texto",
+// alternativas, trechos da fonte) - ignora o "Correto:"/marcador em
+// negrito (<strong>), copiando só o texto de verdade que vem depois,
+// que é o que a pessoa quer colar em outro lugar
+async function vfCopiarLinhaExplicacaoQuestVF(elemento){
+  elemento.querySelector(':scope > .vf-selinho-copiado')?.remove();
+  const clone = elemento.cloneNode(true);
+  clone.querySelectorAll('strong').forEach(el => el.remove());
+  const texto = clone.textContent;
+  try{
+    await navigator.clipboard.writeText(texto.trim());
+    vfMostrarSelinhoCopiadoVF(elemento);
+  }catch(e){
+    alert('Não consegui copiar automaticamente. Tenta selecionar o texto manualmente.');
+  }
+}
+
+// toca em qualquer linha da explicação do Quest (alternativa, "Correto:",
+// trecho da fonte) pra copiar só aquele trecho específico - detecta a
+// linha mais próxima do toque (.linha-numerada tem marcador+texto juntos,
+// .enunciado-linha é só texto solto, tipo os parágrafos de TRECHOS DA FONTE)
+function vfCliqueNaExplicacaoQuestVF(evento){
+  const linha = evento.target.closest('.linha-numerada, .enunciado-linha');
+  if(linha) vfCopiarLinhaExplicacaoQuestVF(linha);
+}
+
+// selinho de texto "Copiado" flutuando acima do elemento, estilo apps de
+// banco - some sozinho depois de um tempo
+function vfMostrarSelinhoCopiadoVF(elemento){
+  elemento.querySelector(':scope > .vf-selinho-copiado')?.remove(); // se já tinha um preso de um toque anterior
+  const selinho = document.createElement('span');
+  selinho.className = 'vf-selinho-copiado';
+  selinho.textContent = 'Copiado';
+  selinho.style.cssText = 'position:absolute;top:-8px;left:50%;transform:translate(-50%,-100%);background:#111;color:#fff;font-size:var(--fs-a);font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.15s ease;z-index:2';
+  elemento.appendChild(selinho);
+  requestAnimationFrame(() => { selinho.style.opacity = '1'; });
+  setTimeout(() => {
+    selinho.style.opacity = '0';
+    setTimeout(() => selinho.remove(), 200);
+  }, 1200);
+}
+
+// ---- editar a correção ("Correto:") segurando nela, mesmo sistema já
+// usado no enunciado e na explicação ----
+let vfTimerPressionarCorrecao = null;
+let vfMoveuDuranteToqueCorrecao = false;
+let vfPosicaoInicialPressionarCorrecaoVF = null;
+function vfIniciarPressionarCorrecao(evento){
+  vfMoveuDuranteToqueCorrecao = false;
+  clearTimeout(vfTimerPressionarCorrecao);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarCorrecaoVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
+  if(souCarlos()){
+    vfTimerPressionarCorrecao = setTimeout(() => {
+      vfTimerPressionarCorrecao = null;
+      vfIniciarEdicaoCorrecaoVF();
+    }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+  }
+}
+function vfCancelarPressionarCorrecaoSilencioso(evento){
+  if(evento && vfPosicaoInicialPressionarCorrecaoVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarCorrecaoVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarCorrecaoVF.y;
+      if(Math.hypot(dx, dy) < 25) return;
+    }
+  }
+  vfMoveuDuranteToqueCorrecao = true;
+  clearTimeout(vfTimerPressionarCorrecao);
+  vfTimerPressionarCorrecao = null;
+}
+function vfSoltarPressionarCorrecao(evento){
+  clearTimeout(vfTimerPressionarCorrecao);
+  vfTimerPressionarCorrecao = null;
+  const div = document.getElementById('vf-correcao-atual');
+  // mesma lógica do enunciado - ver comentário lá
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueCorrecao){
+    if(evento) evento.preventDefault();
+    vfCopiarComProtecaoDuploToqueVF(div, evento);
+  }
+}
+
+function vfIniciarEdicaoCorrecaoVF(){
+  if(!estadoVF || estadoVF.posicao < 0) return;
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  if(!entrada) return;
+  const item = entrada.item;
+  const div = document.getElementById('vf-correcao-atual');
+  if(!div || div.dataset.editando === '1') return;
+  div.dataset.editando = '1';
+  const textoOriginal = item.correcao || item.texto;
+  div.innerHTML = `<textarea id="vf-textarea-correcao" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:inherit;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default">${escapeHtml(textoOriginal)}</textarea>`;
+  const textarea = document.getElementById('vf-textarea-correcao');
+  vfAutoAlturaTextareaVF(textarea);
+  textarea.addEventListener('input', () => vfAutoAlturaTextareaVF(textarea));
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.addEventListener('blur', () => vfSalvarEdicaoCorrecaoVF(item.id, textoOriginal));
+}
+
+async function vfSalvarEdicaoCorrecaoVF(questaoId, textoOriginal){
+  const textarea = document.getElementById('vf-textarea-correcao');
+  const div = document.getElementById('vf-correcao-atual');
+  if(!textarea || !div) return;
+  const textoNovo = textarea.value.trim();
+  div.dataset.editando = '0';
+  document.getElementById('bottom-nav')?.classList.remove('teclado-aberto');
+  document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
+  if(!textoNovo || textoNovo === textoOriginal){
+    div.innerHTML = formatarTextoItemVF(textoOriginal);
+    return;
+  }
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  if(entrada && entrada.item && entrada.item.id === questaoId) entrada.item.correcao = textoNovo;
+  div.innerHTML = formatarTextoItemVF(textoNovo);
+  const cacheAtualCorrecao = vfConteudoCompletoCache.get(questaoId) || {};
+  vfConteudoCompletoCache.set(questaoId, {...cacheAtualCorrecao, correcao: textoNovo});
+  const {error} = await sb.from('questoes_vf').update({correcao: textoNovo}).eq('id', questaoId);
+  if(error){
+    alert('Erro ao salvar a edição da correção: '+error.message);
+  }
+}
+
+function renderizarBarraFixaVF(item, jaRespondida){
+  const barraFixa = document.getElementById('vf-barra-fixa');
+  barraFixa.className = 'vf-barra-fixa';
+  const podeVoltar = estadoVF.posicao > 0;
+  const linhaPrincipal = jaRespondida
+    ? `<button class="btn-secundario" style="flex:1" ${podeVoltar?'':'disabled'} onclick="anteriorVF()">← Anterior</button>
+       <button class="btn-primario" style="flex:1" onclick="proximoVF()">Próxima →</button>`
+    : `<button class="btn-secundario vf-btn-resposta" style="flex:1" onclick="responderVF(false)">Falso</button>
+       <button class="btn-secundario vf-btn-resposta" style="flex:1" onclick="responderVF(true)">Verdadeiro</button>`;
+
+  barraFixa.innerHTML = `
+    <div class="vf-barra-fixa-principal">${linhaPrincipal}</div>
+    <div class="vf-barra-fixa-acoes">
+      <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoVF('${item.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        <span>Excluir</span>
+      </button>
+      <button class="banco-acao-btn ${favoritosVF.has(item.id)?'favoritada':''}" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar(event)" ontouchend="vfCancelarPressionarFavoritar(event,'${item.id}')" ontouchmove="vfCancelarPressionarFavoritar(event)" onmousedown="vfIniciarPressionarFavoritar(event)" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
+        <svg viewBox="0 0 24 24" fill="${favoritosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
+        <span>Favoritar</span>
+      </button>
+      <button class="banco-acao-btn" onclick="abrirNotaVF('${item.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M17 4v5h3"/></svg>
+        <span>Notas</span>
+        ${notasVF.has(item.id)?'<span class="badge-dot" style="background:#888"></span>':''}
+      </button>
+      <button class="banco-acao-btn ${flashsSalvosVF.has(item.id)?'favoritada':''}" onclick="vfAbrirEscolhaMotivoSalvarVF('${item.id}')" ontouchstart="vfIniciarPressionarSalvar(event)" ontouchend="vfCancelarPressionarSalvar(event,'${item.id}')" ontouchmove="vfCancelarPressionarSalvar(event)" onmousedown="vfIniciarPressionarSalvar(event)" onmouseup="vfCancelarPressionarSalvar()" onmouseleave="vfCancelarPressionarSalvar()">
+        <svg viewBox="0 0 24 24" fill="${flashsSalvosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span>Salvar</span>
+      </button>
+    </div>
+  `;
+  medirAlturaBarraFixaVF(); // mede de verdade — testei e confirmei que tela
+  // estreita + fonte de acessibilidade maior pode quebrar a fileira de
+  // ações em várias linhas, ficando bem mais alta que um número fixo previa
+}
+
+function medirAlturaBarraFixaVF(){
+  const barraFixa = document.getElementById('vf-barra-fixa');
+  const conteudo = document.getElementById('vf-conteudo');
+  if(!barraFixa || !conteudo) return;
+  const altura = barraFixa.offsetHeight;
+  if(altura > 0) conteudo.style.paddingBottom = (altura + 20) + 'px'; // +20px de respiro extra
+  // reflete a altura real da barra fixa numa variável CSS - usada pelo
+  // balão da sessão pra ficar acima dela, só quando ela realmente pode
+  // sobrepor ele. Achado real: a partir de 1100px de largura (telas
+  // largas/paisagem), a barra fixa passa a começar em left:250px (depois
+  // do menu lateral) - nessa faixa ela nunca ocupa a mesma área
+  // horizontal onde o balão fica (à esquerda), então somar essa altura
+  // ali só empurrava o balão pra cima sem necessidade nenhuma. Só abaixo
+  // de 1100px (retrato) a barra ocupa a largura toda e pode sobrepor
+  const larguraEstreita = window.innerWidth < 1100;
+  const alturaConsiderada = (larguraEstreita && !barraFixa.classList.contains('hidden')) ? altura : 0;
+  document.documentElement.style.setProperty('--vf-barra-fixa-altura', alturaConsiderada + 'px');
+}
+
+async function responderVF(resposta){
+  if(!estadoVF) return;
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  if(!entrada || entrada.resposta !== null) return;
+  const agoraMs = agoraCorrigidoVF();
+  if(agoraMs < (estadoVF.bloqueadoAteMs||0)) return; // toque duplo acidental logo após a questão aparecer — ignora
+  vfDespausarSeNecessarioVF(); // responder é sinal claro de que está ativo - esquecimento de apertar "Retomar" não deveria bloquear o progresso
+  const item = entrada.item;
+  // tempo ATIVO: o que já foi acumulado em pausas anteriores, mais o
+  // trecho corrente se ainda estiver ativa agora — é isso que alimenta o
+  // algoritmo (não conta tempo fora do app, tela bloqueada, etc)
+  const tempoAtivoMsFinal = (entrada.tempoAtivoMs||0) + (entrada.ativoDesdeMs != null ? (agoraMs - entrada.ativoDesdeMs) : 0);
+  entrada.tempoAtivoMs = tempoAtivoMsFinal; // persiste o valor final completo na entrada - sem isso, o painel de estatísticas da sessão lia só o acumulado parcial de antes da última pausa (achado real)
+  const tempoS = tempoAtivoMsFinal / 1000;
+  // tempo BRUTO: do momento que a questão apareceu até agora, sem
+  // descontar pausa nenhuma — só pro log, pra calibração futura poder
+  // comparar quanto as pausas realmente pesam
+  const tempoBrutoMs = agoraMs - entrada.apareceuEmMs;
+  const acertou = resposta === item.resposta;
+
+  entrada.resposta = resposta;
+  entrada.acertou = acertou;
+  // os botões mudam de posição/rótulo assim que essa resposta é
+  // registrada (Verdadeiro/Falso vira Anterior/Próxima, na MESMA posição
+  // física da tela) - sem essa trava, um toque duplo rápido no mesmo
+  // lugar (ou o dedo/caneta ainda pressionando quando o botão novo
+  // aparece) acionava Próxima/Anterior sem querer, avançando ou voltando
+  // antes da pessoa ver o resultado. Checada em proximoVF/anteriorVF
+  estadoVF.bloqueadoAteMs = agoraMs + 400;
+  estadoVF.respondidasSessao++;
+  if(acertou) estadoVF.acertosSessao++;
+  vfPersistirEstadoSessaoVF(); // guarda o estado real da sessão - sem isso, fechar e reabrir o app "zerava" as questões da sessão mesmo com a sessão ainda pausada/ativa
+
+  const estadoAntes = item.estado;
+  const intervaloAntes = item.intervalo_horas;
+  entrada.estadoAntesDeResponder = estadoAntes; // achado real: item.estado é mutado logo abaixo (Object.assign), então precisa desse snapshot separado pro painel de estatísticas conseguir saber depois se essa questão era nova ou repetição NO MOMENTO em que foi respondida
+
+  // Regra 1 (fluxo garantido de novas): reseta o contador toda vez que a
+  // questão SERVIDA (não a resultante) era 'nova', não importa o caminho
+  // que a trouxe até aqui
+  if(!estadoAntes || estadoAntes === 'nova') estadoVF.respostasDesdeUltimaNova = 0;
+  else estadoVF.respostasDesdeUltimaNova = (estadoVF.respostasDesdeUltimaNova || 0) + 1;
+
+  // Regra 2 (anti-irmãs): registra a família dessa questão no buffer das
+  // últimas GAP_FAMILIA respondidas (fila - descarta a mais antiga)
+  if(item.familiaId){
+    if(!estadoVF.familiasRecentesVF) estadoVF.familiasRecentesVF = [];
+    estadoVF.familiasRecentesVF.push(item.familiaId);
+    if(estadoVF.familiasRecentesVF.length > VF_ALGO.GAP_FAMILIA) estadoVF.familiasRecentesVF.shift();
+  }
+
+  const contadorNoMomento = estadoVF.contadorGlobal;
+  const novoEstadoItem = registrarRespostaAlgoritmoVF(item, acertou, tempoS, agoraMs, contadorNoMomento);
+  Object.assign(item, novoEstadoItem);
+  estadoVF.contadorGlobal = contadorNoMomento + 1; // otimista, sincroniza com o servidor abaixo
+
+  // guarda o estado local (já calculado, correto) numa "lista de espera" —
+  // se o filtro mudar antes do upsert terminar, carregarPoolVF usa esse
+  // valor em vez do que ainda está desatualizado no banco. Sem isso, uma
+  // troca de filtro rápida podia buscar essa questão como "nova" de novo,
+  // porque o upsert ainda não tinha chegado no servidor
+  escritasPendentesVF.set(item.id, {...item});
+
+  vfSalvarEClimparAnotacaoVF(entrada); // guarda o que foi desenhado como imagem e limpa o canvas, senão fica em cima do resultado
+  renderizarItemVF(); // mostra o resultado na hora, sem esperar o banco
+
+  // registra a promise do upsert dessa questão, acessível de fora - se o
+  // usuário favoritar ESSA MESMA questão rapidamente (antes do upsert
+  // terminar), o favoritar precisa esperar esse upsert original completar
+  // antes de aplicar o encolhimento de intervalo por cima, senão os dois
+  // updates competem e o mais lento (não necessariamente o mais recente)
+  // vence, podendo deixar o intervalo cheio no banco mesmo a tela
+  // mostrando encolhido (C2 do relatório da Fable)
+  const promiseRespostaVF = (async () => {
+    const [rpcResultado, logRespostaResultado] = await Promise.all([
+      sb.rpc('incrementar_contador_vf', {p_usuario_id: usuarioAtual.id}),
+      sb.from('repeticao_vf').upsert({
+        usuario_id: usuarioAtual.id, questao_vf_id: item.id,
+        estado: item.estado, intervalo_horas: item.intervalo_horas, fator: item.fator,
+      ultima_resposta_em: item.ultima_resposta_em, degrau: item.degrau,
+      total_degraus: item.total_degraus, intervalo_pendente: item.intervalo_pendente,
+      marca_contador: item.marca_contador, total_respostas: item.total_respostas, total_erros: item.total_erros
+    }, {onConflict: 'usuario_id,questao_vf_id'}),
+    sb.from('log_respostas_vf').insert({
+      questao_vf_id: item.id, usuario_id: usuarioAtual.id, acertou,
+      tempo_ms: Math.round(tempoS*1000), tempo_bruto_ms: tempoBrutoMs, estado_antes: estadoAntes,
+      intervalo_antes: intervaloAntes, intervalo_depois: item.intervalo_horas
+    }).select('id').single()
+  ]);
+  escritasPendentesVF.delete(item.id); // upsert confirmado — não precisa mais do valor de espera
+  // Math.max, não atribuição direta — em respostas muito rápidas em
+  // sequência, o RPC da primeira pode voltar DEPOIS do incremento otimista
+  // da segunda já ter avançado localmente; sem o Math.max, o contador
+  // regrediria nesse instante e uma terceira resposta pegaria marca_contador
+  // duplicado
+  if(rpcResultado?.data != null) estadoVF.contadorGlobal = Math.max(estadoVF.contadorGlobal, rpcResultado.data);
+  // guarda o id dessa resposta específica na entrada do histórico - é essa
+  // "tentativa" (não a questão em si) que escopa a marcação de texto. Se
+  // já tinha algo marcado (grifado antes de responder), persiste agora
+  // vinculado a esse id - só a partir desse momento a marcação sobrevive
+  // a fechar o app
+  const idRespostaCriada = logRespostaResultado?.data?.id;
+  if(idRespostaCriada){
+    entrada.idRespostaVF = idRespostaCriada;
+    vfPersistirMarcacoesTextoVF('flash', idRespostaCriada, item.id);
+  }
+  })();
+  vfRespostasEmVooVF.set(item.id, promiseRespostaVF);
+  promiseRespostaVF.finally(() => {
+    if(vfRespostasEmVooVF.get(item.id) === promiseRespostaVF) vfRespostasEmVooVF.delete(item.id);
+  });
+  await promiseRespostaVF;
+}
+
+// toque longo no botão Favoritar abre a lista de favoritos - toque normal
+// continua favoritando/desfavoritando como sempre foi. Esse botão é
+// ignorado pelo sistema genérico de toque com caneta (ver o touchstart
+// global) - fica inteiramente autossuficiente aqui, incluindo disparar o
+// clique manualmente quando necessário (só pra caneta: dedo/mouse já
+// clicam sozinhos normalmente, sem precisar de nada disso)
+let vfTimerPressionarFavoritar = null;
+let vfFoiToqueLongoFavoritar = false;
+let vfPosicaoInicialPressionarFavoritarVF = null;
+function vfIniciarPressionarFavoritar(evento){
+  vfFoiToqueLongoFavoritar = false;
+  clearTimeout(vfTimerPressionarFavoritar);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarFavoritarVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
+  vfTimerPressionarFavoritar = setTimeout(() => {
+    vfTimerPressionarFavoritar = null;
+    vfFoiToqueLongoFavoritar = true;
+    vfAbrirFavoritosVF();
+  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+}
+function vfCancelarPressionarFavoritar(evento, id){
+  // touchmove: só verifica se já moveu demais - se ainda está dentro da
+  // tolerância, não faz nada ainda (deixa o toque longo pendente rodando)
+  if(evento && evento.type === 'touchmove' && vfPosicaoInicialPressionarFavoritarVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarFavoritarVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarFavoritarVF.y;
+      if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela nada ainda
+    }
+  }
+  // chegou aqui: ou é touchend/mouseup (toque acabou de vez), ou moveu
+  // demais no touchmove (arrasto de verdade) - cancela o toque longo pendente
+  const foiToqueLongo = vfFoiToqueLongoFavoritar;
+  clearTimeout(vfTimerPressionarFavoritar);
+  vfTimerPressionarFavoritar = null;
+  vfPosicaoInicialPressionarFavoritarVF = null;
+  // só dispara o clique manualmente se: é touchend de verdade (tem id) +
+  // não foi toque longo + foi realmente a caneta (touch-action:none nos
+  // botões do Flash suprime o clique sintético só dela, dedo/mouse
+  // continuam clicando sozinhos normalmente sem precisar disso)
+  if(id && !foiToqueLongo && evento && evento.type === 'touchend' && vfEhToqueDeCaneta(evento.changedTouches?.[0])){
+    evento.preventDefault();
+    toggleFavoritoVF(id);
+  }
+}
+
+// ---- sistema de tags customizadas (livres) por questão V/F ----
+let vfQuestaoIdTagsAtualVF = null;
+
+function vfRenderizarListaTagsAtualVF(){
+  const container = document.getElementById('vf-tags-lista-atual');
+  if(!container || !vfQuestaoIdTagsAtualVF) return;
+  const tags = vfTagsPorQuestaoVF.get(vfQuestaoIdTagsAtualVF) || [];
+  // tags automáticas (eh_numero/eh_lista) são campos estruturais da
+  // questão, não registros na tabela de tags customizadas - por isso não
+  // apareciam aqui antes, mesmo já visíveis como badge na tela principal.
+  // Mostradas com o mesmo estilo sólido do badge (visualmente diferente
+  // das customizadas, que têm só borda), permitindo desmarcar direto daqui
+  const itemAtual = estadoVF?.pool?.find(i => i.id === vfQuestaoIdTagsAtualVF) || estadoVF?.historico?.find(h => h.item.id === vfQuestaoIdTagsAtualVF)?.item;
+  const tagsAutomaticas = [
+    itemAtual?.eh_numero ? {campo: 'eh_numero', nome: 'NÚMERO'} : null,
+    itemAtual?.eh_lista ? {campo: 'eh_lista', nome: 'LISTA'} : null
+  ].filter(Boolean);
+  const htmlAutomaticas = tagsAutomaticas.map(t =>
+    `<span style="background:#B23A34;color:#fff;font-weight:700;font-size:var(--fs-b);border-radius:8px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px;letter-spacing:.03em">${t.nome}<span onclick="vfDesmarcarTagAutomaticaVF('${t.campo}')" style="cursor:pointer;color:#F0C9C5;font-weight:700">✕</span></span>`
+  ).join('');
+  const htmlCustomizadas = tags.map(t => `<span style="color:#B23A34;font-weight:600;font-size:var(--fs-b);border:1.5px solid #B23A34;border-radius:8px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px">${escapeHtml(t.nome)}<span onclick="vfRemoverTagVF('${t.id}')" style="cursor:pointer;color:#999;font-weight:700">✕</span></span>`).join('');
+  const html = htmlAutomaticas + htmlCustomizadas;
+  container.innerHTML = html || '<p style="color:#999;font-size:var(--fs-c)">Nenhuma tag ainda.</p>';
+}
+
+// desmarca eh_numero/eh_lista direto pelo popup de tags - espelha a
+// mesma lógica de vfAdicionarTagVF, só que no sentido inverso
+async function vfDesmarcarTagAutomaticaVF(campoEstrutural){
+  if(!vfQuestaoIdTagsAtualVF) return;
+  const questaoId = vfQuestaoIdTagsAtualVF;
+  const {error} = await sb.from('questoes_vf').update({[campoEstrutural]: false}).eq('id', questaoId);
+  if(error) return;
+  const itemNoPool = estadoVF?.pool?.find(i => i.id === questaoId) || estadoVF?.historico?.find(h => h.item.id === questaoId)?.item;
+  if(itemNoPool) itemNoPool[campoEstrutural] = false; // reflete na tela na hora, sem esperar recarregar
+  vfRenderizarListaTagsAtualVF();
+  renderizarItemVF();
+}
+
+function vfAbrirPopupTagsVF(questaoId){
+  vfQuestaoIdTagsAtualVF = questaoId;
+  pausarTimerVF(); // mesmo padrão dos outros modais - a pendente não fica rodando escondida atrás do popup
+  document.getElementById('vf-tags-input-novo').value = '';
+  document.getElementById('vf-tags-status').textContent = '';
+  document.getElementById('vf-tags-datalist').innerHTML = vfTodasTagsCacheVF.map(t => `<option value="${escapeHtml(t.nome)}">`).join('');
+  vfRenderizarListaTagsAtualVF();
+  abrirModal('modal-tags-vf');
+}
+
+function vfFecharPopupTagsVF(){
+  fecharModal('modal-tags-vf');
+  retomarOuDescartarPendenteVF();
+  vfQuestaoIdTagsAtualVF = null;
+}
+
+async function vfAdicionarTagVF(){
+  const input = document.getElementById('vf-tags-input-novo');
+  const nomeDigitado = input.value.trim().toUpperCase();
+  const statusEl = document.getElementById('vf-tags-status');
+  if(!nomeDigitado || !vfQuestaoIdTagsAtualVF) return;
+
+  // "NÚMERO"/"LISTA" (com ou sem acento) não viram tag customizada solta -
+  // isso criava duas categorias diferentes pra mesma coisa: o badge
+  // automático (eh_numero/eh_lista, o que o botão de filtro realmente
+  // usa) e uma tag solta que parecia igual mas não tinha efeito nenhum no
+  // filtro. Marcar por aqui atualiza o campo estrutural de verdade -
+  // mesmo badge, mesmo comportamento, funciona com o filtro
+  const nomeSemAcento = nomeDigitado.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const campoEstrutural = nomeSemAcento === 'NUMERO' ? 'eh_numero' : nomeSemAcento === 'LISTA' ? 'eh_lista' : null;
+  if(campoEstrutural){
+    const questaoId = vfQuestaoIdTagsAtualVF;
+    const itemNoPool = estadoVF?.pool?.find(i => i.id === questaoId) || estadoVF?.historico?.find(h => h.item.id === questaoId)?.item;
+    if(itemNoPool && itemNoPool[campoEstrutural]){
+      statusEl.innerHTML = `<span style="color:#B00020">Essa questão já está marcada como ${campoEstrutural === 'eh_numero' ? 'Número' : 'Lista'}.</span>`;
+      return;
+    }
+    const {error} = await sb.from('questoes_vf').update({[campoEstrutural]: true}).eq('id', questaoId);
+    if(error){
+      statusEl.innerHTML = '<span style="color:#B00020">Não consegui marcar agora. Tenta de novo.</span>';
+      return;
+    }
+    if(itemNoPool) itemNoPool[campoEstrutural] = true; // reflete na tela na hora, sem esperar recarregar
+    input.value = '';
+    statusEl.innerHTML = `<span style="color:#3B6D11">Essa tag funciona no filtro.</span>`;
+    vfRenderizarListaTagsAtualVF(); // mostra o badge aqui dentro do próprio popup na hora, sem precisar fechar e reabrir
+    renderizarItemVF();
+    return;
+  }
+
+  const jaTemEssaTag = (vfTagsPorQuestaoVF.get(vfQuestaoIdTagsAtualVF) || []).some(t => t.nome.toLowerCase() === nomeDigitado.toLowerCase());
+  if(jaTemEssaTag){
+    statusEl.innerHTML = '<span style="color:#B00020">Essa questão já tem essa tag.</span>';
+    return;
+  }
+
+  // reaproveita a tag se já existir uma com esse nome (case-insensitive) -
+  // nunca cria duplicata só por causa de maiúscula/minúscula diferente
+  let tagExistente = vfTodasTagsCacheVF.find(t => t.nome.toLowerCase() === nomeDigitado.toLowerCase());
+  let tag = tagExistente;
+
+  if(!tag){
+    const {data: tagCriada, error: erroCriar} = await sb.from('tags_vf').insert({nome: nomeDigitado, criado_por: usuarioAtual.id}).select('id, nome').single();
+    if(erroCriar){
+      // corrida: outra pessoa criou a mesma tag entre o cache carregar e
+      // agora - trata como "já existe", busca ela em vez de falhar
+      if(erroCriar.code === '23505'){
+        const {data: tagJaExistente} = await sb.from('tags_vf').select('id, nome').ilike('nome', nomeDigitado).maybeSingle();
+        if(tagJaExistente) tag = tagJaExistente;
+      }
+      if(!tag){
+        statusEl.innerHTML = '<span style="color:#B00020">Não consegui criar a tag. Tenta de novo.</span>';
+        return;
+      }
+    }else{
+      tag = tagCriada;
+    }
+    vfTodasTagsCacheVF.push(tag);
+  }
+
+  // otimista: a tela muda já, a escrita acontece em segundo plano
+  const questaoId = vfQuestaoIdTagsAtualVF;
+  if(!vfTagsPorQuestaoVF.has(questaoId)) vfTagsPorQuestaoVF.set(questaoId, []);
+  vfTagsPorQuestaoVF.get(questaoId).push(tag);
+  input.value = '';
+  vfRenderizarListaTagsAtualVF();
+  renderizarItemVF();
+
+  const {error} = await sb.from('questoes_vf_tags').insert({questao_vf_id: questaoId, tag_id: tag.id, criado_por: usuarioAtual.id});
+  if(error && error.code !== '23505'){ // 23505 = já existia essa relação, inofensivo
+    // desfaz o otimismo
+    const lista = vfTagsPorQuestaoVF.get(questaoId) || [];
+    vfTagsPorQuestaoVF.set(questaoId, lista.filter(t => t.id !== tag.id));
+    vfRenderizarListaTagsAtualVF();
+    renderizarItemVF();
+    statusEl.innerHTML = '<span style="color:#B00020">Não consegui salvar. Tenta de novo.</span>';
+  }
+}
+
+async function vfRemoverTagVF(tagId){
+  const questaoId = vfQuestaoIdTagsAtualVF;
+  if(!questaoId) return;
+  const listaAntes = vfTagsPorQuestaoVF.get(questaoId) || [];
+  const tagRemovida = listaAntes.find(t => t.id === tagId);
+  // otimista
+  vfTagsPorQuestaoVF.set(questaoId, listaAntes.filter(t => t.id !== tagId));
+  vfRenderizarListaTagsAtualVF();
+  renderizarItemVF();
+
+  const {error} = await sb.from('questoes_vf_tags').delete().eq('questao_vf_id', questaoId).eq('tag_id', tagId);
+  if(error && tagRemovida){
+    // desfaz o otimismo
+    const listaAtual = vfTagsPorQuestaoVF.get(questaoId) || [];
+    vfTagsPorQuestaoVF.set(questaoId, [...listaAtual, tagRemovida]);
+    vfRenderizarListaTagsAtualVF();
+    renderizarItemVF();
+  }
+}
+
+async function toggleFavoritoVF(questaoVfId){
+  if(vfFoiToqueLongoFavoritar){
+    // o toque longo já abriu a lista - esse clique é só a "sobra" do
+    // mesmo toque, não é pra alternar o favorito também
+    vfFoiToqueLongoFavoritar = false;
+    return;
+  }
+  if(favoritosVF.has(questaoVfId)){
+    // otimista: a tela muda JÁ, a escrita no banco acontece em segundo
+    // plano - "meio lento" antes era esperar o banco confirmar antes de
+    // sequer mudar o ícone na tela
+    favoritosVF.delete(questaoVfId);
+    renderizarItemVF();
+    // o boost de fila (VF_ALGO.BOOST_FAVORITO) já some sozinho ao checar
+    // favoritosVF.has() de novo - não precisa desfazer nada aqui. O
+    // encolhimento de intervalo (efeito imediato de quando favoritou)
+    // também NUNCA é desfeito - vira só uma revisão a mais que aconteceu,
+    // inofensivo, o Fable foi claro nisso
+    const {error} = await sb.from('favoritos_vf').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
+    if(error){
+      // escrita falhou de verdade - desfaz o otimismo
+      favoritosVF.add(questaoVfId);
+      renderizarItemVF();
+      console.error('erro ao desfavoritar:', error);
+    }
+  }else{
+    favoritosVF.add(questaoVfId);
+    renderizarItemVF();
+    sb.from('favoritos_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoVfId}).then(({error}) => {
+      if(error){
+        favoritosVF.delete(questaoVfId);
+        renderizarItemVF();
+        console.error('erro ao favoritar:', error);
+      }
+    });
+    // efeito imediato, uma vez só: "acertei, mas fiquei ressabiado" - se
+    // está em revisão com intervalo > 24h, encolhe pra 24h (equivalente ao
+    // botão "Hard" do Anki). NÃO mexe em fator nem em degraus, só puxa a
+    // próxima aparição pra amanhã em vez de daqui a dias
+    const entrada = estadoVF.historico.find(h => h.item.id === questaoVfId);
+    const item = entrada?.item;
+    if(item && item.estado === 'revisao' && item.intervalo_horas > 24){
+      item.intervalo_horas = 24;
+      renderizarItemVF(); // já reflete "vence mais cedo" na tela, antes do banco confirmar
+      (async () => {
+        // se a RESPOSTA dessa mesma questão ainda está em voo (upsert
+        // original ainda não confirmou no banco), espera ele terminar
+        // primeiro - senão os dois updates competem, e o mais lento vence
+        // no banco mesmo não sendo o mais recente (C2 do relatório da Fable)
+        const respostaEmVoo = vfRespostasEmVooVF.get(questaoVfId);
+        if(respostaEmVoo) await respostaEmVoo;
+        // se ainda tinha um snapshot pendente pra essa questão (troca de
+        // filtro no meio, por exemplo), atualiza ele também com o valor
+        // encolhido - senão o snapshot ficava com o intervalo cheio,
+        // desatualizado em relação ao que a tela e o banco já têm agora
+        const pendente = escritasPendentesVF.get(questaoVfId);
+        if(pendente) escritasPendentesVF.set(questaoVfId, {...pendente, intervalo_horas: 24});
+        const {error} = await sb.from('repeticao_vf').update({intervalo_horas: 24}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
+        if(error) console.error('erro ao encolher intervalo do favorito:', error);
+      })();
+    }
+  }
+}
+
+let questaoNotaVfAtual = null;
+// fecha os modais de Notas/Excluir do V/F retomando o cronômetro da
+// pendente (ou descartando, se a pausa foi longa demais) — usadas tanto
+// no botão Fechar/Cancelar quanto no clique fora do modal
+function fecharModalNotaVF(){
+  fecharModal('modal-nota-vf');
+  retomarOuDescartarPendenteVF();
+}
+function fecharModalExclusaoVF(){
+  fecharModal('modal-confirmar-exclusao-vf');
+  retomarOuDescartarPendenteVF();
+}
+
+// ícone de lâmpada reaproveitável - usado no preview de mnemônico/nota do
+// Flash (badge com nota existente + convite pra criar uma nova)
+function VF_ICONE_LAMPADA_SVG(largura, altura, cor){
+  return `<svg width="${largura}" height="${altura}" viewBox="0 0 646 736" style="flex-shrink:0;color:${cor}"><path d="M318.41 2.13C328.5 -0.09 327.03 13.35 327.03 19.2C327.03 37.67 327.02 56.14 327.03 74.61C327.03 80.45 328.88 91.32 320.17 91.48C311.34 91.64 312.99 81.11 313.01 75.24C313.08 57.4 312.98 39.56 313.01 21.72C313.02 15.99 310.51 3.87 318.41 2.13ZM116.22 79.49C122.37 78.64 127.31 86.99 130.96 90.98C142.61 103.7 154.1 116.54 165.63 129.36C169.64 133.82 178.03 140.97 170.9 146.69C164.08 152.14 157.64 141.75 153.76 137.44C139.97 122.17 125.22 107.39 112.16 91.49C108.67 87.24 110.24 80.32 116.22 79.49ZM521.71 79.48C527.89 78.59 531.96 85.61 528.56 90.67C525 95.99 519.45 100.83 515.09 105.53C505.41 116 496 126.74 486.48 137.35C482.55 141.72 476.3 151.9 469.38 146.74C462.15 141.35 470.77 133.47 474.58 129.22C485.58 116.94 496.64 104.7 507.74 92.51C510.89 89.06 517.19 80.14 521.71 79.48ZM356.04 709.28C352.74 716.43 349.88 722.25 343.08 726.84C322.91 740.45 291.66 732.5 283.65 709.15C275.88 708.09 268.71 707.52 261.48 704.1C248.52 697.96 238.29 685.4 235.07 671.39C233.26 663.48 234.03 655.01 234.03 646.94C234.02 637.08 234.02 627.22 233.99 617.35C233.94 600.21 233.7 583.09 233.28 565.96C233.09 557.96 234.47 549.05 233.17 541.17C232.62 537.85 228.3 533.88 227.4 529.17C225.68 520.12 226.8 510.62 224.94 501.48C220.39 479.13 211.01 458.02 198.67 438.82C193.04 430.07 186.48 422.09 180.37 413.7C167.97 396.64 158.2 378.32 152.15 358.12C147.91 344 146.76 328.56 146.7 313.87C146.32 218.67 222.84 141.49 317.65 139.3C414.24 137.07 492.87 216.9 493.12 312.61C493.16 327.63 491.84 342.76 487.86 357.28C478.94 389.82 462.58 407.7 444.18 434.39C430.31 454.51 418.89 476.73 414.32 500.88C413.14 507.16 412.43 513.46 412.06 519.84C411.89 522.7 412.25 525.72 411.67 528.54C410.65 533.42 406.26 538.63 405.84 541.17C404.5 549.2 405.78 559.94 405.8 568.24C405.84 586.5 405.81 604.76 405.82 623.02C405.83 644.88 409.48 671.33 395.94 689.66C388.99 699.07 378.59 704.99 367.4 707.77C363.7 708.69 359.6 708.19 356.04 709.28ZM316.58 157.09C222.36 159.17 149.87 247.4 166.13 340.31C169.58 360 177.58 379.17 189.15 395.5C201.17 412.47 214.21 428.5 223.74 447.12C232.83 464.89 240.14 483.5 242.85 503.42C243.6 508.96 243.97 514.79 243.9 520.39C243.87 522.99 243.41 526.48 245.83 528.27C248.21 530.04 253.11 529.09 255.94 529.09C264.55 529.1 273.15 529.08 281.76 529.08C307.15 529.1 332.55 529.09 357.94 529.09C364.99 529.09 386.49 530.46 391.91 528.87C394.41 528.13 394.71 525.06 394.78 522.91C394.98 516.73 395.49 510.78 396.17 504.65C398.71 481.55 408.08 459.05 420.1 439.3C431.75 420.17 446.79 403.35 457.96 383.94C465.95 370.07 470.75 355.05 473.8 339.43C476.21 327.13 476.24 313.7 475.19 301.28C468.22 218.63 400.33 155.24 316.58 157.09ZM10.57 238.9C16.32 238.04 22.6 241.55 28.08 242.86C43.34 246.49 58.35 251.35 73.49 255.45C78.96 256.93 91.79 258.45 89.67 266.93C87.3 276.43 76.39 271.2 70.17 269.56C57.85 266.31 45.7 262.39 33.41 259.09C25.69 257.02 17.03 255.59 9.67 252.57C3.45 250.03 3.3 239.99 10.57 238.9ZM626.21 238.79C633.56 237.81 638.47 247.25 631.67 251.7C627.19 254.63 618.09 255.79 612.75 257.28C598.52 261.25 584.38 265.59 570.09 269.36C564.37 270.87 553.68 276.41 550.37 268.42C546.51 259.13 559.23 257.37 565.14 255.76C580.83 251.51 596.44 247.03 612.12 242.75C616.78 241.49 621.4 239.44 626.21 238.79ZM86.07 406.3C93.53 404.58 99.02 414.06 92.45 418.92C88.06 422.17 78.34 423.53 72.95 425.29C58.93 429.86 44.72 434.11 30.53 438.19C25.03 439.77 14.29 445.52 11.01 437.64C7.07 428.21 20.2 426.23 26.24 424.52C46.13 418.89 65.98 410.93 86.07 406.3ZM548.79 406.25C554.42 404.9 562.44 409.35 567.86 410.85C583.62 415.21 599.11 420.5 614.81 425.08C620.69 426.8 631.29 428.59 627.9 437.37C624.74 445.54 613.63 439.76 607.97 438.05C594.03 433.84 580.04 429.72 566.19 425.23C560.15 423.26 553.65 422.13 547.81 419.6C542 417.09 542.44 407.77 548.79 406.25ZM165.42 509.02C171.28 508.22 175.91 514.08 172.82 519.47C169.78 524.79 164.42 529.47 160.42 534.09C150.79 545.24 141.13 556.36 131.5 567.51C127.49 572.16 121.37 582.79 114.15 577.48C106.71 571.99 115.82 564.25 119.42 559.85C130.06 546.84 141.48 534.46 152.38 521.66C155.49 518.01 160.38 509.7 165.42 509.02ZM471.45 509.02C478.23 507.78 482.16 515.46 486.04 519.78C497.57 532.58 508.68 545.88 519.8 559.05C523.55 563.49 533.47 571.99 525.54 577.46C518.34 582.41 512.89 572.82 508.87 568.11C496.4 553.51 483.56 539.22 471.25 524.52C468.17 520.85 464.52 517.23 467.22 512.27C468.06 510.74 469.71 509.34 471.45 509.02ZM390.93 546.21C343.63 546.21 296.32 546.21 249.02 546.21C247.51 550.98 247.68 571.21 248.96 575.96C296.29 575.96 343.61 575.96 390.93 575.96C390.93 566.04 390.93 556.13 390.93 546.21ZM390.93 591.72C343.6 591.72 296.27 591.72 248.93 591.72C248.93 594.18 248.93 596.64 248.93 599.09C296.27 607.5 343.6 615.91 390.93 624.32C390.93 613.46 390.93 602.59 390.93 591.72ZM390.92 640.29C343.81 631.8 296.7 623.32 249.6 614.83C247.91 617.78 248.33 631.88 249.15 635.61C296.4 644.64 343.66 653.66 390.92 662.69C390.92 655.22 390.92 647.75 390.92 640.29ZM385.32 677.8C339.97 668.98 294.63 660.17 249.29 651.35C248.55 653.73 248.83 656.41 248.83 658.91C248.84 673.76 257.62 686.85 271.8 691.83C280.03 694.71 289.54 693.5 298.1 693.53C314.49 693.59 330.88 693.44 347.27 693.54C360.71 693.62 379 692.37 385.32 677.8Z" fill="currentColor" fill-rule="evenodd"/></svg>`;
+}
+
+// busca sob demanda (não junto com o carregamento geral do pool) a nota
+// mais recente pra mostrar como preview logo abaixo do resultado - só
+// dispara quando notasVF (já carregado com o pool inteiro) indica que
+// essa questão específica tem pelo menos uma nota, evitando uma consulta
+// desnecessária pra maioria das questões, que não têm nenhuma
+async function vfCarregarPreviewNotaVF(questaoVfId){
+  const el = document.getElementById('vf-preview-nota');
+  if(!el) return; // a tela já pode ter mudado de questão antes da resposta chegar
+  const {data} = await sb.from('notas_vf').select('id, texto').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).order('criado_em', {ascending:false}).limit(1);
+  // reconfere o elemento depois do await - se a pessoa já avançou pra
+  // outra questão enquanto isso, não pisa no preview da questão nova
+  const elAtual = document.getElementById('vf-preview-nota');
+  if(!elAtual || !data || !data.length) return;
+  // mantém a classe card-questao (já traz padding/borda/sombra corretos
+  // pro card próprio) - só ajusta o layout interno pra flex e o cursor
+  elAtual.style.marginTop = '14px';
+  elAtual.style.display = 'flex';
+  elAtual.style.gap = '10px';
+  elAtual.style.alignItems = 'center';
+  elAtual.style.cursor = 'pointer';
+  elAtual.onclick = () => abrirNotaVF(questaoVfId);
+  elAtual.innerHTML = `${VF_ICONE_LAMPADA_SVG('24', '27', '#B23A34')}<div style="color:#333;line-height:1.4">${escapeHtml(data[0].texto)}</div>`;
+}
+
+async function abrirNotaVF(questaoVfId){
+  pausarTimerVF(); // abrir Notas/Excluir com questão pendente conta como sair da tela — você está escrevendo, não lendo a afirmação
+  questaoNotaVfAtual = questaoVfId;
+  document.getElementById('texto-nota-vf').value = '';
+  document.getElementById('lista-notas-vf').innerHTML = '';
+  document.getElementById('lista-notas-vf').style.maxHeight = '0px';
+  // abre o modal JÁ, sem esperar a busca no banco (mesmo padrão de
+  // Excluir/Favoritar/Salvar) - a lista de notas carrega em paralelo,
+  // logo em seguida, e expande com uma transição suave (CSS) quando
+  // chegar, em vez de segurar a abertura inteira até a resposta do banco
+  abrirModal('modal-nota-vf');
+  renderizarListaNotasVF();
+}
+
+async function renderizarListaNotasVF(){
+  const el = document.getElementById('lista-notas-vf');
+  const {data} = await sb.from('notas_vf').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false});
+  if(!data || !data.length){ el.innerHTML = ''; el.style.maxHeight = '0px'; return; }
+  el.innerHTML = `<div style="margin-bottom:14px">` + data.map(n => `
+    <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
+      <p style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${formatarTextoItemVF(n.texto)}</p>
+      <button onclick="excluirNotaVF('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
+    </div>`).join('') + `</div>`;
+  // altura grande o bastante pra caber qualquer lista realista de notas -
+  // a transição CSS só precisa de um valor-alvo maior que o conteúdo real
+  el.style.maxHeight = '2000px';
+}
+
+// mesma lógica do abrirExplicacaoQuestao (Quest normal) — a explicação já
+// vem pronta do PDF (campo "explicacao"), não precisa gerar nada. Só
+// limpa o prefixo "VERDADEIRA –"/"FALSA –" que vem do formato original,
+// já que a tela já mostra o veredito de forma clara, não precisa repetir
+let vfQuestaoIdExplicacaoAtual = null;
+// fecha o modal de explicação E descarta qualquer rabisco feito em cima
+// dele - nunca vaza pro desenho real da questão. Também finaliza um
+// traço em andamento nesse canvas, se houver (proteção pra nunca deixar
+// vfDesenhandoAgora "preso" apontando pra um canvas que já sumiu)
+function vfFecharModalExplicacaoVF(){
+  if(vfDesenhandoAgora) vfFinalizarTracoDesenho();
+  // força o blur do textarea de edição ANTES de fechar - achado real e
+  // crítico: sem isso, fechar o modal (botão Fechar, ou X) enquanto
+  // ainda editando podia nunca disparar o evento de blur do textarea
+  // (que é o que aciona vfSalvarEdicaoExplicacaoVF), simplesmente
+  // escondendo o modal com a edição inteira descartada, sem salvar nada
+  // no banco - e sem nenhum aviso de que isso aconteceu
+  const textareaEdicao = document.getElementById('vf-textarea-explicacao');
+  if(textareaEdicao) textareaEdicao.blur();
+  fecharModal('modal-explicacao-vf');
+  vfFecharCanvasExplicacaoVF();
+}
+
+function abrirExplicacaoVF(questaoVfId){
+  vfQuestaoIdExplicacaoAtual = questaoVfId;
+  const entrada = estadoVF.historico.find(h => h.item.id === questaoVfId);
+  const el = document.getElementById('conteudo-explicacao-vf');
+  if(!entrada){ el.innerHTML = ''; abrirModal('modal-explicacao-vf'); vfAbrirCanvasExplicacaoVF(); return; }
+  const explicacao = entrada.item.explicacao || '';
+  const atributosEdicao = `id="vf-explicacao-atual" ${souCarlos() ? 'data-editavel-vf="1"' : ''} ontouchstart="vfIniciarPressionarExplicacao(event)" ontouchend="vfSoltarPressionarExplicacao(event)" ontouchmove="vfCancelarPressionarExplicacaoSilencioso(event)" onmousedown="vfIniciarPressionarExplicacao(event)" onmouseup="vfSoltarPressionarExplicacao()" onmouseleave="vfCancelarPressionarExplicacaoSilencioso()"`;
+  el.innerHTML = explicacao
+    ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;line-height:1.5;color:#111;position:relative">${formatarTextoItemVF(explicacao)}</div>`
+    : `<p ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;color:#666;position:relative">${souCarlos() ? 'Sem explicação cadastrada – segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
+  abrirModal('modal-explicacao-vf');
+  vfAbrirCanvasExplicacaoVF();
+}
+
+// ---- editar a explicação segurando nela (só Carlos), mesmo sistema já
+// usado na afirmação (toque longo -> vira textarea no próprio lugar) ----
+let vfTimerPressionarExplicacao = null;
+let vfPosicaoInicialPressionarExplicacaoVF = null;
+let vfMoveuDuranteToqueExplicacao = false;
+function vfIniciarPressionarExplicacao(evento){
+  const div = document.getElementById('vf-explicacao-atual');
+  if(div && div.dataset.editando === '1') return; // já editando - não interfere no textarea, deixa o Safari cuidar do toque/seleção sozinho
+  vfMoveuDuranteToqueExplicacao = false;
+  clearTimeout(vfTimerPressionarExplicacao);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarExplicacaoVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
+  vfTimerPressionarExplicacao = setTimeout(() => {
+    vfTimerPressionarExplicacao = null;
+    vfIniciarEdicaoExplicacaoVF();
+  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+}
+// usado no touchmove/mouseleave - moveu ou saiu = não é toque limpo, só
+// cancela a espera de edição, NÃO copia (mesmo padrão do enunciado)
+function vfCancelarPressionarExplicacaoSilencioso(evento){
+  const div = document.getElementById('vf-explicacao-atual');
+  if(div && div.dataset.editando === '1') return; // mesma blindagem do início do toque
+  if(evento && vfPosicaoInicialPressionarExplicacaoVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarExplicacaoVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarExplicacaoVF.y;
+      if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
+    }
+  }
+  vfMoveuDuranteToqueExplicacao = true;
+  clearTimeout(vfTimerPressionarExplicacao);
+  vfTimerPressionarExplicacao = null;
+}
+// usado no touchend/mouseup - toque limpo (não virou edição, não moveu)
+// copia o texto, igual já funciona no enunciado e na correção
+function vfSoltarPressionarExplicacao(evento){
+  clearTimeout(vfTimerPressionarExplicacao);
+  vfTimerPressionarExplicacao = null;
+  const div = document.getElementById('vf-explicacao-atual');
+  // mesma lógica do enunciado - ver comentário lá
+  if(div && div.dataset.editando !== '1' && !vfMoveuDuranteToqueExplicacao){
+    if(evento) evento.preventDefault();
+    vfCopiarComProtecaoDuploToqueVF(div, evento);
+  }
+}
+
+function vfIniciarEdicaoExplicacaoVF(){
+  if(!souCarlos()) return; // só o Carlos edita segurando - outros usuários só copiam com toque rápido
+  const entrada = estadoVF.historico.find(h => h.item.id === vfQuestaoIdExplicacaoAtual);
+  if(!entrada) return;
+  const div = document.getElementById('vf-explicacao-atual');
+  if(!div || div.dataset.editando === '1') return;
+  div.dataset.editando = '1';
+  const textoOriginal = entrada.item.explicacao || '';
+  div.innerHTML = `<textarea id="vf-textarea-explicacao" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:1.5;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default">${escapeHtml(textoOriginal)}</textarea>`;
+  const textarea = document.getElementById('vf-textarea-explicacao');
+  vfAutoAlturaTextareaVF(textarea);
+  textarea.addEventListener('input', () => vfAutoAlturaTextareaVF(textarea));
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.addEventListener('blur', () => vfSalvarEdicaoExplicacaoVF(vfQuestaoIdExplicacaoAtual, textoOriginal));
+}
+
+async function vfSalvarEdicaoExplicacaoVF(questaoId, textoOriginal){
+  const textarea = document.getElementById('vf-textarea-explicacao');
+  const div = document.getElementById('vf-explicacao-atual');
+  if(!textarea || !div) return;
+  const textoNovo = textarea.value.trim();
+  div.dataset.editando = '0';
+  document.getElementById('bottom-nav')?.classList.remove('teclado-aberto');
+  document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
+  if(textoNovo === textoOriginal){
+    div.innerHTML = textoOriginal ? formatarTextoItemVF(textoOriginal) : (souCarlos() ? 'Sem explicação cadastrada – segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.');
+    return;
+  }
+  const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
+  if(entrada) entrada.item.explicacao = textoNovo || null;
+  div.innerHTML = textoNovo ? formatarTextoItemVF(textoNovo) : 'Sem explicação cadastrada – segure aqui pra adicionar.';
+  const cacheAtualExplicacao = vfConteudoCompletoCache.get(questaoId) || {};
+  vfConteudoCompletoCache.set(questaoId, {...cacheAtualExplicacao, explicacao: textoNovo || null});
+  const {error} = await sb.from('questoes_vf').update({explicacao: textoNovo || null}).eq('id', questaoId);
+  if(error){
+    alert('Erro ao salvar a edição da explicação: '+error.message);
+  }
+}
+
+async function vfCopiarExplicacaoParaClaude(botao){
+  const entrada = estadoVF.historico.find(h => h.item.id === vfQuestaoIdExplicacaoAtual);
+  if(!entrada) return;
+  const item = entrada.item;
+  const livro = vfBibliografiaCache.get(item.bibliografia_id)?.titulo || 'Publicação não identificada';
+  const capituloTexto = item.capitulo
+    ? `${rotuloCapituloDoLivro(livro)} ${String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')}`
+    : null;
+  // sempre a versão VERDADEIRA da afirmação - se a original é falsa, usa a
+  // correção (o que vinha depois de "Correto:" no upload), nunca o texto
+  // falso original
+  const afirmacaoVerdadeira = item.resposta ? item.texto : (item.correcao || item.texto);
+  const partes = [
+    `Livro: ${livro}`,
+    capituloTexto ? `Capítulo: ${capituloTexto}` : null,
+    '',
+    `Afirmação (verdadeira): ${afirmacaoVerdadeira}`,
+    '',
+    item.explicacao ? `Explicação: ${item.explicacao}` : null,
+    '',
+    '---',
+    'Antes de explicar: abra o livro na pasta PSCPP/Bibliografia, localize a seção citada acima e leia. Não responda de memória. A Explicação acima é meu ponto de partida, não a fonte – confira contra o livro e me avise se divergir em algo.\n\nExplique isso da forma mais clara possível, by the book: o que o autor escreveu, na ordem em que ele apresenta. Se precisar acrescentar algo que não está no texto para a explicação fechar, marque como complemento seu. Se não achar o trecho no livro, me diga – não preencha com conhecimento geral.\n\nSe ajudar a entender, desenhe o que o autor quis dizer: um desenho em HTML renderizado aqui no chat. Não publique página nem artefato.\n\nNada além disso: sem seções extras, sem tabela-resumo, sem box de revisão, sem relatório dos meus erros anteriores. Explicação + desenho, e para. Se eu tiver dúvida, eu pergunto.'
+  ].filter(p => p !== null).join('\n');
+
+  try{
+    await navigator.clipboard.writeText(partes);
+    vfMostrarSelinhoCopiadoVF(botao);
+  }catch(e){
+    alert('Não consegui copiar automaticamente. Tenta selecionar o texto manualmente.');
+  }
+}
+
+async function adicionarNotaVF(){
+  const campo = document.getElementById('texto-nota-vf');
+  const texto = campo.value.trim();
+  if(!texto) return;
+  await sb.from('notas_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoNotaVfAtual, texto});
+  campo.value = '';
+  notasVF.add(questaoNotaVfAtual);
+  await renderizarListaNotasVF();
+  renderizarItemVF();
+}
+
+async function excluirNotaVF(notaId){
+  await sb.from('notas_vf').delete().eq('id', notaId);
+  await renderizarListaNotasVF();
+  const {count} = await sb.from('notas_vf').select('id', {count:'exact', head:true}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual);
+  if(!count) notasVF.delete(questaoNotaVfAtual);
+  renderizarItemVF();
+}
+
+let questaoVfParaExcluir = null;
+function abrirConfirmacaoExclusaoVF(questaoVfId){
+  pausarTimerVF();
+  questaoVfParaExcluir = questaoVfId;
+  document.getElementById('motivo-exclusao-vf').value = '';
+  abrirModal('modal-confirmar-exclusao-vf');
+}
+
+async function confirmarExclusaoVF(){
+  if(!questaoVfParaExcluir) return;
+  const idExcluido = questaoVfParaExcluir;
+  const motivo = document.getElementById('motivo-exclusao-vf').value.trim() || null;
+  await sb.from('exclusoes_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: idExcluido, motivo});
+  estadoVF.pool = estadoVF.pool.filter(i => i.id !== idExcluido);
+  questaoVfParaExcluir = null;
+  fecharModal('modal-confirmar-exclusao-vf');
+
+  const entradaAtual = estadoVF.historico[estadoVF.posicao];
+  if(entradaAtual && entradaAtual.item.id === idExcluido){
+    if(entradaAtual.resposta === null){
+      // ainda não respondida - essa é a "pendente" de verdade, sem
+      // estatística nenhuma pra preservar (nunca foi contabilizada em
+      // acertosSessao/respondidasSessao), pode sair do histórico mesmo
+      estadoVF.historico.splice(estadoVF.posicao, 1);
+      estadoVF.posicao--;
+    }
+    // se já tinha resposta, mantém a entrada no histórico (não faz
+    // splice) - achado real: excluir uma questão já respondida estava
+    // removendo ela do histórico, e como "Respondidas"/tempo médio/novas
+    // x repetições no painel de estatísticas são calculados a partir do
+    // histórico, isso fazia esses números encolherem a cada exclusão,
+    // enquanto acertosSessao/respondidasSessao (contadores à parte, só
+    // incrementados uma vez, nunca decrementados) continuavam contando
+    // a questão excluída - daí a divergência entre os números
+    await avancarParaProximaVF(); // já deixa o cronômetro ativo de novo, pra questão nova
+  }else{
+    // não era a pendente atual — ela continua lá, só retoma o cronômetro
+    // dela (estava pausado desde que o modal abriu)
+    await retomarOuDescartarPendenteVF();
+  }
+}
+
+async function proximoVF(){
+  if(!estadoVF) return;
+  if(agoraCorrigidoVF() < (estadoVF.bloqueadoAteMs||0)) return; // toque duplo acidental logo após responder — o botão mudou de Verdadeiro/Falso pra Próxima na mesma posição física
+  vfDespausarSeNecessarioVF(); // avançar é sinal claro de que está ativo, mesmo raciocínio de responderVF
+  if(vfVisualizandoSalvoInfoVF){ vfSairDoModoVisualizacaoSalvoVF(); renderizarItemVF(); return; } // "Próxima" a partir de uma visualização de salvo só volta pra sessão real - não avança a partir da posição antiga
+  if(estadoVF.posicao < estadoVF.historico.length - 1){
+    estadoVF.posicao++;
+    // se aterrissou numa entrada ainda não respondida (só pode ser a
+    // última — nunca há duas pendentes ao mesmo tempo, garantido pela
+    // correção do bug da órfã), rearma a trava de toque duplo. Antes só
+    // era armada em avancarParaProximaVF, deixando essa navegação
+    // específica (Anterior, depois dois toques rápidos em Próxima) sem
+    // proteção — achado do Fable
+    const entradaNova = estadoVF.historico[estadoVF.posicao];
+    if(entradaNova && entradaNova.resposta === null){
+      estadoVF.bloqueadoAteMs = agoraCorrigidoVF() + 400;
+    }
+    limparCanvasDesenhoVF(); // trocou de questão dentro do histórico, rascunho some
+    renderizarItemVF();
+  }else{
+    await avancarParaProximaVF();
+  }
+}
+
+function anteriorVF(){
+  if(!estadoVF || estadoVF.posicao <= 0) return;
+  if(agoraCorrigidoVF() < (estadoVF.bloqueadoAteMs||0)) return; // mesma trava de toque duplo acidental logo após responder
+  if(vfVisualizandoSalvoInfoVF){ vfSairDoModoVisualizacaoSalvoVF(); renderizarItemVF(); return; } // mesmo raciocínio de proximoVF - só volta pra sessão real
+  estadoVF.posicao--;
+  limparCanvasDesenhoVF();
+  renderizarItemVF();
+}
+
+
+// SuperQuest: simulado fixo de 70 questões variadas, sem filtro nenhum – regras
+// podem ser refinadas depois (ex: balancear por módulo), essa é a v1 simples.
+const QUANTIDADE_SUPERQUEST = 70;
+
+async function gerarSuperQuest(){
+  const [{data: todasQuestoes, error}, {data: exclusoes}] = await Promise.all([
+    buscarTudoPaginadoVF(() => sb.from('questoes').select('*', {count: 'exact'}).eq('anulada', false).order('id')),
+    sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).is('resolvido_em', null)
+  ]);
+  if(error){ alert('Erro ao buscar questões: '+error.message); return; }
+
+  const idsExcluidos = new Set((exclusoes||[]).map(e=>e.questao_id));
+  let pool = (todasQuestoes||[]).filter(q=>!idsExcluidos.has(q.id));
+
+  if(pool.length < QUANTIDADE_SUPERQUEST){
+    alert(`O banco ainda não tem ${QUANTIDADE_SUPERQUEST} questões disponíveis pra montar um SuperQuest (tem ${pool.length} agora). Sobe mais PDFs pra desbloquear essa opção.`);
+    return;
+  }
+
+  pool = embaralharFisherYates(pool).slice(0, QUANTIDADE_SUPERQUEST);
+
+  const nomeCaderno = `SuperQuest ${new Date().toLocaleDateString('pt-BR')}`;
+  const {data: novoCaderno} = await sb.from('cadernos').insert({
+    usuario_id: usuarioAtual.id,
+    nome: nomeCaderno,
+    filtros_aplicados: {superquest: true, questao_ids: pool.map(q=>q.id)},
+    status: 'em_andamento'
+  }).select().single();
+
+  cadernoAtual = novoCaderno;
+  questoesCaderno = pool;
+  indiceQuestaoAtual = 0;
+  respostasPorQuestao = {};
+  vfDesenhosPorQuestaoQuestVF = new Map(); // caderno novo - não herda desenho de outro
+  alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
+  questoesExcluidasAtual = new Set();
+  await carregarFavoritosENotas(pool.map(q=>q.id));
+
+  document.getElementById('quests-filtros').classList.add('hidden');
+  document.getElementById('quests-resolucao').classList.remove('hidden');
+  renderizarQuestaoAtual();
+}
+
+async function montarCaderno(){
+  let questoesFiltradas = await buscarQuestoesFiltradas();
+
+  if(questoesFiltradas.length === 0){
+    document.getElementById('quests-sem-resultado').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('quests-sem-resultado').classList.add('hidden');
+
+  if(questoesFiltradas.length < 10){
+    alert(`Só ${questoesFiltradas.length} ${questoesFiltradas.length===1?'questão disponível':'questões disponíveis'} com esses filtros (menos de 10) – pode ter pouca variedade.`);
+  }
+
+  if(document.getElementById('toggle-priorizar-erro').checked){
+    const {data: minhasRespostas} = await sb.from('respostas_finalizadas').select('questao_id, correta').eq('usuario_id', usuarioAtual.id);
+    const stats = {};
+    (minhasRespostas||[]).forEach(r=>{
+      if(!stats[r.questao_id]) stats[r.questao_id] = {k:0,n:0};
+      stats[r.questao_id].n++;
+      if(!r.correta) stats[r.questao_id].k++;
+    });
+    questoesFiltradas = questoesFiltradas.map(q=>{
+      const s = stats[q.id] || {k:0,n:0};
+      return {...q, _wilson: wilsonScoreLowerBound(s.k, s.n)};
+    }).sort((a,b)=>b._wilson - a._wilson);
+  }else{
+    questoesFiltradas = embaralharFisherYates(questoesFiltradas);
+  }
+
+  // aplica a quantidade escolhida (5/10/15/20/todas/customizada)
+  if(quantidadeSelecionada !== 'todas'){
+    questoesFiltradas = questoesFiltradas.slice(0, quantidadeSelecionada);
+  }
+
+  const nomeDigitado = document.getElementById('nome-caderno').value.trim();
+  const agora = new Date();
+
+  // monta o nome: publicação específica > módulo genérico como base;
+  // acrescenta capítulo (palavra completa - Capítulo/Chapter/Section,
+  // nunca abreviado) quando filtrado; e "Reforço" quando é esse o modo
+  let baseNome = filtroSelecionado.modulo || 'Caderno';
+  if(filtroSelecionado.publicacao && !filtroSelecionado.publicacao.startsWith('tema:')){
+    const bibEscolhidaNome = bibliografiaCache.find(b => b.id === filtroSelecionado.publicacao);
+    if(bibEscolhidaNome) baseNome = bibEscolhidaNome.nome_exibicao || bibEscolhidaNome.titulo;
+  }
+  if(filtroSelecionado.capitulo){
+    const rotuloCap = rotuloCapituloDoLivro(baseNome);
+    baseNome += ` – ${rotuloCap} ${filtroSelecionado.capitulo}`; // travessão curto (–), não longo (—)
+  }
+  if(document.getElementById('toggle-priorizar-erro').checked){
+    baseNome += ' · Reforço';
+  }
+  const nomeCaderno = nomeDigitado || `${baseNome} ${agora.toLocaleDateString('pt-BR')}`;
+
+  // cria o caderno
+  const {data: novoCaderno} = await sb.from('cadernos').insert({
+    usuario_id: usuarioAtual.id,
+    nome: nomeCaderno,
+    filtros_aplicados: {...filtroSelecionado, questao_ids: questoesFiltradas.map(q=>q.id)},
+    status: 'em_andamento'
+  }).select().single();
+  cadernoAtual = novoCaderno;
+  questoesCaderno = questoesFiltradas;
+  indiceQuestaoAtual = 0;
+  respostasPorQuestao = {};
+  vfDesenhosPorQuestaoQuestVF = new Map(); // caderno novo - não herda desenho de outro
+  alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
+  questoesExcluidasAtual = new Set();
+  await carregarFavoritosENotas(questoesFiltradas.map(q=>q.id));
+
+  document.getElementById('quests-filtros').classList.add('hidden');
+  document.getElementById('quests-resolucao').classList.remove('hidden');
+  renderizarQuestaoAtual();
+}
+
+/* ============================================================
+   CADERNOS EXISTENTES – em andamento / concluídos
+   ============================================================ */
+async function carregarCadernosExistentes(){
+  const {data} = await sb.from('cadernos').select('*').eq('usuario_id', usuarioAtual.id).order('criado_em',{ascending:false});
+  const todos = data || [];
+  const andamento = todos.filter(c=>c.status==='em_andamento');
+  const concluidos = todos.filter(c=>c.status==='finalizado');
+  totalCadernosAndamento = andamento.length;
+  totalCadernosConcluidos = concluidos.length;
+
+  // atualiza o card "Cadernos em andamento" da Início — mesmo dado que
+  // verificarCadernoEmAndamento() calcularia, sem precisar de outra consulta
+  // à mesma tabela (é chamado sozinho de novo só depois de finalizar um
+  // caderno, quando esse carregamento aqui não roda)
+  const cardEl = document.getElementById('caderno-em-andamento');
+  if(cardEl){
+    if(andamento.length > 0){
+      cardEl.classList.remove('hidden');
+      document.getElementById('caderno-em-andamento-info').textContent = andamento.length===1 ? '1 caderno esperando você' : `${andamento.length} cadernos esperando você`;
+    }else{
+      cardEl.classList.add('hidden');
+    }
+  }
+
+  document.getElementById('titulo-cadernos-andamento').textContent = `Cadernos em andamento (${andamento.length})`;
+  document.getElementById('titulo-cadernos-concluidos').textContent = `Cadernos concluídos (${concluidos.length})`;
+
+  // busca todas as respostas desse usuário de uma vez só, pra montar a
+  // estatística de cada caderno sem precisar de uma consulta por caderno
+  const idsRelevantes = todos.map(c=>c.id);
+  const respostasPorCaderno = {};
+  if(idsRelevantes.length){
+    const {data: todasRespostas} = await sb.from('respostas').select('caderno_id, correta').in('caderno_id', idsRelevantes);
+    (todasRespostas||[]).forEach(r=>{
+      if(!respostasPorCaderno[r.caderno_id]) respostasPorCaderno[r.caderno_id] = {total:0, acertos:0};
+      respostasPorCaderno[r.caderno_id].total++;
+      if(r.correta) respostasPorCaderno[r.caderno_id].acertos++;
+    });
+  }
+
+  const itensAndamento = andamento.map(c=>{
+    const totalQuestoes = (c.filtros_aplicados && c.filtros_aplicados.questao_ids) ? c.filtros_aplicados.questao_ids.length : null;
+    const stats = respostasPorCaderno[c.id] || {total:0, acertos:0};
+    const progresso = totalQuestoes ? `${stats.total} de ${totalQuestoes} respondidas` : `${stats.total} respondidas`;
+    return `
+    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;cursor:pointer" onclick="modoRevisaoCaderno=false;retomarCadernoEspecifico('${c.id}')" ontouchend="event.preventDefault();modoRevisaoCaderno=false;retomarCadernoEspecifico('${c.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
+        <span class="tx" style="font-size:var(--fs-e);padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)" ontouchend="event.preventDefault();event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+      </div>
+      <span style="color:#888;font-size:var(--fs-b)">${progresso}</span>
+    </div>`;
+  });
+  const elA = document.getElementById('lista-cadernos-andamento');
+  elA.innerHTML = itensAndamento.length ? montarCarrosselCadernos(itensAndamento, 'carrossel-andamento') : '<span style="color:#888;font-size:var(--fs-d)">Nenhum caderno em andamento.</span>';
+
+  const itensConcluidos = concluidos.map(c=>{
+    const stats = respostasPorCaderno[c.id] || {total:0, acertos:0};
+    const pct = stats.total ? Math.round((stats.acertos/stats.total)*100) : 0;
+    return `
+    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;opacity:0.85;cursor:pointer" onclick="abrirDetalheCadernoConcluido('${c.id}')" ontouchend="event.preventDefault();abrirDetalheCadernoConcluido('${c.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
+        <span class="tx" style="font-size:var(--fs-e);padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="finalizado" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)" ontouchend="event.preventDefault();event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+      </div>
+      <span style="color:#888;font-size:var(--fs-d)">${stats.total} questões · ${pct}% de acerto</span>
+    </div>`;
+  });
+  const elC = document.getElementById('lista-cadernos-concluidos');
+  elC.innerHTML = itensConcluidos.length ? montarCarrosselCadernos(itensConcluidos, 'carrossel-concluidos') : '<span style="color:#888;font-size:var(--fs-d)">Nenhum caderno concluído ainda.</span>';
+}
+
+// Listas de caderno podem crescer sem limite ao longo do tempo – sem paginação,
+// uma lista grande estoura a altura da tela e o scrollIntoView nunca consegue
+// mostrar o final dela (não é possível "rolar melhor" até algo maior que a tela).
+// Solução: no máximo 5 itens por página, virando carrossel horizontal a partir daí.
+const ITENS_POR_PAGINA_CADERNO = 5;
+let totalCadernosAndamento = 0;
+let totalCadernosConcluidos = 0;
+
+function montarCarrosselCadernos(itensHtml, idTrack){
+  if(itensHtml.length <= ITENS_POR_PAGINA_CADERNO){
+    return `<div style="display:flex;flex-direction:column">${itensHtml.join('')}</div>`;
+  }
+  const paginas = [];
+  for(let i=0; i<itensHtml.length; i+=ITENS_POR_PAGINA_CADERNO){
+    paginas.push(itensHtml.slice(i, i+ITENS_POR_PAGINA_CADERNO));
+  }
+  return `
+    <div class="carrossel-cadernos" id="${idTrack}">
+      ${paginas.map(pagina => `<div class="carrossel-pagina">${pagina.join('')}</div>`).join('')}
+    </div>
+    <div class="carrossel-dots">
+      ${paginas.map((_,i) => `<span class="carrossel-dot${i===0?' ativo':''}" id="${idTrack}-dot${i}"></span>`).join('')}
+    </div>`;
+}
+
+function initCarrosselCaderno(idTrack, totalPaginas){
+  const el = document.getElementById(idTrack);
+  if(!el || totalPaginas <= 1) return;
+  el.addEventListener('scroll', ()=>{
+    const pagina = Math.round(el.scrollLeft / el.clientWidth);
+    for(let i=0; i<totalPaginas; i++){
+      const dot = document.getElementById(idTrack+'-dot'+i);
+      if(dot) dot.classList.toggle('ativo', i===pagina);
+    }
+  }, {passive:true});
+}
+
+function toggleCadernosLista(tipo){
+  const conteudo = document.getElementById('lista-cadernos-'+tipo);
+  const chev = document.getElementById('chev-'+tipo);
+  conteudo.classList.toggle('open');
+  chev.classList.toggle('open');
+  if(conteudo.classList.contains('open')){
+    requestAnimationFrame(()=>{
+      conteudo.scrollIntoView({block:'start', behavior:'smooth'});
+      const total = tipo==='andamento' ? totalCadernosAndamento : totalCadernosConcluidos;
+      const totalPaginas = Math.ceil(total / ITENS_POR_PAGINA_CADERNO);
+      initCarrosselCaderno('carrossel-'+tipo, totalPaginas);
+    });
+  }
+}
+
+async function retomarCadernoEspecifico(cadernoId){
+  // caderno e respostas não dependem um do outro — só precisam do cadernoId,
+  // que já temos de cara. Rodar em paralelo evita 1 ida-e-volta desnecessária.
+  // O cache de marcações do caderno inteiro também entra aqui - carregado de
+  // uma vez só, pra navegar entre questões depois não ter nenhum atraso de rede
+  const [{data}, {data: respostasDoCaderno}] = await Promise.all([
+    sb.from('cadernos').select('*').eq('id', cadernoId).single(),
+    sb.from('respostas').select('*').eq('caderno_id', cadernoId),
+    vfCarregarCacheMarcacoesDoEscopoVF('quest', cadernoId)
+  ]);
+  if(!data){ alert('Caderno não encontrado.'); return; }
+  cadernoAtual = data;
+
+  respostasPorQuestao = {};
+  alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
+  vfCarregarDesenhosCadernoDoStorageVF(); // abrindo/retomando um caderno - traz de volta o que foi salvo antes do app fechar
+  (respostasDoCaderno||[]).forEach(r=>{ respostasPorQuestao[r.questao_id] = {letra:r.resposta_dada, correta:r.correta}; });
+
+  // usa a lista exata de questões salva na criação do caderno – não recalcula pelos filtros
+  // (fallback pelos filtros só existe pra cadernos criados antes dessa correção, sem questao_ids salvo)
+  const filtros = data.filtros_aplicados || {};
+  let questoes, exclusoesDoCaderno;
+  questoesExcluidasAtual = new Set();
+  if(filtros.questao_ids && filtros.questao_ids.length){
+    // achado real: exclusões e favoritos/notas só precisam dos IDs das
+    // questões (já conhecidos aqui, vindos do caderno) - não precisam
+    // esperar a busca das questões completas terminar primeiro. Disparar
+    // os 3 juntos elimina uma ida-e-volta de rede inteira nesse caminho
+    // (o mais comum, cadernos criados depois dessa correção)
+    const idsSalvos = filtros.questao_ids;
+    const [{data: qs}, {data: exclusoes}] = await Promise.all([
+      sb.from('questoes').select('*').in('id', idsSalvos),
+      sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsSalvos).is('resolvido_em', null),
+      carregarFavoritosENotas(idsSalvos)
+    ]);
+    // .in() não garante devolver na ordem da lista passada – reordena manualmente
+    // pra bater exatamente com a ordem embaralhada salva na criação do caderno
+    const mapaQuestoes = {};
+    (qs||[]).forEach(q => { mapaQuestoes[q.id] = q; });
+    questoes = idsSalvos.map(id => mapaQuestoes[id]).filter(Boolean);
+    exclusoesDoCaderno = exclusoes;
+  }else{
+    // caminho antigo (cadernos sem questao_ids salvo) - aqui sim as
+    // exclusões dependem de já ter buscado as questões, pra saber os IDs
+    const montarQuery = () => {
+      let q = sb.from('questoes').select('*', {count: 'exact'});
+      if(filtros.modulo) q = q.eq('modulo_pscpp', filtros.modulo);
+      if(filtros.publicacao) q = q.eq('bibliografia_id', filtros.publicacao);
+      if(filtros.capitulo) q = q.eq('capitulo', filtros.capitulo);
+      return q.order('id');
+    };
+    const {data: qs} = await buscarTudoPaginadoVF(montarQuery);
+    questoes = qs;
+    const idsQuestoesCaderno = (questoes||[]).map(q=>q.id);
+    const [{data: exclusoes}] = await Promise.all([
+      idsQuestoesCaderno.length
+        ? sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoesCaderno).is('resolvido_em', null)
+        : Promise.resolve({data: []}),
+      carregarFavoritosENotas(idsQuestoesCaderno)
+    ]);
+    exclusoesDoCaderno = exclusoes;
+  }
+
+  questoesCaderno = questoes || [];
+  // recupera exclusões que já tinham sido feitas numa sessão anterior desse
+  // mesmo caderno – pra continuar mostrando "Questão excluída" no lugar
+  // certo, em vez de esquecer e mostrar a questão de novo
+  (exclusoesDoCaderno||[]).forEach(e=>{ questoesExcluidasAtual.add(e.questao_id); });
+
+  const primeiraNaoRespondida = questoesCaderno.findIndex(q => !respostasPorQuestao[q.id] && !questoesExcluidasAtual.has(q.id));
+  indiceQuestaoAtual = primeiraNaoRespondida !== -1 ? primeiraNaoRespondida : 0;
+  trocarAba('quests', true); // pula o contador de disponíveis - a tela de filtros nunca fica visível aqui, vai direto pra resolução do caderno
+  document.getElementById('quests-filtros').classList.add('hidden');
+  document.getElementById('quests-resolucao').classList.remove('hidden');
+  renderizarQuestaoAtual();
+}
+
+let cadernoParaExcluir = null;
+
+// reaproveita toda a lógica de carregar questões/respostas/exclusões/
+// favoritos que já existe pra retomar um caderno em andamento — a única
+// diferença é o modo revisão ligado depois, que esconde os botões de
+// excluir/finalizar (não fazem sentido pra um caderno já concluído)
+async function revisarCadernoConcluido(cadernoId){
+  // liga o modo revisão ANTES de carregar/renderizar — se ligasse depois,
+  // a primeira questão já teria renderizado com o modo errado (mostrando
+  // excluir/finalizar em vez do botão certo), só a segunda em diante
+  // ficaria certa
+  modoRevisaoCaderno = true;
+  await retomarCadernoEspecifico(cadernoId);
+}
+
+function abrirConfirmacaoExclusaoCaderno(el){
+  cadernoParaExcluir = el.dataset.id;
+  const nome = el.dataset.nome;
+  const texto = `Excluir o caderno "${nome}"? Isso desfaz a contribuição desse caderno nas suas estatísticas.`;
+  document.getElementById('texto-confirmar-exclusao-caderno').textContent = texto;
+  abrirModal('modal-confirmar-exclusao-caderno');
+}
+
+async function confirmarExclusaoCaderno(){
+  if(!cadernoParaExcluir) return;
+
+  // se esse caderno já tinha sido enviado pro Tracker, precisa apagar lá
+  // também — senão fica dado órfão contando pontos de um caderno que não
+  // existe mais aqui. Isso roda ANTES de apagar localmente de propósito:
+  // se a exclusão no Tracker falhar, avisa e deixa o Carlos decidir se
+  // quer prosseguir mesmo assim, em vez de apagar aqui e esquecer lá
+  const {data: cadernoInfo} = await sb.from('cadernos').select('id_atividade_tracker').eq('id', cadernoParaExcluir).maybeSingle();
+  if(cadernoInfo?.id_atividade_tracker){
+    try{
+      const {data: {session}} = await sb.auth.getSession();
+      const resp = await fetch(`${TRACKER_INTERMEDIARIA_URL}?id_atividade=${encodeURIComponent(cadernoInfo.id_atividade_tracker)}`, {
+        method: 'DELETE',
+        headers: {'Authorization': `Bearer ${session?.access_token}`}
+      });
+      const resultado = await resp.json().catch(()=>({ok:false, erro:'resposta inválida'}));
+      if(!resultado.ok && resp.status !== 404){
+        // 404 (já não existe lá) não é motivo pra travar — qualquer outro
+        // erro, sim, porque apagar aqui sem avisar deixaria lixo lá
+        if(!confirm(`Não consegui apagar esse caderno no PSCPP Tracker (${resultado.erro||'erro desconhecido'}). Apagar mesmo assim só aqui no Pilotquest?`)){
+          return;
+        }
+      }
+    }catch(e){
+      if(!confirm('Não consegui conectar ao PSCPP Tracker pra apagar esse caderno lá. Apagar mesmo assim só aqui no Pilotquest?')){
+        return;
+      }
+    }
+  }
+
+  await sb.from('cadernos').delete().eq('id', cadernoParaExcluir);
+  const estavaResolvendo = cadernoAtual && cadernoAtual.id === cadernoParaExcluir;
+  cadernoParaExcluir = null;
+  fecharModal('modal-confirmar-exclusao-caderno');
+  if(estavaResolvendo){
+    try{ localStorage.removeItem('pscpp_quest_desenhos_' + cadernoAtual.id); }catch(e){}
+    cadernoAtual = null;
+    questoesCaderno = [];
+    document.getElementById('quests-resolucao').classList.add('hidden');
+    document.getElementById('quests-filtros').classList.remove('hidden');
+  }
+  await carregarCadernosExistentes();
+}
+
+let alternativaSelecionadaAtual = null; // marcada mas ainda não confirmada – reseta a cada troca de questão
+let alternativasRiscadasAtual = new Set(); // "eliminadas" visualmente (pressionar e segurar) – reseta a cada troca de questão
+let questoesExcluidasAtual = new Set(); // ids das questões excluídas nesse caderno – fica na MESMA posição, só troca o visual por uma versão apagada com aviso por cima
+
+// Pressionar e segurar risca uma alternativa (elimina ela visualmente, sem
+// contar como resposta); toque/clique rápido continua selecionando como
+// resposta, igual sempre foi. Uma alternativa riscada não pode ser
+// selecionada – só desriscada com outro pressionar e segurar.
+const DURACAO_PRESSIONAR_LONGO_MS = 250;
+let pressTimerAlternativa = null;
+let pressLetraAtual = null;
+let pressFoiLongo = false;
+let pressMoveu = false;
+let pressPosicaoInicial = null; // {x, y} - usado pra medir a distância real percorrida, em vez de marcar "moveu" no primeiro pixel
+let ultimaSelecaoPorToque = 0; // debounce – evita que o clique "fantasma" que o navegador dispara depois de um toque conte como um segundo clique
+function iniciarPressionarAlternativa(letra, evento){
+  pressLetraAtual = letra;
+  pressFoiLongo = false;
+  pressMoveu = false;
+  pressPosicaoInicial = (evento && evento.touches && evento.touches[0]) ? {x: evento.touches[0].clientX, y: evento.touches[0].clientY} : null;
+  clearTimeout(pressTimerAlternativa);
+  pressTimerAlternativa = setTimeout(()=>{
+    if(!pressMoveu){
+      pressFoiLongo = true;
+      alternarRiscoAlternativa(letra);
+    }
+  }, DURACAO_PRESSIONAR_LONGO_MS);
+}
+// dedo se moveu (rolando a tela) – cancela o risco, e não bloqueia a rolagem
+// natural do navegador (por isso não usamos preventDefault aqui).
+// Limiar de distância real (não o primeiro pixel) - achado real: a
+// Apple Pencil tem um tremor natural mesmo "parada", marcar "moveu" sem
+// nenhuma tolerância impedia a seleção de funcionar quase sempre com a caneta
+const LIMIAR_MOVIMENTO_PRESSIONAR_PX = 10;
+function moverDurantePressionar(evento){
+  if(pressPosicaoInicial && evento && evento.touches && evento.touches[0]){
+    const dx = evento.touches[0].clientX - pressPosicaoInicial.x, dy = evento.touches[0].clientY - pressPosicaoInicial.y;
+    if(Math.hypot(dx, dy) < LIMIAR_MOVIMENTO_PRESSIONAR_PX) return; // dentro da tolerância - ainda não conta como "moveu" de verdade
+  }
+  pressMoveu = true;
+  clearTimeout(pressTimerAlternativa);
+}
+function cancelarPressionarAlternativa(){
+  clearTimeout(pressTimerAlternativa);
+  pressPosicaoInicial = null;
+}
+function finalizarPressionarAlternativa(letra, viaToque){
+  clearTimeout(pressTimerAlternativa);
+  pressPosicaoInicial = null;
+  const foiLongo = pressFoiLongo;
+  const moveu = pressMoveu;
+  pressLetraAtual = null;
+  pressFoiLongo = false;
+  pressMoveu = false;
+  if(viaToque){
+    ultimaSelecaoPorToque = Date.now();
+  }else if(Date.now() - ultimaSelecaoPorToque < 500){
+    return; // esse mouseup é só o eco sintético do toque que acabou de acontecer
+  }
+  if(!foiLongo && !moveu && !alternativasRiscadasAtual.has(letra)){
+    selecionarAlternativa(letra);
+  }
+}
+function alternarRiscoAlternativa(letra){
+  if(alternativasRiscadasAtual.has(letra)){
+    alternativasRiscadasAtual.delete(letra);
+  }else{
+    alternativasRiscadasAtual.add(letra);
+    if(alternativaSelecionadaAtual === letra) alternativaSelecionadaAtual = null; // se estava selecionada, desmarca ao riscar
+  }
+  if(navigator.vibrate) navigator.vibrate(30); // feedback tátil rápido, se o aparelho suportar
+  renderizarQuestaoAtual();
+}
+let favoritosDoUsuario = new Set();
+let notasDoUsuario = new Set();
+let topicosPendentesDoUsuario = new Set();
+let relatosFormatacaoDoUsuario = new Set();
+let alternativasSalvasAtual = new Set(); // chave "questaoId|letra" — só usada pelo Carlos
+let modoRevisaoCaderno = false; // true quando visualizando um caderno JÁ concluído (somente leitura, sem excluir/finalizar)
+
+async function carregarFavoritosENotas(idsQuestoes){
+  if(!idsQuestoes.length){ favoritosDoUsuario = new Set(); notasDoUsuario = new Set(); topicosPendentesDoUsuario = new Set(); relatosFormatacaoDoUsuario = new Set(); alternativasSalvasAtual = new Set(); return; }
+  const [{data: favs}, {data: nts}, {data: topicosDasQuestoes}, {data: relatos}, {data: altsSalvas}] = await Promise.all([
+    sb.from('favoritos').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
+    sb.from('notas').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
+    sb.from('topicos').select('id, questao_id, status').in('questao_id', idsQuestoes),
+    sb.from('relatos_formatacao').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
+    souCarlos() ? sb.from('alternativas_salvas').select('questao_id, letra').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes) : Promise.resolve({data: []})
+  ]);
+  favoritosDoUsuario = new Set((favs||[]).map(f=>f.questao_id));
+  notasDoUsuario = new Set((nts||[]).map(n=>n.questao_id));
+  relatosFormatacaoDoUsuario = new Set((relatos||[]).map(r=>r.questao_id));
+  // chave combinada questão+letra, já que dá pra salvar mais de uma
+  // alternativa da mesma questão, cada uma independente
+  alternativasSalvasAtual = new Set((altsSalvas||[]).map(a=>a.questao_id+'|'+a.letra));
+
+  // uma questão tem "bolinha" de Discutir se tiver algum tópico ainda ativo
+  // pra esse usuário: aberto, ou resolvido mas que ele ainda não votou/concordou
+  const idsTopicos = (topicosDasQuestoes||[]).map(t=>t.id);
+  let idsVotados = new Set();
+  if(idsTopicos.length){
+    const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id).in('topico_id', idsTopicos);
+    idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
+  }
+  topicosPendentesDoUsuario = new Set(
+    (topicosDasQuestoes||[]).filter(t => t.status==='aberto' || !idsVotados.has(t.id)).map(t=>t.questao_id)
+  );
+}
+
+async function toggleAlternativaSalva(questaoId, letra, btnEl){
+  const chave = questaoId + '|' + letra;
+  if(alternativasSalvasAtual.has(chave)){
+    await sb.from('alternativas_salvas').delete().eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId).eq('letra', letra);
+    alternativasSalvasAtual.delete(chave);
+  }else{
+    await sb.from('alternativas_salvas').insert({usuario_id: usuarioAtual.id, questao_id: questaoId, letra});
+    alternativasSalvasAtual.add(chave);
+  }
+  if(btnEl) btnEl.style.color = alternativasSalvasAtual.has(chave) ? '#B23A34' : '#ccc';
+}
+
+async function toggleFavorito(questaoId){
+  if(favoritosDoUsuario.has(questaoId)){
+    await sb.from('favoritos').delete().eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId);
+    favoritosDoUsuario.delete(questaoId);
+  }else{
+    await sb.from('favoritos').insert({usuario_id: usuarioAtual.id, questao_id: questaoId});
+    favoritosDoUsuario.add(questaoId);
+  }
+  renderizarQuestaoAtual();
+}
+
+let questaoNotaAtual = null;
+
+async function abrirNotaQuestao(questaoId){
+  questaoNotaAtual = questaoId;
+  document.getElementById('texto-nota-questao').value = '';
+  abrirModal('modal-nota-questao');
+  await renderizarListaNotasQuestao();
+}
+
+async function renderizarListaNotasQuestao(){
+  const el = document.getElementById('lista-notas-questao');
+  el.innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>';
+  const {data} = await sb.from('notas').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoNotaAtual).order('criado_em', {ascending:false});
+  if(!data || !data.length){ el.innerHTML = ''; return; }
+  el.innerHTML = `<div style="margin-bottom:14px">` + data.map(n => `
+    <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
+      <p style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${formatarEnunciado(n.texto)}</p>
+      <button onclick="excluirNotaQuestao('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
+    </div>`).join('') + `</div>`;
+}
+
+async function adicionarNotaQuestao(){
+  const campo = document.getElementById('texto-nota-questao');
+  const texto = campo.value.trim();
+  if(!texto) return;
+  await sb.from('notas').insert({usuario_id: usuarioAtual.id, questao_id: questaoNotaAtual, texto});
+  campo.value = '';
+  notasDoUsuario.add(questaoNotaAtual);
+  await renderizarListaNotasQuestao();
+  renderizarQuestaoAtual();
+}
+
+async function excluirNotaQuestao(notaId){
+  await sb.from('notas').delete().eq('id', notaId);
+  await renderizarListaNotasQuestao();
+  const {count} = await sb.from('notas').select('id', {count:'exact', head:true}).eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoNotaAtual);
+  if(!count) notasDoUsuario.delete(questaoNotaAtual);
+  renderizarQuestaoAtual();
+}
+
+// Reporte de formatação — 1 clique só, sem formulário. Qualquer pessoa que
+// notar algo estranho na formatação (não confundir com "Discutir", que é
+// pra questões de conteúdo/gabarito) avisa o admin direto, sem precisar
+// escrever nada
+async function reportarProblemaFormatacao(questaoId){
+  const btn = document.getElementById('btn-reportar-formatacao-'+questaoId);
+  if(btn) btn.disabled = true;
+  const jaReportada = relatosFormatacaoDoUsuario.has(questaoId);
+
+  if(jaReportada){
+    // desfaz: apaga o relato de verdade, não só o efeito visual — é isso
+    // que faz a notificação sumir pro admin também, na próxima atualização
+    const {error} = await sb.from('relatos_formatacao').delete().eq('questao_id', questaoId).eq('usuario_id', usuarioAtual.id);
+    if(error){ alert('Erro ao desfazer: '+error.message); if(btn) btn.disabled = false; return; }
+    relatosFormatacaoDoUsuario.delete(questaoId);
+  }else{
+    const {error} = await sb.from('relatos_formatacao').insert({questao_id: questaoId, usuario_id: usuarioAtual.id});
+    if(error){ alert('Erro ao reportar: '+error.message); if(btn) btn.disabled = false; return; }
+    relatosFormatacaoDoUsuario.add(questaoId);
+  }
+
+  if(btn){
+    btn.classList.toggle('ativo', !jaReportada);
+    const span = btn.querySelector('span');
+    if(span) span.textContent = jaReportada ? 'Formatação' : 'Reportado';
+    btn.disabled = false;
+  }
+}
+
+// Edição direta do admin — diferente de "Propor edição" (que passa por
+// votação da comunidade), essa aplica na hora, sem votar. Só aparece o
+// botão pra quem é admin
+let questaoEdicaoAdminAtual = null;
+async function abrirEdicaoDiretaAdmin(questaoId){
+  const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
+  if(!q){ alert('Não consegui carregar essa questão.'); return; }
+  questaoEdicaoAdminAtual = questaoId;
+  // colapsa as quebras de linha originais do PDF (que quebravam numa largura
+  // de coluna estreita, no meio da frase) antes de mostrar no formulário —
+  // sem isso, o texto aparece "picado" em várias linhas curtas, difícil de
+  // ler e editar. Isso já limpa o texto salvo também, já que ao salvar sem
+  // mexer em nada o valor limpo é o que volta pro banco
+  const limpar = t => (t||'').replace(/\s+/g, ' ').trim();
+  document.getElementById('admin-edicao-enunciado').value = limpar(removerMarcadoresSubscrito(q.enunciado));
+  // separa as alternativas nos 5 campos individuais, reaproveitando o
+  // mesmo parser que já divide "a) texto b) texto..." pra exibição normal
+  const altsExtraidas = extrairAlternativas(q.alternativas);
+  const mapaAlts = {};
+  altsExtraidas.forEach(a => { mapaAlts[a.letra] = a.texto; });
+  ['a','b','c','d','e'].forEach(letra => {
+    document.getElementById('admin-edicao-alt-'+letra).value = limpar(removerMarcadoresSubscrito(mapaAlts[letra] || ''));
+  });
+  document.getElementById('admin-edicao-gabarito').value = (q.gabarito||'').toUpperCase();
+  document.getElementById('admin-edicao-explicacao').value = limpar(removerMarcadoresSubscrito(q.explicacao || ''));
+  document.getElementById('admin-edicao-concurso').value = q.concurso_origem || '';
+  document.getElementById('admin-edicao-ano').value = q.ano_prova || '';
+  abrirModal('modal-editar-questao-admin');
+}
+async function salvarEdicaoDiretaAdmin(){
+  if(!questaoEdicaoAdminAtual) return;
+  const enunciado = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-enunciado').value.trim());
+  // junta os 5 campos individuais de volta no formato "a) texto\nb) texto..."
+  // que o banco espera — pula letras deixadas em branco (questão com menos
+  // de 5 alternativas, caso raro mas existe)
+  const alternativas = ['a','b','c','d','e']
+    .map(letra => {
+      const texto = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-alt-'+letra).value.trim());
+      return texto ? `(${letra}) ${texto}` : null;
+    })
+    .filter(Boolean)
+    .join('\n');
+  const gabarito = document.getElementById('admin-edicao-gabarito').value.trim().toLowerCase();
+  const explicacao = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-explicacao').value.trim());
+  const concursoOrigem = document.getElementById('admin-edicao-concurso').value.trim() || null;
+  const anoProva = parseInt(document.getElementById('admin-edicao-ano').value, 10) || null;
+  const {error} = await sb.from('questoes').update({
+    enunciado, alternativas, gabarito,
+    explicacao: explicacao || null,
+    explicacao_origem: explicacao ? 'fonte_original' : 'nunca_gerada',
+    concurso_origem: concursoOrigem,
+    ano_prova: anoProva,
+    atualizado_em: new Date().toISOString()
+  }).eq('id', questaoEdicaoAdminAtual);
+  if(error){ alert('Erro ao salvar: '+error.message); return; }
+  // marca quaisquer relatos de formatação dessa questão como vistos, já
+  // que acabou de ser corrigida
+  await sb.from('relatos_formatacao').update({visto:true}).eq('questao_id', questaoEdicaoAdminAtual);
+  fecharModal('modal-editar-questao-admin');
+  const idAtualizado = questaoEdicaoAdminAtual;
+  questaoEdicaoAdminAtual = null;
+  // atualiza a questão em memória, se estiver visível em algum contexto
+  const idx = questoesCaderno.findIndex(x=>x.id===idAtualizado);
+  if(idx !== -1){
+    questoesCaderno[idx] = {...questoesCaderno[idx], enunciado, alternativas, gabarito, explicacao: explicacao||null};
+    renderizarQuestaoAtual();
+  }
+  await atualizarNotificacoesOrdenadas();
+}
+
+function fecharCadernoResolucao(){
+  document.getElementById('quests-resolucao').classList.add('hidden');
+  document.getElementById('quests-filtros').classList.remove('hidden');
+  carregarCadernosExistentes();
+}
+
+function renderizarPillsCaderno(){
+  const el = document.getElementById('pills-nav-caderno');
+  el.innerHTML = questoesCaderno.map((q,i)=>{
+    const r = respostasPorQuestao[q.id];
+    const excluida = questoesExcluidasAtual.has(q.id);
+    let cls = 'pill-questao';
+    if(i===indiceQuestaoAtual) cls += ' atual';
+    if(excluida) cls += ' excluida';
+    else if(r) cls += r.correta ? ' acertou' : ' errou';
+    return `<button class="${cls}" onclick="irParaQuestao(${i})">${excluida?'×':i+1}</button>`;
+  }).join('');
+}
+
+// salva o desenho atual (se houver algo desenhado de verdade) associado
+// à questão que está prestes a sair de cena - junto com a largura/altura
+// do conteúdo no momento, pro mesmo fator de correção de rotação já
+// usado no histórico normal também funcionar aqui
+function vfSalvarDesenhoQuestaoAtualQuestVF(){
+  const questaoAtual = questoesCaderno[indiceQuestaoAtual];
+  if(!questaoAtual) return;
+  const canvas = document.getElementById('vf-canvas-desenho');
+  if(!canvas || typeof vfIndiceHistoricoVF === 'undefined' || vfIndiceHistoricoVF < 0) return; // nada desenhado, nada a guardar
+  const content = document.getElementById('content');
+  vfDesenhosPorQuestaoQuestVF.set(questaoAtual.id, {
+    dataUrl: canvas.toDataURL(),
+    larguraConteudo: content ? content.clientWidth : null,
+    alturaConteudo: content ? content.scrollHeight : null
+  });
+  vfPersistirDesenhosCadernoNoStorageVF(); // sem isso, fechar o app apagava tudo - só ficava em memória
+}
+// grava o mapa inteiro de desenhos do caderno atual no localStorage -
+// achado real: sem persistir de verdade, fechar e reabrir o app perdia
+// tudo que tinha sido riscado, mesmo dentro do mesmo caderno em aberto
+function vfPersistirDesenhosCadernoNoStorageVF(){
+  if(!cadernoAtual) return;
+  try{
+    const objeto = Object.fromEntries(vfDesenhosPorQuestaoQuestVF);
+    localStorage.setItem('pscpp_quest_desenhos_' + cadernoAtual.id, JSON.stringify(objeto));
+  }catch(e){} // localStorage cheio ou indisponível - sem essa persistência, mas não quebra o resto do app
+}
+// carrega os desenhos salvos do caderno atual (se existirem) - chamado
+// ao abrir/retomar um caderno, restaura vfDesenhosPorQuestaoQuestVF a
+// partir do que ficou salvo antes do app ter sido fechado
+function vfCarregarDesenhosCadernoDoStorageVF(){
+  vfDesenhosPorQuestaoQuestVF = new Map();
+  if(!cadernoAtual) return;
+  try{
+    const salvo = localStorage.getItem('pscpp_quest_desenhos_' + cadernoAtual.id);
+    if(salvo) vfDesenhosPorQuestaoQuestVF = new Map(Object.entries(JSON.parse(salvo)));
+  }catch(e){}
+}
+// restaura o desenho salvo da questão (se existir) depois que o canvas já
+// foi limpo/redimensionado pra tela atual - mesmo fator de correção de
+// rotação de vfHistoricoDesenho, já que é o mesmo tipo de situação (o
+// desenho pode ter sido salvo numa orientação diferente da atual)
+function vfRestaurarDesenhoQuestaoQuestVF(questaoId){
+  const salvo = vfDesenhosPorQuestaoQuestVF.get(questaoId);
+  if(!salvo || !vfCtxDesenho) return;
+  const canvas = document.getElementById('vf-canvas-desenho');
+  const content = document.getElementById('content');
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  const img = new Image();
+  img.onload = () => {
+    vfCtxDesenho.globalCompositeOperation = 'source-over';
+    vfCtxDesenho.globalAlpha = 1;
+    let larguraDestino = img.width/dpr, alturaDestino = img.height/dpr;
+    if(content && salvo.larguraConteudo && salvo.alturaConteudo){
+      const novaLargura = content.clientWidth;
+      const novaAltura = Math.min(Math.max(content.scrollHeight, content.offsetHeight), window.innerHeight * 8);
+      larguraDestino = (img.width/dpr) * (novaLargura / salvo.larguraConteudo);
+      alturaDestino = (img.height/dpr) * (novaAltura / salvo.alturaConteudo);
+    }
+    vfCtxDesenho.drawImage(img, 0, 0, larguraDestino, alturaDestino);
+    // esse desenho restaurado também precisa entrar no histórico de
+    // desfazer/refazer da questão nova, senão "Desfazer" não teria o que desfazer
+    vfSalvarEstadoHistoricoVF();
+  };
+  img.src = salvo.dataUrl;
+}
+
+// ---- Rascunho livre - folha de desenho independente, sem vínculo com
+// nenhuma questão. Reaproveita 100% do sistema de canvas/caneta/borracha/
+// destaque já existente (mesma infraestrutura do Flash e do Quest) - só
+// muda a "tela" em volta. Um único desenho persistido (não é por
+// questão como no Quest), guardado localmente até o usuário limpar -
+// não sincroniza com o Supabase de propósito, é rascunho de verdade,
+// não conteúdo de estudo pra rever depois ----
+let vfAbaAnteriorAoRascunhoVF = null; // guarda qual aba estava visível antes, pra voltar exatamente pra ela ao fechar
+
+function abrirRascunhoLivreVF(){
+  // #quests-resolucao não tem a classe .view-aba própria (só o pai
+  // #aba-quests tem) - mas vfTelaAtualVF()/vfEstaVisivelAgora() checam
+  // ela diretamente, sem considerar se o pai está escondido. Escondendo
+  // só via .view-aba genérico, ela continuava "contando" como visível
+  // por trás do rascunho, mesmo não aparecendo na tela
+  const questResolucaoVisivel = document.getElementById('quests-resolucao');
+  const questResolucaoEstavaVisivel = questResolucaoVisivel && !questResolucaoVisivel.classList.contains('hidden');
+  const abaVisivelAgora = document.querySelector('.view-aba:not(.hidden)');
+  vfAbaAnteriorAoRascunhoVF = questResolucaoEstavaVisivel ? 'quests-resolucao' : (abaVisivelAgora ? abaVisivelAgora.id : 'aba-inicio');
+  // o texto ao lado da seta de voltar mostra pra onde o "voltar" vai
+  // levar - mesmos nomes usados no menu de navegação, pra ficar
+  // consistente com o resto do app
+  const nomesAbaVF = {'aba-inicio': 'Início', 'aba-forum': 'Fórum', 'aba-placar': 'Desempenho', 'aba-vf': 'Flash', 'aba-quests': 'Quest', 'quests-resolucao': 'Quest', 'aba-adicionar': 'Adicionar questões'};
+  const textoVoltar = document.getElementById('rascunho-livre-texto-voltar');
+  if(textoVoltar) textoVoltar.textContent = nomesAbaVF[vfAbaAnteriorAoRascunhoVF] || 'Voltar';
+  document.querySelectorAll('.view-aba').forEach(el => el.classList.add('hidden'));
+  if(questResolucaoVisivel) questResolucaoVisivel.classList.add('hidden');
+  document.getElementById('aba-rascunho-livre-vf').classList.remove('hidden');
+  vfAtualizarVisibilidadeCanvasVF();
+  limparCanvasDesenhoVF(); // qualquer traço da tela anterior nunca deveria "vazar" pra cá
+  inicializarCanvasDesenhoVF(); // mede o canvas já com o tamanho certo dessa tela nova
+  mostrarBarraDesenhoVF(); // aparece direto, sem precisar tocar primeiro pra "descobrir" que dá pra desenhar
+  vfRestaurarRascunhoLivreVF();
+  document.querySelectorAll('#bottom-nav .nav-item').forEach(item => item.classList.remove('active'));
+}
+
+function fecharRascunhoLivreVF(){
+  vfSalvarRascunhoLivreVF();
+  limparCanvasDesenhoVF(); // esconde barra/painéis e limpa o canvas visualmente antes de trocar de tela
+  document.getElementById('aba-rascunho-livre-vf').classList.add('hidden');
+  const idVolta = vfAbaAnteriorAoRascunhoVF || 'aba-inicio';
+  if(idVolta === 'quests-resolucao'){
+    // caso especial: #quests-resolucao vive dentro de #aba-quests, então
+    // os dois precisam voltar a ficar visíveis juntos
+    document.getElementById('aba-quests')?.classList.remove('hidden');
+    document.getElementById('quests-resolucao')?.classList.remove('hidden');
+  }else{
+    document.getElementById(idVolta)?.classList.remove('hidden');
+  }
+  vfAtualizarVisibilidadeCanvasVF();
+  const nomeNavAlvo = idVolta === 'quests-resolucao' ? 'quests' : idVolta.replace(/^aba-/, '');
+  document.querySelectorAll('#bottom-nav .nav-item').forEach(item => item.classList.toggle('active', item.dataset.aba === nomeNavAlvo));
+}
+
+function vfSalvarRascunhoLivreVF(){
+  const canvas = document.getElementById('vf-canvas-desenho');
+  if(!canvas || typeof vfIndiceHistoricoVF === 'undefined' || vfIndiceHistoricoVF < 0) return; // nada desenhado, nada a guardar
+  const papel = document.getElementById('rascunho-livre-papel');
+  try{
+    localStorage.setItem('pscpp_rascunho_livre_vf', JSON.stringify({
+      dataUrl: canvas.toDataURL(),
+      largura: papel ? papel.clientWidth : null,
+      altura: papel ? papel.clientHeight : null
+    }));
+  }catch(e){} // localStorage cheio ou indisponível - não quebra o resto do app
+}
+
+function vfRestaurarRascunhoLivreVF(){
+  if(!vfCtxDesenho) return;
+  let salvo;
+  try{
+    const bruto = localStorage.getItem('pscpp_rascunho_livre_vf');
+    if(!bruto) return;
+    salvo = JSON.parse(bruto);
+  }catch(e){ return; }
+  const canvas = document.getElementById('vf-canvas-desenho');
+  const papel = document.getElementById('rascunho-livre-papel');
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  const img = new Image();
+  img.onload = () => {
+    vfCtxDesenho.globalCompositeOperation = 'source-over';
+    vfCtxDesenho.globalAlpha = 1;
+    let larguraDestino = img.width/dpr, alturaDestino = img.height/dpr;
+    if(papel && salvo.largura && salvo.altura){
+      larguraDestino = (img.width/dpr) * (papel.clientWidth / salvo.largura);
+      alturaDestino = (img.height/dpr) * (papel.clientHeight / salvo.altura);
+    }
+    vfCtxDesenho.drawImage(img, 0, 0, larguraDestino, alturaDestino);
+    vfSalvarEstadoHistoricoVF(); // entra no histórico de desfazer, senão "Desfazer" não teria o que desfazer
+  };
+  img.src = salvo.dataUrl;
+}
+
+function vfLimparRascunhoLivreVF(){
+  limparCanvasDesenhoVF();
+  mostrarBarraDesenhoVF(); // limparCanvasDesenhoVF esconde a barra - like o rascunho continua aberto, ela deve continuar visível
+  try{ localStorage.removeItem('pscpp_rascunho_livre_vf'); }catch(e){}
+}
+
+
+function irParaQuestao(i){
+  vfSalvarDesenhoQuestaoAtualQuestVF(); // guarda o que foi riscado na questão que está saindo, antes de trocar
+  indiceQuestaoAtual = i;
+  alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
+  limparCanvasDesenhoVF(); // limpa primeiro - só fica em branco de verdade se a questão nova nunca teve desenho salvo
+  renderizarQuestaoAtual(); // muda o DOM pra questão nova - precisa acontecer ANTES de redimensionar o canvas, senão ele mede o tamanho da questão antiga
+  redimensionarCanvasDesenhoVF(); // garante que o canvas já tem o tamanho certo da questão nova antes de tentar restaurar um desenho nele
+  const questaoNova = questoesCaderno[i];
+  if(questaoNova) vfRestaurarDesenhoQuestaoQuestVF(questaoNova.id);
+}
+
+function selecionarAlternativa(letra){
+  alternativaSelecionadaAtual = (alternativaSelecionadaAtual === letra) ? null : letra;
+  renderizarQuestaoAtual();
+}
+
+async function confirmarRespostaCaderno(){
+  if(!alternativaSelecionadaAtual) return;
+  const q = questoesCaderno[indiceQuestaoAtual];
+  await responderQuestao(q.id, alternativaSelecionadaAtual);
+  alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
+}
+
+async function abrirInfoQuestao(questaoId){
+  const q = questoesCaderno.find(x => x.id === questaoId);
+  if(!q) return;
+  document.getElementById('texto-info-questao').textContent = 'Carregando...';
+  abrirModal('modal-info-questao');
+  const {data: autor} = await sb.from('usuarios').select('nome').eq('id', q.autor_id).single();
+  const dataFormatada = q.criado_em ? new Date(q.criado_em).toLocaleDateString('pt-BR') : 'data desconhecida';
+  let texto = `Adicionada por ${autor?.nome || 'alguém'}, em ${dataFormatada}.`;
+
+  const mapaBibliografiaTitulo = {};
+  bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
+  const partes = [];
+  if(q.modulo_pscpp) partes.push(q.modulo_pscpp);
+  if(q.bibliografia_id && mapaBibliografiaTitulo[q.bibliografia_id]) partes.push(mapaBibliografiaTitulo[q.bibliografia_id]);
+  if(q.capitulo){
+    const rotulo = rotuloCapituloDoLivro(q.bibliografia_id ? mapaBibliografiaTitulo[q.bibliografia_id] : null);
+    partes.push(`${rotulo} ${q.capitulo}`);
+  }
+  if(partes.length) texto += `\n${partes.join(' · ')}`;
+
+  if(usuarioAtual?.is_admin && q.lote_upload_id) texto += `\n\nLote: ${q.lote_upload_id}`;
+  document.getElementById('texto-info-questao').innerHTML = escapeHtml(texto).replace(/\n/g, '<br>');
+}
+function renderizarQuestaoAtual(){
+  renderizarPillsCaderno();
+  const q = questoesCaderno[indiceQuestaoAtual];
+  if(!q){ document.getElementById('questao-atual').innerHTML = '<p>Fim do caderno.</p>'; return; }
+
+  const excluida = questoesExcluidasAtual.has(q.id);
+  const alternativas = extrairAlternativas(q.alternativas);
+  const jaRespondida = !!respostasPorQuestao[q.id];
+  const resposta = respostasPorQuestao[q.id];
+  const gabarito = (q.gabarito||'').toLowerCase().trim();
+  const todasRespondidas = questoesCaderno.length > 0 && questoesCaderno.every(qq => !!respostasPorQuestao[qq.id] || questoesExcluidasAtual.has(qq.id));
+  const nomeCadernoEscapado = escapeHtml(cadernoAtual.nome || 'Caderno sem nome');
+
+  const mostrarBotaoSalvarAlt = jaRespondida && souCarlos();
+  // reserva o espaço do ícone de salvar SEMPRE (desde antes de responder,
+  // não só depois) - achado real: o padding-right só era aplicado depois
+  // de responder, quando o ícone surgia; isso reduzia a largura disponível
+  // pro texto NAQUELE momento, fazendo a última palavra "descer" pra uma
+  // segunda linha bem na hora que o ícone aparecia. Reservando sempre (pra
+  // quem pode ver o ícone), o texto já nasce com a largura final certa,
+  // sem nunca precisar requebrar linha depois
+  const reservarEspacoSalvarAlt = souCarlos();
+  // se a questão tem formato I./II./III., só os itens fazem sentido salvar
+  // (a alternativa em si é só "apenas I e III", sem conteúdo próprio) — as
+  // alternativas não mostram marcador nesse caso específico
+  const itensNumeradosDaQuestao = reservarEspacoSalvarAlt ? extrairItensNumerados(q.enunciado) : null;
+  const mostrarBotaoSalvarNaAlternativa = mostrarBotaoSalvarAlt && !itensNumeradosDaQuestao;
+  const reservarEspacoNaAlternativa = reservarEspacoSalvarAlt && !itensNumeradosDaQuestao;
+  const htmlAlternativas = alternativas.length
+    ? alternativas.map(alt=>{
+        const riscada = alternativasRiscadasAtual.has(alt.letra);
+        let estilo = '';
+        if(jaRespondida){
+          if(alt.letra === gabarito) estilo = 'background:#EAF3DE;border-color:#639922;color:#27500A';
+          else if(alt.letra === resposta.letra) estilo = 'background:#FCEBEB;border-color:#E24B4A;color:#A32D2D';
+        }else if(riscada){
+          estilo = 'opacity:0.4;background:#F5F5F4;border-color:#ddd';
+        }else if(alt.letra === alternativaSelecionadaAtual){
+          estilo = 'background:#E6F1FB;border-color:#202A45;color:#202A45';
+        }
+        const handlers = (jaRespondida || excluida) ? '' : `onmousedown="iniciarPressionarAlternativa('${alt.letra}')" onmouseup="finalizarPressionarAlternativa('${alt.letra}', false)" onmouseleave="cancelarPressionarAlternativa()" ontouchstart="iniciarPressionarAlternativa('${alt.letra}', event)" ontouchend="finalizarPressionarAlternativa('${alt.letra}', true)" ontouchmove="moverDurantePressionar(event)" ontouchcancel="cancelarPressionarAlternativa()"`;
+        const botaoBtn = `<button class="banco-alt-btn" style="width:100%;${estilo}${reservarEspacoNaAlternativa?';padding-right:38px':''}" ${(jaRespondida||excluida)?'disabled':''} ${handlers}><span style="display:flex;gap:8px;align-items:flex-start;text-align:left"><span style="flex-shrink:0">${alt.letra})</span> <span style="flex:1;min-width:0${riscada?';text-decoration:line-through':''}">${alt.texto}</span></span></button>`;
+        // botão de salvar fica FORA do <button> da alternativa de propósito —
+        // um botão nativo desabilitado bloqueia clique em qualquer coisa
+        // dentro dele, mesmo em elementos filhos com seu próprio onclick
+        if(!mostrarBotaoSalvarNaAlternativa) return `<div style="position:relative">${botaoBtn}</div>`;
+        const chaveAlt = q.id + '|' + alt.letra;
+        const salva = alternativasSalvasAtual.has(chaveAlt);
+        return `<div style="position:relative">${botaoBtn}<button onclick="toggleAlternativaSalva('${q.id}','${alt.letra}',this)" style="position:absolute;top:6px;right:6px;background:none;border:none;padding:4px;cursor:pointer;color:${salva?'#B23A34':'#ccc'};display:flex" title="Salvar essa alternativa"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button></div>`;
+      }).join('')
+    : '<p style="color:#B00020;font-size:var(--fs-d)">Alternativas não identificadas nessa questão (pode estar malformada) – considere excluir pra você.</p>';
+
+  const foiCorrigidaAntesDeResponder = !jaRespondida && q.atualizado_em && cadernoAtual.criado_em && q.atualizado_em > cadernoAtual.criado_em;
+
+  // questão excluída por você: continua sendo desenhada normalmente (então
+  // ocupa exatamente o mesmo espaço que ocuparia de qualquer forma), só que
+  // apagada/sem interação por baixo, com um aviso flutuando por cima —
+  // mais sutil do que sumir com o conteúdo de vez
+  const html = `
+    <div style="position:relative">
+    <div${excluida ? ' style="opacity:0.28;filter:grayscale(0.5);pointer-events:none;user-select:none"' : ''}>
+    <div class="card-questao" data-questao-id="${q.id}">
+      <div class="section-title" style="margin:0 0 8px 0;display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span style="display:flex;align-items:center;gap:6px">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length} <button class="btn-icone-pequeno" onclick="abrirInfoQuestao('${q.id}')" title="Sobre essa questão"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        ${souCarlos() ? `<button class="btn-icone-pequeno" onclick="abrirEdicaoDiretaAdmin('${q.id}')" title="Editar questão"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>` : ''}
+        ${q.concurso_origem ? `<span style="background:#202A45;color:#fff;font-size:var(--fs-a);font-weight:700;padding:4px 8px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="${escapeHtml(q.concurso_origem)}${q.ano_prova?' '+q.ano_prova:''}">MB</span>` : ''}
+        ${q.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:4px 8px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''}
+        ${foiCorrigidaAntesDeResponder ? '<span class="selo-correcao" style="display:flex;align-items:center;gap:3px;font-weight:600;text-transform:none;letter-spacing:normal;padding:2px 6px;flex-shrink:0;white-space:nowrap"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Corrigida recentemente</span>' : ''}
+        </span>
+      </div>
+      <div class="enunciado" id="quest-enunciado-atual">${(() => {
+        if(!itensNumeradosDaQuestao) return formatarEnunciado(q.enunciado);
+        const parseado = itensNumeradosDaQuestao;
+        // formato "I. ... II. ... III. ..." detectado — cada item vira uma
+        // linha com ícone de salvar próprio, já que salvar só a letra da
+        // alternativa ("b) Apenas I e III") não diz nada sem o conteúdo
+        // de I e III junto
+        const linhasItens = parseado.itens.map(item=>{
+          const chaveItem = q.id+'|'+item.numeral;
+          const salvo = alternativasSalvasAtual.has(chaveItem);
+          return `<div style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;position:relative;padding-right:32px">
+            <span class="vf-numeral-item-nao-marcavel" style="flex-shrink:0">${escapeHtml(item.numeral)}.</span>
+            <span style="flex:1;min-width:0">${formatarEnunciado(item.texto)}</span>
+            <button onclick="toggleAlternativaSalva('${q.id}','${item.numeral}',this)" style="position:absolute;top:0;right:0;background:none;border:none;padding:4px;cursor:pointer;color:${salvo?'#B23A34':'#ccc'};display:flex" title="Salvar esse item">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            </button>
+          </div>`;
+        }).join('');
+        const linhaConclusao = parseado.conclusao ? `<div class="enunciado-linha">${formatarEnunciado(parseado.conclusao)}</div>` : '';
+        return `${formatarEnunciado(parseado.intro)}${linhasItens}${linhaConclusao}`;
+      })()}</div>
+    </div>
+    <div class="banco-alternativas">${htmlAlternativas}</div>
+    ${alternativas.length ? `<div style="margin-top:14px;height:44px;box-sizing:border-box${(jaRespondida || excluida) ? ';display:none' : ''}"><button class="btn-primario" style="width:100%;height:100%;box-sizing:border-box" ${!alternativaSelecionadaAtual?'disabled':''} onclick="confirmarRespostaCaderno()">Confirmar resposta</button></div>` : ''}
+    <div id="resultado-questao">${jaRespondida?renderizarResultado(q,resposta):''}</div>
+    </div>
+    ${excluida ? `
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px">
+      <div style="background:#fff;padding:18px 26px;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,0.14);border:0.5px solid #eee;text-align:center">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#999" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 8px"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        <div style="font-size:var(--fs-e);font-weight:600;color:#333;margin-bottom:12px">Questão excluída</div>
+        <button class="btn-secundario" style="width:auto;padding:8px 18px" onclick="reverterExclusaoQuestao('${q.id}')">Reverter</button>
+      </div>
+    </div>` : ''}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      ${indiceQuestaoAtual>0?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual-1})">← Anterior</button>`:''}
+      ${indiceQuestaoAtual<questoesCaderno.length-1?`<button class="btn-secundario" style="flex:1" onclick="irParaQuestao(${indiceQuestaoAtual+1})">Próxima →</button>`:''}
+    </div>
+    ${todasRespondidas ? `
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button style="flex:1;padding:10px;font-size:var(--fs-e);border-radius:8px;background:#fff;color:#A32D2D;border:0.5px solid #F7C1C1;font-family:inherit;cursor:pointer" data-id="${cadernoAtual.id}" data-nome="${nomeCadernoEscapado}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">Excluir caderno</button>
+      ${!modoRevisaoCaderno ? `<button class="btn-primario" style="flex:1" onclick="finalizarCaderno()">Finalizar caderno</button>` : ''}
+    </div>` : ''}
+    ${!excluida ? `<div class="banco-acoes">
+      <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoQuestao('${q.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        <span>Excluir</span>
+      </button>
+      <button class="banco-acao-btn ${favoritosDoUsuario.has(q.id)?'favoritada':''}" onclick="toggleFavorito('${q.id}')">
+        <svg viewBox="0 0 24 24" fill="${favoritosDoUsuario.has(q.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
+        <span>Favoritar</span>
+      </button>
+      <button class="banco-acao-btn" onclick="abrirDiscussaoDoCaderno('${q.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <span>Discutir</span>
+        ${topicosPendentesDoUsuario.has(q.id)?'<span class="badge-dot"></span>':''}
+      </button>
+      <button class="banco-acao-btn" onclick="abrirNotaQuestao('${q.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M17 4v5h3"/></svg>
+        <span>Notas</span>
+        ${notasDoUsuario.has(q.id)?'<span class="badge-dot" style="background:#888"></span>':''}
+      </button>
+    </div>` : ''}`;
+  document.getElementById('questao-atual').innerHTML = html;
+  if(cadernoAtual && q) vfAplicarMarcacoesDoCacheVF('quest', cadernoAtual.id, q.id);
+}
+
+function renderizarResultado(q,resposta){
+  const cor = resposta.correta ? '#3B6D11' : '#A32D2D';
+  const textoResultado = `${resposta.correta?'Acertou!':'Errou!'} Gabarito: ${(q.gabarito||'–').toUpperCase()}`;
+
+  return `<div class="banco-resultado" style="color:${cor};position:relative;display:flex;align-items:center;justify-content:center">
+    <span>${textoResultado}</span>
+    <button class="btn-icone-pequeno" style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="abrirExplicacaoQuestao('${q.id}')" title="Ver explicação">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </button>
+  </div>`;
+}
+
+// trava simples — evita que um toque duplo rápido no "Confirmar resposta"
+// grave a mesma resposta 2 vezes (a tabela não tem proteção de duplicata
+// no banco pra isso)
+let respondendoQuestaoEmAndamento = false;
+async function responderQuestao(questaoId, letraEscolhida){
+  if(respondendoQuestaoEmAndamento) return;
+  respondendoQuestaoEmAndamento = true;
+  try{
+    const q = questoesCaderno.find(x=>x.id===questaoId);
+    const gabarito = (q.gabarito||'').toLowerCase().trim();
+    const correta = letraEscolhida === gabarito;
+
+    respostasPorQuestao[questaoId] = {letra: letraEscolhida, correta};
+
+    // salva direto no banco – a view "respostas_finalizadas" já garante que isso
+    // só conta pras estatísticas depois que o caderno for finalizado, então não
+    // precisa mais bufferizar em memória até o fim
+    await sb.from('respostas').insert({
+      caderno_id: cadernoAtual.id,
+      questao_id: questaoId,
+      usuario_id: usuarioAtual.id,
+      resposta_dada: letraEscolhida,
+      correta
+    });
+
+    renderizarQuestaoAtual();
+  }finally{
+    respondendoQuestaoEmAndamento = false;
+  }
+}
+
+function gerarExplicacao(questaoId){
+  // TODO: chamar função serverless equivalente à de extração, mas pra pesquisa web
+  // via Claude + web search, salvar em questoes.explicacao e mudar explicacao_origem
+  // pra 'gerada_web'. Fora do escopo deste primeiro rascunho de código.
+  alert('Geração de explicação via busca na web: a implementar numa próxima função serverless.');
+}
+
+function abrirExplicacaoQuestao(questaoId){
+  const q = questoesCaderno.find(x=>x.id===questaoId);
+  const el = document.getElementById('conteudo-explicacao-questao');
+  if(!q){ el.innerHTML = ''; abrirModal('modal-explicacao-questao'); return; }
+
+  if(q.explicacao_origem === 'fonte_original'){
+    el.innerHTML = `<div style="margin:0;line-height:1.5;color:#111">${formatarEnunciado(q.explicacao)}</div>`;
+  }else if(q.explicacao_origem === 'gerada_web'){
+    el.innerHTML = `<div style="margin:0 0 10px 0;line-height:1.5;color:#111">${formatarEnunciado(q.explicacao)}</div><span style="font-size:var(--fs-b);color:#888">(baseada em busca na web)</span>`;
+  }else{
+    el.innerHTML = `<p style="margin:0 0 14px 0;color:#666">Ainda não geramos uma explicação pra essa questão.</p><button class="btn-primario" onclick="gerarExplicacao('${questaoId}')">Gerar explicação (busca na web)</button>`;
+  }
+  abrirModal('modal-explicacao-questao');
+}
+
+let questaoParaExcluir = null;
+
+function abrirConfirmacaoExclusaoQuestao(questaoId){
+  questaoParaExcluir = questaoId;
+  document.getElementById('motivo-exclusao-questao').value = '';
+  abrirModal('modal-confirmar-exclusao-questao');
+}
+
+async function confirmarExclusaoQuestao(){
+  if(!questaoParaExcluir) return;
+  // souCarlos() aqui é redundante com o campo já vir escondido pros outros
+  // usuários (nunca teriam como digitar nada nele), mas é bom ter os dois:
+  // não confia só no CSS pra decidir o que vai pro banco
+  const motivo = souCarlos() ? (document.getElementById('motivo-exclusao-questao').value.trim() || null) : null;
+  await excluirQuestao(questaoParaExcluir, motivo);
+  questaoParaExcluir = null;
+  fecharModal('modal-confirmar-exclusao-questao');
+}
+
+async function reverterExclusaoQuestao(questaoId){
+  await sb.from('exclusoes').delete().eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId);
+  questoesExcluidasAtual.delete(questaoId);
+  // a resposta original (se essa questão já tinha sido respondida antes de
+  // ser excluída) NUNCA foi apagada do banco — excluirQuestao só limpa a
+  // memória local, de propósito, pra não perder o histórico. Sem buscar
+  // de volta aqui, o app "esquecia" que já tinha resposta, deixando
+  // responder de novo uma questão já respondida (bug real: dava pra usar
+  // excluir+reverter como truque pra tentar de novo uma questão errada)
+  const {data: respostaExistente} = await sb.from('respostas').select('resposta_dada, correta').eq('usuario_id', usuarioAtual.id).eq('caderno_id', cadernoAtual.id).eq('questao_id', questaoId).maybeSingle();
+  if(respostaExistente){
+    respostasPorQuestao[questaoId] = {letra: respostaExistente.resposta_dada, correta: respostaExistente.correta};
+  }
+  renderizarQuestaoAtual();
+}
+
+async function excluirQuestao(questaoId, motivo){
+  await sb.from('exclusoes').insert({usuario_id: usuarioAtual.id, questao_id: questaoId, motivo: motivo || null});
+  delete respostasPorQuestao[questaoId];
+  questoesExcluidasAtual.add(questaoId);
+  renderizarQuestaoAtual();
+}
+
+function podeUsarIntegracaoTracker(){
+  return usuarioAtual?.email === 'luzzipratico@gmail.com';
+}
+// mesma checagem, nome mais genérico – usada em outras funcionalidades
+// exclusivas do Carlos além da integração com o Tracker (tipo cadastrar
+// questões de Marinha)
+function souCarlos(){
+  return usuarioAtual?.email === 'luzzipratico@gmail.com';
+}
+
+async function finalizarCaderno(){
+  // se for o Carlos, guarda um retrato do caderno ANTES de limpar da
+  // memória — vai precisar disso pra montar o envio pro Tracker depois
+  // que ele confirmar no popup, já que tudo abaixo é apagado na hora
+  let retratoParaTracker = null;
+  if(podeUsarIntegracaoTracker() && cadernoAtual){
+    retratoParaTracker = {
+      cadernoId: cadernoAtual.id,
+      criadoEm: cadernoAtual.criado_em,
+      finalizadoEm: new Date().toISOString(),
+      questoes: questoesCaderno.map(q=>({...q})),
+      respostas: {...respostasPorQuestao},
+      excluidas: new Set(questoesExcluidasAtual)
+    };
+  }
+
+  await sb.from('cadernos').update({status:'finalizado', finalizado_em:new Date().toISOString()}).eq('id', cadernoAtual.id);
+  try{ localStorage.removeItem('pscpp_quest_desenhos_' + cadernoAtual.id); }catch(e){}
+  cadernoAtual = null;
+  questoesCaderno = [];
+  respostasPorQuestao = {};
+  alternativaSelecionadaAtual = null;
+  alternativasRiscadasAtual = new Set();
+  questoesExcluidasAtual = new Set();
+  document.getElementById('quests-resolucao').classList.add('hidden');
+  document.getElementById('quests-filtros').classList.remove('hidden');
+  await carregarCadernosExistentes();
+  await verificarCadernoEmAndamento(); // recalcula a contagem certa, pode ainda sobrar outros em andamento
+
+  if(retratoParaTracker){
+    abrirConfirmacaoEnvioTracker(retratoParaTracker);
+  }
+}
+
+/* ============================================================
+   Integração com o PSCPP Tracker — só pro Carlos (usuarioAtual.email).
+   Chama uma Edge Function DO PRÓPRIO Pilotquest (enviar-tracker), que
+   por sua vez chama a Edge Function do lado do Tracker. O segredo
+   compartilhado com o Tracker fica só no servidor dessa function
+   intermediária - nunca mais trafega nem fica visível no código do
+   cliente (correção do item A4: antes TRACKER_SEGREDO ficava direto
+   aqui no HTML, visível pra qualquer um que abrisse "ver código-fonte")
+   ============================================================ */
+const TRACKER_INTERMEDIARIA_URL = 'https://jenzxycerdtjpkrzesia.supabase.co/functions/v1/enviar-tracker';
+
+let retratoTrackerAtual = null;
+
+function abrirConfirmacaoEnvioTracker(retrato){
+  retratoTrackerAtual = retrato;
+  document.getElementById('resultado-envio-tracker').classList.add('hidden');
+  document.getElementById('confirmacao-envio-tracker').classList.remove('hidden');
+  document.getElementById('texto-confirmacao-envio-tracker').textContent = retrato.origemFlash
+    ? 'Isso registra essa sessão do Flash (tempo, acertos e as questões) no PSCPP Tracker.'
+    : 'Isso registra esse caderno (tempo, acertos e as questões) no PSCPP Tracker.';
+  const btn = document.getElementById('btn-confirmar-envio-tracker');
+  btn.disabled = false;
+  btn.textContent = 'Enviar';
+  abrirModal('modal-envio-tracker');
+}
+
+async function confirmarEnvioTracker(){
+  if(!retratoTrackerAtual) return;
+  const retrato = retratoTrackerAtual;
+  const btn = document.getElementById('btn-confirmar-envio-tracker');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  const tempoMinutos = Math.max(1, Math.round((new Date(retrato.finalizadoEm) - new Date(retrato.criadoEm)) / 60000));
+
+  let payload;
+  if(retrato.origemFlash){
+    // V/F não tem alternativas múltiplas - gabarito e resposta são só
+    // verdadeiro/falso, e a questão inteira já é o "enunciado completo"
+    const modulos = new Set(retrato.entradas.map(h => vfBibliografiaCache.get(h.item.bibliografia_id)?.modulo_pscpp).filter(Boolean));
+    const moduloUnico = modulos.size === 1 ? [...modulos][0] : null;
+    const publicacoes = new Set(retrato.entradas.map(h => vfBibliografiaCache.get(h.item.bibliografia_id)?.titulo).filter(Boolean));
+    const publicacaoUnica = publicacoes.size === 1 ? [...publicacoes][0] : null;
+
+    // status considera anulação (igual o fluxo normal já faz com
+    // q.anulada) - antes vinha sempre Acertei/Errei, e anuladas ficava
+    // fixo em 0, mesmo quando a questão realmente tinha sido anulada
+    let acertos = 0, erros = 0, anuladasVF = 0;
+    const questoesPayload = retrato.entradas.map((h, i) => {
+      let status;
+      if(h.item.anulada){ status = 'Anulada'; anuladasVF++; }
+      else if(h.acertou){ status = 'Acertei'; acertos++; }
+      else { status = 'Errei'; erros++; }
+      return {
+        numero_questao: String(i + 1),
+        status,
+        modulo_pscpp: vfBibliografiaCache.get(h.item.bibliografia_id)?.modulo_pscpp || null,
+        publicacao: vfBibliografiaCache.get(h.item.bibliografia_id)?.titulo || null,
+        capitulo: h.item.capitulo || null,
+        gabarito: h.item.resposta ? 'verdadeiro' : 'falso',
+        sua_resposta: h.resposta ? 'verdadeiro' : 'falso',
+        questao_completa: h.item.texto || '',
+        correcao: h.item.correcao || null
+      };
+    });
+
+    payload = {
+      origem: 'flash',
+      tempo_gasto_minutos: tempoMinutos,
+      modulo: moduloUnico,
+      publicacao: publicacaoUnica,
+      total_questoes: questoesPayload.length,
+      acertos_efetivos: acertos,
+      erros_efetivos: erros,
+      anuladas: anuladasVF,
+      questoes: questoesPayload
+    };
+  }else{
+    const questoesValidas = retrato.questoes.filter(q => !retrato.excluidas.has(q.id));
+
+    const modulos = new Set(questoesValidas.map(q=>q.modulo_pscpp).filter(Boolean));
+    const moduloUnico = modulos.size === 1 ? [...modulos][0] : null;
+
+    const mapaBibliografiaTitulo = {};
+    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
+    const publicacoes = new Set(questoesValidas.map(q=>q.bibliografia_id ? mapaBibliografiaTitulo[q.bibliografia_id] : null).filter(Boolean));
+    const publicacaoUnica = publicacoes.size === 1 ? [...publicacoes][0] : null;
+
+    let acertos = 0, erros = 0, anuladas = 0;
+    const questoesPayload = [];
+    questoesValidas.forEach(q=>{
+      const resp = retrato.respostas[q.id];
+      if(!resp) return; // não respondida — não deveria acontecer num caderno finalizado, mas por segurança não manda
+      let status;
+      if(q.anulada){ status = 'Anulada'; anuladas++; }
+      else if(resp.correta){ status = 'Acertei'; acertos++; }
+      else { status = 'Errei'; erros++; }
+      const altsFormatadas = extrairAlternativas(q.alternativas).map(a=>`${a.letra}) ${a.texto}`).join('\n');
+      questoesPayload.push({
+        numero_questao: String(questoesPayload.length + 1),
+        status,
+        modulo_pscpp: q.modulo_pscpp || null,
+        publicacao: q.bibliografia_id ? (mapaBibliografiaTitulo[q.bibliografia_id] || null) : null,
+        capitulo: q.capitulo ? String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '') : null,
+        gabarito: (q.gabarito||'').toLowerCase(),
+        sua_resposta: resp.letra,
+        questao_completa: `${q.enunciado||''}\n\n${altsFormatadas}`.trim(),
+        correcao: q.correcao || null
+      });
+    });
+
+    payload = {
+      origem: 'quest',
+      tempo_gasto_minutos: tempoMinutos,
+      modulo: moduloUnico,
+      publicacao: publicacaoUnica,
+      total_questoes: questoesPayload.length,
+      acertos_efetivos: acertos,
+      erros_efetivos: erros,
+      anuladas,
+      questoes: questoesPayload
+    };
+  }
+
+  const elResultado = document.getElementById('texto-resultado-envio-tracker');
+  try{
+    const {data: {session}} = await sb.auth.getSession();
+    const resp = await fetch(TRACKER_INTERMEDIARIA_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${session?.access_token}`},
+      body: JSON.stringify(payload)
+    });
+    const resultado = await resp.json();
+    if(resultado.ok){
+      elResultado.textContent = `Enviado como ${resultado.id_atividade} – ${resultado.questoes_gravadas} questões registradas no Tracker.`;
+      elResultado.style.color = '#27500A';
+      if(retrato.cadernoId){
+        await sb.from('cadernos').update({enviado_tracker_em: new Date().toISOString(), id_atividade_tracker: resultado.id_atividade}).eq('id', retrato.cadernoId);
+      }
+      if(retrato.sessaoVfId){
+        await sb.from('sessoes_vf').update({enviado_tracker_em: new Date().toISOString(), id_atividade_tracker: resultado.id_atividade}).eq('id', retrato.sessaoVfId);
+      }
+    }else{
+      elResultado.textContent = `Não consegui enviar: ${resultado.erro || 'erro desconhecido'}`;
+      elResultado.style.color = '#A32D2D';
+    }
+  }catch(e){
+    elResultado.textContent = 'Não consegui conectar ao Tracker agora. Pode tentar de novo mais tarde direto lá.';
+    elResultado.style.color = '#A32D2D';
+  }
+
+  retratoTrackerAtual = null;
+  document.getElementById('confirmacao-envio-tracker').classList.add('hidden');
+  document.getElementById('resultado-envio-tracker').classList.remove('hidden');
+}
+
+function naoEnviarTracker(){
+  retratoTrackerAtual = null;
+  fecharModal('modal-envio-tracker');
+}
+
+/* ============================================================
+   FÓRUM – sistema de tópicos (unifica "erro reportado" e "discussão
+   geral"). Toda discussão nasce intencional (com título), precisa de
+   troca mínima (1+ resposta) antes de poder ser votada como resolvida,
+   e resolução é por votação de maioria simples do total de usuários
+   cadastrados (não um número fixo – se entrar mais gente no grupo, a
+   maioria necessária recalcula sozinha) – não depende de quantos
+   participaram da votação em si. "Resolvido" é por pessoa: quem votou já
+   para de ver o tópico; quem não votou continua vendo até dar seu próprio
+   veredito (concordar ou reabrir, mesmo com maioria já formada).
+   ============================================================ */
+let totalUsuariosCadastrados = 5; // valor de segurança até carregar o de verdade
+async function carregarTotalUsuarios(){
+  const {count} = await sb.from('usuarios').select('id', {count:'exact', head:true});
+  if(count) totalUsuariosCadastrados = count;
+}
+function votosParaResolver(){
+  return Math.floor(totalUsuariosCadastrados/2) + 1;
+}
+function abrirModalInfoResolucao(){
+  document.getElementById('texto-info-resolucao').textContent = `Cada pessoa cadastrada vota individualmente que considera a discussão resolvida. Com ${votosParaResolver()} de ${totalUsuariosCadastrados} votos (maioria), a discussão passa a aparecer como resolvida – mas quem ainda não votou pode reabrir ela a qualquer momento, mesmo com maioria já formada. Seu voto pode ser desfeito depois, se mudar de ideia.`;
+  abrirModal('modal-info-resolucao');
+}
+
+/* ============================================================
+   NOTIFICAÇÕES DO FÓRUM – Nível 1 (Realtime, só com app aberto)
+   ============================================================ */
+async function atualizarNotificacoesForum(){
+  await atualizarNotificacoesOrdenadas();
+}
+
+function iniciarRealtimeForum(){
+  sb.channel('forum-realtime')
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'comentarios'}, (payload)=>{
+      if(payload.new.usuario_id !== usuarioAtual.id) atualizarNotificacoesForum();
+    })
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'topicos'}, ()=>{
+      atualizarNotificacoesForum();
+    })
+    .subscribe();
+}
+
+let forumCache = [];
+
+async function carregarForum(){
+  const [{data: todosTopicos}, {data: meusVotos}] = await Promise.all([
+    sb.from('topicos').select('*, questoes(enunciado, modulo_pscpp, bibliografia_id, capitulo)').order('criado_em', {ascending:false}),
+    sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id)
+  ]);
+  const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
+
+  const ativos = (todosTopicos||[]).filter(t => t.status==='aberto' || !idsVotados.has(t.id));
+
+  const idsTopicos = ativos.map(t=>t.id);
+  const infoComentarios = {};
+  const mapaVisto = {};
+  if(idsTopicos.length){
+    const [{data: comentariosTodos}, {data: propostasTodas}, {data: minhasVisualizacoes}] = await Promise.all([
+      sb.from('comentarios').select('topico_id, criado_em').in('topico_id', idsTopicos).order('criado_em',{ascending:false}),
+      sb.from('propostas_edicao').select('topico_id, criado_em').in('topico_id', idsTopicos).order('criado_em',{ascending:false}),
+      sb.from('topicos_vistos').select('topico_id, visto_em').eq('usuario_id', usuarioAtual.id).in('topico_id', idsTopicos)
+    ]);
+    (comentariosTodos||[]).forEach(c=>{
+      if(!infoComentarios[c.topico_id]) infoComentarios[c.topico_id] = {total:0, ultima:c.criado_em};
+      infoComentarios[c.topico_id].total++;
+    });
+    // propor uma edição/anulação também é atividade que deve atualizar a
+    // posição na lista, mesmo não sendo tecnicamente um comentário
+    (propostasTodas||[]).forEach(p=>{
+      if(!infoComentarios[p.topico_id]) infoComentarios[p.topico_id] = {total:0, ultima:p.criado_em};
+      else if(p.criado_em > infoComentarios[p.topico_id].ultima) infoComentarios[p.topico_id].ultima = p.criado_em;
+    });
+    (minhasVisualizacoes||[]).forEach(v=>{ mapaVisto[v.topico_id] = v.visto_em; });
+  }
+
+  forumCache = ativos.map(t=>{
+    const ultimaAtividade = infoComentarios[t.id]?.ultima || t.criado_em;
+    return {
+      ...t,
+      totalComentarios: infoComentarios[t.id]?.total || 0,
+      ultimaAtividade,
+      naoVisto: !mapaVisto[t.id] || ultimaAtividade > mapaVisto[t.id] || (t.status==='aberto' && !idsVotados.has(t.id)) // nunca viu, ou viu mas tem novidade, ou já viu e não tem novidade mas ainda precisa do seu voto
+    };
+  }).sort((a,b)=>(b.ultimaAtividade||'').localeCompare(a.ultimaAtividade||''));
+
+  renderizarListaForum();
+}
+
+function badgeTipoTopico(tipo){
+  return tipo==='erro'
+    ? '<span style="font-size:var(--fs-d);color:#A32D2D;display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Erro</span>'
+    : '<span style="font-size:var(--fs-d);color:var(--azul-marca);display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Discussão</span>';
+}
+
+function renderizarListaForum(){
+  const lista = forumCache;
+  const el = document.getElementById('lista-forum');
+  if(!lista.length){ el.innerHTML = '<p style="color:#888">Nenhuma discussão ativa no momento.</p>'; return; }
+  const mapaBibliografiaTitulo = {};
+  bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
+  el.innerHTML = lista.map(f=>{
+    const q = f.questoes;
+    const partes = [];
+    if(q?.modulo_pscpp) partes.push(escapeHtml(q.modulo_pscpp));
+    if(q?.bibliografia_id && mapaBibliografiaTitulo[q.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[q.bibliografia_id]));
+    if(q?.capitulo) partes.push(rotuloCapituloDoLivro(q?.bibliografia_id ? mapaBibliografiaTitulo[q.bibliografia_id] : null) + ' ' + escapeHtml(String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
+    return `
+    <div class="card-questao" style="cursor:pointer" onclick="abrirTopicoDoForum('${f.id}')" ontouchend="event.preventDefault();abrirTopicoDoForum('${f.id}')">
+      <div style="margin-bottom:6px">
+        ${badgeTipoTopico(f.tipo)}
+      </div>
+      <div style="font-size:var(--fs-e);font-weight:600;color:#111;text-transform:uppercase;display:flex;align-items:center;gap:6px">${f.naoVisto?'<span style="width:8px;height:8px;border-radius:50%;background:#E24B4A;flex-shrink:0"></span>':''}${escapeHtml(f.titulo)}</div>
+      <p style="font-size:var(--fs-d);color:#888;margin-top:4px">${partes.length ? partes.join(' · ') : 'Questão'}</p>
+      <div style="display:flex;justify-content:space-between;color:#888;font-size:var(--fs-b);margin-top:8px">
+        <span>${f.totalComentarios} ${f.totalComentarios===1?'comentário':'comentários'}</span>
+        <span>${tempoRelativo(f.ultimaAtividade)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function abrirTopicoDoForum(topicoId){
+  abrirViewTopico();
+  mostrarCarregandoTopico();
+  renderizarTopico(topicoId);
+}
+
+function tempoRelativo(dataIso){
+  if(!dataIso) return '';
+  const diffMs = new Date() - new Date(dataIso);
+  const diffMin = Math.floor(diffMs/60000);
+  if(diffMin < 1) return 'agora mesmo';
+  if(diffMin < 60) return `há ${diffMin} min`;
+  const diffHoras = Math.floor(diffMin/60);
+  if(diffHoras < 24) return `há ${diffHoras}h`;
+  const diffDias = Math.floor(diffHoras/24);
+  if(diffDias === 1) return 'ontem';
+  if(diffDias < 7) return `há ${diffDias} dias`;
+  return new Date(dataIso).toLocaleDateString('pt-BR');
+}
+
+function avatarMiniHtml(usuario){
+  const nome = usuario?.nome || '?';
+  if(usuario?.foto_url){
+    return `<div style="width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0"><img src="${usuario.foto_url}" style="width:100%;height:100%;object-fit:cover"></div>`;
+  }
+  return `<div style="width:28px;height:28px;border-radius:50%;background:#B23A34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0">${escapeHtml(nome[0].toUpperCase())}</div>`;
+}
+
+let comentariosCacheAtual = {};
+function renderizarListaComentarios(lista){
+  comentariosCacheAtual = {};
+  lista.forEach(c => { comentariosCacheAtual[c.id] = c; });
+  if(!lista.length) return '<p style="color:#888;font-size:var(--fs-d)">Nenhum comentário ainda.</p>';
+  return lista.map(c=>{
+    const pai = c.resposta_a ? comentariosCacheAtual[c.resposta_a] : null;
+    const citacao = pai ? `
+        <div style="font-size:var(--fs-b);color:#888;border-left:2px solid #ddd;padding-left:8px;margin:2px 0 4px">↳ Respondendo a <strong>${escapeHtml(pai.usuarios?.nome||'?')}</strong>: "${escapeHtml((pai.texto||'').slice(0,60))}${(pai.texto||'').length>60?'…':''}"</div>` : '';
+    return `
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      ${avatarMiniHtml(c.usuarios)}
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+          <span style="font-weight:600;color:#111;font-size:var(--fs-d)">${escapeHtml(c.usuarios?.nome||'?')}</span>
+          <span style="font-size:var(--fs-b);color:#888;white-space:nowrap">${tempoRelativo(c.criado_em)}</span>
+        </div>
+        ${citacao}
+        <div style="font-size:var(--fs-d)">${formatarEnunciado(c.texto)}</div>
+        <button onclick="responderComentario('${c.id}')" style="background:none;border:none;padding:0;color:#888;font-size:var(--fs-b);cursor:pointer;text-decoration:underline;margin-top:2px">Responder</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+let respondendoComentarioId = null;
+function responderComentario(comentarioId){
+  const c = comentariosCacheAtual[comentarioId];
+  if(!c) return;
+  respondendoComentarioId = comentarioId;
+  document.getElementById('nome-resposta-a').textContent = c.usuarios?.nome || '?';
+  document.getElementById('indicador-resposta').classList.remove('hidden');
+  document.getElementById('novo-comentario-topico').focus();
+}
+function cancelarResposta(){
+  respondendoComentarioId = null;
+  document.getElementById('indicador-resposta').classList.add('hidden');
+}
+
+/* ============================================================
+   Lista de tópicos de UMA questão (abre a partir do botão "Discutir")
+   ============================================================ */
+async function renderizarDetalheQuestao(questaoId){
+  const [{data: questao}, {data: minhasNotasDaQuestao}, {data: topicosDaQuestao}, {data: meusVotos}] = await Promise.all([
+    sb.from('questoes').select('enunciado, alternativas').eq('id', questaoId).maybeSingle(),
+    sb.from('notas').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId).order('criado_em', {ascending:false}),
+    sb.from('topicos').select('*').eq('questao_id', questaoId).order('criado_em', {ascending:false}),
+    sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id)
+  ]);
+  const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
+
+  const idsTopicos = (topicosDaQuestao||[]).map(t=>t.id);
+  const contagemComentarios = {};
+  if(idsTopicos.length){
+    const {data: comentariosTodos} = await sb.from('comentarios').select('topico_id').in('topico_id', idsTopicos);
+    (comentariosTodos||[]).forEach(c=>{ contagemComentarios[c.topico_id] = (contagemComentarios[c.topico_id]||0)+1; });
+  }
+
+  const temTopicoAtivo = (topicosDaQuestao||[]).some(t=>t.status==='aberto');
+
+  const html = `
+    ${questao ? `
+    <div class="section-title" style="margin-top:0">Questão</div>
+    <div class="card-questao">
+      <p style="font-size:var(--fs-d);color:#111;margin:0">${formatarEnunciado(questao.enunciado || '')}</p>
+      ${questao.alternativas ? `<div style="font-size:var(--fs-d);color:#111;margin:10px 0 0">${extrairAlternativas(questao.alternativas).map(alt=>`<div class="linha-numerada"><span class="linha-marcador">${alt.letra})</span><span class="linha-texto">${alt.texto}</span></div>`).join('')}</div>` : ''}
+      ${usuarioAtual?.is_admin ? `<button class="btn-secundario" style="width:100%;margin-top:14px" onclick="abrirEdicaoDiretaAdmin('${questaoId}')">Editar (admin)</button>` : ''}
+    </div>` : ''}
+
+    ${(minhasNotasDaQuestao||[]).length ? `
+    <div class="section-title">Suas notas</div>
+    ${minhasNotasDaQuestao.map(n=>`
+    <div class="card-questao">
+      <p style="font-size:var(--fs-d);color:#111;margin:0">${formatarEnunciado(n.texto)}</p>
+      <p style="font-size:var(--fs-b);color:#888;margin-top:6px">${new Date(n.criado_em).toLocaleDateString('pt-BR')}</p>
+    </div>`).join('')}` : ''}
+
+    <div class="section-title">Discussões dessa questão</div>
+    ${(topicosDaQuestao||[]).length ? (topicosDaQuestao||[]).map(t=>{
+      const resolvidoPraMim = t.status==='resolvido' && idsVotados.has(t.id);
+      return `<div class="card-questao" style="cursor:pointer${resolvidoPraMim?';opacity:0.6':''}" onclick="abrirTopico('${t.id}')" ontouchend="event.preventDefault();abrirTopico('${t.id}')">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          ${badgeTipoTopico(t.tipo)}
+          <span style="color:#888;font-size:var(--fs-b)">${t.status==='resolvido'?'Resolvido':'Aberto'}</span>
+        </div>
+        <div style="font-size:var(--fs-d);font-weight:600;color:#111">${escapeHtml(t.titulo)}</div>
+        <div style="color:#888;font-size:var(--fs-b);margin-top:4px">${contagemComentarios[t.id]||0} ${contagemComentarios[t.id]===1?'comentário':'comentários'} · ${tempoRelativo(t.criado_em)}</div>
+      </div>`;
+    }).join('') : '<p style="color:#888;font-size:var(--fs-d)">Nenhuma discussão ainda nessa questão.</p>'}
+
+    ${!temTopicoAtivo ? `
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;font-size:var(--fs-e);border-radius:8px;background:#fff;color:#A32D2D;border:0.5px solid #F7C1C1;font-family:inherit;cursor:pointer" onclick="abrirModalNovoTopico('${questaoId}','erro')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Reportar erro</button>
+      <button class="btn-primario" style="flex:1" onclick="abrirModalNovoTopico('${questaoId}','geral')">Abrir discussão</button>
+    </div>` : ''}
+  `;
+  document.getElementById(containerTopicoAtual()).innerHTML = html;
+}
+
+async function abrirDetalheQuestao(questaoId, rotuloVoltar){
+  mostrarCarregandoTopico();
+  abrirViewTopico(rotuloVoltar || 'Desempenho');
+  await renderizarDetalheQuestao(questaoId);
+}
+
+/* ============================================================
+   Abrir um tópico novo – sempre com título (nasce intencional)
+   ============================================================ */
+let novoTopicoContexto = null;
+function selecionarTipoNovoTopico(tipo){
+  novoTopicoContexto.tipo = tipo;
+  document.getElementById('toggle-tipo-geral').classList.toggle('active', tipo==='geral');
+  document.getElementById('toggle-tipo-erro').classList.toggle('active', tipo==='erro');
+  const campoTitulo = document.getElementById('novo-topico-titulo');
+  campoTitulo.placeholder = tipo==='erro' ? 'O que está errado?' : 'O que você quer discutir?';
+}
+function abrirModalNovoTopico(questaoId, tipo){
+  novoTopicoContexto = {questaoId, tipo};
+  document.getElementById('novo-topico-titulo').value = '';
+  document.getElementById('novo-topico-mensagem').value = '';
+  selecionarTipoNovoTopico(tipo);
+  abrirModal('modal-novo-topico');
+}
+
+async function confirmarNovoTopico(){
+  const titulo = document.getElementById('novo-topico-titulo').value.trim();
+  const mensagem = document.getElementById('novo-topico-mensagem').value.trim();
+  if(!titulo){ alert('Escreve um resumo curto antes de abrir.'); return; }
+  if(!mensagem){ alert('Escreve sua mensagem antes de abrir.'); return; }
+  const {questaoId, tipo} = novoTopicoContexto;
+  const {data, error} = await sb.from('topicos').insert({questao_id: questaoId, tipo, titulo, criado_por: usuarioAtual.id}).select().single();
+  if(error){
+    alert('Essa questão já tem uma discussão ativa (erro ou geral). Só dá pra abrir outra depois que essa for resolvida.');
+    return;
+  }
+  // a mensagem escrita no popup já entra como o primeiro comentário do tópico
+  const {error: erroComentario} = await sb.from('comentarios').insert({topico_id: data.id, usuario_id: usuarioAtual.id, texto: mensagem});
+  if(erroComentario) console.error('Discussão criada, mas não consegui salvar a primeira mensagem:', erroComentario.message);
+
+  fecharModal('modal-novo-topico');
+  await atualizarNotificacoesForum();
+
+  // mostra o tópico recém-criado na versão grande (igual ao Fórum) – o
+  // container pode não estar aberto ainda, se veio direto do "Discutir"
+  // numa questão que não tinha nenhuma discussão até agora
+  if(modoTopicoModal){
+    mostrarCarregandoTopico();
+    abrirModal('modal-questao-detalhe');
+  }else{
+    mostrarCarregandoTopico();
+    abrirViewTopico();
+  }
+  await renderizarTopico(data.id);
+}
+
+/* ============================================================
+   Thread de UM tópico – comentários + votação de resolução
+   ============================================================ */
+function abrirTopico(topicoId){
+  mostrarCarregandoTopico();
+  renderizarTopico(topicoId);
+}
+
+async function renderizarTopico(topicoId){
+  const {data: topico} = await sb.from('topicos').select('*, questoes(id, enunciado, alternativas, gabarito)').eq('id', topicoId).single();
+  if(!topico){ document.getElementById(containerTopicoAtual()).innerHTML = '<p>Tópico não encontrado.</p>'; return; }
+  // as 2 marcações de "visto" (pelo criador, e por qualquer um que abriu)
+  // não dependem uma da outra – rodam juntas. As duas precisam ser
+  // ESPERADAS de verdade (não só disparadas) — senão, se a pessoa voltar
+  // rápido demais pra lista logo depois de comentar/abrir, a busca seguinte
+  // pode rodar antes desses registros terminarem de gravar, e a bolinha de
+  // "não visualizado" volta a aparecer por engano (vê o valor antigo)
+  const escritasDeVisto = [
+    sb.from('topicos_vistos').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id, visto_em: new Date().toISOString()}, {onConflict:'usuario_id,topico_id'})
+  ];
+  if(topico.criado_por === usuarioAtual.id){
+    escritasDeVisto.push(sb.from('topicos').update({criador_visto_em: new Date().toISOString()}).eq('id', topicoId));
+  }
+  await Promise.all(escritasDeVisto);
+  atualizarNotificacoesOrdenadas();
+  if(document.getElementById('aba-forum') && !document.getElementById('aba-forum').classList.contains('hidden')){
+    renderizarListaForum();
+  }
+  const [{data: comentarios}, {data: votos}, {data: ultimaProposta}] = await Promise.all([
+    sb.from('comentarios').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).order('criado_em', {ascending:true}),
+    sb.from('votos_resolucao').select('*, usuarios(nome)').eq('topico_id', topicoId),
+    topico.tipo==='erro'
+      ? sb.from('propostas_edicao').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).order('criado_em', {ascending:false}).limit(1).maybeSingle()
+      : Promise.resolve({data:null})
+  ]);
+  // a proposta pode já estar "aplicada" (se a maioria bateu antes de você
+  // votar) – só mostra a caixa de "proposta pendente" se ainda não foi
+  const propostaPendente = ultimaProposta && ultimaProposta.status==='pendente' ? ultimaProposta : null;
+
+  const totalVotos = (votos||[]).length;
+  const meuVoto = (votos||[]).find(v=>v.usuario_id===usuarioAtual.id);
+  const temComentario = (comentarios||[]).length > 0;
+  const listaVotantes = (votos||[]).map(v=>escapeHtml(v.usuarios?.nome||'?')).join(', ');
+
+  const textoBotaoResolver = propostaPendente
+    ? (propostaPendente.tipo==='anulacao' ? 'Aprovar essa anulação' : 'Aprovar essa edição')
+    : 'Marcar como resolvido';
+  const propostaAplicada = (ultimaProposta && ultimaProposta.status==='aplicada') ? ultimaProposta : null;
+  let blocoVotacao = '';
+  if(propostaAplicada){
+    const textoFinal = propostaAplicada.tipo==='anulacao' ? '✓ Esta questão foi anulada.' : '✓ Esta edição foi aplicada.';
+    blocoVotacao = `<div style="text-align:center;margin-top:14px;padding:12px;background:#F0F7EC;border-radius:10px;color:#3B6D11;font-weight:600;font-size:var(--fs-d)">${textoFinal}</div>`;
+  }else if(!temComentario){
+    blocoVotacao = `<p style="color:#888;font-size:var(--fs-d);text-align:center;margin-top:14px">Precisa de pelo menos uma resposta na discussão antes de poder ser marcada como resolvida.</p>`;
+  }else{
+    // as 3 fases ativas da votação (não votou / já votou / maioria formada)
+    // usam a MESMA estrutura, com as mesmas 4 linhas sempre reservadas –
+    // só o conteúdo de cada linha muda. Isso evita o card "pular" de
+    // tamanho toda vez que alguém vota, que era o bug de antes
+    let corFundo, iconeStatus, linhaBotoes;
+    if(meuVoto){
+      corFundo = '#F5F5F4';
+      iconeStatus = '';
+      linhaBotoes = `<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px">
+        <span style="display:inline-flex;align-items:center;gap:4px;color:#3B6D11;font-size:var(--fs-b);font-weight:600">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#3B6D11" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Aprovado
+        </span>
+        <button onclick="desfazerVotoResolucao('${topicoId}')" style="background:none;border:none;padding:10px 0;color:#888;font-size:var(--fs-b);cursor:pointer;text-decoration:underline">Desfazer</button>
+      </div>`;
+    }else if(topico.status==='resolvido'){
+      corFundo = '#FEF6E4';
+      iconeStatus = '';
+      const textoMaioria = ultimaProposta
+        ? (ultimaProposta.tipo==='anulacao' ? 'A maioria já aprovou essa anulação. Você concorda?' : 'A maioria já aprovou essa edição. Você concorda?')
+        : 'A maioria já considera isso resolvido. Você concorda?';
+      linhaBotoes = `
+        <div style="font-size:var(--fs-d);font-weight:600;margin-top:6px">${textoMaioria}</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn-secundario" style="flex:1;border:1px solid #ccc" onclick="reabrirTopico('${topicoId}')">Reabrir</button>
+          <button class="btn-primario" style="flex:1" onclick="votarResolvido('${topicoId}')">Concordar</button>
+        </div>`;
+    }else{
+      corFundo = '#F5F5F4';
+      iconeStatus = '';
+      linhaBotoes = `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px">
+        <button class="btn-secundario" style="border:1px solid #ccc" onclick="votarResolvido('${topicoId}')">${textoBotaoResolver}</button>
+        <button class="btn-icone-pequeno" onclick="abrirModalInfoResolucao()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
+      </div>`;
+    }
+    blocoVotacao = `
+      <div style="text-align:center;margin-top:14px;padding:10px 12px;background:${corFundo};border-radius:10px">
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:var(--fs-d);color:#666">
+          ${iconeStatus}<span>${totalVotos} de ${votosParaResolver()} votos pra resolver</span>
+        </div>
+        ${listaVotantes ? `<div style="font-size:var(--fs-b);color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${listaVotantes}</div>` : ''}
+        ${linhaBotoes}
+      </div>`;
+  }
+
+  const blocoPropostaPendente = propostaPendente ? (
+    propostaPendente.tipo==='anulacao' ? `
+    <div class="card-questao" style="margin-top:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        ${avatarMiniHtml(propostaPendente.usuarios)}
+        <span style="font-size:var(--fs-d);color:#666">${escapeHtml(propostaPendente.usuarios?.nome||'Alguém')} propôs esta anulação:</span>
+      </div>
+      <p style="font-size:var(--fs-d);color:#111;line-height:1.6">Quem já respondeu (de qualquer jeito) passa a ter a resposta contada como acerto. Essa ação não pode ser desfeita depois de aprovada.</p>
+    </div>` : `
+    <div class="card-questao" style="margin-top:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        ${avatarMiniHtml(propostaPendente.usuarios)}
+        <span style="font-size:var(--fs-d);color:#666">${escapeHtml(propostaPendente.usuarios?.nome||'Alguém')} propôs esta edição:</span>
+      </div>
+      <div style="font-size:var(--fs-d);color:#111;line-height:1.6">${formatarEnunciado(propostaPendente.enunciado)}</div>
+      <div style="font-size:var(--fs-d);margin-top:16px">${extrairAlternativas(propostaPendente.alternativas).map(alt=>`<div class="linha-numerada"><span class="linha-marcador">${alt.letra})</span><span class="linha-texto">${alt.texto}</span></div>`).join('')}</div>
+      <div style="font-size:var(--fs-d);margin-top:16px;font-weight:600">Gabarito: ${escapeHtml((propostaPendente.gabarito||'').toUpperCase())}</div>
+    </div>`
+  ) : '';
+
+  const acoesPropor = (topico.status==='aberto' && !propostaPendente) ? `
+    <div style="display:flex;align-items:center;gap:6px;margin-top:14px">
+      <button class="btn-secundario" style="flex:1;color:#A32D2D;border:1px solid #F7C1C1" onclick="confirmarAnularQuestao('${topico.questoes.id}','${topicoId}')">Propor anulação</button>
+      <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-anulacao-topico')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
+      <button class="btn-primario" style="flex:1" onclick="abrirFormularioEdicao('${topico.questoes.id}','${topicoId}')">Propor edição</button>
+    </div>` : '';
+
+  const html = `
+    ${badgeTipoTopico(topico.tipo)}
+    <h3 class="config-title config-title-menor" style="margin-top:8px;text-transform:uppercase">${escapeHtml(topico.titulo)}</h3>
+    ${topico.questoes ? `
+    <div style="background:#F7F7F5;border-left:3px solid #ccc;border-radius:8px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:var(--fs-b);color:#999;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;font-weight:600">Questão desta discussão</div>
+      <p style="font-size:var(--fs-d);color:#444;margin:0;line-height:1.6">${formatarEnunciado(topico.questoes.enunciado)}</p>
+      ${topico.questoes.alternativas ? `<div style="font-size:var(--fs-d);color:#444;margin-top:12px">${extrairAlternativas(topico.questoes.alternativas).map(alt=>`<div class="linha-numerada"><span class="linha-marcador">${alt.letra})</span><span class="linha-texto">${alt.texto}</span></div>`).join('')}</div>` : ''}
+      ${topico.questoes.gabarito ? `<div style="font-size:var(--fs-d);margin-top:12px;font-weight:600;color:#444">Gabarito: ${escapeHtml(topico.questoes.gabarito.toUpperCase())}</div>` : ''}
+    </div>` : ''}
+    <div>${renderizarListaComentarios(comentarios||[])}</div>
+    <div id="indicador-resposta" class="hidden" style="display:flex;align-items:center;justify-content:space-between;background:#F5F5F4;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:var(--fs-b);color:#666">
+      <span>Respondendo a <strong id="nome-resposta-a"></strong></span>
+      <button onclick="cancelarResposta()" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-b)">Cancelar</button>
+    </div>
+    <textarea id="novo-comentario-topico" class="textarea-padrao" placeholder="Comentar..." style="min-height:100px"></textarea>
+    <button class="btn-primario" style="width:100%" onclick="enviarComentarioTopico('${topicoId}')">Comentar</button>
+    ${blocoPropostaPendente}
+    ${blocoVotacao}
+    ${acoesPropor}
+  `;
+  document.getElementById(containerTopicoAtual()).innerHTML = html;
+}
+
+async function enviarComentarioTopico(topicoId){
+  const campo = document.getElementById('novo-comentario-topico');
+  const texto = campo.value.trim();
+  if(!texto) return;
+  await sb.from('comentarios').insert({topico_id: topicoId, usuario_id: usuarioAtual.id, texto, resposta_a: respondendoComentarioId});
+  respondendoComentarioId = null;
+  await renderizarTopico(topicoId);
+}
+
+async function votarResolvido(topicoId){
+  await sb.from('votos_resolucao').insert({topico_id: topicoId, usuario_id: usuarioAtual.id});
+  await verificarMaioriaTopico(topicoId);
+  await renderizarTopico(topicoId);
+  await atualizarNotificacoesForum();
+}
+
+async function desfazerVotoResolucao(topicoId){
+  await sb.from('votos_resolucao').delete().eq('topico_id', topicoId).eq('usuario_id', usuarioAtual.id);
+  await verificarMaioriaTopico(topicoId);
+  await renderizarTopico(topicoId);
+  await atualizarNotificacoesForum();
+}
+
+async function reabrirTopico(topicoId){
+  await sb.from('votos_resolucao').delete().eq('topico_id', topicoId);
+  await sb.from('topicos').update({status:'aberto'}).eq('id', topicoId);
+  await renderizarTopico(topicoId);
+  await atualizarNotificacoesForum();
+}
+
+async function verificarMaioriaTopico(topicoId){
+  const {data: votos} = await sb.from('votos_resolucao').select('id').eq('topico_id', topicoId);
+  const total = (votos||[]).length;
+  const resolvido = total >= votosParaResolver();
+  await sb.from('topicos').update({status: resolvido ? 'resolvido' : 'aberto'}).eq('id', topicoId);
+
+  if(resolvido){
+    // se tinha uma proposta pendente pra esse tópico (edição ou anulação), a
+    // maioria que acabou de bater É a aprovação dela – aplica agora, de uma vez.
+    // Se qualquer etapa falhar no meio do caminho, desfaz o "resolvido" que
+    // acabou de marcar ali em cima — senão o tópico ficaria mostrando
+    // resolvido com a mudança de verdade nunca aplicada na questão
+    const {data: proposta} = await sb.from('propostas_edicao').select('*').eq('topico_id', topicoId).eq('status','pendente').maybeSingle();
+    if(proposta){
+      let erroAplicacao = null;
+      if(proposta.tipo==='anulacao'){
+        // sequencial de propósito (não Promise.all): a RPC de baixo exige
+        // que a questão já esteja marcada como anulada antes de aplicar
+        // em respostas - roda em paralelo quebraria essa garantia
+        const {error: e1} = await sb.from('questoes').update({anulada:true, atualizado_em: new Date().toISOString()}).eq('id', proposta.questao_id);
+        // update direto em respostas nunca funcionou (a tabela nunca teve
+        // policy de UPDATE, só INSERT/SELECT - falhava silenciosamente
+        // sempre, e a anulação inteira era desfeita por causa disso). RPC
+        // SECURITY DEFINER resolve isso com segurança: só dá o ponto de
+        // volta se a questão realmente estiver anulada, sem abrir UPDATE
+        // direto em respostas pra qualquer usuário
+        const {error: e2} = e1 ? {error: e1} : await sb.rpc('aplicar_anulacao_questao', {p_questao_id: proposta.questao_id});
+        erroAplicacao = e1 || e2;
+      }else{
+        const {error} = await sb.from('questoes').update({
+          enunciado: proposta.enunciado,
+          alternativas: proposta.alternativas,
+          gabarito: proposta.gabarito,
+          atualizado_em: new Date().toISOString()
+        }).eq('id', proposta.questao_id);
+        erroAplicacao = error;
+      }
+      if(!erroAplicacao){
+        // a questão foi corrigida (editada) ou anulada de verdade — marca
+        // TODAS as exclusões pendentes dela como resolvidas, pra todo mundo
+        // que a tinha excluído, não só quem votou. Não existe botão de
+        // reverter manual pra isso — é sempre automático, só quando o
+        // problema é endereçado de verdade (decisão explícita do Carlos:
+        // "se eu apaguei eu apaguei", só volta se for corrigida de fato)
+        await sb.from('exclusoes').update({resolvido_em: new Date().toISOString()}).eq('questao_id', proposta.questao_id).is('resolvido_em', null);
+      }
+      if(erroAplicacao){
+        // não conseguiu aplicar a mudança de verdade — desfaz o "resolvido"
+        // pra não ficar num estado inconsistente, e avisa
+        await sb.from('topicos').update({status:'aberto'}).eq('id', topicoId);
+        alert('A votação bateu maioria, mas não consegui aplicar a mudança na questão: ' + erroAplicacao.message + '\n\nA discussão foi mantida aberta – tenta votar de novo depois.');
+        return;
+      }
+      const {error: erroProposta} = await sb.from('propostas_edicao').update({status:'aplicada'}).eq('id', proposta.id);
+      if(erroProposta){
+        // a mudança JÁ foi aplicada na questão com sucesso – isso aqui é só
+        // a etiqueta da proposta não tendo sido atualizada, não desfaz nada
+        // (desfazer a questão de novo criaria mais inconsistência, não menos)
+        console.error('Proposta aplicada na questão, mas não consegui marcar como aplicada:', erroProposta.message);
+      }
+    }
+  }
+}
+
+/* ============================================================
+   Propor edição – não muda a questão na hora. Fica como proposta
+   pendente até a votação de resolução (mesmo mecanismo de sempre)
+   atingir maioria; aí sim os campos propostos são aplicados
+   automaticamente (ver verificarMaioriaTopico)
+   ============================================================ */
+// remove os marcadores de subscrito/sobrescrito (_ e ^), voltando pro
+// texto puro sem underscore/circunflexo visível — usado só na hora de
+// mostrar numa caixa de texto simples, que nunca consegue renderizar
+// <sub>/<sup> de verdade (é só texto puro). Ao salvar, mesclarSubscritosQuebrados
+// roda de novo e recoloca os marcadores certos automaticamente
+function removerMarcadoresSubscrito(texto){
+  return (texto||'')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1$2')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
+}
+async function abrirFormularioEdicao(questaoId, topicoId){
+  const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
+  const html = `
+    <div class="section-title" style="margin-top:0">Propor edição</div>
+    <label style="font-size:var(--fs-b);color:#888">Enunciado</label>
+    <textarea id="edicao-enunciado" class="filter-select" style="min-height:90px">${escapeHtml(removerMarcadoresSubscrito(q.enunciado))}</textarea>
+    <label style="font-size:var(--fs-b);color:#888">Alternativas</label>
+    <textarea id="edicao-alternativas" class="filter-select" style="min-height:90px">${escapeHtml(removerMarcadoresSubscrito(q.alternativas))}</textarea>
+    <label style="font-size:var(--fs-b);color:#888">Gabarito (uma letra, a-e)</label>
+    <input type="text" id="edicao-gabarito" class="filter-select" value="${escapeHtml(q.gabarito||'')}" maxlength="1">
+    <button class="btn-primario" onclick="enviarPropostaEdicao('${questaoId}','${topicoId}')">Enviar proposta</button>
+    <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="renderizarTopico('${topicoId}')">Cancelar</button>
+  `;
+  document.getElementById(containerTopicoAtual()).innerHTML = html;
+}
+
+async function enviarPropostaEdicao(questaoId, topicoId){
+  const enunciado = mesclarSubscritosQuebrados(document.getElementById('edicao-enunciado').value.trim());
+  const alternativas = mesclarSubscritosQuebrados(document.getElementById('edicao-alternativas').value.trim());
+  const gabarito = document.getElementById('edicao-gabarito').value.trim().toLowerCase();
+  const {error} = await sb.from('propostas_edicao').insert({
+    topico_id: topicoId, questao_id: questaoId, enunciado, alternativas, gabarito, criado_por: usuarioAtual.id
+  });
+  if(error){
+    alert('Erro ao enviar proposta: '+error.message);
+    return;
+  }
+  // quem propôs já entra automaticamente como o primeiro voto a favor —
+  // se isso falhar, não trava o fluxo (a proposta já foi criada com
+  // sucesso), só fica faltando 1 voto que a pessoa pode dar manualmente
+  const {error: erroVoto} = await sb.from('votos_resolucao').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id}, {onConflict:'topico_id,usuario_id'});
+  if(erroVoto) console.error('Não consegui registrar o voto automático do proponente:', erroVoto.message);
+  await verificarMaioriaTopico(topicoId);
+  await renderizarTopico(topicoId);
+  await atualizarNotificacoesForum();
+}
+
+/* ============================================================
+   Anular questão – outro desfecho possível de um tópico de erro. Quem
+   já respondeu ganha o ponto como acerto (mesmo quem errou), igual
+   anulação de prova de verdade; a questão nunca mais entra em cadernos
+   novos.
+   ============================================================ */
+let questaoParaAnular = null;
+
+function confirmarAnularQuestao(questaoId, topicoId){
+  questaoParaAnular = {questaoId, topicoId};
+  abrirModal('modal-confirmar-anulacao');
+}
+
+async function executarAnulacaoQuestao(){
+  if(!questaoParaAnular) return;
+  const {questaoId, topicoId} = questaoParaAnular;
+  const {error} = await sb.from('propostas_edicao').insert({
+    topico_id: topicoId, questao_id: questaoId, tipo: 'anulacao', criado_por: usuarioAtual.id
+  });
+  questaoParaAnular = null;
+  fecharModal('modal-confirmar-anulacao');
+  if(error){
+    alert('Erro ao propor anulação: '+error.message);
+    return;
+  }
+  // quem propôs já entra automaticamente como o primeiro voto a favor —
+  // se isso falhar, não trava o fluxo, só fica faltando 1 voto que a
+  // pessoa pode dar manualmente
+  const {error: erroVotoAnulacao} = await sb.from('votos_resolucao').upsert({topico_id: topicoId, usuario_id: usuarioAtual.id}, {onConflict:'topico_id,usuario_id'});
+  if(erroVotoAnulacao) console.error('Não consegui registrar o voto automático do proponente:', erroVotoAnulacao.message);
+  await verificarMaioriaTopico(topicoId);
+  await renderizarTopico(topicoId);
+  await atualizarNotificacoesForum();
+}
+
+/* ============================================================
+   PLACAR
+   ============================================================ */
+let metricasFiltroDias = 30; // 30 dias é o padrão ao entrar na aba
+let metricasDataInicio = null; // filtro customizado, tem prioridade sobre metricasFiltroDias quando preenchido
+let metricasDataFim = null;
+
+function selecionarPeriodoMetricas(dias, btn){
+  metricasFiltroDias = dias;
+  metricasDataInicio = null;
+  metricasDataFim = null;
+  document.getElementById('metricas-data-inicio').value = '';
+  document.getElementById('metricas-data-fim').value = '';
+  document.getElementById('metricas-redefinir-datas').classList.add('hidden');
+  document.getElementById('metricas-filtro-datas-customizadas').classList.add('hidden');
+  document.querySelectorAll('#metricas-filtro-periodo .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderizarMetricasPessoais();
+}
+function toggleFiltroCustomizado(){
+  document.getElementById('metricas-filtro-datas-customizadas').classList.toggle('hidden');
+}
+function aplicarFiltroDatasCustomizadas(){
+  const inicio = document.getElementById('metricas-data-inicio').value;
+  const fim = document.getElementById('metricas-data-fim').value;
+  metricasDataInicio = inicio || null;
+  metricasDataFim = fim || null;
+  if(metricasDataInicio || metricasDataFim){
+    document.querySelectorAll('#metricas-filtro-periodo .filter-btn[data-dias]').forEach(b=>b.classList.remove('active'));
+    document.getElementById('metricas-redefinir-datas').classList.remove('hidden');
+  }
+  renderizarMetricasPessoais();
+}
+function redefinirFiltroDatas(){
+  metricasDataInicio = null;
+  metricasDataFim = null;
+  document.getElementById('metricas-data-inicio').value = '';
+  document.getElementById('metricas-data-fim').value = '';
+  document.getElementById('metricas-redefinir-datas').classList.add('hidden');
+  document.getElementById('metricas-filtro-datas-customizadas').classList.add('hidden');
+  metricasFiltroDias = 0;
+  document.querySelectorAll('#metricas-filtro-periodo .filter-btn[data-dias]').forEach(b=>b.classList.remove('active'));
+  renderizarMetricasPessoais();
+}
+
+// cache bruto das métricas — carregado 1x quando entra na aba (ou quando os
+// dados podem ter mudado), NÃO a cada troca de filtro. Trocar filtro só
+// refiltra o que já está em memória, sem ida nova ao banco — é isso que
+// deixa instantâneo, igual o PSCPP Tracker
+let metricasRespostasCache = [];
+let metricasQuestoesInfoCache = {};
+let metricasNotasCache = [];
+let metricasFavoritosCache = [];
+let metricasTodasQuestoesCache = [];
+function mostrarModuloVazio(texto){
+  document.getElementById('lista-metricas-modulo').innerHTML = `<p style="color:#888;font-size:var(--fs-d)">${texto}</p>`;
+}
+
+// Calcula, por módulo, duas métricas que olham pra PARES de tentativas na
+// mesma questão ao longo do tempo (não são um "instantâneo" como % de
+// acerto): recuperação (errou, tentou de novo, acertou?) e retenção
+// (acertou há mais de 14 dias, ainda acerta se aparecer de novo?)
+function calcularMetricasConhecimentoPorModulo(respostasBase, infoPorQuestao){
+  const CORTE_RETENCAO_MS = 14*24*60*60*1000;
+  const agora = Date.now();
+  const porModulo = {};
+  respostasBase.forEach(r=>{
+    const mod = infoPorQuestao[r.questao_id]?.modulo_pscpp || 'Sem módulo';
+    if(!porModulo[mod]) porModulo[mod] = {};
+    if(!porModulo[mod][r.questao_id]) porModulo[mod][r.questao_id] = [];
+    porModulo[mod][r.questao_id].push(r);
+  });
+  const resultado = {};
+  Object.entries(porModulo).forEach(([mod, questoes])=>{
+    let recuperacaoTotal=0, recuperacaoSucesso=0, retencaoTotal=0, retencaoSucesso=0;
+    Object.values(questoes).forEach(lista=>{
+      lista.sort((a,b)=> a.respondido_em.localeCompare(b.respondido_em));
+      for(let i=0;i<lista.length-1;i++){
+        const atual=lista[i], proxima=lista[i+1];
+        if(!atual.correta){
+          recuperacaoTotal++;
+          if(proxima.correta) recuperacaoSucesso++;
+        }
+        if(atual.correta){
+          const idade = agora - new Date(atual.respondido_em).getTime();
+          if(idade >= CORTE_RETENCAO_MS){
+            retencaoTotal++;
+            if(proxima.correta) retencaoSucesso++;
+          }
+        }
+      }
+    });
+    resultado[mod] = {
+      recuperacaoPct: recuperacaoTotal ? Math.round((recuperacaoSucesso/recuperacaoTotal)*100) : null,
+      retencaoPct: retencaoTotal ? Math.round((retencaoSucesso/retencaoTotal)*100) : null,
+      recuperacaoSucesso, recuperacaoTotal, retencaoSucesso, retencaoTotal,
+    };
+  });
+  return resultado;
+}
+
+let evolucaoSemanasExibidas = 12; // independente do filtro de período do resto da tela
+function formatarPeriodoEvolucao(semanas){
+  if(semanas < 8) return semanas === 1 ? '1 semana' : `${semanas} semanas`;
+  if(semanas < 52) return `${Math.round(semanas/4.345)} meses`;
+  const anos = semanas/52;
+  return anos < 1.5 ? '1 ano' : `${Math.round(anos)} anos`;
+}
+function atualizarSliderEvolucao(valor){
+  evolucaoSemanasExibidas = parseInt(valor, 10);
+  document.getElementById('evolucao-slider-valor').textContent = formatarPeriodoEvolucao(evolucaoSemanasExibidas);
+  renderizarGraficoEvolucao();
+}
+function determinarGranularidadeEvolucao(semanas){
+  if(semanas <= 3) return 'dia';
+  if(semanas <= 17) return 'semana'; // ~4 meses
+  return 'mes';
+}
+
+function calcularEvolucaoSemanalModulo(){
+  // vazio = considera todos (mesma regra "vazio = todos" do resto da tela);
+  // com módulos/matérias selecionados, junta as respostas deles numa linha
+  // só. O período aqui é o do slider próprio da evolução, não o filtro
+  // geral da tela
+  const corteEvolucao = Date.now() - evolucaoSemanasExibidas*7*24*60*60*1000;
+  const mapaBibliografiaTitulo = {};
+  bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
+  const respostasDoModulo = metricasRespostasCache.filter(r => {
+    const mod = metricasQuestoesInfoCache[r.questao_id]?.modulo_pscpp;
+    if(modulosFiltradosMetricas.size > 0 && !modulosFiltradosMetricas.has(mod)) return false;
+    if(materiasFiltradasMetricas.size > 0){
+      const bibId = metricasQuestoesInfoCache[r.questao_id]?.bibliografia_id;
+      if(!bibId || !materiasFiltradasMetricas.has(mapaBibliografiaTitulo[bibId])) return false;
+    }
+    return new Date(r.respondido_em).getTime() >= corteEvolucao;
+  });
+
+  // agrupamento se adapta ao tamanho do período — pouco tempo agrupa por
+  // dia, período médio por semana, período longo por mês. Assim a linha
+  // nunca fica nem vazia demais (poucos pontos) nem lotada demais
+  const granularidade = determinarGranularidadeEvolucao(evolucaoSemanasExibidas);
+  const porBucket = {};
+  respostasDoModulo.forEach(r=>{
+    const data = new Date(r.respondido_em);
+    let chave;
+    if(granularidade === 'dia'){
+      chave = data.toISOString().slice(0,10);
+    }else if(granularidade === 'semana'){
+      const diaDaSemana = data.getDay();
+      const inicioSemana = new Date(data);
+      inicioSemana.setDate(data.getDate() - ((diaDaSemana+6)%7));
+      inicioSemana.setHours(0,0,0,0);
+      chave = inicioSemana.toISOString().slice(0,10);
+    }else{
+      chave = data.getFullYear() + '-' + String(data.getMonth()+1).padStart(2,'0');
+    }
+    if(!porBucket[chave]) porBucket[chave] = {total:0, acertos:0};
+    porBucket[chave].total++;
+    if(r.correta) porBucket[chave].acertos++;
+  });
+  return {
+    granularidade,
+    pontos: Object.entries(porBucket)
+      .sort((a,b)=> a[0].localeCompare(b[0]))
+      .map(([chave, s])=>({ chave, pct: Math.round((s.acertos/s.total)*100) }))
+  };
+}
+
+let graficoEvolucao = null;
+function formatarRotuloEvolucao(chave, granularidade){
+  if(granularidade === 'mes'){
+    const [ano, mes] = chave.split('-');
+    const nomesMes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return nomesMes[parseInt(mes,10)-1] + '/' + ano.slice(2);
+  }
+  return new Date(chave+'T00:00:00').toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+}
+
+async function renderizarGraficoEvolucao(){
+  const {granularidade, pontos} = calcularEvolucaoSemanalModulo();
+  const elVazio = document.getElementById('metricas-evolucao-vazio');
+  const canvas = document.getElementById('grafico-evolucao');
+  const elContexto = document.getElementById('metricas-evolucao-contexto');
+  if(elContexto){
+    const partes = [];
+    partes.push(modulosFiltradosMetricas.size > 0 ? [...modulosFiltradosMetricas].join(', ') : 'Todos os módulos');
+    if(materiasFiltradasMetricas.size > 0) partes.push([...materiasFiltradasMetricas].join(', '));
+    elContexto.textContent = partes.join(' · ');
+  }
+
+  if(graficoEvolucao){ graficoEvolucao.destroy(); graficoEvolucao = null; }
+
+  if(pontos.length < 2){
+    canvas.classList.add('hidden');
+    elVazio.textContent = 'Não tem dado suficiente ainda pra mostrar evolução nesse módulo/período.';
+    elVazio.classList.remove('hidden');
+    return;
+  }
+  canvas.classList.remove('hidden');
+  elVazio.classList.add('hidden');
+  try{
+    await carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js', () => typeof Chart !== 'undefined');
+    graficoEvolucao = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: pontos.map(d => formatarRotuloEvolucao(d.chave, granularidade)),
+        datasets: [{
+          data: pontos.map(d=>d.pct),
+          borderColor: '#D95926',
+          backgroundColor: 'rgba(217,89,38,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: '#D95926',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {display:false},
+          tooltip: {callbacks: {label: (item) => item.raw + '% de acerto'}}
+        },
+        scales: {
+          x: {grid:{display:false}, ticks:{color:'#888', font:{size:11}}},
+          y: {min:0, max:100, ticks:{color:'#888', font:{size:11}, callback:(v)=>v+'%'}, grid:{color:'#eee'}}
+        }
+      }
+    });
+  }catch(erroGrafico){
+    console.error('Erro ao desenhar gráfico de evolução:', erroGrafico);
+    canvas.classList.add('hidden');
+    elVazio.textContent = 'Não consegui carregar o gráfico agora. Tenta recarregar a página.';
+    elVazio.classList.remove('hidden');
+  }
+}
+
+function linhaComparativaModulo(nome, pctAcerto, pctRecuperacao, pctRetencao, acertos, total, recuperacaoSucesso, recuperacaoTotal, retencaoSucesso, retencaoTotal){
+  const barraSemDado = () => `
+    <div style="display:flex;align-items:center;gap:6px;height:12px;margin-bottom:3px">
+      <div style="flex:1;background:#F0F0EE;border-radius:3px;height:7px;overflow:hidden"></div>
+      <span style="width:36px;flex-shrink:0"></span>
+    </div>`;
+  const linhasInfo = [`% de acerto: ${acertos} de ${total}`];
+  linhasInfo.push(recuperacaoTotal ? `% de recuperação: ${recuperacaoSucesso} de ${recuperacaoTotal}` : '% de recuperação: sem dado suficiente ainda');
+  linhasInfo.push(retencaoTotal ? `% de retenção: ${retencaoSucesso} de ${retencaoTotal}` : '% de retenção: sem dado suficiente ainda');
+  const textoInfo = linhasInfo.map(l=>`<div>${escapeHtml(l)}</div>`).join('');
+  return `
+    <div style="padding:12px 0;cursor:pointer;border-bottom:0.5px solid #f0f0ee" onclick="mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)" ontouchend="event.preventDefault();mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+        <span style="font-size:var(--fs-d);font-weight:600;color:#111">${escapeHtml(nome)}</span>
+        <span style="font-size:var(--fs-b);color:#888;flex-shrink:0;margin-left:10px">${acertos}/${total} acertos</span>
+      </div>
+      ${barraFina(pctAcerto, 100, '#1BAF7A', '%')}
+      ${pctRecuperacao !== null ? barraFina(pctRecuperacao, 100, '#EDA100', '%') : barraSemDado()}
+      ${pctRetencao !== null ? barraFina(pctRetencao, 100, '#4A3AA7', '%') : barraSemDado()}
+    </div>`;
+}
+function mostrarInfoModulo(event, nome, textoInfo){
+  event.stopPropagation();
+  let popup = document.getElementById('popup-info-modulo');
+  if(!popup){
+    popup = document.createElement('div');
+    popup.id = 'popup-info-modulo';
+    popup.style.cssText = 'position:fixed;background:#111;color:#fff;padding:10px 14px;border-radius:8px;font-size:var(--fs-b);line-height:1.7;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.25);max-width:280px';
+    document.body.appendChild(popup);
+  }
+  popup.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${nome}</div>${textoInfo}`;
+  popup.style.display = 'block';
+  const x = event.clientX || (event.touches && event.touches[0]?.clientX) || window.innerWidth/2;
+  const y = event.clientY || (event.touches && event.touches[0]?.clientY) || window.innerHeight/2;
+  popup.style.left = Math.max(8, Math.min(x, window.innerWidth - 288)) + 'px';
+  popup.style.top = (y + 12) + 'px';
+  clearTimeout(window._timeoutPopupModulo);
+  window._timeoutPopupModulo = setTimeout(()=>{ popup.style.display = 'none'; }, 3000);
+}
+window.addEventListener('click', (e)=>{
+  const popup = document.getElementById('popup-info-modulo');
+  if(popup && e.target !== popup) popup.style.display = 'none';
+});
+function legendaBarrasModulo(){
+  return `<div style="display:flex;gap:14px;margin-bottom:8px;font-size:var(--fs-d);color:#888">
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#1BAF7A;border-radius:2px"></span>% de acerto</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#EDA100;border-radius:2px"></span>% de recuperação</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#4A3AA7;border-radius:2px"></span>% de retenção</span>
+  </div>`;
+}
+
+function renderizarGraficoModuloTresBarras(linhasModulo){
+  const linhasValidas = linhasModulo.slice().sort((a,b) => b.pctAcerto - a.pctAcerto);
+  if(!linhasValidas.length){
+    mostrarModuloVazio('Nenhum dado disponível pra esses módulos.');
+    return;
+  }
+  document.getElementById('lista-metricas-modulo').innerHTML = `
+    ${legendaBarrasModulo()}
+    ${linhasValidas.map(l => linhaComparativaModulo(l.modulo, l.pctAcerto, l.pctRecuperacao, l.pctRetencao, l.acertos, l.total, l.recuperacaoSucesso, l.recuperacaoTotal, l.retencaoSucesso, l.retencaoTotal)).join('')}
+  `;
+}
+
+function passaNoFiltroPeriodo(dataIso){
+  if(!dataIso) return false;
+  if(metricasDataInicio && dataIso < metricasDataInicio+'T00:00:00') return false;
+  if(metricasDataFim && dataIso > metricasDataFim+'T23:59:59') return false;
+  if(!metricasDataInicio && !metricasDataFim && metricasFiltroDias > 0){
+    const cutoff = new Date(Date.now() - metricasFiltroDias*24*60*60*1000).toISOString();
+    if(dataIso < cutoff) return false;
+  }
+  return true;
+}
+
+async function carregarMetricasPessoais(viaPullToRefresh){
+  if(!viaPullToRefresh){
+    document.getElementById('metricas-carregando-inicial').classList.remove('hidden');
+    document.getElementById('metricas-conteudo').classList.add('hidden');
+  }
+
+  const [{data: respostasBrutas}, {data: minhasNotas}, {data: meusFavoritos}, {data: todasQuestoesBanco}, {data: minhasExclusoes}] = await Promise.all([
+    buscarTudoPaginadoVF(() => sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_id')),
+    sb.from('notas').select('id, questao_id, texto, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
+    sb.from('favoritos').select('id, questao_id, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
+    buscarTudoPaginadoVF(() => sb.from('questoes').select('id, modulo_pscpp, tipo_questao', {count: 'exact'}).eq('anulada', false).order('id')),
+    sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).is('resolvido_em', null)
+  ]);
+
+  metricasRespostasCache = respostasBrutas || [];
+  metricasNotasCache = minhasNotas || [];
+  metricasFavoritosCache = meusFavoritos || [];
+  const idsExcluidosSet = new Set((minhasExclusoes||[]).map(e=>e.questao_id));
+  metricasTodasQuestoesCache = (todasQuestoesBanco||[]).filter(q=>!idsExcluidosSet.has(q.id));
+
+  const idsQuestoes = new Set(metricasRespostasCache.map(r=>r.questao_id));
+  metricasNotasCache.forEach(n=>idsQuestoes.add(n.questao_id));
+  metricasFavoritosCache.forEach(f=>idsQuestoes.add(f.questao_id));
+  const idsQuestoesArr = [...idsQuestoes];
+  const {data: questoesInfo} = idsQuestoesArr.length
+    ? await buscarTudoPaginadoVF(() => sb.from('questoes').select('id, modulo_pscpp, tipo_questao, bibliografia_id, capitulo, enunciado', {count: 'exact'}).in('id', idsQuestoesArr).order('id'))
+    : {data: []};
+  metricasQuestoesInfoCache = {};
+  (questoesInfo||[]).forEach(q=>{ metricasQuestoesInfoCache[q.id] = q; });
+
+  document.getElementById('metricas-carregando-inicial').classList.add('hidden');
+  document.getElementById('metricas-conteudo').classList.remove('hidden');
+  renderizarMetricasPessoais();
+}
+
+function barraFina(valor, maximo, cor, sufixo=''){
+  const largura = maximo > 0 ? Math.min(100, Math.round((valor/maximo)*100)) : 0;
+  return `
+    <div style="display:flex;align-items:center;gap:6px;height:12px;margin-bottom:3px">
+      <div style="flex:1;background:#F0F0EE;border-radius:3px;height:7px;overflow:hidden">
+        <div style="width:${largura}%;background:${cor};height:100%;border-radius:3px"></div>
+      </div>
+      <span style="width:36px;flex-shrink:0;text-align:right;font-size:var(--fs-a);line-height:11px;color:#666">${valor}${sufixo}</span>
+    </div>`;
+}
+function linhaComparativa(nome, acertos, total, pct, maximo, corPct){
+  return `
+    <div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:0.5px solid #eee">
+      <div style="width:96px;flex-shrink:0;font-size:var(--fs-d);font-weight:600;color:#111">${nome}</div>
+      <div style="flex:1">
+        ${barraFina(acertos, maximo, '#8FA878')}
+        ${barraFina(total, maximo, '#B5B5B0')}
+        ${barraFina(pct, 100, corPct, '%')}
+      </div>
+    </div>`;
+}
+function legendaBarras(){
+  return `<div style="display:flex;gap:14px;margin-bottom:8px;font-size:var(--fs-a);color:#888">
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#8FA878;border-radius:2px"></span>Acertos</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#B5B5B0;border-radius:2px"></span>Respondidas</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;flex-shrink:0;background:#C9A165;border-radius:2px"></span>% de acertos</span>
+  </div>`;
+}
+const MODULOS_PSCPP = ['Arte Naval','Comunicações','Conhecimentos Gerais','Legislação','Manobrabilidade','Meteorologia e Oceanografia','Navegação em Águas Restritas'];
+
+// Lista fechada de bibliografia oficial do PSCPP, por módulo — extraída do
+// dossiê do projeto (Anexo 2-B do edital da Marinha). Cada entrada tem:
+// modulo, autorBusca (termos de busca no texto, minúsculo), titulo (nome
+// completo pra criar o registro de bibliografia), capitulos (array de
+// números de capítulo cobertos por ESSA entrada especificamente — usado
+// pra desempatar quando o mesmo autor aparece em módulos diferentes)
+const BIBLIOGRAFIA_FECHADA = [
+  {modulo:"Arte Naval", autorBusca:["clark"], autor:"CLARK, I. C.", titulo:"Mooring and Anchoring Ships: Principles and Practice, v.1", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["fonseca"], autor:"FONSECA, M. M.", titulo:"Arte Naval, v.1", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["fragoso"], autor:"FRAGOSO, O.; CAJATY, M.", titulo:"Rebocadores Portuários", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["rp"], autor:"FRAGOSO, O.; CAJATY, M.", titulo:"Rebocadores Portuários", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["hensen", "tug"], autor:"HENSEN, H.", titulo:"Tug Use in Port: A Practical Guide", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["tup"], autor:"HENSEN, H.", titulo:"Tug Use in Port: A Practical Guide", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["tup4"], autor:"HENSEN, H.", titulo:"Tug Use in Port: A Practical Guide", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["hensen", "estabilidade", "rebocadores"], autor:"HENSEN, H.; VAN DER LAAN, M.", titulo:"Estabilidade dos Rebocadores", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["1428"], autor:"IMO", titulo:"Required Pilot Transfer Arrangements (MSC.1/Circ.1428)", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["circ.1428"], autor:"IMO", titulo:"Required Pilot Transfer Arrangements (MSC.1/Circ.1428)", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["1495"], autor:"IMO", titulo:"SOLAS 1974 (as amended), Regra V/23.3.3", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["circ.1495"], autor:"IMO", titulo:"SOLAS 1974 (as amended), Regra V/23.3.3", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["1045"], autor:"IMO", titulo:"Pilot Transfer Arrangements (Resolution A.1045(27))", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["1108"], autor:"IMO", titulo:"Amendments to the Recommendation on Pilot Transfer Arrangements (Resolution A.1108(29))", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["solas", "1974"], autor:"IMO", titulo:"SOLAS 1974 (as amended), Regra V/23.3.3", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["macelrevey"], autor:"MacELREVEY, D. H.", titulo:"Shiphandling for the Mariner", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["shfm"], autor:"MacELREVEY, D. H.", titulo:"Shiphandling for the Mariner", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["nayak", "pilotage"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 3, 4, 13-19)", capitulos:[3, 4, 13, 14, 15, 16, 17, 18, 19]},
+  {modulo:"Arte Naval", autorBusca:["tpmp"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 3, 4, 13-19)", capitulos:[3, 4, 13, 14, 15, 16, 17, 18, 19]},
+  {modulo:"Arte Naval", autorBusca:["pianc 235"], autor:"PIANC", titulo:"Ship Dimensions and Data for Design of Marine Infrastructure (Report Nº 235)", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["pianc", "ship dimensions"], autor:"PIANC", titulo:"Ship Dimensions and Data for Design of Marine Infrastructure (Report Nº 235)", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["radioperador"], autor:"DIRETORIA DE PORTOS E COSTAS", titulo:"Manual do Curso Especial de Radioperador Geral", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["erog"], autor:"DIRETORIA DE PORTOS E COSTAS", titulo:"Manual do Curso Especial de Radioperador Geral", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["international code of signals"], autor:"IMO", titulo:"International Code of Signals", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["cis"], autor:"IMO", titulo:"International Code of Signals", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["ics"], autor:"IMO", titulo:"International Code of Signals", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["918", "communication phrases"], autor:"IMO", titulo:"Standard Marine Communication Phrases (Resolution A.918(22))", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["smcp"], autor:"IMO", titulo:"Standard Marine Communication Phrases (Resolution A.918(22))", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["2.508", "marpol"], autor:"BRASIL", titulo:"Decreto nº 2.508/1998 – MARPOL 73/78", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["planejamento portuário"], autor:"CONAPRA", titulo:"Planejamento Portuário: Recomendações para Acessos Náuticos", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["1598", "fatigue"], autor:"IMO", titulo:"Guidelines on Fatigue (MSC.1/Circ.1598)", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["ship/port interface"], autor:"IMO", titulo:"Ship/Port Interface: List of Publications (FAL.6/Circ.14/Rev.2)", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["fal.6"], autor:"IMO", titulo:"Ship/Port Interface: List of Publications (FAL.6/Circ.14/Rev.2)", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["livingstone"], autor:"LIVINGSTONE, G. H.; LIVINGSTONE, G. H.", titulo:"Shiphandling the Beautiful Game, v.1", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["stbg"], autor:"LIVINGSTONE, G. H.; LIVINGSTONE, G. H.", titulo:"Shiphandling the Beautiful Game, v.1", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["sbg"], autor:"LIVINGSTONE, G. H.; LIVINGSTONE, G. H.", titulo:"Shiphandling the Beautiful Game, v.1", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["normam-224"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-224/DPC", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["declaração universal", "direitos humanos"], autor:"ONU", titulo:"Declaração Universal dos Direitos Humanos", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["pianc 121"], autor:"PIANC", titulo:"Harbour Approach Channels: Design Guidelines", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["pimenta"], autor:"PIMENTA, M. G.", titulo:"Direito Processual Marítimo", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["dpm"], autor:"PIMENTA, M. G.", titulo:"Direito Processual Marítimo", capitulos:null},
+  {modulo:"Conhecimentos Gerais", autorBusca:["stopford"], autor:"STOPFORD, M.", titulo:"Economia Marítima", capitulos:null},
+  {modulo:"Legislação", autorBusca:["2.596", "rlesta"], autor:"BRASIL", titulo:"Decreto nº 2.596/1998 – RLESTA", capitulos:null},
+  {modulo:"Legislação", autorBusca:["12.481"], autor:"BRASIL", titulo:"Decreto nº 12.481/2025 – Política Marítima Nacional", capitulos:null},
+  {modulo:"Legislação", autorBusca:["pmn"], autor:"BRASIL", titulo:"Decreto nº 12.481/2025 – Política Marítima Nacional", capitulos:null},
+  {modulo:"Legislação", autorBusca:["2.256"], autor:"BRASIL", titulo:"Decreto nº 2.256/1997", capitulos:null},
+  {modulo:"Legislação", autorBusca:["7.642"], autor:"BRASIL", titulo:"Lei nº 7.642/1987 – Procuradoria Especial da Marinha", capitulos:null},
+  {modulo:"Legislação", autorBusca:["pem"], autor:"BRASIL", titulo:"Lei nº 7.642/1987 – Procuradoria Especial da Marinha", capitulos:null},
+  {modulo:"Legislação", autorBusca:["7.652"], autor:"BRASIL", titulo:"Lei nº 7.652/1988 – Registro da Propriedade Marítima", capitulos:null},
+  {modulo:"Legislação", autorBusca:["9.432"], autor:"BRASIL", titulo:"Lei nº 9.432/1997 – Ordenação do Transporte Aquaviário", capitulos:null},
+  {modulo:"Legislação", autorBusca:["lei complementar", "97/1999"], autor:"BRASIL", titulo:"Lei Complementar nº 97/1999 (cap. VI, art. 17)", capitulos:null},
+  {modulo:"Legislação", autorBusca:["12.815"], autor:"BRASIL", titulo:"Lei nº 12.815/2013 – Lei dos Portos", capitulos:null},
+  {modulo:"Legislação", autorBusca:["14.813"], autor:"BRASIL", titulo:"Lei nº 14.813/2024 – Regulamenta a atividade de praticagem", capitulos:null},
+  {modulo:"Legislação", autorBusca:["9.537", "lesta"], autor:"BRASIL", titulo:"Lei nº 9.537/1997 – LESTA", capitulos:null},
+  {modulo:"Legislação", autorBusca:["2.180", "tribunal marítimo"], autor:"BRASIL", titulo:"Lei nº 2.180/1954 – Tribunal Marítimo", capitulos:null},
+  {modulo:"Legislação", autorBusca:["carta 12.000"], autor:"DHN", titulo:"Publicações Náuticas (Cartas Náuticas, Carta 12.000, Avisos aos Navegantes, Roteiro, Lista de Faróis, Lista de Auxílios-Rádio, Tábuas das Marés, Cartas de Correntes de Maré, Cartas Piloto)", capitulos:null},
+  {modulo:"Legislação", autorBusca:["960", "certification for maritime pilots"], autor:"IMO", titulo:"Recommendations on Training and Certification for Maritime Pilots (Resolution A.960(23))", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-601"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-601/DHN", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-311"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-311/DPC", capitulos:null},
+  {modulo:"Legislação", autorBusca:["busca e salvamento", "sar"], autor:"MARINHA DO BRASIL", titulo:"Serviço de Busca e Salvamento Marítimo (SAR) no Brasil", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-602"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-602/DHN", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-112"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-112/DPC", capitulos:null},
+  {modulo:"Legislação", autorBusca:["portaria", "37/mb"], autor:"MARINHA DO BRASIL", titulo:"Portaria nº 37/MB/2022 – Estrutura da Autoridade Marítima", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-204"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-204/DPC", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-302"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-302/DPC", capitulos:null},
+  {modulo:"Legislação", autorBusca:["normam-201"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-201/DPC (cap. 7, arts. 7.1-7.3 e 7.10-7.14)", capitulos:[7]},
+  {modulo:"Legislação", autorBusca:["política nacional de defesa"], autor:"MINISTÉRIO DA DEFESA", titulo:"Política Nacional de Defesa", capitulos:null},
+  {modulo:"Legislação", autorBusca:["md35"], autor:"MINISTÉRIO DA DEFESA", titulo:"Glossário das Forças Armadas (MD35-G-01)", capitulos:null},
+  {modulo:"Legislação", autorBusca:["glossário", "forças armadas"], autor:"MINISTÉRIO DA DEFESA", titulo:"Glossário das Forças Armadas (MD35-G-01)", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["bertram"], autor:"BERTRAM, V.", titulo:"Practical Ship Hydrodynamics", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["crenshaw"], autor:"CRENSHAW, R. S.", titulo:"Naval Shiphandling", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["1228", "adverse weather"], autor:"IMO", titulo:"Revised Guidance to the Master for Avoiding Dangerous Situations in Adverse Weather and Sea Conditions (MSC.1/Circ.1228)", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["circ.1228"], autor:"IMO", titulo:"Revised Guidance to the Master for Avoiding Dangerous Situations in Adverse Weather and Sea Conditions (MSC.1/Circ.1228)", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["a.601"], autor:"IMO", titulo:"Provision and Display of Manoeuvring Information on Board Ships (Resolution A.601(15))", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["601", "manoeuvring information"], autor:"IMO", titulo:"Provision and Display of Manoeuvring Information on Board Ships (Resolution A.601(15))", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["1053", "explanatory notes"], autor:"IMO", titulo:"Explanatory Notes to the Standards for Ship Manoeuvrability (MSC/Circ.1053)", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["circ.1053"], autor:"IMO", titulo:"Explanatory Notes to the Standards for Ship Manoeuvrability (MSC/Circ.1053)", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["137(76)", "manoeuvrability"], autor:"IMO", titulo:"Standards for Ship Manoeuvrability (Resolution MSC.137(76))", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["larsson", "raven"], autor:"LARSSON, L.; RAVEN, H. C.", titulo:"Ship Resistance and Flow", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["lewis", "resistance"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Resistance", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["lewis", "propulsion"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Propulsion", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["lewis", "controllability"], autor:"LEWIS, E. V.", titulo:"Principles of Naval Architecture – Controllability", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["santos", "manobrabilidade", "seculo"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["mesquita", "manobrabilidade"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["manobrabilidade do navio no século 21"], autor:"SANTOS, E. M.", titulo:"A Manobrabilidade do Navio no Século 21", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-6)", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["ship resistance and flow"], autor:null, titulo:"Ship Resistance and Flow", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["practical ship hydrodynamics"], autor:null, titulo:"Practical Ship Hydrodynamics", capitulos:null},
+  {modulo:"Manobrabilidade", autorBusca:["mesquita", "hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 3-6)", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["lobo", "soares"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["valgas"], autor:"LOBO, P. R. V.; SOARES, C. A.", titulo:"Meteorologia e Oceanografia", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["normam-701"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-701/DHN", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["ciência e a arte", "45"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["miguens", "45"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["noções de meteorologia para navegantes"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte, v.3, cap. 45", capitulos:[45]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["pianc 117"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["hydro/meteo"], autor:"PIANC", titulo:"Use of Hydro/Meteo Information for Port Access and Operations (Report 117)", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["princípios de hidrodinâmica"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 1-2)", capitulos:[1, 2]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["mesquita", "ondas"], autor:"SANTOS, E. M.", titulo:"Princípios de Hidrodinâmica e Ação das Ondas sobre o Movimento do Navio (caps. 1-2)", capitulos:[1, 2]},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["ynoue"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
+  {modulo:"Meteorologia e Oceanografia", autorBusca:["meteorologia", "nocoes basicas"], autor:"YNOUE, R. Y. et al.", titulo:"Meteorologia: Noções Básicas", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["bento"], autor:"BENTO, C. N. S.", titulo:"Navegação Integrada", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["norberto"], autor:"BENTO, C. N. S.", titulo:"Navegação Integrada", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["solas", "2024"], autor:"IMO", titulo:"SOLAS Consolidated Edition 2024 (Capítulo V)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["colreg"], autor:"IMO", titulo:"COLREG, Consolidated Edition 2018", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["ripeam"], autor:"IMO", titulo:"COLREG, Consolidated Edition 2018", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["1580", "dp systems"], autor:"IMO", titulo:"Guidelines for Vessels with DP Systems (MSC.1/Circ.1580)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["circ.1580"], autor:"IMO", titulo:"Guidelines for Vessels with DP Systems (MSC.1/Circ.1580)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["imo", "dp", "systems"], autor:"IMO", titulo:"Guidelines for Vessels with DP Systems (MSC.1/Circ.1580)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["738", "dp operator"], autor:"IMO", titulo:"Guidelines for DP Operator Training (MSC.1/Circ.738/Rev.2)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["circ.738"], autor:"IMO", titulo:"Guidelines for DP Operator Training (MSC.1/Circ.738/Rev.2)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["imo", "dp", "operator"], autor:"IMO", titulo:"Guidelines for DP Operator Training (MSC.1/Circ.738/Rev.2)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["ecdis"], autor:"IMO", titulo:"Performance Standards for ECDIS (Resolution MSC.530(106))", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["1106", "ais"], autor:"IMO", titulo:"Revised Guidelines for AIS (Resolution A.1106(29))", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["192(79)", "radar equipment"], autor:"IMO", titulo:"Adoption of the Revised Performance Standards for Radar Equipment (Resolution MSC.192(79))", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["imo", "radar"], autor:"IMO", titulo:"Adoption of the Revised Performance Standards for Radar Equipment (Resolution MSC.192(79))", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["bridge procedures"], autor:"INTERNATIONAL CHAMBER OF SHIPPING", titulo:"Bridge Procedures Guide", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["bpg"], autor:"INTERNATIONAL CHAMBER OF SHIPPING", titulo:"Bridge Procedures Guide", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["normam-501"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-501/DHN", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["normam-511"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-511/DHN", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["normam-202"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-202/DPC", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["miguens"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte (v.1 e v.3, exceto cap. 45)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["ciência e a arte"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte (v.1 e v.3, exceto cap. 45)", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["nayak", "pilotage"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6, 13)", capitulos:[5, 6, 13]},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["tpmp"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6, 13)", capitulos:[5, 6, 13]},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["swift", "bailey"], autor:"SWIFT, A. J.; BAILEY, T. J.", titulo:"Bridge Team Management: a Practical Guide", capitulos:null},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["btm"], autor:"SWIFT, A. J.; BAILEY, T. J.", titulo:"Bridge Team Management: a Practical Guide", capitulos:null},
+];
+
+/* ============================================================
+   Parser de PDF/texto de questões — sem IA, por regras de texto.
+   Reconhece 2 variações de cabeçalho de questão ("QUESTÃO Nº 1"/"QUESTÃO 1"
+   e "Questão 1 de 47"), e RESPOSTA:/GABARITO: em qualquer ordem com o
+   cabeçalho repetido na seção de gabarito. Testado contra amostras reais
+   dos PDFs enviados pelo Carlos antes de entrar em produção.
+   ============================================================ */
+const REGEX_RESPOSTA = /(?:RESPOSTA|GABARITO)\b\s*(?:CORRETA\s*)?\S{0,4}\s*(?:ALTERNATIVA\s*)?([A-E])\b/gi;
+const REGEX_INICIO_QUESTAO = /(?:GABARITO(?:\s+\w+)?\s*[–\-—]\s*)?QUEST[ÃA]O(?:\s+(\d+)\s+DE\s+\d+|\s*N?º?\s*(\d+)\b(?!\s*[–\-—]?\s*(?:GABARITO|CHAVE\s+DE\s+RESPOSTA)))/gi;
+
+function encontrarIniciosQuestao(texto){
+  const brutos = [...texto.matchAll(REGEX_INICIO_QUESTAO)];
+  // tira as que vieram prefixadas de "GABARITO —" ou "Resolução:" (são a
+  // repetição do número da questão dentro do gabarito, não o início real)
+  return brutos.filter(m => {
+    if(/^GABARITO/i.test(m[0])) return false;
+    const antes = texto.slice(Math.max(0, m.index-20), m.index);
+    if(/Resolu[çc][ãa]o\s*:?\s*$/i.test(antes)) return false;
+    return true;
+  });
+}
+
+// tira linhas de metadado (DISCIPLINA:/BIBLIOGRAFIA:/DIFICULDADE:/...) e
+// qualquer linha de continuação delas (quando o texto quebra em 2 linhas,
+// a linha de baixo geralmente começa em minúscula, diferente do enunciado
+// de verdade que sempre começa em maiúscula)
+// aceita tanto "DISCIPLINA: valor" (numa linha só) quanto "DISCIPLINA"
+// sozinho, com o valor em linha(s) separada(s) embaixo (às vezes com mais
+// de uma linha, tipo uma citação de bibliografia que quebra) — os formatos
+// vistos até agora nos PDFs reais
+const PADRAO_LABEL_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|PSCPP|CARACTER[ÍI]STICA(\s+DO(\s+PSCPP)?)?(\s+REPRODUZIDA)?)\s*:?\s*$/i;
+// linha isolada que só descreve o tipo da questão (ex: "Múltipla escolha
+// (direta)"), sem nenhum outro conteúdo — aparece às vezes numa linha
+// própria logo depois de "QUESTÃO N" e antes de "DISCIPLINA", precisa ser
+// descartada por inteiro. Bem restrito de propósito (a linha inteira tem
+// que ser só isso) pra não arriscar bater em conteúdo de verdade
+const PADRAO_LINHA_TIPO_QUESTAO_ISOLADA = /^Múltipla escolha\s*\([^)]*\)\s*$/i;
+const PREFIXOS_METADADO = /^(DISCIPLINA|BIBLIOGRAFIA|DIFICULDADE|FORMATO|PSCPP|CARACTER[ÍI]STICA(\s+DO\s+PSCPP)?(\s+REPRODUZIDA)?)\s*(:|\s)/i;
+// palavras curtas comuns do português que não podem ser confundidas com
+// subscrito, mesmo aparecendo isoladas numa "linha" quebrada
+const PALAVRAS_CURTAS_COMUNS_SUBSCRITO = new Set(['de','da','do','em','um','uma','no','na','ao','os','as','eu','ou','se','me','te','lhe','há','já','só','aí']);
+// junta de volta um subscrito de fórmula física/matemática que quebrou em
+// "linhas" separadas na extração do PDF (a posição vertical menor do
+// subscrito confunde o pdf.js) — cobre letra sozinha (C_R), letra+número
+// (C_D0), 2 letras (C_Th) e símbolo (V_∞). Marca com "_" pra depois virar
+// subscrito visual de verdade na hora de exibir
+function mesclarSubscritosQuebrados(texto){
+  // remove espaço sobrando entre uma letra (grega ou não) e o apóstrofo
+  // logo depois dela — artefato comum da extração de PDF em notação tipo
+  // "YB'( η ')", que deveria ser "YB'(η')"
+  // e entre símbolos matemáticos (∆, √) e o que vem logo depois — tipo
+  // "∆ VP" que deveria ser "∆VP", ou "√ (AM)" que deveria ser "√(AM)"
+  // e também espaço ANTES do símbolo, tipo "V/ √(gl)" que deveria ser "V/√(gl)"
+  const semEspacoSobrando = texto
+    .replace(/([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])\s+(['′])/g, '$1$2')
+    .replace(/([∆√])\s+(?=[A-Za-zΑ-Ωα-ω(])/g, '$1')
+    .replace(/\/\s+(?=[∆√])/g, '/')
+    .replace(/\( +/g, '(');
+  // FnL / Fnh (número de Froude, com o L ou h subscrito) — comum em textos
+  // de resistência ao avanço/manobrabilidade
+  const comFnCorrigido = semEspacoSobrando.replace(/\bFn\s?([Lh])\b/g, 'Fn_$1');
+  // dentro de expressões matemáticas compactas (tanh(...), sin(...) etc.),
+  // remove espaço entre número/letra e letra grega — só dentro dos
+  // parênteses de uma função conhecida, pra não arriscar colar letra grega
+  // com a palavra seguinte na prosa normal (ex: "o ângulo θ é" tem que
+  // continuar com espaço)
+  const comExpressoesLimpa = comFnCorrigido.replace(/\b(tanh|sinh|cosh|sin|cos|tan|sqrt|ln|log)\(([^)]*)\)/gi, (m, fn, dentro) => {
+    const limpo = dentro
+      .replace(/(\d)\s+([Α-Ωα-ω])/g, '$1$2')
+      .replace(/([Α-Ωα-ω])\s+([a-zA-Z0-9])/g, '$1$2')
+      .replace(/([a-zA-Z0-9])\/\s+([Α-Ωα-ω])/g, '$1/$2')
+      .replace(/\s+$/, '');
+    return fn + '(' + limpo + ')';
+  });
+  const comQuebraDeLinha = comExpressoesLimpa.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψω]['′]{0,2}|\d+)\n\s*(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})\s*\n/g, (m, principal, candidato) => {
+    if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
+    // sobrescrito (expoente), não subscrito: número negativo (notação
+    // científica, ex: "10^-6"), base numérica (mesmo caso), ou letra de
+    // unidade seguida só de dígito (ex: "m^2" = metro quadrado, "s^-1")
+    const ehExpoente = /^-\d/.test(candidato) || /^\d+$/.test(principal) || (/^\d{1,2}$/.test(candidato) && /^(m|s|cm|km|kg|g|l|ml|n|pa|hz)$/i.test(principal));
+    return `${principal}${ehExpoente?'^':'_'}${candidato}\n`;
+  });
+  // caso adicional: "Letra' + letra curta" colado, sem quebra de linha
+  // nenhuma (ex: "N'v", "N'δ") — o apóstrofo é sinal forte o bastante de
+  // notação de derivada hidrodinâmica pra tratar sempre como subscrito,
+  // mesmo que a questão original não tenha vindo com quebra de linha
+  return comQuebraDeLinha.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψω]['′]{1,2})\s?([a-zA-Zαβγδεζηθικλμνξοπρστυφχψω])(?![A-Za-zÀ-ÿ])/g, (m, principal, candidato) => {
+    if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
+    return `${principal}_${candidato}`;
+  }).replace(/\b([xy])0\b/g, '$1_0'); // notação de posição/referência (deslocamento em x0/y0 da linha de centro), comum em manobrabilidade
+}
+
+// rede de segurança final: roda depois de tudo já montado, garantindo a
+// limpeza do rodapé "Página N de M" / "Page N of M" independentemente de
+// qual caminho do parser o texto passou antes (às vezes um formato de PDF
+// escapa das limpezas anteriores por algum detalhe de estrutura)
+// reconhece especificamente a notação de derivadas hidrodinâmicas de
+// manobra (X', Y', N' + subscrito conhecido: u, v, r, δ, 0), convertendo
+// pra subscrito mesmo quando vem tudo grudado sem separação nenhuma no
+// PDF original — diferente de mesclarSubscritosQuebrados, que só cobre o
+// caso de quebra de linha, essa aqui cobre o caso de já vir junto
+function converterDerivadasManobra(texto){
+  return texto.replace(/\b([XYN]')(u|v|r|0|δ)(?![a-zA-Zà-ú])/g, '$1_$2');
+}
+
+function limparRodapePaginaFinal(texto){
+  return converterDerivadasManobra(texto)
+    .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '')
+    .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '')
+    .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*(\n|$)/gi, '$2')
+    .replace(/\s*Page\s+\d+\s*(of\s*\d+)?\s*(\n|$)/gi, '$2')
+    .replace(/^\s*\n/gm, '')
+    .trim();
+}
+
+function limparEnunciado(textoOriginal){
+  // remove resíduo de citação bibliográfica que às vezes sobra colado no
+  // início do enunciado (tipo "I.IV Series. Jersey City: SNAME, 2010. Cap.
+  // 5 — Título do Capítulo, seção 5.2.1." antes do texto de verdade) —
+  // acontece quando a citação da Ship Resistance and Flow (Larsson/Raven)
+  // é longa demais e passa da minha janela de continuação de metadado
+  const semResiduoDeCitacao = textoOriginal.replace(/^.*?SNAME,\s*\d{4}\.\s*Cap\.\s*\d+\s*[-–—]\s*.*?\.(?!\d)(?:\s*se[çc][ãa]o\s*[\d.]+\.(?!\d))?\s*/is, '');
+  // insere espaço quando um marcador de lista (I. II. a) A. etc.) vem
+  // colado direto no texto seguinte, sem espaço nenhum — acontece às
+  // vezes na extração do PDF
+  const texto = mesclarSubscritosQuebrados(semResiduoDeCitacao).replace(/\b([IVXLCDM]{1,6}[).]|[a-eA-E][).])([A-Za-zÀ-ÿ])/g, '$1 $2');
+  const linhas = texto.split('\n');
+  const linhasLimpas = [];
+  // normal | esperando_valor_solto (label sozinho, valor pode ter várias
+  // linhas até achar uma em branco) | pulando_valor_colado (label:valor na
+  // mesma linha, só aceita NO MÁXIMO 1 linha extra de continuação)
+  let modo = 'normal';
+  let linhasPuladasNoValor = 0; // trava de segurança pro modo pulando_valor_multi — nem
+  // todo formato tem linha em branco separando metadado de enunciado, então
+  // limita a no máximo 2 linhas de valor, mesmo sem achar uma em branco
+  for(const linha of linhas){
+    const linhaLimpa = linha.trim();
+    // detecta um label novo em QUALQUER estado (mesmo no meio de estar
+    // pulando o valor de outro label — evita engolir tudo de uma vez)
+    if(PADRAO_LINHA_TIPO_QUESTAO_ISOLADA.test(linhaLimpa)){
+      continue;
+    }
+    if(PADRAO_LABEL_METADADO.test(linhaLimpa)){
+      modo = 'esperando_valor_solto';
+      continue;
+    }
+    if(PREFIXOS_METADADO.test(linhaLimpa)){
+      modo = 'pulando_valor_colado';
+      continue;
+    }
+    if(modo === 'normal'){
+      if(/^Página \d+/i.test(linhaLimpa)) continue;
+      linhasLimpas.push(linha);
+      continue;
+    }
+    if(modo === 'esperando_valor_solto'){
+      if(!linhaLimpa) continue; // ainda não chegou o valor, ignora linha em branco
+      // label quebrado em 2 linhas físicas (ex: "CARACTERISTICA" numa
+      // linha, "DO PSCPP" na de baixo) — ainda é label, não é o valor
+      if(/^(DO\s+PSCPP|PSCPP|REPRODUZIDA)\s*:?\s*$/i.test(linhaLimpa)) continue;
+      modo = 'pulando_valor_multi'; // achou a 1ª linha do valor
+      linhasPuladasNoValor = 1;
+      continue;
+    }
+    if(modo === 'pulando_valor_multi'){
+      if(!linhaLimpa){ modo = 'normal'; continue; } // linha em branco = fim do valor
+      // 3 sinais de que a linha ainda é continuação do valor (não conteúdo
+      // novo): termina em ano de publicação (citação bibliográfica quebrada,
+      // ex: "Butterworth-Heinemann, 2012."), OU começa em minúscula (frase
+      // cortada no meio, ex: "...ataque" numa linha, "efetivo." na de baixo),
+      // OU fecha um parêntese logo no início (ex: "Architecture Series)."
+      // fechando o "(Principles of Naval" que ficou aberto na linha anterior)
+      const pareceFimDeCitacao = /\b(19|20)\d{2}\.?\s*$/.test(linhaLimpa);
+      const comecaMinuscula = /^[a-zà-ÿ]/.test(linhaLimpa);
+      const fechaParenteseNoInicio = /^[^()]{0,30}\)/.test(linhaLimpa);
+      if(linhasPuladasNoValor >= 1 && !pareceFimDeCitacao && !comecaMinuscula && !fechaParenteseNoInicio){
+        // trava de segurança: já pulou 1 linha de valor, não achou linha em
+        // branco, e essa linha não parece continuação — trata como
+        // conteúdo real, não é mais metadado
+        modo = 'normal';
+        linhasLimpas.push(linha);
+        continue;
+      }
+      linhasPuladasNoValor++;
+      continue; // ainda dentro do valor (pode ter mais de 1 linha), continua pulando
+    }
+    if(modo === 'pulando_valor_colado'){
+      // valor já começou colado no "label:" — aceita continuação se a
+      // linha parecer mesmo parte do valor: começa em minúscula (frase
+      // cortada no meio), OU termina em ano de publicação (citação
+      // bibliográfica quebrada, tipo "...Oxford: Elsevier\nButterworth-
+      // Heinemann, 2012." — aqui "Butterworth" começa maiúscula, mas ainda
+      // é parte da mesma citação, não conteúdo novo)
+      modo = 'normal';
+      const pareceContinuacao = linhaLimpa && (!/^[A-ZÀ-Ú]/.test(linhaLimpa) || /\b(19|20)\d{2}\.?\s*$/.test(linhaLimpa) || /^[^()]{0,30}\)/.test(linhaLimpa));
+      if(pareceContinuacao) continue;
+      linhasLimpas.push(linha);
+      continue;
+    }
+  }
+  return limparRodapePaginaFinal(mesclarSubscritosQuebrados(linhasLimpas.join('\n'))
+    .replace(/^\s*\n/gm, '')
+    .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n') // letra isolada que "quebrou" de uma palavra (artefato do pdf.js), não é palavra válida sozinha em português
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/ +([,.;:)·/])/g, '$1')
+    .replace(/\( +/g, '(')
+    .trim());
+}
+
+function parsearQuestoesDoTexto(textoBruto){
+  // normaliza quebras de linha (CRLF do Windows vira LF)
+  const texto = textoBruto.replace(/\r\n/g, '\n');
+  const iniciosQuestao = encontrarIniciosQuestao(texto);
+
+  const questoes = [];
+  for(let i=0; i<iniciosQuestao.length; i++){
+    const inicioBloco = iniciosQuestao[i].index;
+    const fimBloco = i+1 < iniciosQuestao.length ? iniciosQuestao[i+1].index : texto.length;
+    const bloco = texto.slice(inicioBloco, fimBloco);
+
+    // regra: procurar capítulo é sempre a PRIMEIRA coisa a fazer, no texto
+    // ainda 100% bruto — antes de separar enunciado/alternativas/explicação
+    // e antes de qualquer limpeza (que pode apagar a única linha que citava
+    // a seção/capítulo, como aconteceu com o Bertram e a linha "Publicação:")
+    const capituloDoBlocoBruto = extrairCapituloDoTexto(bloco);
+
+    // dentro desse bloco, acha a primeira resposta (separa enunciado+alts de explicação)
+    const respostaNoBloco = [...bloco.matchAll(REGEX_RESPOSTA)][0];
+    const zonaPergunta = respostaNoBloco ? bloco.slice(0, respostaNoBloco.index) : bloco;
+    const zonaExplicacao = respostaNoBloco ? bloco.slice(respostaNoBloco.index) : '';
+    const gabarito = respostaNoBloco ? respostaNoBloco[1].toLowerCase() : null;
+
+    // dentro da zona da pergunta: separa enunciado de alternativas a-e/A-E
+    const matchAlt = zonaPergunta.match(/\n\s*[a-eA-E]\)\s*/);
+    const enunciado = limparEnunciado(
+      (matchAlt ? zonaPergunta.slice(0, matchAlt.index) : zonaPergunta)
+        .replace(/QUEST[ÃA]O(?:\s+\d+\s+DE\s+\d+|\s*N?º?\s*\d+)[^\n]*/i, '')
+    );
+
+    const alternativas = zonaPergunta
+      .slice(matchAlt ? matchAlt.index : zonaPergunta.length)
+      .split(/\n\s*(?=[a-eA-E]\)\s)/)
+      .map(a => mesclarSubscritosQuebrados(a.trim()).replace(/\s+/g,' ').replace(/ +([,.;:)·/])/g, '$1'))
+      .filter(a => /^[a-eA-E]\)/.test(a))
+      // remove ruído de rodapé de página que pode grudar na última
+      // alternativa (o corte da zona da pergunta só para no "GABARITO",
+      // então "Página N", cabeçalho repetido e "QUESTÃO N - CHAVE DE
+      // RESPOSTA" ainda ficam para trás, coladinhos)
+      .map(a => a
+        .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/i, '')
+        .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões" — .*$/s pra pegar tudo que vier depois também (página, próxima questão colada)
+        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé de citação ABNT completa (autor, título, edição...) — específico do jeito que a Pantoja cita o BENTO/Navegação Integrada
+        .replace(/\s*BENTO,\s*Carlos\s*Norberto\s*Stumpf\.\s*Navega[çc][ãa]o\s*Integrada\..*$/is, '') // idem, específico do jeito que a Pantoja cita o Meteorologia (Noções Básicas)
+        .replace(/\s*Meteorologia\s*\(Noções\s*Básicas\)\s*[-–—].*$/is, '') // idem, específico do Princípios de Hidrodinâmica (Mesquita/Santos)
+        .replace(/\s*Princípios\s*de\s*Hidrodinâmica\s*e\s*a\s*Ação\s*das\s*Ondas\s*sobre\s*o\s*Movimento\s*do\s*Navio\s*\(SANTOS.*$/is, '')
+        // idem, específico do Ship Resistance and Flow (Larsson/Raven), formato de citação da Pantoja
+        .replace(/\s*Ship\s*Resistance\s*and\s*Flow\s*\(LARSSON.*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
+        .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '') // rodapé tipo "Nome do Livro, Edição – Chapter N (...) | N" — .*$/s pra pegar tudo que vier depois também
+        .replace(/[A-ZÀ-Ú]\s+[A-Za-zà-ú]{4,}[a-zA-ZÀ-ú0-9\s]{0,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // exige uma palavra de verdade (4+ letras) logo depois da maiúscula, senão bate por engano num numeral romano solto (ex: "III" ou "IV" dentro de "I, II, III e IV")
+        .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
+        .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '') // idem em inglês
+        .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/i, '') // idem, mas colado sem quebra de linha antes
+        .replace(/\s*Page\s+\d+\s*(of\s*\d+)?\s*$/i, '')
+        .replace(/\s*QUEST[ÃA]O\s*N?º?\s*\d+\s*[-–—]\s*CHAVE\s+DE\s+RESPOSTA.*$/i, '')
+        .trim()
+      )
+      // normaliza pro padrão (a)-(e) minúsculo, independente de como veio no original
+      .map((a,idx) => `(${String.fromCharCode(97+idx)}) ${a.replace(/^[a-eA-E]\)\s*/,'')}`);
+
+    // explicação: tira a própria linha "RESPOSTA:/GABARITO:" e cabeçalhos
+    // repetidos tipo "QUESTÃO Nº 1 – GABARITO COMENTADO" / "GABARITO — QUESTÃO 1"
+    const explicacao = limparRodapePaginaFinal(mesclarSubscritosQuebrados(zonaExplicacao)
+      .replace(/\b([IVXLCDM]{1,6}[).]|[a-eA-E][).])([A-Za-zÀ-ÿ])/g, '$1 $2')
+      .replace(/(?:RESPOSTA|GABARITO)\b\s*(?:CORRETA\s*)?\S{0,4}\s*(?:ALTERNATIVA\s*)?[A-E]\b.*$/im, '')
+      .replace(/QUEST[ÃA]O\s*N?º?\s*\d+\s*[–\-—]\s*(?:GABARITO.*|CHAVE\s+DE\s+RESPOSTA)$/gim, '')
+      .replace(/GABARITO(?:\s+\w+)?\s*[–\-—]\s*QUEST[ÃA]O.*$/gim, '')
+      .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
+      .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '') // idem em inglês
+      .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/i, '') // idem, mas colado sem quebra de linha antes
+      .replace(/\s*Page\s+\d+\s*(of\s*\d+)?\s*$/i, '')
+      .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/is, '') // rodapé de página repetido (formato varia bastante)
+      .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões"
+        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé de citação ABNT completa (autor, título, edição...) — específico do jeito que a Pantoja cita o BENTO/Navegação Integrada
+        .replace(/\s*BENTO,\s*Carlos\s*Norberto\s*Stumpf\.\s*Navega[çc][ãa]o\s*Integrada\..*$/is, '') // idem, específico do jeito que a Pantoja cita o Meteorologia (Noções Básicas)
+        .replace(/\s*Meteorologia\s*\(Noções\s*Básicas\)\s*[-–—].*$/is, '') // idem, específico do Princípios de Hidrodinâmica (Mesquita/Santos)
+        .replace(/\s*Princípios\s*de\s*Hidrodinâmica\s*e\s*a\s*Ação\s*das\s*Ondas\s*sobre\s*o\s*Movimento\s*do\s*Navio\s*\(SANTOS.*$/is, '')
+        // idem, específico do Ship Resistance and Flow (Larsson/Raven), formato de citação da Pantoja
+        .replace(/\s*Ship\s*Resistance\s*and\s*Flow\s*\(LARSSON.*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões"
+        .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '')
+      .replace(/[A-ZÀ-Ú]\s+[A-Za-zà-ú]{4,}[a-zA-ZÀ-ú0-9\s]{0,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // exige uma palavra de verdade (4+ letras) logo depois da maiúscula, senão bate por engano num numeral romano solto (ex: "III" ou "IV" dentro de "I, II, III e IV")
+      .replace(/\s*Publica[çc][ãa]o:\s*.*$/is, '') // linha de citação bibliográfica no fim da explicação, desnecessária
+      .replace(/^\s*\n/gm, '')
+      .replace(/([a-zA-Z])\n\s*([a-df-np-zA-DF-NP-Z])\s*\n/g, '$1$2\n')
+            .replace(/[ \t]{2,}/g, ' ')
+      .replace(/ +([,.;:)·/])/g, '$1')
+      .trim());
+
+    // OBS:/OBSERVAÇÃO: Inconsistente — vem do gabarito de origem quando ele
+    // mesmo aponta uma contradição no livro. Procura no bloco inteiro (não
+    // só numa zona específica), porque ainda não se sabe em qual parte do
+    // texto gerado essa observação vai efetivamente aparecer
+    const obsMatchQuest = bloco.match(/OBS(?:ERVA[ÇC][ÃA]O)?:\s*([^\r\n]+)/i);
+    const inconsistenteQuest = obsMatchQuest ? /inconsistente/i.test(obsMatchQuest[1]) : false;
+
+    if(enunciado && alternativas.length >= 4 && gabarito){
+      questoes.push({
+        numero: parseInt(iniciosQuestao[i][1] || iniciosQuestao[i][2], 10),
+        enunciado,
+        alternativas: limparRodapePaginaFinal(alternativas.join('\n')),
+        gabarito,
+        explicacao: explicacao || null,
+        capituloDetectado: capituloDoBlocoBruto,
+        inconsistente: inconsistenteQuest,
+        // texto bruto (com os metadados tipo "BIBLIOGRAFIA: SANTOS...")
+        // que a limpeza do enunciado tira — precisa dele intacto pra
+        // identificar a bibliografia, senão a informação já foi descartada
+        textoBrutoParaBibliografia: (matchAlt ? zonaPergunta.slice(0, matchAlt.index) : zonaPergunta) + ' ' + zonaExplicacao
+      });
+    }
+  }
+
+  // reserva: alguns formatos usam "Questão N de M" como RODAPÉ da própria
+  // página (depois do conteúdo), não como cabeçalho antes dele — nesse
+  // caso a estratégia acima não acha nada, porque o corte fica no lugar
+  // errado. Detecta isso e tenta de novo cortando só por RESPOSTA/GABARITO
+  // (que sempre é confiável, em qualquer formato visto até agora)
+  if(!questoes.length){
+    return parsearPorRespostaComoCorte(texto);
+  }
+  return questoes;
+}
+
+function parsearPorRespostaComoCorte(texto){
+  const respostas = [...texto.matchAll(REGEX_RESPOSTA)];
+  if(!respostas.length) return [];
+  const questoes = [];
+  let inicioUnidade = 0;
+  respostas.forEach((resp, i) => {
+    const fimResposta = resp.index + resp[0].length;
+    const antesResposta = texto.slice(inicioUnidade, resp.index);
+    inicioUnidade = fimResposta;
+
+    const gabarito = resp[1].toLowerCase();
+
+    // regra: procurar capítulo é sempre a primeira coisa, no texto ainda bruto
+    const capituloDoBlocoBruto = extrairCapituloDoTexto(antesResposta);
+
+    // acha o ÚLTIMO bloco de alternativas antes dessa resposta (o mais
+    // próximo dela é o da pergunta de verdade — qualquer coisa antes disso
+    // é sobra da explicação da pergunta anterior, e vira ruído descartado)
+    const blocosAlt = [...antesResposta.matchAll(/\n\s*a\)\s/gi)];
+    if(!blocosAlt.length) return;
+    const inicioAlt = blocosAlt[blocosAlt.length-1].index;
+    const textoComAlternativas = antesResposta.slice(inicioAlt);
+    const textoAntesAlt = antesResposta.slice(0, inicioAlt);
+
+    // enunciado = o último parágrafo antes das alternativas, descartando
+    // qualquer coisa de mais de 1 parágrafo atrás (isso é sobra da questão
+    // anterior: explicação, rodapé "Questão N de M", etc.)
+    const paragrafos = textoAntesAlt.split(/\n\s*\n/).filter(p=>p.trim());
+    const enunciadoBruto = paragrafos.length ? paragrafos[paragrafos.length-1] : '';
+    const enunciado = limparEnunciado(
+      enunciadoBruto
+        .replace(/^.*QUEST[ÃA]O\s*(?:\s+\d+\s+DE\s+\d+|N?º?\s*\d+).*$/gim, '')
+        .replace(/^[A-Z][\w\s—-]{0,60}Cap\.\s*\d+.*$/gim, '') // rodapé tipo "H Quest Nav I — Cap. 10"
+    );
+
+    const alternativas = textoComAlternativas
+      .split(/\n\s*(?=[a-eA-E]\)\s)/)
+      .map(a => mesclarSubscritosQuebrados(a.trim()).replace(/\s+/g,' ').replace(/ +([,.;:)·/])/g, '$1').replace(/\( +/g, '('))
+      .filter(a => /^[a-eA-E]\)/.test(a))
+      .map(a => a
+        .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/i, '')
+        .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões" — .*$/s pra pegar tudo que vier depois também (página, próxima questão colada)
+        .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé de citação ABNT completa (autor, título, edição...) — específico do jeito que a Pantoja cita o BENTO/Navegação Integrada
+        .replace(/\s*BENTO,\s*Carlos\s*Norberto\s*Stumpf\.\s*Navega[çc][ãa]o\s*Integrada\..*$/is, '') // idem, específico do jeito que a Pantoja cita o Meteorologia (Noções Básicas)
+        .replace(/\s*Meteorologia\s*\(Noções\s*Básicas\)\s*[-–—].*$/is, '') // idem, específico do Princípios de Hidrodinâmica (Mesquita/Santos)
+        .replace(/\s*Princípios\s*de\s*Hidrodinâmica\s*e\s*a\s*Ação\s*das\s*Ondas\s*sobre\s*o\s*Movimento\s*do\s*Navio\s*\(SANTOS.*$/is, '')
+        // idem, específico do Ship Resistance and Flow (Larsson/Raven), formato de citação da Pantoja
+        .replace(/\s*Ship\s*Resistance\s*and\s*Flow\s*\(LARSSON.*$/is, '') // rodapé tipo "TÍTULO EM CAIXA ALTA — Autor (ed) — Caps. N, M e P Q questões" — .*$/s pra pegar tudo que vier depois também
+        .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{5,40},\s*[A-Za-zÀ-ú\s]{3,30}\s*[–-]\s*Chapter\s*\d+[^|]{0,60}\|\s*\d+.*$/is, '') // rodapé tipo "Nome do Livro, Edição – Chapter N (...) | N" — .*$/s pra pegar tudo que vier depois também
+        .replace(/[A-ZÀ-Ú]\s+[A-Za-zà-ú]{4,}[a-zA-ZÀ-ú0-9\s]{0,60}\([A-ZÀ-Ú]+,.*?\d{4}\)\s*[-–—]\s*Cap[íi]tulo\s*\d+.*$/s, '') // exige uma palavra de verdade (4+ letras) logo depois da maiúscula, senão bate por engano num numeral romano solto (ex: "III" ou "IV" dentro de "I, II, III e IV")
+        .replace(/^\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/gim, '') // marcador de página solto, qualquer posição
+        .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '') // idem em inglês
+        .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/i, '') // idem, mas colado sem quebra de linha antes
+        .replace(/\s*Page\s+\d+\s*(of\s*\d+)?\s*$/i, '')
+        .trim()
+      )
+      .map((a,idx) => `(${String.fromCharCode(97+idx)}) ${a.replace(/^[a-eA-E]\)\s*/,'')}`);
+
+    // mesma detecção do caminho principal
+    const obsMatchQuestReserva = antesResposta.match(/OBS(?:ERVA[ÇC][ÃA]O)?:\s*([^\r\n]+)/i);
+    const inconsistenteQuestReserva = obsMatchQuestReserva ? /inconsistente/i.test(obsMatchQuestReserva[1]) : false;
+
+    if(enunciado && alternativas.length >= 4 && gabarito){
+      questoes.push({
+        numero: i+1,
+        enunciado,
+        alternativas: limparRodapePaginaFinal(alternativas.join('\n')),
+        gabarito,
+        explicacao: null, // formato de rodapé não separa explicação de forma confiável, deixa em branco
+        capituloDetectado: capituloDoBlocoBruto,
+        inconsistente: inconsistenteQuestReserva,
+        textoBrutoParaBibliografia: antesResposta
+      });
+    }
+  });
+  return questoes;
+}
+
+// Identifica bibliografia/módulo de uma questão pela lista fechada — busca
+// primeiro na explicação, depois no enunciado (hierarquia fixa do dossiê).
+// Quando o mesmo autor aparece em módulos diferentes (Nayak, Miguens,
+// Santos), desempata pelo capítulo citado no texto
+// converte numeral romano isolado (palavra inteira) pra arábico — assim
+// "21" e "XXI" batem igual em qualquer comparação, sistematicamente,
+// não só num caso específico
+const MAPA_NUMERAL_ROMANO = {I:1,V:5,X:10,L:50,C:100,D:500,M:1000};
+function romanoParaArabico(romano){
+  let total = 0;
+  for(let i=0; i<romano.length; i++){
+    const atual = MAPA_NUMERAL_ROMANO[romano[i]];
+    const proximo = MAPA_NUMERAL_ROMANO[romano[i+1]];
+    if(proximo && atual < proximo) total -= atual;
+    else total += atual;
+  }
+  return total;
+}
+// valida se é um numeral romano de VERDADE (sequência canônica válida),
+// não só "são letras que existem em numeral romano" — isso sozinho já
+// rejeita "MIL", "CIVIL", "MIM", "VIM", "DIVIDI" (nenhuma dessas é uma
+// combinação romana válida), sem precisar de lista de bloqueio pra cada uma
+const REGEX_ROMANO_VALIDO = /^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
+function ehNumeralRomanoValido(s){ return s.length > 0 && REGEX_ROMANO_VALIDO.test(s); }
+function normalizarNumeraisRomanos(texto){
+  // (?<![\p{L}\p{N}])...(?![\p{L}\p{N}]) é a fronteira de palavra de
+  // verdade — o \b padrão do JS só entende letra/número em ASCII, então
+  // uma letra acentuada logo do lado (tipo "CÓDIGO") quebrava errado e
+  // confundia o "C" isolado com o numeral romano 100
+  return texto.replace(/(?<![\p{L}\p{N}])[IVXLCDM]{1,8}(?![\p{L}\p{N}])/gu, (match) => {
+    if(match === 'LI') return match; // ambíguo com o verbo "li" mesmo em maiúscula, mantém como está
+    if(!ehNumeralRomanoValido(match)) return match;
+    const valor = romanoParaArabico(match);
+    return valor > 0 && valor < 4000 ? String(valor) : match;
+  });
+}
+function normalizarBusca(texto){
+  const comRomanosConvertidos = normalizarNumeraisRomanos(texto||'');
+  return comRomanosConvertidos.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+// termos curtos (siglas, números) exigem fronteira de palavra, senão batem
+// como substring dentro de qualquer palavra maior sem relação nenhuma
+// (ex: "bpg" batendo dentro de "abpgordável") — frases longas (com espaço)
+// continuam com busca simples, risco de falso positivo é bem menor nelas
+function textoContemTermo(textoNorm, termoNorm){
+  if(termoNorm.length <= 5 && !/\s/.test(termoNorm)){
+    const escapado = termoNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(?<![\\p{L}\\p{N}])${escapado}(?![\\p{L}\\p{N}])`, 'u');
+    return regex.test(textoNorm);
+  }
+  return textoNorm.includes(termoNorm);
+}
+// leis, decretos e resoluções/circulares da IMO são sempre tratadas como
+// capítulo único no Pilotquest, mesmo quando o documento em si tem
+// subdivisões internas (Capítulo I, IV, VIII, etc.) — decisão explícita
+// do Carlos, pra não fragmentar por engano uma fonte que o app sempre
+// trata como bloco só. Força "Único" independente do que o texto da
+// questão mencione internamente
+// consulta o dado REAL do banco (bibliografiaCache, já carregada) - a
+// versão antiga tentava ADIVINHAR isso com regex em cima do formato do
+// título (ex: título começa com "Lei"/"Decreto", tem "MSC." no meio...),
+// o que é frágil e ficava desatualizado sempre que uma nova publicação
+// não batesse com esses padrões (ex: "NORMAM-501/DHN" nunca bateria,
+// mesmo estando marcada capitulo_unico=true no banco) - foi exatamente
+// essa fragilidade que causou lixo sistemático (fragmentos de palavra,
+// números soltos) em milhares de afirmações - ver regra fixa no histórico
+function ehFonteCapituloUnico(titulo){
+  if(!titulo) return false;
+  const bib = bibliografiaCache.find(b => b.titulo === titulo);
+  return bib?.capitulo_unico === true;
+}
+function extrairCapituloDoTexto(texto){
+  const t = texto || '';
+  // 1º: procura padrão "seção/section/item N.M" ou "p. X | N.M" — o
+  // primeiro número antes do ponto já indica o capítulo, seguindo a
+  // convenção acadêmica de numeração (Capítulo.Seção.Subseção) — pega
+  // citações que nunca dizem "capítulo" explicitamente, tipo "item 3.1"
+  // ou "section 2.1" (inglês)
+  // aceita bastante variação de grafia depois de "seç"/"sec" (acentos
+  // trocados ou duplicados, erro comum de IA gerando texto) — "se" + ç/c +
+  // até 4 caracteres do conjunto de vogais/acentos/s, cobre seção, seções,
+  // e variações tipo "seçãões"/"seçaões" que às vezes aparecem
+  let m = t.match(/\b(?:se[çc][aãoões]{1,4}|secs?\.?|sections?|item|itens|figuras?|figures?)\.?\s*(\d{1,2})\.\d/i);
+  if(m) return parseInt(m[1],10);
+  m = t.match(/\|\s*(\d{1,2})\.\d/);
+  if(m) return parseInt(m[1],10);
+  // 2º: recurso — procura literalmente "capítulo N" / "cap. N"
+  m = t.match(/\bcap(?:[íi]tulos?|\.)\s*n?º?\s*(\d{1,2})\b/i) || t.match(/\bChapter\s*(\d{1,2})\b/i);
+  return m ? parseInt(m[1],10) : null;
+}
+function identificarBibliografia(explicacao, enunciado){
+  // usa sempre o texto combinado (explicação + enunciado juntos) — nunca é
+  // pior que checar separado, já que contém tudo dos dois. Checar separado
+  // primeiro (versão antiga) tinha um bug real: quando a palavra que
+  // desempata (tipo "45" de "Cap. 45") só aparece num dos dois campos, o
+  // outro campo sozinho podia achar só a candidata genérica e retornar
+  // ela na hora, sem nunca chegar a testar o texto combinado que teria
+  // achado a candidata certa
+  const texto = [explicacao, enunciado].filter(Boolean).join(' ');
+  if(!texto) return null;
+  const textoNorm = normalizarBusca(texto);
+  const candidatosBrutos = BIBLIOGRAFIA_FECHADA.filter(entrada =>
+    entrada.autorBusca.every(termo => textoContemTermo(textoNorm, normalizarBusca(termo)))
+  );
+  // dedup por módulo+título — 2 entradas do mesmo livro (com termos de
+  // busca diferentes, tipo "miguens" e o título por extenso) não contam
+  // como ambiguidade de verdade, são a mesma bibliografia
+  const candidatos = [...new Map(candidatosBrutos.map(c => [c.modulo+'|'+c.titulo, c])).values()];
+  if(candidatos.length === 1) return candidatos[0];
+  if(candidatos.length > 1){
+      const capExtraido = extrairCapituloDoTexto(texto);
+      if(capExtraido){
+        // alguns capítulos aparecem nas 2 listas do mesmo autor (ex: Nayak
+        // cap. 13 está em Arte Naval E Águas Restritas) — quando o
+        // desempate por capítulo ainda deixa empate entre módulos, decisão
+        // explícita do Carlos: prefere Arte Naval em vez de perguntar
+        // (mudar isso pra "questão em múltiplos módulos" exigiria mudança
+        // de schema, não vale o investimento pra esse caso raro)
+        const comCapCerto = candidatos.filter(c => c.capitulos && c.capitulos.includes(capExtraido));
+        if(comCapCerto.length === 1) return comCapCerto[0];
+        if(comCapCerto.length > 1){
+          const preferida = comCapCerto.find(c => c.modulo === 'Arte Naval');
+          if(preferida) return preferida;
+        }
+        if(comCapCerto.length === 0){
+          // nenhuma candidata tem esse capítulo especificamente listado —
+          // se só uma das candidatas cobre o livro inteiro sem restrição
+          // de capítulo (capitulos:null), ela é "o resto do livro" por
+          // eliminação, e vira a resposta (em vez de nunca poder ser
+          // escolhida, que era o bug: uma entrada tipo "livro completo"
+          // ficava definitivamente inalcançável mesmo com capítulo certo)
+          const semRestricao = candidatos.filter(c => !c.capitulos);
+          if(semRestricao.length === 1) return semRestricao[0];
+        }
+      }
+      // IMPORTANTE: quando NENHUM capítulo é extraído (fonte formatada sem
+      // "Cap. X", tipo "Fonte: SANTOS (2020), p. 13-56"), a eliminação por
+      // capitulos:null NÃO é segura aqui — testei e ela chuta errado nesse
+      // caso real (questão do Capítulo 1 caindo em "exceto caps. 1-2", que
+      // é o módulo errado). Sem saber o capítulo de verdade, cai em
+      // rascunho pra revisão manual de propósito — errar categoria
+      // silenciosamente é pior que pedir revisão
+      return null; // achou o autor, mas ambíguo entre módulos — trata como não achado
+  }
+  return null;
+}
+
+// Identifica bibliografia de cada questão do lote, e usa a mais comum entre
+// as que bateram como fallback pras que não bateram (assume 1 livro por
+// PDF, que é o padrão normal confirmado pelo Carlos)
+function resolverBibliografiaDoLote(questoesComTextos){
+  const identificadas = questoesComTextos.map(q => {
+    // inclui o capítulo já detectado (do bloco bruto da questão) no texto
+    // usado pra identificar - sem isso, livros que existem em mais de um
+    // módulo por faixa de capítulo (ex: Princípios de Hidrodinâmica, em
+    // Manobrabilidade caps. 3-6 E em Meteorologia/Oceanografia caps. 1-2)
+    // podiam falhar em desempatar quando a explicação/enunciado da
+    // questão não menciona capítulo explicitamente. Mesma correção já
+    // testada e aplicada no fluxo V/F
+    const textoComCapitulo = q.capituloDetectado
+      ? `${q.enunciado} Capítulo ${q.capituloDetectado}`
+      : q.enunciado;
+    return identificarBibliografia(q.explicacao, textoComCapitulo);
+  });
+  const contagem = {};
+  identificadas.forEach(entrada => {
+    if(entrada) contagem[entrada.modulo+'|'+entrada.titulo] = (contagem[entrada.modulo+'|'+entrada.titulo]||0) + 1;
+  });
+  const chaveMaisComum = Object.entries(contagem).sort((a,b)=>b[1]-a[1])[0]?.[0];
+  const entradaMaisComum = chaveMaisComum
+    ? BIBLIOGRAFIA_FECHADA.find(e => (e.modulo+'|'+e.titulo) === chaveMaisComum)
+    : null;
+  return identificadas.map(entrada => entrada || entradaMaisComum || null);
+}
+
+let modulosFiltradosMetricas = new Set(); // vazio = considera todos automaticamente
+
+function renderizarListasFiltroModulo(){
+  const disponiveis = MODULOS_PSCPP.filter(m => !modulosFiltradosMetricas.has(m));
+  const selecionados = MODULOS_PSCPP.filter(m => modulosFiltradosMetricas.has(m));
+  document.getElementById('metricas-modulos-disponiveis').innerHTML = disponiveis.length
+    ? disponiveis.map(m=>`<div class="item-lista-modulo" onclick="moverModuloParaSelecionados('${m.replace(/'/g,"\\'")}')">${iconeModuloPreto(m)}</div>`).join('')
+    : '<div style="padding:10px;color:#888;font-size:var(--fs-b)">Nenhum</div>';
+  document.getElementById('metricas-modulos-selecionados').innerHTML = selecionados.length
+    ? selecionados.map(m=>`<div class="item-lista-modulo" onclick="moverModuloParaDisponiveis('${m.replace(/'/g,"\\'")}')">${iconeModuloPreto(m)}</div>`).join('')
+    : '<div style="padding:10px;color:#888;font-size:var(--fs-b)">Nenhum (considera todos)</div>';
+}
+function moverModuloParaSelecionados(nome){
+  modulosFiltradosMetricas.add(nome);
+  renderizarListasFiltroModulo();
+  atualizarMateriasAposMudarModulo();
+  renderizarMetricasPessoais();
+}
+function moverModuloParaDisponiveis(nome){
+  modulosFiltradosMetricas.delete(nome);
+  renderizarListasFiltroModulo();
+  atualizarMateriasAposMudarModulo();
+  renderizarMetricasPessoais();
+}
+function atualizarMateriasAposMudarModulo(){
+  // se um módulo saiu da seleção, os livros dele também precisam sair da
+  // seleção de matéria, senão fica um filtro "fantasma" sem módulo por trás
+  const materiasValidas = new Set(listaMateriasDisponiveis());
+  [...materiasFiltradasMetricas].forEach(m=>{
+    if(!materiasValidas.has(m)) materiasFiltradasMetricas.delete(m);
+  });
+  renderizarListasFiltroMateria();
+}
+
+function listaMateriasDisponiveis(){
+  if(modulosFiltradosMetricas.size === 0) return []; // só mostra livros depois de escolher um módulo
+  const titulos = bibliografiaCache
+    .filter(b => modulosFiltradosMetricas.has(b.modulo_pscpp))
+    .map(b => b.nome_exibicao || b.titulo);
+  return [...new Set(titulos)].sort((a,b)=>a.localeCompare(b,'pt'));
+}
+let materiasFiltradasMetricas = new Set(); // vazio = considera todas automaticamente
+function toggleFiltroModulo(){
+  document.getElementById('conteudo-filtro-modulo').classList.toggle('open');
+  document.getElementById('chev-filtro-modulo').classList.toggle('open');
+}
+function toggleFiltroMateria(){
+  document.getElementById('conteudo-filtro-materia').classList.toggle('open');
+  document.getElementById('chev-filtro-materia').classList.toggle('open');
+}
+function renderizarListasFiltroMateria(){
+  const todas = listaMateriasDisponiveis();
+  const disponiveis = todas.filter(m => !materiasFiltradasMetricas.has(m));
+  const selecionadas = todas.filter(m => materiasFiltradasMetricas.has(m));
+  const msgVazioDisponiveis = modulosFiltradosMetricas.size === 0
+    ? 'Escolha um módulo acima primeiro'
+    : 'Nenhuma';
+  document.getElementById('metricas-materias-disponiveis').innerHTML = disponiveis.length
+    ? disponiveis.map(m=>`<div class="item-lista-modulo" onclick="moverMateriaParaSelecionadas('${m.replace(/'/g,"\\'")}')">${escapeHtml(m)}</div>`).join('')
+    : `<div style="padding:10px;color:#888;font-size:var(--fs-b)">${msgVazioDisponiveis}</div>`;
+  document.getElementById('metricas-materias-selecionadas').innerHTML = selecionadas.length
+    ? selecionadas.map(m=>`<div class="item-lista-modulo" onclick="moverMateriaParaDisponiveis('${m.replace(/'/g,"\\'")}')">${escapeHtml(m)}</div>`).join('')
+    : '<div style="padding:10px;color:#888;font-size:var(--fs-b)">Nenhuma (considera todas)</div>';
+}
+function moverMateriaParaSelecionadas(nome){
+  materiasFiltradasMetricas.add(nome);
+  renderizarListasFiltroMateria();
+  renderizarMetricasPessoais();
+}
+function moverMateriaParaDisponiveis(nome){
+  materiasFiltradasMetricas.delete(nome);
+  renderizarListasFiltroMateria();
+  renderizarMetricasPessoais();
+}
+function calcularTotalQuestoesDisponiveis(filtroTipoAtual, modulosAtuais){
+  let questoes = metricasTodasQuestoesCache;
+  if(modulosAtuais.size > 0) questoes = questoes.filter(q => modulosAtuais.has(q.modulo_pscpp));
+  if(filtroTipoAtual) questoes = questoes.filter(q => q.tipo_questao === filtroTipoAtual);
+  return questoes.length;
+}
+function renderizarMetricasPessoais(){
+  const filtroTipo = document.getElementById('metricas-filtro-tipo').value;
+  const infoPorQuestao = metricasQuestoesInfoCache;
+
+  const elResumo = document.getElementById('metricas-resumo-geral');
+  const elModulo = document.getElementById('lista-metricas-modulo');
+  const elTipo = document.getElementById('lista-metricas-tipo');
+  const elPublicacao = document.getElementById('lista-metricas-publicacao');
+  const elPiores = document.getElementById('lista-metricas-piores');
+  const elFavoritos = document.getElementById('lista-metricas-favoritos');
+  const elNotas = document.getElementById('lista-metricas-notas');
+  elResumo.innerHTML = '';
+  elTipo.innerHTML = '';
+  elPublicacao.innerHTML = '';
+  elPiores.innerHTML = '';
+  elNotas.innerHTML = '';
+
+  // a caixinha de escolher módulo/publicação precisa ficar sempre
+  // atualizada — antes só populava se estivesse vazia, o que parecia
+  // funcionar na primeira visita, mas travava o conteúdo depois da primeira
+  // vez (nunca mais recarregava, inclusive gerando conteúdo desatualizado
+  // depois de um pull-to-refresh, que nunca limpa o conteúdo entre uma
+  // chamada e outra)
+  renderizarListasFiltroModulo();
+  renderizarListasFiltroMateria();
+
+  const respostasBrutas = metricasRespostasCache.filter(r => passaNoFiltroPeriodo(r.respondido_em));
+
+  if(!respostasBrutas.length){
+    mostrarModuloVazio('Nenhuma resposta registrada nesse período. Assim que finalizar um caderno, suas métricas aparecem aqui.');
+    renderizarNotasMetricas(elNotas, infoPorQuestao);
+    return;
+  }
+
+  // filtro de tipo de questão é aplicado em cima do que já veio do período
+  let respostas = respostasBrutas;
+  if(filtroTipo){
+    respostas = respostas.filter(r => infoPorQuestao[r.questao_id]?.tipo_questao === filtroTipo);
+  }
+
+  if(!respostas.length){
+    mostrarModuloVazio('Nenhuma resposta registrada com esses filtros.');
+    renderizarNotasMetricas(elNotas, infoPorQuestao);
+    return;
+  }
+
+  // referência SEM o filtro de módulo, usada só pra régua do gráfico não
+  // mudar de tamanho quando você filtra pra ver menos módulos
+  const statsPorModuloCompleto = {};
+  respostas.forEach(r=>{
+    const mod = infoPorQuestao[r.questao_id]?.modulo_pscpp || 'Sem módulo';
+    if(!statsPorModuloCompleto[mod]) statsPorModuloCompleto[mod] = {total:0, acertos:0};
+    statsPorModuloCompleto[mod].total++;
+    if(r.correta) statsPorModuloCompleto[mod].acertos++;
+  });
+
+  // filtro de módulo (a caixinha lá em cima) é aplicado em cascata — afeta
+  // os cards de resumo e todas as seções abaixo, não só o gráfico "Por módulo"
+  if(modulosFiltradosMetricas.size > 0){
+    respostas = respostas.filter(r => modulosFiltradosMetricas.has(infoPorQuestao[r.questao_id]?.modulo_pscpp));
+  }
+
+  // filtro de matéria (livro) também em cascata, junto com o de módulo
+  if(materiasFiltradasMetricas.size > 0){
+    const mapaBibliografiaTitulo = {};
+    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
+    respostas = respostas.filter(r => {
+      const bibId = infoPorQuestao[r.questao_id]?.bibliografia_id;
+      return bibId && materiasFiltradasMetricas.has(mapaBibliografiaTitulo[bibId]);
+    });
+  }
+
+  if(!respostas.length){
+    mostrarModuloVazio('Nenhuma resposta registrada com esses módulos/publicações selecionados.');
+    renderizarNotasMetricas(elNotas, infoPorQuestao);
+    return;
+  }
+
+  /* ---- cards de resumo geral ---- */
+  const totalRespondidas = respostas.length;
+  const totalAcertos = respostas.filter(r=>r.correta).length;
+  const totalErros = totalRespondidas - totalAcertos;
+  const aproveitamentoNum = totalRespondidas ? (totalAcertos/totalRespondidas)*100 : 0;
+  const aproveitamento = aproveitamentoNum.toFixed(2).replace('.', ',');
+  const corAproveitamento = aproveitamentoNum >= 70 ? '#3B6D11' : aproveitamentoNum >= 50 ? '#854F0B' : '#A32D2D';
+
+  const idsQuestoesUnicas = new Set(respostas.map(r=>r.questao_id));
+  const totalQuestoesUnicas = idsQuestoesUnicas.size;
+  const totalQuestoesRepetidas = totalRespondidas - totalQuestoesUnicas;
+  const totalDisponivel = calcularTotalQuestoesDisponiveis(filtroTipo, modulosFiltradosMetricas);
+
+  elResumo.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
+      <div class="card-questao" style="text-align:left;margin-bottom:0">
+        <div style="font-size:var(--fs-g);font-weight:500">${totalQuestoesUnicas} / ${totalDisponivel}</div>
+        <div style="color:#888;font-size:var(--fs-b)">Questões respondidas</div>
+      </div>
+      <div class="card-questao" style="text-align:left;margin-bottom:0">
+        <div style="font-size:var(--fs-g);font-weight:500">${totalQuestoesRepetidas}</div>
+        <div style="color:#888;font-size:var(--fs-b)">Questões repetidas</div>
+      </div>
+      <div class="card-questao" style="text-align:left;margin-bottom:0">
+        <div style="font-size:var(--fs-g);font-weight:500"><span style="color:#3B6D11">${totalAcertos}</span> / <span style="color:#A32D2D">${totalErros}</span></div>
+        <div style="color:#888;font-size:var(--fs-b)">Acertos / Erros</div>
+      </div>
+      <div class="card-questao" style="text-align:left;margin-bottom:0">
+        <div style="font-size:var(--fs-g);font-weight:500;color:${corAproveitamento}">${aproveitamento}%</div>
+        <div style="color:#888;font-size:var(--fs-b)">Aproveitamento médio</div>
+      </div>
+    </div>
+  `;
+
+  /* ---- por módulo: comparação com métrica selecionável ---- */
+  const statsPorModulo = {};
+  respostas.forEach(r=>{
+    const mod = infoPorQuestao[r.questao_id]?.modulo_pscpp || 'Sem módulo';
+    if(!statsPorModulo[mod]) statsPorModulo[mod] = {total:0, acertos:0};
+    statsPorModulo[mod].total++;
+    if(r.correta) statsPorModulo[mod].acertos++;
+  });
+  // recuperação/retenção olham pra pares de tentativas ao longo do tempo –
+  // usam o histórico completo (sem filtro de período), só respeitando o
+  // filtro de módulo, senão um par "errou/acertou depois" podia ser cortado
+  // ao meio pelo filtro de data
+  const respostasParaConhecimento = modulosFiltradosMetricas.size > 0
+    ? metricasRespostasCache.filter(r => modulosFiltradosMetricas.has(infoPorQuestao[r.questao_id]?.modulo_pscpp))
+    : metricasRespostasCache;
+  const metricasConhecimentoPorModulo = calcularMetricasConhecimentoPorModulo(respostasParaConhecimento, infoPorQuestao);
+
+  const linhasModulo = Object.entries(statsPorModulo)
+    .map(([modulo, s])=>({
+      modulo,
+      total: s.total,
+      acertos: s.acertos,
+      pctAcerto: s.total ? Math.round((s.acertos/s.total)*100) : 0,
+      pctRecuperacao: metricasConhecimentoPorModulo[modulo]?.recuperacaoPct ?? null,
+      pctRetencao: metricasConhecimentoPorModulo[modulo]?.retencaoPct ?? null,
+      recuperacaoSucesso: metricasConhecimentoPorModulo[modulo]?.recuperacaoSucesso ?? 0,
+      recuperacaoTotal: metricasConhecimentoPorModulo[modulo]?.recuperacaoTotal ?? 0,
+      retencaoSucesso: metricasConhecimentoPorModulo[modulo]?.retencaoSucesso ?? 0,
+      retencaoTotal: metricasConhecimentoPorModulo[modulo]?.retencaoTotal ?? 0,
+    }));
+  // régua do eixo X sempre baseada no maior valor entre TODOS os 7 módulos
+  // (seus, não do grupo), não só os que estão filtrados na tela — assim a
+  // régua não muda de tamanho quando você filtra pra ver menos módulos
+  const maiorTotalGeral = Math.max(...Object.values(statsPorModuloCompleto).map(s=>s.total), 1);
+  const elListaDisponiveis = document.getElementById('metricas-modulos-disponiveis');
+  if(!elListaDisponiveis.innerHTML) renderizarListasFiltroModulo();
+  const elListaMateriasDisponiveis = document.getElementById('metricas-materias-disponiveis');
+  if(!elListaMateriasDisponiveis.innerHTML) renderizarListasFiltroMateria();
+
+  renderizarGraficoModuloTresBarras(linhasModulo);
+  renderizarGraficoEvolucao();
+
+  /* ---- por tipo de questão ---- */
+  elTipo.innerHTML = '<p style="color:#888;font-size:var(--fs-d)">A ser implementado.</p>';
+
+  /* ---- por publicação ---- */
+  elPublicacao.innerHTML = '<p style="color:#888;font-size:var(--fs-d)">A ser implementado.</p>';
+
+  /* ---- suas questões mais difíceis (Wilson Score, por questão individual) ---- */
+  const statsPorQuestao = {};
+  respostas.forEach(r=>{
+    if(!statsPorQuestao[r.questao_id]) statsPorQuestao[r.questao_id] = {k:0, n:0};
+    statsPorQuestao[r.questao_id].n++;
+    if(!r.correta) statsPorQuestao[r.questao_id].k++;
+  });
+  const todasComErro = Object.entries(statsPorQuestao)
+    .map(([qid, s])=>({questaoId: qid, wilson: wilsonScoreLowerBound(s.k, s.n), tentativas: s.n, erros: s.k}))
+    .filter(x=>x.erros > 0)
+    .sort((a,b)=>b.wilson - a.wilson);
+  const piores = todasComErro.slice(0, 10);
+
+  function linhaQuestaoDificil(p){
+    const info = infoPorQuestao[p.questaoId];
+    const mapaBibliografiaTitulo = {};
+    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
+    const partes = [];
+    if(info?.modulo_pscpp){
+      const svg = modIconesCustomSvg[info.modulo_pscpp] ? modIconesCustomSvg[info.modulo_pscpp]('#111') : '';
+      partes.push(`<span style="display:inline-flex;align-items:center;gap:5px">${svg?`<span class="icone-modulo-mini">${svg}</span>`:''}${escapeHtml(info.modulo_pscpp)}</span>`);
+    }
+    if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
+    if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
+    if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
+    return `<div style="cursor:pointer;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${p.questaoId}')" ontouchend="event.preventDefault();abrirDetalheQuestao('${p.questaoId}')">
+      <div style="font-size:var(--fs-d);color:#888">${partes.length ? partes.join(' · ') : 'Questão'}</div>
+      <div style="color:#888;font-size:var(--fs-b);margin-top:6px">${p.erros} ${p.erros===1?'erro':'erros'} em ${p.tentativas} ${p.tentativas===1?'tentativa':'tentativas'}</div>
+    </div>`;
+  }
+
+  elPiores.innerHTML = piores.length
+    ? montarCarrosselCadernos(piores.map(linhaQuestaoDificil), 'carrossel-dificeis')
+    : '<p style="color:#888;font-size:var(--fs-d)">Nenhum erro registrado nesse período – mandou bem!</p>';
+  if(piores.length > 5) initCarrosselCaderno('carrossel-dificeis', Math.ceil(piores.length/5));
+
+  /* ---- seus favoritos (atalho de revisão) — não depende do filtro de período ---- */
+  renderizarFavoritosMetricas(elFavoritos, infoPorQuestao);
+
+  /* ---- suas notas (atalho de revisão) — não depende do filtro de período ---- */
+  renderizarNotasMetricas(elNotas, infoPorQuestao);
+}
+
+function renderizarFavoritosMetricas(elFavoritos, infoPorQuestao){
+  if(metricasFavoritosCache.length){
+    const mapaBibliografiaTitulo = {};
+    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
+    const itens = metricasFavoritosCache.map(f=>{
+      const info = infoPorQuestao[f.questao_id];
+      const partes = [];
+      if(info?.modulo_pscpp){
+        const svg = modIconesCustomSvg[info.modulo_pscpp] ? modIconesCustomSvg[info.modulo_pscpp]('#111') : '';
+        partes.push(`<span style="display:inline-flex;align-items:center;gap:5px">${svg?`<span class="icone-modulo-mini">${svg}</span>`:''}${escapeHtml(info.modulo_pscpp)}</span>`);
+      }
+      if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
+      if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
+      if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
+      return `<div style="cursor:pointer;position:relative;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${f.questao_id}')" ontouchend="event.preventDefault();abrirDetalheQuestao('${f.questao_id}')">
+        <button onclick="event.stopPropagation();desfavoritarDaListaMetricas('${f.id}','${f.questao_id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px" title="Desfavoritar">✕</button>
+        <div style="font-size:var(--fs-d);color:#888;margin-right:24px">${partes.length ? partes.join(' · ') : 'Questão'}</div>
+        <div style="color:#888;font-size:var(--fs-b);margin-top:6px">Favoritada em ${new Date(f.criado_em).toLocaleDateString('pt-BR')}</div>
+      </div>`;
+    });
+    elFavoritos.innerHTML = montarCarrosselCadernos(itens, 'carrossel-favoritos');
+    if(itens.length > ITENS_POR_PAGINA_CADERNO) initCarrosselCaderno('carrossel-favoritos', Math.ceil(itens.length/ITENS_POR_PAGINA_CADERNO));
+  }else{
+    elFavoritos.innerHTML = '<p style="color:#888;font-size:var(--fs-d)">Você ainda não favoritou nenhuma questão.</p>';
+  }
+}
+async function desfavoritarDaListaMetricas(favoritoId, questaoId){
+  await sb.from('favoritos').delete().eq('id', favoritoId);
+  metricasFavoritosCache = metricasFavoritosCache.filter(f => f.id !== favoritoId);
+  favoritosDoUsuario.delete(questaoId);
+  renderizarFavoritosMetricas(document.getElementById('lista-metricas-favoritos'), metricasQuestoesInfoCache);
+}
+
+function renderizarNotasMetricas(elNotas, infoPorQuestao){
+  if(metricasNotasCache.length){
+    const mapaBibliografiaTitulo = {};
+    bibliografiaCache.forEach(b=>{ mapaBibliografiaTitulo[b.id] = b.nome_exibicao || b.titulo; });
+    const itens = metricasNotasCache.map(n=>{
+      const info = infoPorQuestao[n.questao_id];
+      const partes = [];
+      if(info?.modulo_pscpp) partes.push(escapeHtml(info.modulo_pscpp));
+      if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
+      if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
+      partes.push(new Date(n.criado_em).toLocaleDateString('pt-BR'));
+      return `<div style="cursor:pointer;position:relative;padding:12px 0;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${n.questao_id}')" ontouchend="event.preventDefault();abrirDetalheQuestao('${n.questao_id}')">
+        <button onclick="event.stopPropagation();excluirNotaDaListaMetricas('${n.id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px" title="Excluir nota">✕</button>
+        <p style="font-size:var(--fs-d);color:#111;margin:0 24px 8px 0">${formatarEnunciado(n.texto)}</p>
+        <div style="font-size:var(--fs-b);color:#888">${partes.join(' · ')}</div>
+      </div>`;
+    });
+    elNotas.innerHTML = montarCarrosselCadernos(itens, 'carrossel-notas');
+    if(itens.length > ITENS_POR_PAGINA_CADERNO) initCarrosselCaderno('carrossel-notas', Math.ceil(itens.length/ITENS_POR_PAGINA_CADERNO));
+  }else{
+    elNotas.innerHTML = '<p style="color:#888;font-size:var(--fs-d)">Você ainda não escreveu nenhuma nota.</p>';
+  }
+}
+async function excluirNotaDaListaMetricas(notaId){
+  await sb.from('notas').delete().eq('id', notaId);
+  metricasNotasCache = metricasNotasCache.filter(n => n.id !== notaId);
+  renderizarNotasMetricas(document.getElementById('lista-metricas-notas'), metricasQuestoesInfoCache);
+}
+
+// Tela de detalhe de um caderno CONCLUÍDO específico – mesma lógica de
+// estatística por módulo de carregarMetricasPessoais(), só que filtrada por
+// um caderno_id em vez do histórico inteiro do usuário
+async function abrirDetalheCadernoConcluido(cadernoId){
+  document.getElementById('modal-detalhe-caderno-conteudo').innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>';
+  abrirModal('modal-detalhe-caderno');
+
+  const [{data: caderno}, {data: respostas}] = await Promise.all([
+    sb.from('cadernos').select('*').eq('id', cadernoId).single(),
+    sb.from('respostas').select('questao_id, correta, resposta_dada').eq('caderno_id', cadernoId)
+  ]);
+  const el = document.getElementById('modal-detalhe-caderno-conteudo');
+
+  if(!respostas || !respostas.length){
+    el.innerHTML = `<h3 class="config-title">${escapeHtml(caderno?.nome||'Caderno')}</h3><p style="color:#888">Nenhuma resposta registrada nesse caderno.</p><button class="btn-secundario" style="width:100%;margin-top:14px" onclick="fecharModal('modal-detalhe-caderno')">Fechar</button>`;
+    return;
+  }
+
+  const idsQuestoes = [...new Set(respostas.map(r=>r.questao_id))];
+  const {data: questoes} = await sb.from('questoes').select('id, modulo_pscpp, capitulo, bibliografia_id, gabarito, anulada').in('id', idsQuestoes);
+  const moduloPorQuestao = {};
+  (questoes||[]).forEach(q=>{ moduloPorQuestao[q.id] = q.modulo_pscpp || 'Sem módulo'; });
+
+  const stats = {};
+  respostas.forEach(r=>{
+    const mod = moduloPorQuestao[r.questao_id] || 'Sem módulo';
+    if(!stats[mod]) stats[mod] = {total: 0, acertos: 0};
+    stats[mod].total++;
+    if(r.correta) stats[mod].acertos++;
+  });
+
+  const totalGeral = respostas.length;
+  const acertosGeral = respostas.filter(r=>r.correta).length;
+  const pctGeral = Math.round((acertosGeral / totalGeral) * 100);
+  const corGeral = pctGeral >= 70 ? '#3B6D11' : pctGeral >= 50 ? '#854F0B' : '#A32D2D';
+
+  const linhas = Object.entries(stats).map(([modulo, s])=>({
+    modulo, total: s.total, pctAcerto: s.total ? Math.round((s.acertos / s.total) * 100) : 0
+  })).sort((a,b)=>a.pctAcerto - b.pctAcerto);
+
+  el.innerHTML = `
+    <h3 class="config-title">${escapeHtml(caderno?.nome||'Caderno')}</h3>
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:var(--fs-i);font-weight:700;color:${corGeral}">${pctGeral}%</div>
+      <div style="color:#888;font-size:var(--fs-b)">${totalGeral} questões respondidas</div>
+    </div>
+    <div class="section-title" style="margin-top:0">Por módulo</div>
+    ${linhas.map(l=>{
+      const cor = l.pctAcerto >= 70 ? '#3B6D11' : l.pctAcerto >= 50 ? '#854F0B' : '#A32D2D';
+      return `<div class="card-questao">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          ${iconeModuloPreto(l.modulo)}
+          <span style="font-weight:700;color:${cor}">${l.pctAcerto}%</span>
+        </div>
+        <div style="color:#888;font-size:var(--fs-b)">${l.total} ${l.total===1?'questão respondida':'questões respondidas'}</div>
+      </div>`;
+    }).join('')}
+    <button class="btn-primario" style="width:100%;margin-top:8px" onclick="fecharModal('modal-detalhe-caderno');revisarCadernoConcluido('${cadernoId}')">Ver questões</button>
+    ${podeUsarIntegracaoTracker() ? (
+      caderno.enviado_tracker_em
+        ? `<button class="btn-secundario" style="width:100%;margin-top:8px;opacity:0.4;cursor:not-allowed" disabled title="Já enviado em ${new Date(caderno.enviado_tracker_em).toLocaleDateString('pt-BR')}">Já enviado para o PSCPP Tracker</button>`
+        : `<button class="btn-secundario" style="width:100%;margin-top:8px" onclick="enviarCadernoAntigoParaTracker('${cadernoId}')">Enviar para o PSCPP Tracker</button>`
+    ) : ''}
+    <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="fecharModal('modal-detalhe-caderno')">Fechar</button>
+  `;
+
+  // guarda os dados já buscados nessa função pra reaproveitar no envio
+  // retroativo, sem precisar buscar tudo de novo
+  detalheCadernoConcluidoCache[cadernoId] = {caderno, respostas, questoes};
+}
+
+let detalheCadernoConcluidoCache = {};
+
+// monta o mesmo formato de "retrato" que o envio ao vivo usa, só que a
+// partir de dados buscados do banco em vez de estado em memória — permite
+// mandar pro Tracker um caderno finalizado antes dessa integração existir
+function enviarCadernoAntigoParaTracker(cadernoId){
+  const dados = detalheCadernoConcluidoCache[cadernoId];
+  if(!dados || !dados.caderno.finalizado_em){
+    alert('Não consegui montar os dados desse caderno pra enviar.');
+    return;
+  }
+  if(dados.caderno.enviado_tracker_em){
+    alert('Esse caderno já foi enviado antes.');
+    return;
+  }
+  const mapaQuestoes = {};
+  (dados.questoes||[]).forEach(q => { mapaQuestoes[q.id] = q; });
+  const respostasPorQuestaoRetroativo = {};
+  (dados.respostas||[]).forEach(r => { respostasPorQuestaoRetroativo[r.questao_id] = {letra: r.resposta_dada, correta: r.correta}; });
+
+  const retrato = {
+    cadernoId,
+    criadoEm: dados.caderno.criado_em,
+    finalizadoEm: dados.caderno.finalizado_em,
+    questoes: Object.values(mapaQuestoes),
+    respostas: respostasPorQuestaoRetroativo,
+    excluidas: new Set() // questões excluídas não entram nem em respostas, então não afetam aqui
+  };
+  fecharModal('modal-detalhe-caderno');
+  abrirConfirmacaoEnvioTracker(retrato);
+}
+
+/* ============================================================
+   UPLOAD / EXTRAÇÃO DE PDF
+   ============================================================ */
+function atualizarNomeArquivoSelecionado(manterStatus){
+  const input = document.getElementById('upload-arquivo');
+  const el = document.getElementById('nome-arquivo-selecionado');
+  if(!manterStatus) document.getElementById('upload-status').innerHTML = '';
+  if(input.files.length === 1){
+    el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${escapeHtml(input.files[0].name)}</span><button type="button" onclick="limparArquivoSelecionado()" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px;flex-shrink:0" title="Remover arquivo">✕</button>`;
+  }else if(input.files.length > 1){
+    const nomes = Array.from(input.files).map(f=>f.name).join(', ');
+    el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${escapeHtml(nomes)}">${input.files.length} arquivos selecionados</span><button type="button" onclick="limparArquivoSelecionado()" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px;flex-shrink:0" title="Remover arquivos">✕</button>`;
+  }else{
+    el.textContent = 'Nenhum arquivo selecionado';
+  }
+}
+function limparArquivoSelecionado(){
+  document.getElementById('upload-arquivo').value = '';
+  atualizarNomeArquivoSelecionado();
+  document.getElementById('upload-status').innerHTML = '';
+}
+
+// Carrega uma biblioteca externa só quando ela é realmente necessária, em
+// vez de sempre no carregamento inicial do app — isso deixa a abertura do
+// app mais leve, já que a maioria das visitas não usa PDF/planilha/gráfico
+const bibliotecasCarregando = {};
+function carregarBibliotecaSobDemanda(url, jaEstaDisponivel){
+  if(jaEstaDisponivel()) return Promise.resolve();
+  if(bibliotecasCarregando[url]) return bibliotecasCarregando[url];
+  bibliotecasCarregando[url] = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = url;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Não consegui carregar um componente necessário (' + url.split('/').pop() + '). Confere sua internet e tenta de novo.'));
+    document.head.appendChild(script);
+  });
+  return bibliotecasCarregando[url];
+}
+
+let workerBlobUrlCache = null; // baixa o worker só uma vez, reaproveita depois
+async function obterWorkerSrcSeguro(){
+  if(workerBlobUrlCache) return workerBlobUrlCache;
+  // baixar o worker como blob local, em vez de apontar direto pra URL do
+  // cdnjs, evita um travamento silencioso conhecido do pdf.js quando o
+  // worker é carregado de um domínio diferente (sem erro nenhum, só trava
+  // pra sempre) — https://github.com/mozilla/pdf.js/issues/7304
+  const resposta = await fetch('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js');
+  if(!resposta.ok) throw new Error('não consegui baixar o worker do pdf.js (status ' + resposta.status + ')');
+  const codigo = await resposta.text();
+  workerBlobUrlCache = URL.createObjectURL(new Blob([codigo], {type:'application/javascript'}));
+  return workerBlobUrlCache;
+}
+
+function comLimiteDeTempo(promessa, segundos, mensagemErro){
+  return Promise.race([
+    promessa,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(mensagemErro)), segundos*1000))
+  ]);
+}
+
+async function extrairTextoDoArquivo(arquivo, aoProgredir){
+  const arrayBuffer = await arquivo.arrayBuffer();
+
+  // confere a assinatura real do arquivo (todo PDF de verdade começa com
+  // "%PDF-") antes de decidir qual caminho usar — não dá pra confiar que
+  // o pdf.js sempre lança erro em arquivo inválido; às vezes ele "engole"
+  // sem erro e só não acha texto nenhum, o que faz o fallback nunca disparar
+  const primeirosBytes = new Uint8Array(arrayBuffer.slice(0, 5));
+  const assinatura = String.fromCharCode(...primeirosBytes);
+  const ehPdfDeVerdade = assinatura === '%PDF-';
+
+  if(!ehPdfDeVerdade){
+    // não é PDF de verdade (texto puro com nome .pdf) — lê direto como texto
+    if(aoProgredir) aoProgredir(1, 1);
+    return new TextDecoder('utf-8').decode(arrayBuffer);
+  }
+
+  try{
+    await carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', () => typeof pdfjsLib !== 'undefined');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = await comLimiteDeTempo(
+      obterWorkerSrcSeguro(), 15, 'Não consegui baixar o componente de leitura de PDF (demorou demais). Confere sua internet e tenta de novo.'
+    );
+    const pdf = await comLimiteDeTempo(
+      pdfjsLib.getDocument({data: arrayBuffer}).promise, 20, 'A leitura do PDF travou (demorou demais pra abrir). Tenta de novo, ou tenta outro arquivo.'
+    );
+    let textoCompleto = '';
+    for(let p=1; p<=pdf.numPages; p++){
+      const pagina = await pdf.getPage(p);
+      const conteudo = await pagina.getTextContent();
+      // o pdf.js só devolve pedacinhos de texto soltos, sem quebra de linha
+      // nenhuma — precisa reconstruir comparando a posição vertical (Y) de
+      // cada pedaço: se mudou de linha na página, é quebra de linha de
+      // verdade; se ficou na mesma altura, é só continuação da mesma linha.
+      // Além disso, alguns PDFs (texto justificado) quebram uma única
+      // palavra em vários itens de renderização SEM espaço real entre eles
+      // (ex: "duração" vira os itens "du","r","a","ç","ã","o", cada um
+      // terminando exatamente onde o próximo começa) — por isso também
+      // comparamos a posição horizontal (X): só insere espaço quando existe
+      // uma distância real entre o fim do item anterior e o início deste,
+      // senão gruda os pedaços sem espaço nenhum
+      let yAnterior = null;
+      let xFimAnterior = null;
+      let textoPagina = '';
+      conteudo.items.forEach(item => {
+        const y = item.transform[5];
+        const xInicio = item.transform[4];
+        if(yAnterior !== null && Math.abs(y - yAnterior) > 2){
+          textoPagina += '\n';
+        }else if(textoPagina && xFimAnterior !== null && (xInicio - xFimAnterior) > 1){
+          textoPagina += ' ';
+        }
+        textoPagina += item.str;
+        yAnterior = y;
+        xFimAnterior = xInicio + (item.width || 0);
+      });
+      textoCompleto += textoPagina + '\n\n';
+      if(aoProgredir) aoProgredir(p, pdf.numPages);
+    }
+    return textoCompleto;
+  }catch(erroPdf){
+    // PDF real mas deu erro ao processar — tenta ler como texto simples
+    // antes de desistir de vez (raramente ajuda pra PDF genuíno, mas é
+    // melhor que travar sem nenhuma tentativa)
+    return new TextDecoder('utf-8').decode(arrayBuffer);
+  }
+}
+
+// Barra de progresso real (não é decoração — o percentual reflete o
+// progresso de verdade, tipo "página 4 de 12"), usada durante a extração
+function mostrarBarraProgresso(elStatus, percentual, texto){
+  elStatus.innerHTML = `
+    <p style="text-align:center;color:#666;font-size:var(--fs-b);margin-bottom:6px">${escapeHtml(texto)}</p>
+    <div style="background:#EEE;border-radius:6px;height:10px;overflow:hidden">
+      <div style="width:${percentual}%;background:#B23A34;height:100%;border-radius:6px;transition:width 0.2s"></div>
+    </div>
+    <p style="text-align:center;color:#888;font-size:var(--fs-b);margin-top:6px">${percentual}%</p>
+  `;
+}
+
+let extracaoEmAndamento = false; // protege a mensagem de status de ser
+// apagada sem querer se a pessoa trocar de aba enquanto ainda está rodando
+
+// processa 1 arquivo do upload — devolve quantas questões foram cadastradas,
+// puladas (duplicata) ou pra rascunho, e um erro se algo travou nesse
+// arquivo específico (sem travar o processamento dos outros arquivos do lote)
+// ============================================================
+// ARQUIVO V/F — formato separado, com código #VF# no início do
+// texto extraído. Sempre que um arquivo bate com esse código, vai
+// pra tabela questoes_vf (banco à parte), nunca pra questoes do
+// Pilotquest normal. Ver uso em processarArquivoUpload.
+// ============================================================
+function ehArquivoVF(textoCompleto){
+  return /^\s*#VF#/.test(textoCompleto);
+}
+
+function parsearArquivoVF(textoCompleto){
+  const texto = textoCompleto.replace(/^\s*#VF#\s*/, '');
+  // o capítulo aparece uma vez só, no cabeçalho do arquivo (ex: "PSCPP –
+  // VERDADEIRO OU FALSO · Practical Ship Hydrodynamics, Capítulo 2") —
+  // vale pra todas as questões desse upload, não repete por afirmação
+  const capituloMatch = texto.match(/Cap[ií]tulo\s+(\S+)/i);
+  const capituloDoArquivo = capituloMatch ? capituloMatch[1].replace(/[.,;:]$/, '') : null;
+  // título do cabeçalho geral do arquivo (a parte depois do "·") - usado
+  // na identificação de bibliografia EM VEZ do texto completo do campo
+  // BIBLIOGRAFIA: de cada bloco. O campo BIBLIOGRAFIA: é uma citação ABNT
+  // completa e pode mencionar outras leis/decretos de passagem (ex: "Lei
+  // nº 9.432, de que trata..."), causando ambiguidade e derrubando a
+  // identificação. O título do cabeçalho é a referência única e direta
+  // que o próprio arquivo já usa pra se identificar - testado contra 5
+  // PDFs reais (2 NORMAM, o Decreto, os 2 capítulos de Hidrodinâmica)
+  // antes de aplicar, confirmando que não regride nenhum caso que já
+  // funcionava e resolve os que travavam
+  const tituloMatch = texto.match(/PSCPP\s*[–-]\s*VERDADEIRO OU FALSO\s*[·•]\s*([^\r\n]+)/i);
+  const tituloCabecalhoArquivo = tituloMatch ? tituloMatch[1].trim() : null;
+
+  const blocos = texto.split(/GABARITO\s*[–-]\s*AFIRMAÇÃO\s*\d+/).slice(1);
+  const questoes = [];
+  const erros = [];
+
+  blocos.forEach((bloco, i) => {
+    try{
+      const bibliografiaMatch = bloco.match(/BIBLIOGRAFIA:\s*([\s\S]*?)(?=\n\s*DIFICULDADE:)/);
+      const dificuldadeMatch = bloco.match(/DIFICULDADE:\s*(\S+)/);
+      // TIPO: é opcional (nem toda questão é número/lista) — aceita as
+      // duas juntas também ("TIPO: Número, Lista"), mesmo que hoje nenhuma
+      // questão real tenha as duas ao mesmo tempo
+      const tipoMatch = bloco.match(/TIPO:\s*([^\r\n]+)/i);
+      const tipoTexto = tipoMatch ? tipoMatch[1] : '';
+      const ehNumero = /n[uú]mero/i.test(tipoTexto);
+      const ehLista = /lista/i.test(tipoTexto);
+      // OBS:/OBSERVAÇÃO: Inconsistente — vem do gabarito de origem quando
+      // ele mesmo aponta uma contradição no livro. Aceita "OBS:" ou
+      // "OBSERVAÇÃO:" (com ou sem acento/cedilha), qualquer um dos dois
+      const obsMatch = bloco.match(/OBS(?:ERVA[ÇC][ÃA]O)?:\s*([^\r\n]+)/i);
+      const inconsistente = obsMatch ? /inconsistente/i.test(obsMatch[1]) : false;
+      const respostaMatch = bloco.match(/RESPOSTA:\s*([VF])\b/);
+      if(!bibliografiaMatch || !dificuldadeMatch || !respostaMatch){
+        erros.push({indice: i, motivo: 'não achou BIBLIOGRAFIA/DIFICULDADE/RESPOSTA'});
+        return;
+      }
+      const bibliografiaTextoOriginal = bibliografiaMatch[1].replace(/\s+/g,' ').trim();
+      const dificuldade = dificuldadeMatch[1];
+      const resposta = respostaMatch[1] === 'V';
+
+      const restoAposResposta = bloco.slice(bloco.indexOf(respostaMatch[0]) + respostaMatch[0].length);
+      const textoMatch = restoAposResposta.match(/^([\s\S]*?)(?=\n\s*(VERDADEIRA|FALSA)\s*[–-])/);
+      if(!textoMatch){ erros.push({indice: i, motivo: 'não achou o texto da afirmação'}); return; }
+      const textoAfirmacao = textoMatch[1].replace(/\s+/g,' ').trim();
+
+      // a partir daqui vem "VERDADEIRA – .../FALSA – ..." (justificativa
+      // curta, não usada em lugar nenhum da UI — só serve de transição),
+      // depois "Correto: ..." (só se for falsa) e "EXPLICAÇÃO: ..." (o
+      // texto completo, esse sim é o que aparece no botão de explicação)
+      const restoAposTexto = restoAposResposta.slice(textoMatch[0].length);
+
+      let correcao = null;
+      const correcaoMatch = restoAposTexto.match(/Correto:\s*([\s\S]*?)(?=\n\s*EXPLICAÇÃO:)/);
+      if(correcaoMatch) correcao = correcaoMatch[1].replace(/\s+/g,' ').trim();
+
+      const explicacaoMatch = restoAposTexto.match(/EXPLICAÇÃO:\s*([\s\S]*?)(?=\n\s*TRECHOS DA FONTE)/);
+      if(!explicacaoMatch){ erros.push({indice: i, motivo: 'não achou EXPLICAÇÃO:'}); return; }
+      const explicacao = explicacaoMatch[1].replace(/\s+/g,' ').trim();
+
+      const trechosMatch = bloco.match(/TRECHOS DA FONTE\s*([\s\S]*?)(?=\n\s*Fonte:)/);
+      const trechosFonte = trechosMatch ? trechosMatch[1].replace(/\s+/g,' ').trim() : null;
+      const fonteMatch = bloco.match(/Fonte:\s*([\s\S]*?)(?=\n\s*\n|\n\s*Página \d+ de|$)/);
+      const fonte = fonteMatch ? fonteMatch[1].replace(/\s+/g,' ').trim() : null;
+
+      questoes.push({texto: textoAfirmacao, resposta, explicacao, correcao, trechos_fonte: trechosFonte, fonte, bibliografiaTextoOriginal, dificuldade, ehNumero, ehLista, inconsistente});
+    }catch(e){
+      erros.push({indice: i, motivo: 'exceção: ' + e.message});
+    }
+  });
+
+  return {questoes, erros, capituloDoArquivo, tituloCabecalhoArquivo};
+}
+
+async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
+  const {questoes, erros, capituloDoArquivo, tituloCabecalhoArquivo} = parsearArquivoVF(textoBruto);
+  if(!questoes.length){
+    return {erro: `"${nomeArquivoAtual}": código #VF# encontrado, mas não consegui extrair nenhuma questão do formato esperado.`, cadastradas:0, puladas:0, rascunho:0};
+  }
+
+  // identifica a bibliografia de cada questão pela mesma lógica já usada
+  // no upload normal — tenta pelo cabeçalho "BIBLIOGRAFIA:" de cada bloco.
+  // Busca o id direto no banco (não reaproveita mapaBibliografiaId, que é
+  // uma variável local só de dentro do fluxo normal de upload — usar ela
+  // aqui é a causa exata do travamento em 75% que aconteceu de verdade)
+  const resultados = await Promise.all(questoes.map(async q => {
+    // usa o título do cabeçalho geral do arquivo pra identificar a
+    // bibliografia, EM VEZ do texto completo do campo BIBLIOGRAFIA: de
+    // cada bloco. O campo BIBLIOGRAFIA: é uma citação ABNT completa e
+    // pode mencionar outras leis/decretos de passagem (ex: um decreto que
+    // regulamenta uma lei, citando "Lei nº 9.432, de que trata..."),
+    // fazendo duas entradas diferentes baterem ao mesmo tempo e a
+    // identificação travar em ambiguidade. O título do cabeçalho é único
+    // por arquivo e direto - testado contra 5 PDFs reais antes de aplicar
+    // (2 NORMAM, o Decreto, os 2 capítulos de Hidrodinâmica), sem
+    // regredir nenhum caso que já funcionava
+    const textoParaIdentificar = capituloDoArquivo && tituloCabecalhoArquivo
+      ? `${tituloCabecalhoArquivo} Capítulo ${capituloDoArquivo}`
+      : (tituloCabecalhoArquivo || q.bibliografiaTextoOriginal);
+    const bibEncontrada = identificarBibliografia(textoParaIdentificar, textoParaIdentificar);
+    let bibliografiaId = null;
+    let bibCapituloUnico = false;
+    if(bibEncontrada){
+      const {data: bibRow} = await sb.from('bibliografia')
+        .select('id, capitulo_unico')
+        .eq('modulo_pscpp', bibEncontrada.modulo)
+        .eq('titulo', bibEncontrada.titulo)
+        .maybeSingle();
+      bibliografiaId = bibRow?.id || null;
+      bibCapituloUnico = bibRow?.capitulo_unico === true;
+    }
+
+    // checagem de duplicata — mesmo texto já cadastrado, pula sem inserir.
+    // Evita que subir o mesmo PDF de novo (ou um PDF que junta afirmações
+    // antigas com novas, por engano) duplique tudo, igual o Quest normal
+    // já faz há tempo com enunciado+alternativas
+    const {data: existente} = await sb.from('questoes_vf').select('id').eq('texto', q.texto).maybeSingle();
+    if(existente) return {ok: false, pulada: true, texto: q.texto};
+
+    const camposComuns = {
+      texto: q.texto,
+      resposta: q.resposta,
+      explicacao: q.explicacao,
+      correcao: q.correcao,
+      trechos_fonte: q.trechos_fonte,
+      fonte: q.fonte,
+      n_palavras: q.texto.trim().split(/\s+/).filter(Boolean).length,
+      eh_numero: q.ehNumero,
+      eh_lista: q.ehLista,
+      inconsistente: q.inconsistente,
+      dificuldade: q.dificuldade,
+      autor_id: usuarioAtual.id,
+      lote_upload_id: loteUploadId,
+      nome_arquivo_origem: nomeArquivoAtual
+    };
+
+    if(!bibliografiaId){
+      // sem bibliografia identificada - NÃO entra no banco real. Fica no
+      // rascunho até alguém (autor ou admin) resolver manualmente, mesmo
+      // padrão já usado pro upload normal (Quest) - decisão explícita do
+      // Carlos: "enquanto não colocar tudo certinho não entra no banco"
+      const {data: rascunhoInserido, error: erroRascunho} = await sb.from('questoes_vf_rascunho').insert({
+        ...camposComuns,
+        capitulo: capituloDoArquivo // melhor palpite disponível - confirmado/corrigido na revisão manual
+      }).select('id').single();
+      return {ok: !erroRascunho, erro: erroRascunho?.message, viraRascunho: true, id: rascunhoInserido?.id, texto: q.texto};
+    }
+
+    // publicação marcada como capítulo único (bibliografia.capitulo_unico) -
+    // NUNCA usa o que foi extraído do cabeçalho do arquivo, mesmo que o
+    // cabeçalho mencione capítulos específicos (ex: "Capítulos I, IV e
+    // VIII") - o capítulo sempre é 'Único' nesse caso. Tentar extrair um
+    // capítulo real do texto pra essas publicações foi a causa de um bug
+    // sistemático que gerou lixo (fragmentos de palavra, números soltos)
+    // em milhares de afirmações - ver regra fixa no histórico do projeto
+    const {data: inserida, error} = await sb.from('questoes_vf').insert({
+      ...camposComuns,
+      bibliografia_id: bibliografiaId,
+      capitulo: bibCapituloUnico ? 'Único' : capituloDoArquivo
+    }).select('id').single();
+
+    // segunda camada — se duas rotinas checaram ao mesmo tempo e as duas
+    // acharam "não existe" antes de qualquer uma inserir (janela de corrida),
+    // o banco recusa a segunda com o código 23505 (unique_violation).
+    // Trata isso como "pulada", não como erro de verdade
+    if(error?.code === '23505') return {ok: false, pulada: true, texto: q.texto};
+
+    return {ok: !error, erro: error?.message, id: inserida?.id, texto: q.texto};
+  }));
+
+  const cadastradas = resultados.filter(r => r.ok && !r.viraRascunho).length;
+  const puladas = resultados.filter(r => r.pulada).length;
+  const quantasRascunho = resultados.filter(r => r.ok && r.viraRascunho).length;
+  const falhas = resultados.filter(r => !r.ok && !r.pulada);
+
+  return {
+    cadastradas,
+    puladas,
+    rascunho: quantasRascunho,
+    erro: falhas.length ? `"${nomeArquivoAtual}": ${falhas.length} questão(ões) V/F falharam ao cadastrar (${falhas[0].erro}).` : null
+  };
+}
+
+async function processarArquivoUpload(arquivo, prefixoProgresso, status, concursoOrigemUpload, anoProvaUpload){
+  const nomeArquivoAtual = arquivo.name;
+  let textoBruto;
+  try{
+    textoBruto = await extrairTextoDoArquivo(arquivo, (paginaAtual, totalPaginas) => {
+      const percentual = Math.round((paginaAtual/totalPaginas) * 70); // extração = até 70% da barra
+      mostrarBarraProgresso(status, percentual, `${prefixoProgresso}Lendo página ${paginaAtual} de ${totalPaginas}...`);
+    });
+  }catch(e){
+    return {erro: `"${nomeArquivoAtual}": não consegui ler o arquivo (${e.message})`, cadastradas:0, puladas:0, rascunho:0};
+  }
+
+  // arquivo do formato V/F (código #VF# no início) — desvia completamente
+  // do fluxo normal de questões, vai pra tabela separada questoes_vf
+  if(ehArquivoVF(textoBruto)){
+    mostrarBarraProgresso(status, 75, `${prefixoProgresso}Identificando as afirmações V/F...`);
+    const loteUploadIdVF = crypto.randomUUID();
+    try{
+      return await processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadIdVF);
+    }catch(e){
+      // nunca mais deixa travar silenciosamente em algum %: se algo
+      // inesperado quebrar aqui, aparece como erro de verdade na tela
+      return {erro: `"${nomeArquivoAtual}": falha ao processar arquivo V/F (${e.message})`, cadastradas:0, puladas:0, rascunho:0};
+    }
+  }
+
+  mostrarBarraProgresso(status, 75, `${prefixoProgresso}Identificando as questões...`);
+  const questoesParsed = parsearQuestoesDoTexto(textoBruto);
+  // 1 código por upload — todas as questões (e rascunhos) dessa leva
+  // compartilham o mesmo código, pra dar pra apagar só essa leva depois,
+  // sem mexer em questões de outros uploads
+  const loteUploadId = crypto.randomUUID();
+  if(!questoesParsed.length){
+    const trecho = (textoBruto || '').slice(0, 600);
+    return {
+      erro: `"${nomeArquivoAtual}": nenhuma questão identificada nesse arquivo.`,
+      trecho,
+      cadastradas:0, puladas:0, rascunho:0
+    };
+  }
+
+  mostrarBarraProgresso(status, 82, `${prefixoProgresso}Identificando a bibliografia...`);
+  const bibliografias = resolverBibliografiaDoLote(
+    questoesParsed.map(q=>({explicacao: q.explicacao, enunciado: q.textoBrutoParaBibliografia, capituloDetectado: q.capituloDetectado}))
+  );
+
+  // separa em 2 grupos: as que identificaram bibliografia vão direto pro
+  // banco de verdade; as que não identificaram vão pro rascunho, esperando
+  // alguém (o autor, ou o admin) escolher manualmente depois — nunca mais
+  // trava o processo inteiro por causa de 1 questão sem bibliografia clara
+  const prontasParaQuestoes = [];
+  const paraRascunho = [];
+  questoesParsed.forEach((q, i) => {
+    if(bibliografias[i]) prontasParaQuestoes.push({questao: q, bib: bibliografias[i]});
+    else paraRascunho.push(q);
+  });
+
+  mostrarBarraProgresso(status, 88, `${prefixoProgresso}Localizando bibliografia...`);
+  let mapaBibliografiaId;
+  try{
+    // só BUSCA a bibliografia entre as que já existem — nunca cria uma
+    // nova aqui. Se alguma não for encontrada (bem raro, já que a lista
+    // vem direto do banco), essa questão específica também vai pro
+    // rascunho, em vez de travar o lote inteiro
+    const entradasUnicas = [...new Map(prontasParaQuestoes.map(p => [p.bib.modulo+'|'+p.bib.titulo, p.bib])).values()];
+    const resultadosBibliografia = await Promise.all(entradasUnicas.map(async entrada => {
+      const {data: existente} = await sb.from('bibliografia').select('id').eq('titulo', entrada.titulo).eq('modulo_pscpp', entrada.modulo).maybeSingle();
+      return {chave: entrada.modulo+'|'+entrada.titulo, id: existente?.id || null};
+    }));
+    mapaBibliografiaId = {};
+    resultadosBibliografia.forEach(r => { mapaBibliografiaId[r.chave] = r.id; });
+  }catch(erroBusca){
+    return {erro: `"${nomeArquivoAtual}": não consegui consultar a bibliografia no banco (${erroBusca.message})`, cadastradas:0, puladas:0, rascunho:0};
+  }
+
+  // qualquer questão cuja bibliografia identificada não bateu com nada no
+  // banco (raro) também vai pro rascunho, em vez de travar tudo
+  for(let i = prontasParaQuestoes.length - 1; i >= 0; i--){
+    const chave = prontasParaQuestoes[i].bib.modulo+'|'+prontasParaQuestoes[i].bib.titulo;
+    if(!mapaBibliografiaId[chave]){
+      paraRascunho.push(prontasParaQuestoes[i].questao);
+      prontasParaQuestoes.splice(i, 1);
+    }
+  }
+
+  let quantasCadastradas = 0, quantasPuladas = 0, quantasRascunho = 0;
+  try{
+    if(prontasParaQuestoes.length){
+      mostrarBarraProgresso(status, 92, `${prefixoProgresso}Cadastrando ${prontasParaQuestoes.length} questões...`);
+      const resultadosInsercao = await Promise.all(prontasParaQuestoes.map(async ({questao: q, bib}) => {
+        // só considera duplicata de verdade quando enunciado E alternativas
+        // batem igual — enunciado sozinho pode repetir por acaso entre
+        // questões diferentes (mesma pergunta, respostas diferentes)
+        const {data: existente} = await sb.from('questoes')
+          .select('id')
+          .eq('enunciado', q.enunciado)
+          .eq('alternativas', q.alternativas)
+          .maybeSingle();
+        if(existente) return {pulada: true};
+
+        const {data: questaoInserida, error: erroInsertQuestao} = await sb.from('questoes').insert({
+          enunciado: q.enunciado,
+          alternativas: q.alternativas,
+          gabarito: q.gabarito,
+          autor_id: usuarioAtual.id,
+          capitulo: ehFonteCapituloUnico(bib.titulo) ? 'Único' : (q.capituloDetectado || extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null),
+          tipo_questao: null,
+          modulo_pscpp: bib.modulo,
+          bibliografia_id: mapaBibliografiaId[bib.modulo+'|'+bib.titulo],
+          explicacao: q.explicacao || null,
+          explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada',
+          inconsistente: q.inconsistente || false,
+          lote_upload_id: loteUploadId,
+          concurso_origem: concursoOrigemUpload,
+          ano_prova: anoProvaUpload
+        }).select('id').single();
+        if(erroInsertQuestao){
+          // a trava UNIQUE do banco pegou uma duplicata que a checagem
+          // anterior não viu a tempo (janela de corrida entre checar e
+          // inserir, quando múltiplas questões do mesmo lote rodam em
+          // paralelo) — trata como duplicata normal (pulada), não como
+          // falha que travaria o upload inteiro
+          if(erroInsertQuestao.code === '23505') return {pulada: true};
+          throw new Error('Não consegui cadastrar uma questão: ' + erroInsertQuestao.message);
+        }
+        return {pulada: false};
+      }));
+      quantasPuladas = resultadosInsercao.filter(r => r.pulada).length;
+      quantasCadastradas = resultadosInsercao.length - quantasPuladas;
+    }
+
+    if(paraRascunho.length){
+      mostrarBarraProgresso(status, 97, `${prefixoProgresso}Salvando ${paraRascunho.length} questão(ões) pendente(s) de revisão...`);
+      await Promise.all(paraRascunho.map(q => sb.from('questoes_rascunho').insert({
+        enunciado: q.enunciado,
+        alternativas: q.alternativas,
+        gabarito: q.gabarito,
+        explicacao: q.explicacao || null,
+        explicacao_origem: q.explicacao ? 'fonte_original' : 'nunca_gerada',
+        inconsistente: q.inconsistente || false,
+        capitulo: q.capituloDetectado || extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null,
+        autor_id: usuarioAtual.id,
+        nome_arquivo_origem: nomeArquivoAtual || null,
+        lote_upload_id: loteUploadId,
+        concurso_origem: concursoOrigemUpload,
+          ano_prova: anoProvaUpload
+      })));
+      quantasRascunho = paraRascunho.length;
+    }
+  }catch(erroCadastro){
+    return {
+      erro: `"${nomeArquivoAtual}": travou no meio do cadastro (${erroCadastro.message})`,
+      cadastradas: quantasCadastradas, puladas: quantasPuladas, rascunho: quantasRascunho
+    };
+  }
+
+  return {cadastradas: quantasCadastradas, puladas: quantasPuladas, rascunho: quantasRascunho};
+}
+
+async function enviarUpload(){
+  const input = document.getElementById('upload-arquivo');
+  const status = document.getElementById('upload-status');
+  if(!input.files.length){ status.innerHTML = '<p style="color:#B00020">Escolha ao menos um PDF primeiro.</p>'; return; }
+  const marcadoComoMarinha = souCarlos() && document.getElementById('upload-eh-marinha').checked;
+  const concursoOrigemUpload = marcadoComoMarinha ? (document.getElementById('upload-concurso').value.trim() || null) : null;
+  const anoProvaUpload = marcadoComoMarinha ? (parseInt(document.getElementById('upload-ano').value, 10) || null) : null;
+
+  extracaoEmAndamento = true;
+  const arquivos = Array.from(input.files);
+  const totalArquivos = arquivos.length;
+  const resultados = [];
+
+  // processa um arquivo de cada vez, em sequência — não em paralelo,
+  // porque a barra de progresso mostra o andamento de cada arquivo
+  // individualmente ("Arquivo 2 de 5: lendo página 3..."), e paralelo
+  // bagunçaria essa exibição. Se um arquivo falhar, os outros continuam –
+  // o erro fica guardado e aparece no resumo final, sem travar o lote inteiro
+  for(let i = 0; i < totalArquivos; i++){
+    const prefixoProgresso = totalArquivos > 1 ? `Arquivo ${i+1} de ${totalArquivos}: ` : '';
+    mostrarBarraProgresso(status, 0, `${prefixoProgresso}Lendo o arquivo...`);
+    const resultado = await processarArquivoUpload(arquivos[i], prefixoProgresso, status, concursoOrigemUpload, anoProvaUpload);
+    resultados.push(resultado);
+  }
+
+  extracaoEmAndamento = false;
+  const totalCadastradas = resultados.reduce((s,r)=>s+r.cadastradas, 0);
+  const totalPuladas = resultados.reduce((s,r)=>s+r.puladas, 0);
+  const totalRascunho = resultados.reduce((s,r)=>s+r.rascunho, 0);
+  const comErro = resultados.filter(r => r.erro);
+
+  mostrarBarraProgresso(status, 100, 'Concluído!');
+  const textoPuladas = totalPuladas ? ` (${totalPuladas} já existia${totalPuladas>1?'m':''} igual e ${totalPuladas>1?'foram puladas':'foi pulada'})` : '';
+  const textoRascunho = totalRascunho ? ` <span style="color:#B8860B">${totalRascunho} precisam de revisão manual (bibliografia não identificada) – veja a notificação no Início.</span>` : '';
+  let htmlFinal = totalCadastradas || totalPuladas
+    ? `<p style="color:#1B5E20;text-align:center;margin-top:8px">${totalCadastradas} questões cadastradas!${textoPuladas}</p>${textoRascunho ? `<p style="text-align:center;margin-top:6px">${textoRascunho}</p>` : ''}`
+    : (totalRascunho ? `<p style="color:#555;text-align:center;margin-top:8px">Lido com sucesso – ${totalRascunho} questão(ões) precisam de revisão manual antes de entrar no banco. Veja a notificação no Início.</p>` : '');
+
+  if(comErro.length){
+    htmlFinal += `<div style="margin-top:10px">${comErro.map(r => `<p style="color:#B00020;font-size:var(--fs-c)">${escapeHtml(r.erro)}</p>${r.trecho ? `<textarea readonly style="width:100%;height:100px;font-size:var(--fs-a);font-family:monospace;margin:4px 0 8px;padding:6px;border:0.5px solid #ddd;border-radius:6px;color:#444" onclick="this.select()">${escapeHtml(r.trecho) || '(vazio)'}</textarea>` : ''}`).join('')}</div>`;
+  }
+
+  status.innerHTML = htmlFinal || '<p style="color:#B00020">Nada foi cadastrado.</p>';
+  input.value = '';
+  atualizarNomeArquivoSelecionado(true);
+  // some sozinha depois de um tempo, com fade suave — só quando não tem
+  // rascunho pendente nem erro (isso a pessoa precisa continuar vendo, não some)
+  if(!totalRascunho && !comErro.length){
+    setTimeout(() => {
+      status.style.transition = 'opacity 0.6s';
+      status.style.opacity = '0';
+      setTimeout(() => { status.innerHTML = ''; status.style.opacity = '1'; }, 600);
+    }, 2500);
+  }
+  if(totalRascunho) atualizarNotificacoesOrdenadas();
+}
+
+/* ============================================================
+   Upload por planilha (Excel) – caminho alternativo ao PDF, sem IA,
+   já que os dados chegam estruturados
+   ============================================================ */
+// Arrastar um arquivo pra cima do app, em qualquer aba, reconhece e já leva
+// pra tela de Adicionar Questões com o arquivo certo pré-selecionado — não
+// precisa estar na aba de upload pra começar a arrastar
+let contadorArrastarArquivo = 0;
+window.addEventListener('dragenter', (e)=>{
+  if(!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+  if(!usuarioAtual) return;
+  e.preventDefault();
+  contadorArrastarArquivo++;
+  document.getElementById('overlay-arrastar-arquivo').classList.remove('hidden');
+});
+window.addEventListener('dragover', (e)=>{
+  if(!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+  e.preventDefault(); // sem isso o navegador abre o arquivo direto, em vez de soltar
+});
+window.addEventListener('dragleave', (e)=>{
+  if(!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+  contadorArrastarArquivo = Math.max(0, contadorArrastarArquivo-1);
+  if(contadorArrastarArquivo === 0) document.getElementById('overlay-arrastar-arquivo').classList.add('hidden');
+});
+window.addEventListener('drop', (e)=>{
+  if(!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+  e.preventDefault();
+  contadorArrastarArquivo = 0;
+  document.getElementById('overlay-arrastar-arquivo').classList.add('hidden');
+  if(!usuarioAtual) return; // ainda na tela de login/instalação, não tem pra onde levar o arquivo
+  const arquivo = e.dataTransfer.files[0];
+  if(!arquivo) return;
+
+  const dt = new DataTransfer();
+  dt.items.add(arquivo);
+  const nomeMinusculo = arquivo.name.toLowerCase();
+
+  if(nomeMinusculo.endsWith('.pdf')){
+    trocarAba('adicionar');
+    alternarTipoUpload('pdf');
+    document.getElementById('upload-arquivo').files = dt.files;
+    atualizarNomeArquivoSelecionado();
+  }else if(nomeMinusculo.endsWith('.xlsx')){
+    trocarAba('adicionar');
+    alternarTipoUpload('planilha');
+    document.getElementById('upload-planilha').files = dt.files;
+    atualizarNomePlanilhaSelecionada();
+  }else{
+    alert('Só dá pra soltar arquivo PDF ou Excel (.xlsx) aqui.');
+  }
+});
+
+function alternarTipoUpload(tipo){
+  document.getElementById('toggle-upload-pdf').classList.toggle('active', tipo==='pdf');
+  document.getElementById('toggle-upload-planilha').classList.toggle('active', tipo==='planilha');
+  document.getElementById('secao-upload-pdf').classList.toggle('hidden', tipo!=='pdf');
+  document.getElementById('secao-upload-planilha').classList.toggle('hidden', tipo!=='planilha');
+  document.getElementById('upload-status').innerHTML = '';
+  document.getElementById('upload-planilha-status').innerHTML = '';
+}
+
+/* ============================================================
+   Revisão de rascunhos pendentes — questões extraídas de PDF cuja
+   bibliografia não foi identificada automaticamente, esperando alguém
+   (o autor, ou o admin) escolher manualmente entre o que já existe
+   ============================================================ */
+async function abrirRevisaoRascunho(){
+  abrirModal('modal-revisao-rascunho');
+  const container = document.getElementById('lista-rascunhos-pendentes');
+  container.innerHTML = '<p style="text-align:center;color:#888">Carregando...</p>';
+
+  let query = sb.from('questoes_rascunho').select('*, usuarios(nome)').order('criado_em', {ascending:false});
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  const {data} = await query;
+
+  if(!data || !data.length){
+    container.innerHTML = '<p style="text-align:center;color:#888">Nenhuma pendência no momento.</p>';
+    return;
+  }
+
+  // agrupa por arquivo de origem — na prática, questões do mesmo PDF são
+  // quase sempre do mesmo livro, então resolve o grupo inteiro de uma vez
+  const grupos = {};
+  data.forEach(r => {
+    const chave = r.nome_arquivo_origem || `sem-nome-${r.id}`;
+    if(!grupos[chave]) grupos[chave] = [];
+    grupos[chave].push(r);
+  });
+
+  if(!bibliografiaCache || !bibliografiaCache.length) await carregarBibliografia();
+
+  container.innerHTML = Object.entries(grupos).map(([nomeArquivo, itens]) => {
+    const idGrupo = 'grupo-' + btoa(unescape(encodeURIComponent(nomeArquivo))).replace(/[^a-zA-Z0-9]/g,'');
+    const autorNome = itens[0].usuarios?.nome || 'Alguém';
+    const opcoesModulo = modulosPscpp.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+    return `
+    <div style="border:0.5px solid #ddd;border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-weight:600;font-size:var(--fs-e)">${escapeHtml(nomeArquivo === `sem-nome-${itens[0].id}` ? 'Upload sem nome de arquivo' : nomeArquivo)}</div>
+      <div style="color:#888;font-size:var(--fs-b);margin-bottom:10px">${itens.length} ${itens.length>1?'questões':'questão'} · enviado por ${escapeHtml(autorNome)}</div>
+      <details style="margin-bottom:10px">
+        <summary style="cursor:pointer;color:#666;font-size:var(--fs-b)">Ver enunciados</summary>
+        <div style="margin-top:8px;max-height:150px;overflow-y:auto;font-size:var(--fs-b);color:#555">
+          ${itens.map(q => `<p style="margin-bottom:6px">${escapeHtml(q.enunciado.slice(0,150))}${q.enunciado.length>150?'...':''}</p>`).join('')}
+        </div>
+      </details>
+      <select id="${idGrupo}-modulo" class="filter-select" style="margin-bottom:8px" onchange="atualizarPublicacoesRevisao('${idGrupo}')">
+        <option value="">Escolhe o módulo...</option>
+        ${opcoesModulo}
+      </select>
+      <select id="${idGrupo}-publicacao" class="filter-select" style="margin-bottom:8px" disabled onchange="preencherCapituloUnicoSeAplicavel('${idGrupo}')">
+        <option value="">Escolhe o módulo primeiro</option>
+      </select>
+      <input type="text" id="${idGrupo}-capitulo" class="filter-select" style="margin-bottom:8px" placeholder="Capítulo (opcional)" value="${escapeHtml(itens[0].capitulo || '')}">
+      ${souCarlos() ? `
+      <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#444;margin-bottom:10px;cursor:pointer">
+        <input type="checkbox" id="${idGrupo}-prova-real" style="width:16px;height:16px;flex-shrink:0" onchange="document.getElementById('${idGrupo}-campos-concurso').classList.toggle('hidden', !this.checked)">
+        Questões de prova real (não geradas por IA)
+      </label>
+      <div id="${idGrupo}-campos-concurso" class="hidden" style="margin-bottom:10px">
+        <input type="text" id="${idGrupo}-concurso" class="filter-select" placeholder="Concurso (ex: PSCPP, EFOMM)" list="lista-concursos-existentes">
+        <input type="number" id="${idGrupo}-ano" class="filter-select" placeholder="Ano da prova">
+      </div>` : ''}
+      <div style="display:flex;gap:8px">
+        <button class="btn-secundario" style="flex:1" onclick="descartarGrupoRascunho('${nomeArquivo.replace(/'/g,"\\'")}')">Descartar</button>
+        <button class="btn-primario" style="flex:1" onclick="resolverGrupoRascunho('${nomeArquivo.replace(/'/g,"\\'")}', '${idGrupo}')">Cadastrar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// publicações tratadas como capítulo único — sempre a fonte inteira, nunca
+// subdividida, mesmo que o documento em si tenha capítulos/itens internos
+// por dentro (ex: Lei dos Portos tem capítulos I, IV, VIII, mas é tratada
+// como um bloco só). Leis e decretos SEMPRE entram aqui (regra geral);
+// documentos da IMO entram um por um numa lista fixa — nem todo documento
+// da IMO é único (ex: MSC/Circ.1053 tem capítulos reais e NÃO deve entrar
+// aqui, foi um erro que corrigimos depois de aplicar sem checar direito)
+function preencherCapituloUnicoSeAplicavel(idGrupo){
+  const bibliografiaId = document.getElementById(idGrupo+'-publicacao').value;
+  const elCapitulo = document.getElementById(idGrupo+'-capitulo');
+  const bib = bibliografiaCache.find(b => b.id === bibliografiaId);
+  // só preenche se o campo ainda estiver vazio — nunca sobrescreve algo
+  // que a pessoa já tenha digitado à mão
+  if(bib && ehFonteCapituloUnico(bib.titulo) && !elCapitulo.value.trim()){
+    elCapitulo.value = 'Único';
+  }
+}
+
+function atualizarPublicacoesRevisao(idGrupo){
+  const modulo = document.getElementById(idGrupo+'-modulo').value;
+  const elPublicacao = document.getElementById(idGrupo+'-publicacao');
+  if(!modulo){
+    elPublicacao.innerHTML = '<option value="">Escolhe o módulo primeiro</option>';
+    elPublicacao.disabled = true;
+    return;
+  }
+  const opcoes = bibliografiaCache.filter(b => b.modulo_pscpp === modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+  elPublicacao.innerHTML = '<option value="">Escolhe a publicação...</option>' + opcoes.map(b=>`<option value="${b.id}">${escapeHtml(b.nome_exibicao || b.titulo)}</option>`).join('');
+  elPublicacao.disabled = false;
+}
+
+// trava por chave (nomeArquivo+idGrupo) — evita que um clique duplo rápido
+// dispare 2 levas paralelas tentando cadastrar as mesmas questões duas vezes
+let gruposRascunhoEmProcessamento = new Set();
+async function resolverGrupoRascunho(nomeArquivo, idGrupo){
+  const chave = nomeArquivo + '|' + idGrupo;
+  if(gruposRascunhoEmProcessamento.has(chave)) return;
+  gruposRascunhoEmProcessamento.add(chave);
+  try{
+    const modulo = document.getElementById(idGrupo+'-modulo').value;
+  const bibliografiaId = document.getElementById(idGrupo+'-publicacao').value;
+  const capituloDigitado = document.getElementById(idGrupo+'-capitulo').value.trim();
+  const bibEscolhida = bibliografiaId ? bibliografiaCache.find(b => b.id === bibliografiaId) : null;
+  const capituloEhAutomatico = ehFonteCapituloUnico(bibEscolhida?.titulo);
+  const checkboxMarinha = document.getElementById(idGrupo+'-prova-real');
+  const marcadoComoMarinha = checkboxMarinha ? checkboxMarinha.checked : false;
+  const concursoOrigem = marcadoComoMarinha ? (document.getElementById(idGrupo+'-concurso').value.trim() || null) : null;
+  const anoProva = marcadoComoMarinha ? (parseInt(document.getElementById(idGrupo+'-ano').value, 10) || null) : null;
+  if(!modulo || !bibliografiaId || (!capituloDigitado && !capituloEhAutomatico)){
+    alert('Escolhe o módulo, a publicação e o capítulo antes de cadastrar – capítulo é obrigatório.');
+    return;
+  }
+
+  let query = sb.from('questoes_rascunho').select('*').eq('nome_arquivo_origem', nomeArquivo);
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  const {data: itens} = await query;
+  if(!itens || !itens.length) return;
+
+  // confirmação dupla: a publicação escolhida À MÃO no dropdown bate de
+  // verdade com o texto? Evita o erro de clicar na opção errada — já
+  // aconteceu de verdade (questão do Nayak marcada manualmente como
+  // "International Code of Signals", livro que nem é citado no texto).
+  // Usa as mesmas palavras-chave da identificação automática: se NENHUMA
+  // questão do grupo tem NENHUMA delas, para e pede confirmação explícita
+  // antes de cadastrar
+  if(bibEscolhida){
+    const entradasDessaPublicacao = BIBLIOGRAFIA_FECHADA.filter(e => e.modulo === modulo && e.titulo === bibEscolhida.titulo);
+    if(entradasDessaPublicacao.length){
+      const termosValidos = [...new Set(entradasDessaPublicacao.flatMap(e => e.autorBusca))];
+      const bateComAlgum = itens.some(q => {
+        const textoNorm = normalizarBusca([q.explicacao, q.enunciado].filter(Boolean).join(' '));
+        return termosValidos.some(termo => textoContemTermo(textoNorm, normalizarBusca(termo)));
+      });
+      if(!bateComAlgum){
+        const confirmar = confirm(`Nenhuma questão desse grupo menciona termos esperados de "${bibEscolhida.titulo}" (ex: ${termosValidos.slice(0,3).join(', ')}). Confirma que essa é a publicação certa mesmo assim?`);
+        if(!confirmar) return;
+      }
+    }
+  }
+
+  // detecta se o grupo parece ter questões de LIVROS DIFERENTES entre si —
+  // roda a mesma identificação automática usada no upload, item por item
+  // (não em lote), e se aparecer mais de um título diferente sendo
+  // reconhecido, bloqueia o cadastro em grupo. Isso existe porque um
+  // arquivo com assuntos bem diferentes (prova de concurso inteira) já foi
+  // cadastrado inteiro numa publicação só, sem capítulo, corrompendo os
+  // dados — 34 questões de MARPOL/PNA/comunicações carimbadas como se
+  // fossem de Miguens, só porque saiu mais rápido resolver assim
+  const identificacoesPorItem = itens.map(q => identificarBibliografia(q.explicacao, q.enunciado));
+  const identificadas = identificacoesPorItem.filter(Boolean);
+  const titulosDistintos = new Set(identificadas.map(r => r.titulo));
+  // 2 sinais de grupo misturado: (1) mais de 1 livro diferente identificado
+  // — pega quando os 2 livros já estão cadastrados no reconhecimento; (2)
+  // só PARTE do grupo identifica algo, não todas nem nenhuma — pega
+  // quando um dos assuntos ainda não tem reconhecimento cadastrado (ex:
+  // MARPOL), mas ainda assim os outros itens do grupo destoam. Prefere
+  // bloquear demais a deixar passar um cadastro errado
+  const misturaSuspeita = titulosDistintos.size > 1 || (identificadas.length > 0 && identificadas.length < itens.length);
+  if(misturaSuspeita){
+    const mensagemTitulos = titulosDistintos.size ? ` (encontrei: ${[...titulosDistintos].join(' | ')})` : '';
+    alert(`Esse grupo parece ter questões de assuntos diferentes entre si${mensagemTitulos}. Pra evitar cadastro errado, resolve cada questão separadamente em vez de tudo em lote – abre uma de cada vez pela tela de revisão.`);
+    return;
+  }
+
+  // de-duplica DENTRO do mesmo lote antes de processar — sem isso, várias
+  // cópias idênticas da mesma questão (ex: de tentativas repetidas de
+  // upload) rodavam a checagem de duplicata em paralelo, todas ao mesmo
+  // tempo, então nenhuma via a outra ainda inserindo (checar-depois-inserir
+  // não é atômico quando roda em paralelo — bug real que já duplicou
+  // questão 5x). Mantém só a mais antiga de cada grupo, descarta o
+  // rascunho das outras direto, sem nem tentar inserir
+  const vistos = new Map();
+  const itensUnicos = [];
+  const idsDuplicadosNoLote = [];
+  itens.forEach(q => {
+    const chaveItem = q.enunciado + '|' + q.alternativas;
+    if(vistos.has(chaveItem)) idsDuplicadosNoLote.push(q.id);
+    else { vistos.set(chaveItem, true); itensUnicos.push(q); }
+  });
+  if(idsDuplicadosNoLote.length){
+    await Promise.all(idsDuplicadosNoLote.map(id => sb.from('questoes_rascunho').delete().eq('id', id)));
+  }
+
+  // só apaga o rascunho DEPOIS de confirmar que o insert deu certo — se o
+  // insert falhar, o item continua no rascunho (nada se perde, só fica
+  // pendente de tentar de novo) em vez de sumir sem nunca ter sido salvo
+  const falhas = [];
+  let quantasDuplicadas = idsDuplicadosNoLote.length;
+  await Promise.all(itensUnicos.map(async q => {
+    // mesma checagem de duplicata que o upload direto já faz — sem isso,
+    // resolver o mesmo rascunho duas vezes (ou um rascunho que já tinha
+    // sido cadastrado por outro caminho) duplicava a questão sem avisar.
+    // NOTA: essa checagem sozinha ainda tem uma janela de corrida entre
+    // checar e inserir — a trava de verdade é a constraint UNIQUE no banco,
+    // tratada mais abaixo (código 23505) como uma segunda camada
+    const {data: existente} = await sb.from('questoes')
+      .select('id')
+      .eq('enunciado', q.enunciado)
+      .eq('alternativas', q.alternativas)
+      .maybeSingle();
+    if(existente){
+      quantasDuplicadas++;
+      await sb.from('questoes_rascunho').delete().eq('id', q.id);
+      return;
+    }
+
+    const {data: questaoInserida, error: erroInsert} = await sb.from('questoes').insert({
+      enunciado: q.enunciado,
+      alternativas: q.alternativas,
+      gabarito: q.gabarito,
+      autor_id: q.autor_id,
+      capitulo: capituloEhAutomatico ? 'Único' : (capituloDigitado || q.capitulo),
+      tipo_questao: null,
+      modulo_pscpp: modulo,
+      bibliografia_id: bibliografiaId,
+      explicacao: q.explicacao,
+      explicacao_origem: q.explicacao_origem,
+      concurso_origem: concursoOrigem,
+      ano_prova: anoProva
+    }).select('id').single();
+    if(erroInsert){
+      if(erroInsert.code === '23505'){
+        // a trava UNIQUE do banco pegou uma duplicata que a checagem
+        // anterior não viu a tempo (janela de corrida entre checar e
+        // inserir) — trata como duplicata normal, não como falha
+        quantasDuplicadas++;
+        await sb.from('questoes_rascunho').delete().eq('id', q.id);
+        return;
+      }
+      falhas.push(erroInsert.message);
+      return; // não apaga o rascunho — fica lá pra tentar de novo
+    }
+    const {error: erroDelete} = await sb.from('questoes_rascunho').delete().eq('id', q.id);
+    if(erroDelete){
+      // a questão já foi salva com sucesso — isso aqui não é perda de
+      // dado, só uma sobra no rascunho que vai aparecer duplicada da
+      // próxima vez. Avisa mesmo assim, pra saber que precisa limpar
+      falhas.push(`Questão cadastrada, mas não consegui remover do rascunho: ${erroDelete.message}`);
+    }
+  }));
+
+  if(falhas.length || quantasDuplicadas){
+    const textoDuplicadas = quantasDuplicadas ? `${quantasDuplicadas} já existia${quantasDuplicadas>1?'m':''} igual e ${quantasDuplicadas>1?'foram puladas':'foi pulada'}. ` : '';
+    const textoFalhas = falhas.length ? `${falhas.length} tiveram problema:\n\n${falhas.slice(0,5).join('\n')}${falhas.length>5?'\n...':''}` : '';
+    alert(`${itens.length - falhas.length - quantasDuplicadas} de ${itens.length} questões cadastradas. ${textoDuplicadas}${textoFalhas}`);
+  }
+
+  await abrirRevisaoRascunho(); // recarrega a lista
+  await atualizarNotificacoesOrdenadas();
+  }finally{
+    gruposRascunhoEmProcessamento.delete(chave);
+  }
+}
+
+async function descartarGrupoRascunho(nomeArquivo){
+  if(!confirm('Descartar essas questões de vez? Isso não pode ser desfeito.')) return;
+  let query = sb.from('questoes_rascunho').delete().eq('nome_arquivo_origem', nomeArquivo);
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  await query;
+  await abrirRevisaoRascunho();
+  await atualizarNotificacoesOrdenadas();
+}
+
+// ---- mesmo padrão acima, adaptado pro rascunho do V/F (texto/resposta
+// em vez de enunciado/alternativas/gabarito, sem tipo_questao nem
+// concurso/ano - o V/F ainda não tem essas travas extras) ----
+async function abrirRevisaoRascunhoVF(){
+  abrirModal('modal-revisao-rascunho-vf');
+  const container = document.getElementById('lista-rascunhos-pendentes-vf');
+  container.innerHTML = '<p style="text-align:center;color:#888">Carregando...</p>';
+
+  let query = sb.from('questoes_vf_rascunho').select('*, usuarios(nome)').order('criado_em', {ascending:false});
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  const {data} = await query;
+
+  if(!data || !data.length){
+    container.innerHTML = '<p style="text-align:center;color:#888">Nenhuma pendência no momento.</p>';
+    return;
+  }
+
+  // agrupa por arquivo de origem — na prática, questões do mesmo PDF são
+  // quase sempre do mesmo livro, então resolve o grupo inteiro de uma vez
+  const grupos = {};
+  data.forEach(r => {
+    const chave = r.nome_arquivo_origem || `sem-nome-${r.id}`;
+    if(!grupos[chave]) grupos[chave] = [];
+    grupos[chave].push(r);
+  });
+
+  if(!bibliografiaCache || !bibliografiaCache.length) await carregarBibliografia();
+
+  container.innerHTML = Object.entries(grupos).map(([nomeArquivo, itens]) => {
+    const idGrupo = 'grupovf-' + btoa(unescape(encodeURIComponent(nomeArquivo))).replace(/[^a-zA-Z0-9]/g,'');
+    const autorNome = itens[0].usuarios?.nome || 'Alguém';
+    const opcoesModulo = modulosPscpp.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+    return `
+    <div style="border:0.5px solid #ddd;border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-weight:600;font-size:var(--fs-e)">${escapeHtml(nomeArquivo === `sem-nome-${itens[0].id}` ? 'Upload sem nome de arquivo' : nomeArquivo)}</div>
+      <div style="color:#888;font-size:var(--fs-b);margin-bottom:10px">${itens.length} ${itens.length>1?'afirmações':'afirmação'} · enviado por ${escapeHtml(autorNome)}</div>
+      <details style="margin-bottom:10px">
+        <summary style="cursor:pointer;color:#666;font-size:var(--fs-b)">Ver afirmações</summary>
+        <div style="margin-top:8px;max-height:150px;overflow-y:auto;font-size:var(--fs-b);color:#555">
+          ${itens.map(q => `<p style="margin-bottom:6px">${escapeHtml(q.texto.slice(0,150))}${q.texto.length>150?'...':''}</p>`).join('')}
+        </div>
+      </details>
+      <select id="${idGrupo}-modulo" class="filter-select" style="margin-bottom:8px" onchange="atualizarPublicacoesRevisao('${idGrupo}')">
+        <option value="">Escolhe o módulo...</option>
+        ${opcoesModulo}
+      </select>
+      <select id="${idGrupo}-publicacao" class="filter-select" style="margin-bottom:8px" disabled onchange="preencherCapituloUnicoSeAplicavel('${idGrupo}')">
+        <option value="">Escolhe o módulo primeiro</option>
+      </select>
+      <input type="text" id="${idGrupo}-capitulo" class="filter-select" style="margin-bottom:8px" placeholder="Capítulo (opcional)" value="${escapeHtml(itens[0].capitulo || '')}">
+      <div style="display:flex;gap:8px">
+        <button class="btn-secundario" style="flex:1" onclick="descartarGrupoRascunhoVF('${nomeArquivo.replace(/'/g,"\\'")}')">Descartar</button>
+        <button class="btn-primario" style="flex:1" onclick="resolverGrupoRascunhoVF('${nomeArquivo.replace(/'/g,"\\'")}', '${idGrupo}')">Cadastrar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let gruposRascunhoVFEmProcessamento = new Set();
+async function resolverGrupoRascunhoVF(nomeArquivo, idGrupo){
+  const chave = nomeArquivo + '|' + idGrupo;
+  if(gruposRascunhoVFEmProcessamento.has(chave)) return;
+  gruposRascunhoVFEmProcessamento.add(chave);
+  try{
+    const modulo = document.getElementById(idGrupo+'-modulo').value;
+    const bibliografiaId = document.getElementById(idGrupo+'-publicacao').value;
+    const capituloDigitado = document.getElementById(idGrupo+'-capitulo').value.trim();
+    const bibEscolhida = bibliografiaId ? bibliografiaCache.find(b => b.id === bibliografiaId) : null;
+    const capituloEhAutomatico = ehFonteCapituloUnico(bibEscolhida?.titulo);
+    if(!modulo || !bibliografiaId || (!capituloDigitado && !capituloEhAutomatico)){
+      alert('Escolhe o módulo, a publicação e o capítulo antes de cadastrar – capítulo é obrigatório.');
+      return;
+    }
+
+    let query = sb.from('questoes_vf_rascunho').select('*').eq('nome_arquivo_origem', nomeArquivo);
+    if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+    const {data: itens} = await query;
+    if(!itens || !itens.length) return;
+
+    // mesma confirmação dupla do fluxo normal: a publicação escolhida à
+    // mão bate de verdade com o texto das afirmações?
+    if(bibEscolhida){
+      const entradasDessaPublicacao = BIBLIOGRAFIA_FECHADA.filter(e => e.modulo === modulo && e.titulo === bibEscolhida.titulo);
+      if(entradasDessaPublicacao.length){
+        const termosValidos = [...new Set(entradasDessaPublicacao.flatMap(e => e.autorBusca))];
+        const bateComAlgum = itens.some(q => {
+          const textoNorm = normalizarBusca([q.explicacao, q.texto].filter(Boolean).join(' '));
+          return termosValidos.some(termo => textoContemTermo(textoNorm, normalizarBusca(termo)));
+        });
+        if(!bateComAlgum){
+          const confirmar = confirm(`Nenhuma afirmação desse grupo menciona termos esperados de "${bibEscolhida.titulo}" (ex: ${termosValidos.slice(0,3).join(', ')}). Confirma que essa é a publicação certa mesmo assim?`);
+          if(!confirmar) return;
+        }
+      }
+    }
+
+    // de-duplica DENTRO do mesmo lote antes de processar - mesmo motivo
+    // do fluxo normal (checar-depois-inserir não é atômico em paralelo)
+    const vistos = new Map();
+    const itensUnicos = [];
+    const idsDuplicadosNoLote = [];
+    itens.forEach(q => {
+      if(vistos.has(q.texto)) idsDuplicadosNoLote.push(q.id);
+      else { vistos.set(q.texto, true); itensUnicos.push(q); }
+    });
+    if(idsDuplicadosNoLote.length){
+      await Promise.all(idsDuplicadosNoLote.map(id => sb.from('questoes_vf_rascunho').delete().eq('id', id)));
+    }
+
+    const falhas = [];
+    let quantasDuplicadas = idsDuplicadosNoLote.length;
+    await Promise.all(itensUnicos.map(async q => {
+      const {data: existente} = await sb.from('questoes_vf').select('id').eq('texto', q.texto).maybeSingle();
+      if(existente){
+        quantasDuplicadas++;
+        await sb.from('questoes_vf_rascunho').delete().eq('id', q.id);
+        return;
+      }
+
+      const {error: erroInsert} = await sb.from('questoes_vf').insert({
+        texto: q.texto,
+        resposta: q.resposta,
+        explicacao: q.explicacao,
+        correcao: q.correcao,
+        trechos_fonte: q.trechos_fonte,
+        fonte: q.fonte,
+        bibliografia_id: bibliografiaId,
+        capitulo: capituloEhAutomatico ? 'Único' : (capituloDigitado || q.capitulo),
+        n_palavras: q.n_palavras,
+        eh_numero: q.eh_numero,
+        eh_lista: q.eh_lista,
+        inconsistente: q.inconsistente,
+        dificuldade: q.dificuldade,
+        autor_id: q.autor_id,
+        lote_upload_id: q.lote_upload_id,
+        nome_arquivo_origem: q.nome_arquivo_origem
+      }).select('id').single();
+      if(erroInsert){
+        if(erroInsert.code === '23505'){
+          quantasDuplicadas++;
+          await sb.from('questoes_vf_rascunho').delete().eq('id', q.id);
+          return;
+        }
+        falhas.push(erroInsert.message);
+        return; // não apaga o rascunho — fica lá pra tentar de novo
+      }
+      const {error: erroDelete} = await sb.from('questoes_vf_rascunho').delete().eq('id', q.id);
+      if(erroDelete){
+        falhas.push(`Afirmação cadastrada, mas não consegui remover do rascunho: ${erroDelete.message}`);
+      }
+    }));
+
+    if(falhas.length || quantasDuplicadas){
+      const textoDuplicadas = quantasDuplicadas ? `${quantasDuplicadas} já existia${quantasDuplicadas>1?'m':''} igual e ${quantasDuplicadas>1?'foram puladas':'foi pulada'}. ` : '';
+      const textoFalhas = falhas.length ? `${falhas.length} tiveram problema:\n\n${falhas.slice(0,5).join('\n')}${falhas.length>5?'\n...':''}` : '';
+      alert(`${itens.length - falhas.length - quantasDuplicadas} de ${itens.length} afirmações cadastradas. ${textoDuplicadas}${textoFalhas}`);
+    }
+
+    await abrirRevisaoRascunhoVF(); // recarrega a lista
+    await atualizarNotificacoesOrdenadas();
+  }finally{
+    gruposRascunhoVFEmProcessamento.delete(chave);
+  }
+}
+
+async function descartarGrupoRascunhoVF(nomeArquivo){
+  if(!confirm('Descartar essas afirmações de vez? Isso não pode ser desfeito.')) return;
+  let query = sb.from('questoes_vf_rascunho').delete().eq('nome_arquivo_origem', nomeArquivo);
+  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
+  await query;
+  await abrirRevisaoRascunhoVF();
+  await atualizarNotificacoesOrdenadas();
+}
+
+async function baixarModeloPlanilha(){
+  await carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', () => typeof XLSX !== 'undefined');
+  const cabecalho = ['Enunciado', 'Alternativas', 'Gabarito', 'Módulo PSCPP', 'Capítulo', 'Tipo de Questão'];
+  const exemplo = [
+    'Exemplo: Qual a largura mínima de segurança de um canal de acesso?',
+    '(a) texto da alternativa a. (b) texto da alternativa b. (c) texto da alternativa c. (d) texto da alternativa d. (e) texto da alternativa e.',
+    'b',
+    'Navegação em Águas Restritas',
+    'cap. 11',
+    'Conceitual'
+  ];
+  const planilha = XLSX.utils.aoa_to_sheet([cabecalho, exemplo]);
+  const livro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(livro, planilha, 'Questões');
+  XLSX.writeFile(livro, 'modelo-questoes-claude-quest.xlsx');
+}
+
+function atualizarNomePlanilhaSelecionada(manterStatus){
+  const input = document.getElementById('upload-planilha');
+  const el = document.getElementById('nome-planilha-selecionada');
+  if(!manterStatus) document.getElementById('upload-planilha-status').innerHTML = '';
+  if(input.files.length){
+    el.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${escapeHtml(input.files[0].name)}</span><button type="button" onclick="limparPlanilhaSelecionada()" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px;flex-shrink:0" title="Remover planilha">✕</button>`;
+  }else{
+    el.textContent = 'Nenhuma planilha selecionada';
+  }
+}
+function limparPlanilhaSelecionada(){
+  document.getElementById('upload-planilha').value = '';
+  atualizarNomePlanilhaSelecionada();
+  document.getElementById('upload-planilha-status').innerHTML = '';
+}
+
+async function enviarPlanilha(){
+  const input = document.getElementById('upload-planilha');
+  const status = document.getElementById('upload-planilha-status');
+  if(!input.files.length){ status.innerHTML = '<p style="color:#B00020">Escolha uma planilha primeiro.</p>'; return; }
+  const marcadoComoMarinha = souCarlos() && document.getElementById('upload-eh-marinha').checked;
+  const concursoOrigemUpload = marcadoComoMarinha ? (document.getElementById('upload-concurso').value.trim() || null) : null;
+  const anoProvaUpload = marcadoComoMarinha ? (parseInt(document.getElementById('upload-ano').value, 10) || null) : null;
+
+  extracaoEmAndamento = true;
+  status.innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg><p style="text-align:center">Lendo planilha...</p>';
+
+  const modulosValidos = ['Manobrabilidade','Arte Naval','Navegação em Águas Restritas','Legislação','Meteorologia e Oceanografia','Comunicações','Conhecimentos Gerais'];
+  const tiposValidos = ['Conceitual','Cálculo','Número','Lista','Identificação'];
+
+  let linhas;
+  try{
+    await carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', () => typeof XLSX !== 'undefined');
+    const arquivo = input.files[0];
+    const buffer = await arquivo.arrayBuffer();
+    const livro = XLSX.read(buffer, {type:'array'});
+    const planilha = livro.Sheets[livro.SheetNames[0]];
+    linhas = XLSX.utils.sheet_to_json(planilha, {defval:''});
+  }catch(e){
+    extracaoEmAndamento = false;
+    status.innerHTML = `<p style="color:#B00020">Não consegui ler essa planilha: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  if(!linhas.length){
+    extracaoEmAndamento = false;
+    status.innerHTML = '<p style="color:#B00020">Planilha vazia, ou as colunas não batem com o modelo. Baixa o modelo de novo se precisar.</p>';
+    return;
+  }
+
+  const questoesValidas = [];
+  const erros = [];
+  linhas.forEach((linha, i) => {
+    const enunciado = String(linha['Enunciado']||'').trim();
+    if(!enunciado || enunciado.startsWith('Exemplo:')) return; // pula linha vazia ou a linha de exemplo
+
+    const alternativas = String(linha['Alternativas']||'').trim();
+    const gabarito = String(linha['Gabarito']||'').trim().toLowerCase();
+    const modulo = String(linha['Módulo PSCPP']||'').trim();
+    const capitulo = String(linha['Capítulo']||'').trim();
+    const tipoQuestao = String(linha['Tipo de Questão']||'').trim();
+
+    if(!['a','b','c','d','e'].includes(gabarito)){
+      erros.push(`Linha ${i+2}: gabarito "${gabarito}" precisa ser uma letra de a a e.`);
+      return;
+    }
+    if(!modulosValidos.includes(modulo)){
+      erros.push(`Linha ${i+2}: módulo "${modulo}" não é um dos 7 módulos válidos.`);
+      return;
+    }
+    if(tipoQuestao && !tiposValidos.includes(tipoQuestao)){
+      erros.push(`Linha ${i+2}: tipo "${tipoQuestao}" não é um tipo válido (deixa em branco se não souber).`);
+      return;
+    }
+    questoesValidas.push({
+      enunciado, alternativas, gabarito,
+      modulo_pscpp: modulo,
+      capitulo: capitulo || null,
+      tipo_questao: tipoQuestao || null,
+      autor_id: usuarioAtual.id,
+      explicacao_origem: 'nunca_gerada',
+      concurso_origem: concursoOrigemUpload,
+          ano_prova: anoProvaUpload
+    });
+  });
+
+  if(erros.length){
+    extracaoEmAndamento = false;
+    status.innerHTML = `<p style="color:#B00020">${erros.length} linha(s) com problema – corrige na planilha e sobe de novo:</p><p style="color:#B00020;font-size:var(--fs-b)">${erros.slice(0,6).map(e=>escapeHtml(e)).join('<br>')}</p>`;
+    return;
+  }
+  if(!questoesValidas.length){
+    extracaoEmAndamento = false;
+    status.innerHTML = '<p style="color:#B00020">Nenhuma questão preenchida na planilha (só achei a linha de exemplo).</p>';
+    return;
+  }
+
+  await Promise.all(questoesValidas.map(q => sb.from('questoes').insert(q)));
+  extracaoEmAndamento = false;
+  status.innerHTML = `<p style="color:#1B5E20">${questoesValidas.length} questões cadastradas!</p>`;
+  input.value = '';
+  atualizarNomePlanilhaSelecionada(true);
+  setTimeout(() => {
+    status.style.transition = 'opacity 0.6s';
+    status.style.opacity = '0';
+    setTimeout(() => { status.innerHTML = ''; status.style.opacity = '1'; }, 600);
+  }, 2500);
+}
+
+/* ============================================================
+   ADMIN
+   ============================================================ */
+function trocarAbaAdmin(aba){
+  document.querySelectorAll('#modal-admin .filter-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  const el = document.getElementById('admin-conteudo');
+  el.innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>';
+
+  if(aba==='erros'){
+    sb.from('erros_app').select('*').order('criado_em',{ascending:false}).limit(50).then(({data})=>{
+      el.innerHTML = (data||[]).map(e=>`<div class="card-questao"><strong>${escapeHtml(e.tela||'?')}</strong><p>${escapeHtml(e.mensagem)}</p><span style="font-size:var(--fs-b);color:#888">${new Date(e.criado_em).toLocaleString('pt-BR')}</span></div>`).join('') || '<p>Sem erros registrados.</p>';
+    });
+  }
+  if(aba==='malformadas'){
+    sb.from('questoes').select('*').or('gabarito.is.null,alternativas.is.null').limit(500).then(({data})=>{
+      el.innerHTML = (data||[]).map(q=>`<div class="card-questao"><p>${escapeHtml((q.enunciado||'(vazio)').slice(0,100))}</p></div>`).join('') || '<p style="color:#888;font-size:var(--fs-d)">Nenhuma questão malformada encontrada.</p>';
+    });
+  }
+  if(aba==='caderno'){
+    el.innerHTML = `
+      <input type="text" id="admin-usuario-id" placeholder="ID do usuário" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid #DDD">
+      <input type="text" id="admin-caderno-id" placeholder="ID do caderno" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid #DDD">
+      <button class="btn-secundario" onclick="buscarCadernoAdmin()">Buscar</button>
+      <div id="admin-caderno-resultado"></div>`;
+  }
+  if(aba==='convites'){
+    el.innerHTML = `
+      <input type="text" id="admin-convite-apelido" placeholder="Apelido" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid #DDD">
+      <input type="text" id="admin-convite-nome-completo" placeholder="Nome completo" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid #DDD">
+      <button class="btn-primario" onclick="gerarLinkConvite()">Gerar link de convite</button>
+      <div id="admin-convite-resultado" style="margin-top:14px"></div>`;
+  }
+}
+async function gerarLinkConvite(){
+  const apelido = document.getElementById('admin-convite-apelido').value.trim();
+  const nomeCompleto = document.getElementById('admin-convite-nome-completo').value.trim();
+  const resultadoEl = document.getElementById('admin-convite-resultado');
+  if(!apelido){ resultadoEl.innerHTML = '<p style="color:#B00020;font-size:var(--fs-d)">Digite o apelido.</p>'; return; }
+
+  const {data, error} = await sb.from('convites').insert({apelido, nome_completo: nomeCompleto || null}).select().single();
+  if(error){ resultadoEl.innerHTML = `<p style="color:#B00020;font-size:var(--fs-d)">Erro: ${escapeHtml(error.message)}</p>`; return; }
+
+  const link = `${window.location.origin}${window.location.pathname}?convite=${data.id}`;
+  const textoWhatsapp = encodeURIComponent(`E aiiii ${apelido}! Te chamei pro Pilotquest – nosso banco de questões pra estudar juntos pro PSCPP 🚢, Bora?\n\n${link}`);
+  resultadoEl.innerHTML = `
+    <div class="card-questao">
+      <p style="font-size:var(--fs-b);word-break:break-all;color:#666">${escapeHtml(link)}</p>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-secundario" style="flex:1;width:auto" onclick="navigator.clipboard.writeText('${link}')">Copiar link</button>
+        <a class="btn-primario" style="flex:1;width:auto;text-align:center;text-decoration:none;box-sizing:border-box" href="https://wa.me/?text=${textoWhatsapp}" target="_blank">WhatsApp</a>
+      </div>
+    </div>`;
+  document.getElementById('admin-convite-apelido').value = '';
+  document.getElementById('admin-convite-nome-completo').value = '';
+}
+async function buscarCadernoAdmin(){
+  const uid = document.getElementById('admin-usuario-id').value.trim();
+  const cid = document.getElementById('admin-caderno-id').value.trim();
+  const {data, error} = await sb.rpc('ver_caderno_de', {p_usuario_id: uid, p_caderno_id: cid});
+  const el = document.getElementById('admin-caderno-resultado');
+  if(error || !data || !data.length){ el.innerHTML = '<p>Nada encontrado (ou você não tem permissão admin).</p>'; return; }
+  el.innerHTML = data.map(r=>`<div class="card-questao">Resposta: ${r.resposta_dada} – ${r.correta?'✅':'❌'}</div>`).join('');
+}
+
+// Puxar-pra-atualizar (pull-to-refresh) — só ativa quando o scroll já está
+// no topo, pra nunca interferir na rolagem normal
+(function initPullToRefresh(){
+  const contentEl=document.getElementById('content');
+  const indicador=document.getElementById('ptr-indicator');
+  const seta=document.getElementById('ptr-seta');
+  const spinner=document.getElementById('ptr-spinner');
+  if(!contentEl||!indicador||!seta||!spinner) return;
+  const LIMIAR=64,MAX_ARRASTO=90;
+  let yInicial=null,arrastando=false,atualizando=false,passouLimiar=false;
+
+  function resetVisual(){
+    indicador.classList.remove('ativo');
+    indicador.style.height='0px';
+    seta.classList.remove('pronta','escondida');
+    spinner.classList.remove('girando');
+  }
+
+  // Depois de carregar, precisa de um reset diferente do normal: NÃO pode remover 'escondida' da
+  // seta ao mesmo tempo que o container encolhe, senão a seta reaparece com fade-in bem no meio
+  // do encolhimento (pisca por um instante). Encolhe primeiro, e só reseta a seta depois, sem
+  // transição nenhuma, já com tudo escondido.
+  function finalizarCarregamento(){
+    indicador.classList.remove('ativo');
+    indicador.style.height='0px';
+    spinner.classList.remove('girando');
+    setTimeout(()=>{
+      seta.style.transition='none';
+      seta.classList.remove('pronta','escondida');
+      seta.offsetHeight; // força o navegador a aplicar antes de religar a transição
+      seta.style.transition='';
+    },200); // mesma duração da transição de altura do indicador
+  }
+
+  contentEl.addEventListener('touchstart',(e)=>{
+    if(atualizando) return;
+    // desativado por completo na aba do Flash — a caneta encostando perto
+    // do topo e descendo um pouco (bem fácil de acontecer desenhando)
+    // disparava esse gesto sem querer, fazendo a tela "pular"
+    if(typeof vfEstaVisivelAgora === 'function' && vfEstaVisivelAgora()) return;
+    if(contentEl.scrollTop<=0){
+      yInicial=e.touches[0].clientY;
+      arrastando=true;
+      passouLimiar=false;
+    }else{
+      yInicial=null;
+      arrastando=false;
+    }
+  },{passive:true});
+
+  contentEl.addEventListener('touchmove',(e)=>{
+    if(!arrastando||yInicial===null||atualizando) return;
+    const delta=e.touches[0].clientY-yInicial;
+    if(delta<=0){ resetVisual(); return; }
+    if(contentEl.scrollTop>0){ arrastando=false; return; }
+    // a partir daqui é puxar-pra-baixo de verdade, com o scroll já no topo —
+    // impede o navegador de fazer QUALQUER coisa por conta própria (incluindo
+    // o elástico nativo dele, que aparecia sem limite quando o conteúdo da
+    // aba era mais curto que a tela)
+    e.preventDefault();
+    const distancia=Math.min(delta*0.5,MAX_ARRASTO);
+    indicador.classList.add('ativo');
+    indicador.style.height=distancia+'px';
+    // seta só alterna entre 2 estados (normal / virada) ao cruzar o limiar — nunca gira
+    // proporcional ao dedo, evita a sensação de travado. Transição suave fica por conta do CSS.
+    const cruzouAgora=distancia>=LIMIAR;
+    if(cruzouAgora!==passouLimiar){
+      passouLimiar=cruzouAgora;
+      seta.classList.toggle('pronta',passouLimiar);
+    }
+  },{passive:false});
+
+  contentEl.addEventListener('touchend',async()=>{
+    if(!arrastando||yInicial===null){ yInicial=null; return; }
+    arrastando=false;
+    yInicial=null;
+    if(passouLimiar&&!atualizando){
+      atualizando=true;
+      indicador.classList.remove('ativo');
+      indicador.style.height='44px';
+      seta.classList.add('escondida');
+      spinner.classList.add('girando');
+      try{ await atualizarAbaAtual(); }catch(e){}
+      finalizarCarregamento();
+      atualizando=false;
+    }else{
+      resetVisual();
+    }
+  },{passive:true});
+})();
+</script>
+</body>
+</html>
