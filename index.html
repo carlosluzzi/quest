@@ -339,7 +339,7 @@ body.vf-marcacao-texto-ativa .vf-numeral-item-nao-marcavel,body.vf-marcacao-text
 body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf-correcao-atual *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
 .enunciado-linha{display:block;margin-top:10px;white-space:pre-wrap;position:relative}
 .linha-numerada{display:flex;gap:8px;margin-top:10px;align-items:flex-start;position:relative}
-.linha-marcador{flex-shrink:0;font-weight:400;min-width:16px}
+.linha-marcador{flex-shrink:0;font-weight:400;min-width:19px}
 .linha-texto{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:break-word}
 .alternativa{display:block;width:100%;text-align:left;background:#F5F5F6;border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:var(--fs-d)}
 .alternativa.correta{background:#E1F5E1;color:#1B5E20;font-weight:600}
@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-453';
+const VERSAO_APP = '2026-07-25-458';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1758,6 +1758,18 @@ function formatQuestaoCompleta(texto){
   return {enunciado:[partesEnun[0]||'', ...partesEnun.slice(1)].join('<br>'), alternativas:partesAlt};
 }
 
+// remove o underscore de erro de extração/digitação em contrações com
+// apóstrofo (d'_Alembert, o'_clock...) ANTES de qualquer outra
+// formatação - mesma lógica/regra usada em api/extrair-pdf.js e em
+// mesclarSubscritosQuebrados: erro sempre tem 2+ letras depois do
+// underscore (palavra inteira), subscrito matemático legítimo (D'_i,
+// L'_e) sempre tem 1 letra só, nunca mexido aqui. Sem isso, o texto
+// antigo já salvo no banco com esse erro mostrava o _ cru na tela, já
+// que só evitar a conversão pra <sub> não bastava - tinha ficado visível
+function vfLimparApostrofoUnderscoreVF(texto){
+  if(!texto) return texto;
+  return texto.replace(/'_([A-Za-zÀ-ÿ]{2,})/g, "'$1");
+}
 // extrai {letra, texto} de cada alternativa a partir do campo "alternativas" da questão,
 // que já vem normalizado no formato "(a) texto. (b) texto. ..." (ver molde padrão de questão no dossiê)
 // Quebra o enunciado em linhas quando ele tem uma estrutura de lista interna.
@@ -1768,6 +1780,7 @@ function formatQuestaoCompleta(texto){
 //   3. Maiúsculas seguidas de ponto (A. B. C...) – questões de correlação
 function formatarEnunciado(texto){
   if(!texto) return '(enunciado vazio – questão pode estar malformada)';
+  texto = vfLimparApostrofoUnderscoreVF(texto);
   // colapsa qualquer quebra de linha/espaço interno pra um espaço só, ANTES
   // de dividir em itens — sem isso, o texto respeita as quebras de linha
   // originais do PDF (que quebravam numa largura de página estreita),
@@ -1776,7 +1789,7 @@ function formatarEnunciado(texto){
   let escapedCompleto = escapeHtml(texto).replace(/\s+/g, ' ').trim();
   escapedCompleto = vfAplicarMarcacaoMatematicaVF(escapedCompleto); // gregas, operadores, sqrt, sobrescrito com chaves - mesmo padrão do V/F
   escapedCompleto = escapedCompleto
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
@@ -1858,7 +1871,7 @@ function formatarEnunciado(texto){
     // informação que já existe no app — largura mínima (não fixa) pra
     // acomodar tanto marcadores curtos ("a)") quanto mais longos ("III.")
     // sem espremer o texto
-    const estiloBadge = 'display:inline-block;min-width:24px;height:24px;line-height:24px;padding:0 4px;border-radius:8px;font-weight:700;text-align:center;box-sizing:border-box';
+    const estiloBadge = 'display:inline-block;min-width:32px;height:24px;line-height:24px;padding:0 4px;border-radius:8px;font-weight:700;text-align:center;box-sizing:border-box';
     if(matchIncorreta){ corMarcador = ` style="${estiloBadge};background:#FCEBEB;color:#A32D2D"`; resto = resto.slice(matchIncorreta[0].length); }
     else if(matchCorreta){ corMarcador = ` style="${estiloBadge};background:#EAF3DE;color:#3B6D11"`; resto = resto.slice(matchCorreta[0].length); }
     return `<div class="linha-numerada"><span class="linha-marcador"${corMarcador}>${marcador}</span><span class="linha-texto">${resto}</span></div>${secoesSeparadas}`;
@@ -1976,8 +1989,9 @@ function extrairItensNumerados(enunciado){
 
 function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
+  alternativasTexto = vfLimparApostrofoUnderscoreVF(alternativasTexto);
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
@@ -3873,6 +3887,7 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
 
 function formatarTextoItemVF(texto){
   if(!texto) return '';
+  texto = vfLimparApostrofoUnderscoreVF(texto);
   let resultado = escapeHtml(texto)
     // travessão longo (—) sempre vira curto (–) — o extrator às vezes
     // ainda manda o longo por engano, mesmo pedindo o curto; corrigir
@@ -3882,7 +3897,7 @@ function formatarTextoItemVF(texto){
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
   return resultado
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
 }
@@ -4578,22 +4593,7 @@ function vfEhToqueDeCaneta(touch){
   return touch && touch.touchType === 'stylus';
 }
 
-// proteção contra a palma da mão nos campos de edição (correção/
-// explicação) - um <textarea> nativo sempre "ganha" o toque pra seleção
-// de texto, mesmo com user-select:none no container pai (comportamento
-// nativo de campo de entrada, não é algo que CSS consiga bloquear). Se a
-// pessoa está escrevendo/corrigindo usando a caneta, qualquer toque que
-// não seja da própria caneta dentro desses textareas é quase sempre a
-// palma da mão apoiada sem querer - bloqueado antes que o navegador
-// selecione/copie o texto. Capture phase pra interceptar ANTES do
-// comportamento nativo de seleção do textarea
-document.addEventListener('touchstart', (e) => {
-  const dentroDeTextareaEdicao = e.target.closest('#vf-textarea-correcao, #vf-textarea-explicacao');
-  if(!dentroDeTextareaEdicao) return;
-  const touch = e.touches[0];
-  if(vfEhToqueDeCaneta(touch)) return; // a própria caneta sempre funciona normal (posicionar cursor, selecionar de propósito)
-  e.preventDefault();
-}, {capture: true, passive: false});
+
 
 // PointerEvent.getCoalescedEvents() dá acesso às amostras de toque REAIS
 // que o hardware gerou entre um touchmove e outro (não é interpolação/
@@ -8576,7 +8576,7 @@ async function avancarParaProximaVF(){
   vfPreBuscarProximasVF(); // não espera - roda solta em segundo plano enquanto o usuário lê
 }
 
-function mudarModuloFiltroVF(){
+async function mudarModuloFiltroVF(){
   const modulo = document.getElementById('vf-filtro-modulo').value;
   filtroVF.modulo = modulo || null;
   filtroVF.publicacao = null;
@@ -8589,10 +8589,15 @@ function mudarModuloFiltroVF(){
     elPub.innerHTML = '<option value="">Todas as publicações</option>';
     elPub.disabled = true;
   }else{
+    if(!vfPublicacoesComQuestaoVF){
+      const {data} = await sb.rpc('publicacoes_com_questoes_vf');
+      vfPublicacoesComQuestaoVF = new Set((data||[]).map(r => r.bibliografia_id).filter(Boolean));
+    }
     const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
-    elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>
-      `<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`
-    ).join('');
+    elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>{
+      const vazio = !vfPublicacoesComQuestaoVF.has(p.id);
+      return `<option value="${p.id}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(p.nome_exibicao || p.titulo)}</option>`;
+    }).join('');
     elPub.disabled = false;
   }
   mudarFiltroVF();
@@ -8684,6 +8689,12 @@ function alternarFiltrosVF(){
   }
 }
 
+// lista fixa dos 7 módulos do PSCPP - sempre aparecem todos no filtro,
+// mesmo os que ainda não têm nenhuma questão cadastrada no Flash (esses
+// ficam desabilitados, não escondidos - fica claro que a categoria
+// existe, só não tem conteúdo ainda)
+const VF_MODULOS_PSCPP_FIXOS = ['Manobrabilidade','Arte Naval','Navegação em Águas Restritas','Legislação','Meteorologia e Oceanografia','Comunicações','Conhecimentos Gerais'];
+let vfPublicacoesComQuestaoVF = null; // Set de bibliografia_id - carregado junto com os módulos, reaproveitado na cascata de publicação
 async function popularFiltroModuloVF(){
   const el = document.getElementById('vf-filtro-modulo');
   if(el.dataset.populado) return;
@@ -8692,11 +8703,16 @@ async function popularFiltroModuloVF(){
   // pra deduplicar no navegador era pesado e causava lentidão perceptível
   // (inclusive um artefato visual de reflow). A função no banco já
   // devolve só os módulos distintos, poucas linhas
-  const {data} = await sb.rpc('modulos_com_questoes_vf');
-  const modulosComVF = new Set((data||[]).map(r => r.modulo_pscpp).filter(Boolean));
-  el.innerHTML = '<option value="">Todos os módulos</option>' + [...modulosComVF].sort((a,b)=>a.localeCompare(b,'pt')).map(m=>
-    `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`
-  ).join('');
+  const [{data: modulosData}, {data: pubsData}] = await Promise.all([
+    sb.rpc('modulos_com_questoes_vf'),
+    sb.rpc('publicacoes_com_questoes_vf'),
+  ]);
+  const modulosComVF = new Set((modulosData||[]).map(r => r.modulo_pscpp).filter(Boolean));
+  vfPublicacoesComQuestaoVF = new Set((pubsData||[]).map(r => r.bibliografia_id).filter(Boolean));
+  el.innerHTML = '<option value="">Todos os módulos</option>' + VF_MODULOS_PSCPP_FIXOS.map(m => {
+    const vazio = !modulosComVF.has(m);
+    return `<option value="${escapeHtml(m)}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(m)}</option>`;
+  }).join('');
   el.dataset.populado = '1';
   await vfRestaurarUIFiltroVF(); // reflete visualmente o filtro que já veio restaurado do fechamento anterior do app
 }
@@ -8711,9 +8727,10 @@ async function vfRestaurarUIFiltroVF(){
     document.getElementById('vf-filtro-modulo').value = modulo;
     const elPub = document.getElementById('vf-filtro-publicacao');
     const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
-    elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>
-      `<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`
-    ).join('');
+    elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>{
+      const vazio = !vfPublicacoesComQuestaoVF?.has(p.id);
+      return `<option value="${p.id}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(p.nome_exibicao || p.titulo)}</option>`;
+    }).join('');
     elPub.disabled = false;
   }
   if(publicacao){
@@ -8803,7 +8820,7 @@ function renderizarItemVF(){
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
       </div>
-      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;margin-left:-8px;margin-right:-8px;margin-bottom:-8px;text-align:left;font-weight:400;position:relative;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
+      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;margin-left:-8px;margin-right:-8px;margin-bottom:-8px;text-align:left;font-weight:400;position:relative" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
     `;
   }
 
@@ -9092,6 +9109,8 @@ let vfTimerPressionarCorrecao = null;
 let vfMoveuDuranteToqueCorrecao = false;
 let vfPosicaoInicialPressionarCorrecaoVF = null;
 function vfIniciarPressionarCorrecao(evento){
+  const div = document.getElementById('vf-correcao-atual');
+  if(div && div.dataset.editando === '1') return; // já editando - não interfere no textarea
   vfMoveuDuranteToqueCorrecao = false;
   clearTimeout(vfTimerPressionarCorrecao);
   const ponto = evento && (evento.touches ? evento.touches[0] : evento);
@@ -9104,6 +9123,8 @@ function vfIniciarPressionarCorrecao(evento){
   }
 }
 function vfCancelarPressionarCorrecaoSilencioso(evento){
+  const div = document.getElementById('vf-correcao-atual');
+  if(div && div.dataset.editando === '1') return; // mesma blindagem do início do toque
   if(evento && vfPosicaoInicialPressionarCorrecaoVF){
     const ponto = evento.touches ? evento.touches[0] : evento;
     if(ponto){
@@ -9799,31 +9820,11 @@ async function vfSalvarEdicaoExplicacaoVF(questaoId, textoOriginal){
 }
 
 async function vfCopiarExplicacaoParaClaude(botao){
-  const entrada = estadoVF.historico.find(h => h.item.id === vfQuestaoIdExplicacaoAtual);
-  if(!entrada) return;
-  const item = entrada.item;
-  const livro = vfBibliografiaCache.get(item.bibliografia_id)?.titulo || 'Publicação não identificada';
-  const capituloTexto = item.capitulo
-    ? `${rotuloCapituloDoLivro(livro)} ${String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')}`
-    : null;
-  // sempre a versão VERDADEIRA da afirmação - se a original é falsa, usa a
-  // correção (o que vinha depois de "Correto:" no upload), nunca o texto
-  // falso original
-  const afirmacaoVerdadeira = item.resposta ? item.texto : (item.correcao || item.texto);
-  const partes = [
-    `Livro: ${livro}`,
-    capituloTexto ? `Capítulo: ${capituloTexto}` : null,
-    '',
-    `Afirmação (verdadeira): ${afirmacaoVerdadeira}`,
-    '',
-    item.explicacao ? `Explicação: ${item.explicacao}` : null,
-    '',
-    '---',
-    'Antes de explicar: abra o livro na pasta PSCPP/Bibliografia, localize a seção citada acima e leia. Não responda de memória. A Explicação acima é meu ponto de partida, não a fonte – confira contra o livro e me avise se divergir em algo.\n\nExplique isso da forma mais clara possível, by the book: o que o autor escreveu, na ordem em que ele apresenta. Se precisar acrescentar algo que não está no texto para a explicação fechar, marque como complemento seu. Se não achar o trecho no livro, me diga – não preencha com conhecimento geral.\n\nSe ajudar a entender, desenhe o que o autor quis dizer: um desenho em HTML renderizado aqui no chat. Não publique página nem artefato.\n\nNada além disso: sem seções extras, sem tabela-resumo, sem box de revisão, sem relatório dos meus erros anteriores. Explicação + desenho, e para. Se eu tiver dúvida, eu pergunto.'
-  ].filter(p => p !== null).join('\n');
-
+  const el = document.getElementById('conteudo-explicacao-vf');
+  if(!el) return;
+  const texto = el.textContent.trim();
   try{
-    await navigator.clipboard.writeText(partes);
+    await navigator.clipboard.writeText(texto);
     vfMostrarSelinhoCopiadoVF(botao);
   }catch(e){
     alert('Não consegui copiar automaticamente. Tenta selecionar o texto manualmente.');
@@ -10521,71 +10522,166 @@ async function reportarProblemaFormatacao(questaoId){
 // votação da comunidade), essa aplica na hora, sem votar. Só aparece o
 // botão pra quem é admin
 let questaoEdicaoAdminAtual = null;
-async function abrirEdicaoDiretaAdmin(questaoId){
-  const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
-  if(!q){ alert('Não consegui carregar essa questão.'); return; }
-  questaoEdicaoAdminAtual = questaoId;
-  // colapsa as quebras de linha originais do PDF (que quebravam numa largura
-  // de coluna estreita, no meio da frase) antes de mostrar no formulário —
-  // sem isso, o texto aparece "picado" em várias linhas curtas, difícil de
-  // ler e editar. Isso já limpa o texto salvo também, já que ao salvar sem
-  // mexer em nada o valor limpo é o que volta pro banco
-  const limpar = t => (t||'').replace(/\s+/g, ' ').trim();
-  document.getElementById('admin-edicao-enunciado').value = limpar(removerMarcadoresSubscrito(q.enunciado));
-  // separa as alternativas nos 5 campos individuais, reaproveitando o
-  // mesmo parser que já divide "a) texto b) texto..." pra exibição normal
-  const altsExtraidas = extrairAlternativas(q.alternativas);
-  const mapaAlts = {};
-  altsExtraidas.forEach(a => { mapaAlts[a.letra] = a.texto; });
-  ['a','b','c','d','e'].forEach(letra => {
-    document.getElementById('admin-edicao-alt-'+letra).value = limpar(removerMarcadoresSubscrito(mapaAlts[letra] || ''));
-  });
-  document.getElementById('admin-edicao-gabarito').value = (q.gabarito||'').toUpperCase();
-  document.getElementById('admin-edicao-explicacao').value = limpar(removerMarcadoresSubscrito(q.explicacao || ''));
-  document.getElementById('admin-edicao-concurso').value = q.concurso_origem || '';
-  document.getElementById('admin-edicao-ano').value = q.ano_prova || '';
-  abrirModal('modal-editar-questao-admin');
+// ==== edição em lugar das questões do Quest (souCarlos()) - substitui o
+// formulário único antigo. Segurar em cima do texto edita ali mesmo,
+// solta e já salva sozinho - mesmo padrão já usado no Flash ====
+
+// --- enunciado ---
+let vfTimerPressionarEnunciadoQuestVF = null;
+let vfPosicaoInicialPressionarEnunciadoQuestVF = null;
+function vfIniciarPressionarEnunciadoQuestVF(evento){
+  clearTimeout(vfTimerPressionarEnunciadoQuestVF);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarEnunciadoQuestVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
+  vfTimerPressionarEnunciadoQuestVF = setTimeout(() => {
+    vfTimerPressionarEnunciadoQuestVF = null;
+    vfIniciarEdicaoEnunciadoQuestVF();
+  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
 }
-async function salvarEdicaoDiretaAdmin(){
-  if(!questaoEdicaoAdminAtual) return;
-  const enunciado = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-enunciado').value.trim());
-  // junta os 5 campos individuais de volta no formato "a) texto\nb) texto..."
-  // que o banco espera — pula letras deixadas em branco (questão com menos
-  // de 5 alternativas, caso raro mas existe)
-  const alternativas = ['a','b','c','d','e']
-    .map(letra => {
-      const texto = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-alt-'+letra).value.trim());
-      return texto ? `(${letra}) ${texto}` : null;
-    })
-    .filter(Boolean)
-    .join('\n');
-  const gabarito = document.getElementById('admin-edicao-gabarito').value.trim().toLowerCase();
-  const explicacao = mesclarSubscritosQuebrados(document.getElementById('admin-edicao-explicacao').value.trim());
-  const concursoOrigem = document.getElementById('admin-edicao-concurso').value.trim() || null;
-  const anoProva = parseInt(document.getElementById('admin-edicao-ano').value, 10) || null;
-  const {error} = await sb.from('questoes').update({
-    enunciado, alternativas, gabarito,
-    explicacao: explicacao || null,
-    explicacao_origem: explicacao ? 'fonte_original' : 'nunca_gerada',
-    concurso_origem: concursoOrigem,
-    ano_prova: anoProva,
-    atualizado_em: new Date().toISOString()
-  }).eq('id', questaoEdicaoAdminAtual);
-  if(error){ alert('Erro ao salvar: '+error.message); return; }
-  // marca quaisquer relatos de formatação dessa questão como vistos, já
-  // que acabou de ser corrigida
-  await sb.from('relatos_formatacao').update({visto:true}).eq('questao_id', questaoEdicaoAdminAtual);
-  fecharModal('modal-editar-questao-admin');
-  const idAtualizado = questaoEdicaoAdminAtual;
-  questaoEdicaoAdminAtual = null;
-  // atualiza a questão em memória, se estiver visível em algum contexto
-  const idx = questoesCaderno.findIndex(x=>x.id===idAtualizado);
-  if(idx !== -1){
-    questoesCaderno[idx] = {...questoesCaderno[idx], enunciado, alternativas, gabarito, explicacao: explicacao||null};
-    renderizarQuestaoAtual();
+function vfSoltarPressionarEnunciadoQuestVF(){
+  clearTimeout(vfTimerPressionarEnunciadoQuestVF);
+  vfTimerPressionarEnunciadoQuestVF = null;
+  vfPosicaoInicialPressionarEnunciadoQuestVF = null;
+}
+function vfCancelarPressionarEnunciadoQuestVFSilencioso(evento){
+  if(evento && vfPosicaoInicialPressionarEnunciadoQuestVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarEnunciadoQuestVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarEnunciadoQuestVF.y;
+      if(Math.hypot(dx, dy) < 25) return;
+    }
   }
-  await atualizarNotificacoesOrdenadas();
+  vfSoltarPressionarEnunciadoQuestVF();
 }
+function vfIniciarEdicaoEnunciadoQuestVF(){
+  const q = questoesCaderno[indiceQuestaoAtual];
+  if(!q) return;
+  const div = document.getElementById('quest-enunciado-atual');
+  if(!div || div.dataset.editando === '1') return;
+  div.dataset.editando = '1';
+  const textoOriginal = removerMarcadoresSubscrito(q.enunciado || '');
+  div.innerHTML = `<textarea id="quest-textarea-enunciado" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:inherit;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default">${escapeHtml(textoOriginal)}</textarea>`;
+  const textarea = document.getElementById('quest-textarea-enunciado');
+  vfAutoAlturaTextareaVF(textarea);
+  textarea.addEventListener('input', () => vfAutoAlturaTextareaVF(textarea));
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.addEventListener('blur', () => vfSalvarEdicaoEnunciadoQuestVF(q.id, textoOriginal));
+}
+async function vfSalvarEdicaoEnunciadoQuestVF(questaoId, textoOriginal){
+  const textarea = document.getElementById('quest-textarea-enunciado');
+  const div = document.getElementById('quest-enunciado-atual');
+  if(!textarea || !div) return;
+  const textoNovo = mesclarSubscritosQuebrados(textarea.value.trim());
+  div.dataset.editando = '0';
+  if(!textoNovo || textoNovo === textoOriginal){
+    renderizarQuestaoAtual();
+    return;
+  }
+  const idx = questoesCaderno.findIndex(x=>x.id===questaoId);
+  if(idx !== -1) questoesCaderno[idx] = {...questoesCaderno[idx], enunciado: textoNovo};
+  renderizarQuestaoAtual();
+  const {error} = await sb.from('questoes').update({enunciado: textoNovo, atualizado_em: new Date().toISOString()}).eq('id', questaoId);
+  if(error){ alert('Erro ao salvar: '+error.message); return; }
+  await sb.from('relatos_formatacao').update({visto:true}).eq('questao_id', questaoId);
+}
+
+// --- alternativas (uma de cada vez, reconstruindo o campo inteiro por trás) ---
+// quebra o campo bruto "alternativas" em {letra, texto} SEM formatar nada
+// (diferente de extrairAlternativas, que já devolve HTML pronto pra
+// exibir) - precisa do texto cru pra poder remontar o campo depois
+function vfExtrairAlternativasBrutasVF(alternativasTexto){
+  if(!alternativasTexto) return [];
+  const partes = alternativasTexto.replace(/\s+/g, ' ').trim().split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
+  return partes.map(p=>{
+    const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
+    return m ? {letra:m[1], texto:m[2]} : null;
+  }).filter(Boolean);
+}
+// troca só o texto de UMA letra, mantendo as outras intactas, e remonta
+// no formato "(a) texto (b) texto..." que o banco espera
+function vfRemontarAlternativasVF(alternativasTextoOriginal, letraAlvo, novoTexto){
+  const brutas = vfExtrairAlternativasBrutasVF(alternativasTextoOriginal);
+  return brutas.map(a => a.letra === letraAlvo ? `(${a.letra}) ${novoTexto}` : `(${a.letra}) ${a.texto}`).join('\n');
+}
+let vfTimerPressionarAlternativaQuestVF = null;
+let vfPosicaoInicialPressionarAlternativaQuestVF = null;
+let vfLetraPressionadaAtualQuestVF = null;
+function vfIniciarPressionarAlternativaQuestVF(evento, letra){
+  clearTimeout(vfTimerPressionarAlternativaQuestVF);
+  vfLetraPressionadaAtualQuestVF = letra;
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarAlternativaQuestVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
+  vfTimerPressionarAlternativaQuestVF = setTimeout(() => {
+    vfTimerPressionarAlternativaQuestVF = null;
+    vfIniciarEdicaoAlternativaQuestVF(letra);
+  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
+}
+function vfSoltarPressionarAlternativaQuestVF(){
+  clearTimeout(vfTimerPressionarAlternativaQuestVF);
+  vfTimerPressionarAlternativaQuestVF = null;
+  vfPosicaoInicialPressionarAlternativaQuestVF = null;
+}
+function vfCancelarPressionarAlternativaQuestVFSilencioso(evento){
+  if(evento && vfPosicaoInicialPressionarAlternativaQuestVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarAlternativaQuestVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarAlternativaQuestVF.y;
+      if(Math.hypot(dx, dy) < 25) return;
+    }
+  }
+  vfSoltarPressionarAlternativaQuestVF();
+}
+function vfIniciarEdicaoAlternativaQuestVF(letra){
+  const q = questoesCaderno[indiceQuestaoAtual];
+  if(!q) return;
+  const div = document.getElementById('quest-alt-atual-'+letra);
+  if(!div || div.dataset.editando === '1') return;
+  div.dataset.editando = '1';
+  const brutas = vfExtrairAlternativasBrutasVF(q.alternativas);
+  const alt = brutas.find(a => a.letra === letra);
+  const textoOriginal = removerMarcadoresSubscrito(alt ? alt.texto : '');
+  div.innerHTML = `<textarea id="quest-textarea-alt-${letra}" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:4px;margin:-4px;font-family:inherit;font-size:inherit;line-height:inherit;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default">${escapeHtml(textoOriginal)}</textarea>`;
+  const textarea = document.getElementById('quest-textarea-alt-'+letra);
+  vfAutoAlturaTextareaVF(textarea);
+  textarea.addEventListener('input', () => vfAutoAlturaTextareaVF(textarea));
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.addEventListener('blur', () => vfSalvarEdicaoAlternativaQuestVF(letra, textoOriginal));
+}
+async function vfSalvarEdicaoAlternativaQuestVF(letra, textoOriginal){
+  const textarea = document.getElementById('quest-textarea-alt-'+letra);
+  const div = document.getElementById('quest-alt-atual-'+letra);
+  if(!textarea || !div) return;
+  const textoNovo = mesclarSubscritosQuebrados(textarea.value.trim());
+  div.dataset.editando = '0';
+  if(!textoNovo || textoNovo === textoOriginal){
+    renderizarQuestaoAtual();
+    return;
+  }
+  const q = questoesCaderno[indiceQuestaoAtual];
+  const alternativasNovas = vfRemontarAlternativasVF(q.alternativas, letra, textoNovo);
+  const idx = questoesCaderno.findIndex(x=>x.id===q.id);
+  if(idx !== -1) questoesCaderno[idx] = {...questoesCaderno[idx], alternativas: alternativasNovas};
+  renderizarQuestaoAtual();
+  const {error} = await sb.from('questoes').update({alternativas: alternativasNovas, atualizado_em: new Date().toISOString()}).eq('id', q.id);
+  if(error){ alert('Erro ao salvar: '+error.message); return; }
+  await sb.from('relatos_formatacao').update({visto:true}).eq('questao_id', q.id);
+}
+
+// --- gabarito: toque rápido no ícone (não precisa segurar) marca aquela
+// letra como a correta na hora ---
+async function vfMarcarGabaritoQuestVF(questaoId, letra){
+  const q = questoesCaderno[indiceQuestaoAtual];
+  if(!q || q.gabarito === letra) return;
+  const idx = questoesCaderno.findIndex(x=>x.id===questaoId);
+  if(idx !== -1) questoesCaderno[idx] = {...questoesCaderno[idx], gabarito: letra};
+  renderizarQuestaoAtual();
+  const {error} = await sb.from('questoes').update({gabarito: letra, atualizado_em: new Date().toISOString()}).eq('id', questaoId);
+  if(error) alert('Erro ao salvar gabarito: '+error.message);
+}
+
+
 
 function fecharCadernoResolucao(){
   document.getElementById('quests-resolucao').classList.add('hidden');
@@ -10886,13 +10982,12 @@ function renderizarQuestaoAtual(){
       <div class="section-title" style="margin:0 0 8px 0;display:flex;justify-content:space-between;align-items:center;gap:8px">
         <span style="display:flex;align-items:center;gap:6px">Questão ${indiceQuestaoAtual+1} de ${questoesCaderno.length} <button class="btn-icone-pequeno" onclick="abrirInfoQuestao('${q.id}')" title="Sobre essa questão"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
         <span style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-        ${souCarlos() ? `<button class="btn-icone-pequeno" onclick="abrirEdicaoDiretaAdmin('${q.id}')" title="Editar questão"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>` : ''}
         ${q.concurso_origem ? `<span style="background:#202A45;color:#fff;font-size:var(--fs-a);font-weight:700;padding:4px 8px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="${escapeHtml(q.concurso_origem)}${q.ano_prova?' '+q.ano_prova:''}">MB</span>` : ''}
         ${q.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:4px 8px;border-radius:8px;flex-shrink:0;white-space:nowrap;letter-spacing:0.02em" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''}
         ${foiCorrigidaAntesDeResponder ? '<span class="selo-correcao" style="display:flex;align-items:center;gap:3px;font-weight:600;text-transform:none;letter-spacing:normal;padding:2px 6px;flex-shrink:0;white-space:nowrap"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Corrigida recentemente</span>' : ''}
         </span>
       </div>
-      <div class="enunciado" id="quest-enunciado-atual">${(() => {
+      <div class="enunciado" id="quest-enunciado-atual" ${souCarlos() ? `data-editavel-vf="1" data-questao-id="${q.id}" ontouchstart="vfIniciarPressionarEnunciadoQuestVF(event)" ontouchend="vfSoltarPressionarEnunciadoQuestVF(event)" ontouchmove="vfCancelarPressionarEnunciadoQuestVFSilencioso(event)" onmousedown="vfIniciarPressionarEnunciadoQuestVF(event)" onmouseup="vfSoltarPressionarEnunciadoQuestVF()" onmouseleave="vfCancelarPressionarEnunciadoQuestVFSilencioso()"` : ''}>${(() => {
         if(!itensNumeradosDaQuestao) return formatarEnunciado(q.enunciado);
         const parseado = itensNumeradosDaQuestao;
         // formato "I. ... II. ... III. ..." detectado — cada item vira uma
@@ -11834,7 +11929,7 @@ async function verificarMaioriaTopico(topicoId){
 function removerMarcadoresSubscrito(texto){
   return (texto||'')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1$2')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9]{1,4}\/[0-9]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
 }
 async function abrirFormularioEdicao(questaoId, topicoId){
   const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
