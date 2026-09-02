@@ -1524,7 +1524,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <!-- balãozinho de explicação - aparece perto do que foi tocado (\nota{}{}
      no LaTeX ou uma anotação clicada depois numa célula), fecha ao tocar
      fora ou no X -->
-<div id="vf-balao-explicacao" class="hidden" style="position:fixed;z-index:400;max-width:280px;background:#fff;color:#111;border:0.5px solid #eee;border-radius:10px;padding:10px 14px;font-size:var(--fs-c);line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,0.15)">
+<div id="vf-balao-explicacao" class="hidden" style="position:fixed;z-index:400;max-width:280px;background:#F0F0ED;color:#111;border:0.5px solid #D8D8D3;border-radius:10px;padding:10px 14px;font-size:var(--fs-c);line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,0.18)">
   <span id="vf-balao-explicacao-texto"></span>
 </div>
 
@@ -1561,7 +1561,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 </div>
 
 <div class="modal-overlay hidden" id="modal-confirmar-generico-vf" onclick="if(event.target===this) vfFecharConfirmacaoGenericaVF()">
-  <div class="modal-conteudo popup-formulario">
+  <div class="modal-conteudo">
     <h3 class="config-title" id="vf-confirmar-generico-titulo">Confirmar</h3>
     <p id="vf-confirmar-generico-texto"></p>
     <div style="display:flex;gap:8px">
@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-477';
+const VERSAO_APP = '2026-07-25-479';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -10161,7 +10161,7 @@ function vfRenderizarListaBibliotecaComplementarVF(lista){
         <span style="font-weight:600;font-size:var(--fs-d);cursor:pointer" onclick="vfTogglePreviewBibliotecaVF('${item.id}')">${escapeHtml(item.titulo)}</span>
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button class="btn-primario" style="width:auto;padding:6px 12px;font-size:var(--fs-c)" onclick="vfAnexarElementoExistenteVF('${item.id}')">Anexar</button>
-          <button style="width:auto;padding:6px 10px;font-size:var(--fs-c);border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer" onclick="vfAbrirEdicaoElementoHtmlVF('${item.id}')" title="Editar">✏️</button>
+          <button id="vf-btn-editar-biblioteca-${item.id}" class="hidden" style="width:auto;padding:6px 10px;font-size:var(--fs-c);border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;display:flex;align-items:center;justify-content:center" onclick="vfAbrirEdicaoElementoHtmlVF('${item.id}')" title="Editar"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
           <button style="width:auto;padding:6px 10px;font-size:var(--fs-c);border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#B23A34;cursor:pointer" onclick="vfExcluirElementoBibliotecaVF('${item.id}')" title="Excluir da biblioteca">✕</button>
         </div>
       </div>
@@ -10223,6 +10223,7 @@ async function vfSalvarEdicaoElementoHtmlVF(){
 }
 function vfTogglePreviewBibliotecaVF(elementoId){
   document.getElementById(`vf-preview-biblioteca-${elementoId}`).classList.toggle('hidden');
+  document.getElementById(`vf-btn-editar-biblioteca-${elementoId}`)?.classList.toggle('hidden');
 }
 async function vfAnexarElementoExistenteVF(elementoHtmlId){
   if(!vfQuestaoIdComplementarAtualVF) return;
