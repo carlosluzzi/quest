@@ -1548,7 +1548,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="modal-anotacao-elemento-vf">
+<div class="modal-overlay hidden" id="modal-anotacao-elemento-vf" onclick="if(event.target===this) fecharModal('modal-anotacao-elemento-vf')">
   <div class="modal-conteudo">
     <h3 class="config-title">Anotação</h3>
     <textarea id="vf-anotacao-elemento-texto" class="textarea-padrao" placeholder="Explicação pra esse pedaço" style="min-height:100px"></textarea>
@@ -1557,6 +1557,27 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       <button class="btn-primario" style="flex:1" onclick="vfConfirmarAnotacaoElementoVF()">Salvar</button>
     </div>
     <button id="vf-anotacao-elemento-btn-excluir" class="btn-secundario hidden" style="width:100%;margin-top:10px;color:#B23A34" onclick="vfExcluirAnotacaoElementoVF()">Excluir anotação</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-confirmar-generico-vf" onclick="if(event.target===this) vfFecharConfirmacaoGenericaVF()">
+  <div class="modal-conteudo popup-formulario">
+    <h3 class="config-title" id="vf-confirmar-generico-titulo">Confirmar</h3>
+    <p id="vf-confirmar-generico-texto"></p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="vfFecharConfirmacaoGenericaVF()">Cancelar</button>
+      <button class="btn-primario" style="flex:1" id="vf-confirmar-generico-btn-ok" onclick="vfConfirmarGenericoVF()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-editar-elemento-html-vf" onclick="if(event.target===this) fecharModal('modal-editar-elemento-html-vf')">
+  <div class="modal-conteudo popup-formulario" style="max-width:600px">
+    <h3 class="config-title">Editar elemento</h3>
+    <input id="vf-editar-elemento-titulo" class="textarea-padrao" placeholder="Título" style="margin-bottom:10px;min-height:auto">
+    <textarea id="vf-editar-elemento-latex" class="textarea-padrao" placeholder="LaTeX" style="min-height:180px;font-family:monospace;font-size:var(--fs-c)"></textarea>
+    <button class="btn-primario" style="width:100%;margin-top:10px" onclick="vfSalvarEdicaoElementoHtmlVF()">Salvar</button>
+    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-editar-elemento-html-vf')">Cancelar</button>
   </div>
 </div>
 
@@ -1711,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-475';
+const VERSAO_APP = '2026-07-25-477';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3926,15 +3947,37 @@ const VF_FONTE_TABELA = `'Charter','Iowan Old Style',Georgia,'Times New Roman',s
 // e por fim as regras de expoente com fração/parênteses e subscrito que
 // só existem hoje dentro de formatarTextoItemVF/formatarEnunciado -
 // duplicadas aqui porque aquelas não são reutilizáveis como função à parte
+// \nota{X}{Y} - X vira clicável, Y é a explicação (balãozinho). Usa
+// extração de chaves balanceadas (não regex simples) porque X
+// frequentemente tem suas próprias chaves dentro (ex: \nota{x^{4/5}}{...}),
+// que uma regex ingênua [^{}]* não reconhece - parava de casar inteiro
+function vfProcessarNotaClicavelVF(texto){
+  let resultado = '';
+  let pos = 0;
+  const regexInicio = /\\nota\{/g;
+  let match;
+  while((match = regexInicio.exec(texto))){
+    const grupo1 = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+    if(!grupo1){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    const pos2 = grupo1.fimPos + 1;
+    if(texto[pos2] !== '{'){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    const grupo2 = vfExtrairGrupoBalanceadoVF(texto, pos2);
+    if(!grupo2){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    resultado += texto.slice(pos, match.index);
+    resultado += `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(grupo2.conteudo)}" onclick="event.stopPropagation();vfMostrarBalaoExplicacaoVF(event,this.dataset.explicacao)">${grupo1.conteudo}</span>`;
+    pos = grupo2.fimPos + 1;
+    regexInicio.lastIndex = pos;
+  }
+  resultado += texto.slice(pos);
+  return resultado;
+}
 function vfFormatarCelulaArrayVF(celula){
   let c = celula.trim();
   c = c.replace(/—/g, '–'); // travessão longo sempre vira curto, mesma regra do resto do texto
   // \nota{X}{Y} dentro de célula de tabela - mesmo tratamento da regra
   // geral (ver vfExtrairTabelasComoPlaceholderVF), célula também pode
   // ter uma palavra/número anotável clicável
-  c = c.replace(/\\nota\{([^{}]*)\}\{([^{}]*)\}/g, (m, conteudo, explicacao) => {
-    return `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(explicacao)}" onclick="event.stopPropagation();vfMostrarBalaoExplicacaoVF(event,this.dataset.explicacao)">${conteudo}</span>`;
-  });
+  c = vfProcessarNotaClicavelVF(c);
   c = c.replace(/\\text\{([^}]*)\}/g, '$1');
   c = c.replace(/\{,\}/g, ',');
   c = c.replace(/\\,/g, ' ');
@@ -4096,9 +4139,7 @@ function vfExtrairTabelasComoPlaceholderVF(texto){
   // normalmente - só \nota em si precisa ser resolvido antes do
   // escapeHtml geral, senão as chaves/barra invertida seriam escapadas
   // também e a regex nunca mais casaria
-  texto = texto.replace(/\\nota\{([^{}]*)\}\{([^{}]*)\}/g, (m, conteudo, explicacao) => {
-    return `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(explicacao)}" onclick="event.stopPropagation();vfMostrarBalaoExplicacaoVF(event,this.dataset.explicacao)">${conteudo}</span>`;
-  });
+  texto = vfProcessarNotaClicavelVF(texto);
   // primeiro os \sidebyside{...}{...} completos (bloco inteiro, com os
   // dois arrays de dentro juntos) - precisa ir antes dos arrays soltos,
   // senão cada array dentro do sidebyside vira placeholder individual
@@ -10066,6 +10107,7 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
 }
 function vfEsconderBalaoExplicacaoVF(){
   document.getElementById('vf-balao-explicacao').classList.add('hidden');
+  vfIdentificadorBalaoAbertoVF = null;
 }
 document.addEventListener('click', (e) => {
   const balao = document.getElementById('vf-balao-explicacao');
@@ -10119,20 +10161,64 @@ function vfRenderizarListaBibliotecaComplementarVF(lista){
         <span style="font-weight:600;font-size:var(--fs-d);cursor:pointer" onclick="vfTogglePreviewBibliotecaVF('${item.id}')">${escapeHtml(item.titulo)}</span>
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button class="btn-primario" style="width:auto;padding:6px 12px;font-size:var(--fs-c)" onclick="vfAnexarElementoExistenteVF('${item.id}')">Anexar</button>
+          <button style="width:auto;padding:6px 10px;font-size:var(--fs-c);border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer" onclick="vfAbrirEdicaoElementoHtmlVF('${item.id}')" title="Editar">✏️</button>
           <button style="width:auto;padding:6px 10px;font-size:var(--fs-c);border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#B23A34;cursor:pointer" onclick="vfExcluirElementoBibliotecaVF('${item.id}')" title="Excluir da biblioteca">✕</button>
         </div>
       </div>
       <div id="vf-preview-biblioteca-${item.id}" class="hidden" style="margin-top:10px">${formatarTextoItemVF(item.latex_fonte)}</div>
     </div>`).join('');
 }
+// modal de confirmação genérico e reutilizável - substitui confirm()
+// nativo em qualquer ação destrutiva relacionada a elementos HTML
+let vfCallbackConfirmacaoGenericaVF = null;
+function vfAbrirConfirmacaoGenericaVF(titulo, texto, aoConfirmar){
+  document.getElementById('vf-confirmar-generico-titulo').textContent = titulo;
+  document.getElementById('vf-confirmar-generico-texto').textContent = texto;
+  vfCallbackConfirmacaoGenericaVF = aoConfirmar;
+  abrirModal('modal-confirmar-generico-vf');
+}
+function vfFecharConfirmacaoGenericaVF(){
+  fecharModal('modal-confirmar-generico-vf');
+  vfCallbackConfirmacaoGenericaVF = null;
+}
+function vfConfirmarGenericoVF(){
+  const callback = vfCallbackConfirmacaoGenericaVF;
+  fecharModal('modal-confirmar-generico-vf');
+  vfCallbackConfirmacaoGenericaVF = null;
+  if(callback) callback();
+}
+
 async function vfExcluirElementoBibliotecaVF(elementoHtmlId){
-  if(!confirm('Excluir esse elemento da biblioteca de vez? Ele some de todas as questões onde estiver anexado, e não dá pra desfazer.')) return;
-  const {error} = await sb.from('elementos_html_vf').delete().eq('id', elementoHtmlId);
-  if(error){ alert('Erro ao excluir: '+error.message); return; }
+  vfAbrirConfirmacaoGenericaVF('Excluir elemento', 'Excluir esse elemento da biblioteca de vez? Ele some de todas as questões onde estiver anexado, e não dá pra desfazer.', async () => {
+    const {error} = await sb.from('elementos_html_vf').delete().eq('id', elementoHtmlId);
+    if(error){ alert('Erro ao excluir: '+error.message); return; }
+    vfCarregarBibliotecaComplementarVF();
+    // se a questão atual (embaixo do modal) tinha esse elemento anexado,
+    // atualiza a tela principal também - sem isso, ficaria mostrando um
+    // elemento que já não existe mais até a próxima navegação
+    if(vfQuestaoIdComplementarAtualVF) vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF);
+  });
+}
+let vfElementoIdEmEdicaoVF = null;
+function vfAbrirEdicaoElementoHtmlVF(elementoHtmlId){
+  const item = vfBibliotecaComplementarCacheVF.find(i => i.id === elementoHtmlId);
+  if(!item) return;
+  vfElementoIdEmEdicaoVF = elementoHtmlId;
+  document.getElementById('vf-editar-elemento-titulo').value = item.titulo;
+  document.getElementById('vf-editar-elemento-latex').value = item.latex_fonte;
+  abrirModal('modal-editar-elemento-html-vf');
+}
+async function vfSalvarEdicaoElementoHtmlVF(){
+  if(!vfElementoIdEmEdicaoVF) return;
+  const titulo = document.getElementById('vf-editar-elemento-titulo').value.trim().replace(/—/g, '–');
+  const latexFonte = document.getElementById('vf-editar-elemento-latex').value.trim();
+  if(!titulo || !latexFonte){ alert('Preencha o título e o LaTeX.'); return; }
+  const {error} = await sb.from('elementos_html_vf').update({titulo, latex_fonte: latexFonte, atualizado_em: new Date().toISOString()}).eq('id', vfElementoIdEmEdicaoVF);
+  if(error){ alert('Erro ao salvar: '+error.message); return; }
+  fecharModal('modal-editar-elemento-html-vf');
   vfCarregarBibliotecaComplementarVF();
-  // se a questão atual (embaixo do modal) tinha esse elemento anexado,
-  // atualiza a tela principal também - sem isso, ficaria mostrando um
-  // elemento que já não existe mais até a próxima navegação
+  // atualiza a tela principal também, já que o elemento pode estar
+  // anexado (e visível) na questão atual embaixo do modal
   if(vfQuestaoIdComplementarAtualVF) vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF);
 }
 function vfTogglePreviewBibliotecaVF(elementoId){
@@ -10194,9 +10280,12 @@ async function vfCarregarElementosAnexadosVF(questaoVfId){
 // identificador de posição determinístico a cada uma (tabela-linha-col,
 // contando múltiplas tabelas dentro do mesmo bloco, como no sidebyside).
 // Sempre clicável, sem precisar de nenhum "modo" ligado: célula sem
-// anotação abre direto o modal pra criar uma; célula já anotada mostra o
-// balão (com "editar" dentro) - funciona tanto no toque quanto passando
-// o mouse por cima (hover), e sem o destaque cinza padrão do navegador
+// anotação abre direto o modal pra criar uma. Célula já anotada: PRIMEIRO
+// toque mostra o balão normal (a info em si) - só um SEGUNDO toque na
+// MESMA célula, com o balão dela já aberto, abre a edição. Sem essa
+// distinção, no toque (que não tem "hover" de verdade como o mouse) o
+// balão nunca chegava a aparecer, ia direto pra edição sempre
+let vfIdentificadorBalaoAbertoVF = null;
 function vfAplicarIdentificadoresECliquesVF(bloco, mapaAnotacoes, elementoHtmlId){
   bloco.querySelectorAll('table').forEach((tabela, indiceTabela) => {
     tabela.querySelectorAll('tr').forEach((linha, indiceLinha) => {
@@ -10210,7 +10299,13 @@ function vfAplicarIdentificadoresECliquesVF(bloco, mapaAnotacoes, elementoHtmlId
         if(explicacaoSalva){
           celula.style.textDecoration = 'underline dotted';
           celula.style.textUnderlineOffset = '3px';
-          celula.onclick = (e) => { e.stopPropagation(); abrirModalEdicao(); };
+          celula.onclick = (e) => {
+            e.stopPropagation();
+            if(vfIdentificadorBalaoAbertoVF === identificador){ vfEsconderBalaoExplicacaoVF(); abrirModalEdicao(); return; }
+            vfIdentificadorBalaoAbertoVF = identificador;
+            vfMostrarBalaoExplicacaoVF(e, explicacaoSalva);
+          };
+          // hover continua funcionando normal no mouse/desktop - só mostra o balão, sem contar como "toque"
           celula.onmouseenter = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, explicacaoSalva); };
         }else{
           celula.onclick = (e) => { e.stopPropagation(); abrirModalEdicao(); };
@@ -10230,14 +10325,15 @@ function vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, textoAtual, celul
 }
 async function vfExcluirAnotacaoElementoVF(){
   if(!vfAnotacaoContextoAtualVF) return;
-  if(!confirm('Excluir essa anotação?')) return;
   const {elementoHtmlId, identificador, celulaEl} = vfAnotacaoContextoAtualVF;
-  const {error} = await sb.from('anotacoes_elemento_html_vf').delete().eq('elemento_html_id', elementoHtmlId).eq('identificador', identificador);
-  if(error){ alert('Erro ao excluir: '+error.message); return; }
   fecharModal('modal-anotacao-elemento-vf');
-  celulaEl.style.textDecoration = '';
-  celulaEl.onclick = (e) => { e.stopPropagation(); vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, '', celulaEl); };
-  celulaEl.onmouseenter = null;
+  vfAbrirConfirmacaoGenericaVF('Excluir anotação', 'Excluir essa anotação?', async () => {
+    const {error} = await sb.from('anotacoes_elemento_html_vf').delete().eq('elemento_html_id', elementoHtmlId).eq('identificador', identificador);
+    if(error){ alert('Erro ao excluir: '+error.message); return; }
+    celulaEl.style.textDecoration = '';
+    celulaEl.onclick = (e) => { e.stopPropagation(); vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, '', celulaEl); };
+    celulaEl.onmouseenter = null;
+  });
 }
 async function vfConfirmarAnotacaoElementoVF(){
   if(!vfAnotacaoContextoAtualVF) return;
@@ -10250,14 +10346,20 @@ async function vfConfirmarAnotacaoElementoVF(){
   celulaEl.style.textDecoration = 'underline dotted';
   celulaEl.style.textUnderlineOffset = '3px';
   const abrirModalEdicao = () => vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, texto, celulaEl);
-  celulaEl.onclick = (e) => { e.stopPropagation(); abrirModalEdicao(); };
+  celulaEl.onclick = (e) => {
+    e.stopPropagation();
+    if(vfIdentificadorBalaoAbertoVF === identificador){ vfEsconderBalaoExplicacaoVF(); abrirModalEdicao(); return; }
+    vfIdentificadorBalaoAbertoVF = identificador;
+    vfMostrarBalaoExplicacaoVF(e, texto);
+  };
   celulaEl.onmouseenter = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, texto); };
 }
 async function vfDesanexarElementoVF(ligacaoId, questaoVfId){
-  if(!confirm('Desanexar esse elemento dessa questão? Ele continua salvo na sua biblioteca.')) return;
-  const {error} = await sb.from('questao_elemento_html_vf').delete().eq('id', ligacaoId);
-  if(error){ alert('Erro ao desanexar: '+error.message); return; }
-  vfCarregarElementosAnexadosVF(questaoVfId);
+  vfAbrirConfirmacaoGenericaVF('Desanexar elemento', 'Desanexar esse elemento dessa questão? Ele continua salvo na sua biblioteca.', async () => {
+    const {error} = await sb.from('questao_elemento_html_vf').delete().eq('id', ligacaoId);
+    if(error){ alert('Erro ao desanexar: '+error.message); return; }
+    vfCarregarElementosAnexadosVF(questaoVfId);
+  });
 }
 
 async function abrirNotaVF(questaoVfId){
