@@ -329,6 +329,13 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 
 /* --- Questão --- */
 .card-questao{background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:18px;margin-bottom:8px}
+/* elementos anotáveis (\nota{}{} e células de tabela clicadas depois) -
+   sem highlight cinza nativo do navegador ao tocar, só o sublinhado
+   pontilhado indicando que dá pra tocar */
+.vf-nota-clicavel, .vf-celula-anotavel{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none}
+.vf-nota-clicavel{border-bottom:1.5px dotted #B23A34;cursor:pointer}
+.vf-celula-anotavel-com-nota{text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
+.vf-celula-anotavel-sem-nota{cursor:pointer}
 .item-lista-modulo{padding:9px 8px;font-size:var(--fs-d);line-height:1.3;color:#111;cursor:pointer;border-bottom:0.5px solid #eee}
 .item-lista-modulo:last-child{border-bottom:none}
 .item-lista-modulo:active{background:#F5F5F4}
@@ -1517,7 +1524,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <!-- balãozinho de explicação - aparece perto do que foi tocado (\nota{}{}
      no LaTeX ou uma anotação clicada depois numa célula), fecha ao tocar
      fora ou no X -->
-<div id="vf-balao-explicacao" class="hidden" style="position:fixed;z-index:400;max-width:280px;background:#1C1C1A;color:#fff;border-radius:10px;padding:10px 14px;font-size:var(--fs-c);line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,0.25)">
+<div id="vf-balao-explicacao" class="hidden" style="position:fixed;z-index:400;max-width:280px;background:#B23A34;color:#fff;border-radius:10px;padding:10px 14px;font-size:var(--fs-c);line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,0.25)">
   <span id="vf-balao-explicacao-texto"></span>
 </div>
 
@@ -1529,14 +1536,27 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       <button id="vf-complementar-aba-criar" class="btn-secundario" style="flex:1" onclick="vfMudarAbaComplementarVF('criar')">Criar novo</button>
     </div>
     <div id="vf-complementar-conteudo-biblioteca">
+      <input id="vf-complementar-busca" class="textarea-padrao" placeholder="Buscar na biblioteca..." style="margin-bottom:10px;min-height:auto" oninput="vfFiltrarBibliotecaComplementarVF()">
       <div id="vf-complementar-lista-biblioteca" style="max-height:50vh;overflow-y:auto"></div>
     </div>
     <div id="vf-complementar-conteudo-criar" class="hidden">
-      <input id="vf-complementar-titulo-novo" class="textarea-padrao" placeholder="Título (pra você reconhecer na biblioteca depois)" style="margin-bottom:10px">
+      <input id="vf-complementar-titulo-novo" class="textarea-padrao" placeholder="Título (pra você reconhecer na biblioteca depois)" style="margin-bottom:10px;min-height:auto">
       <textarea id="vf-complementar-latex-novo" class="textarea-padrao" placeholder="Cole aqui o LaTeX (\begin{array}...\end{array}, \sidebyside{}{}, \nota{}{}, etc)" style="min-height:180px;font-family:monospace;font-size:var(--fs-c)"></textarea>
       <button class="btn-primario" style="width:100%;margin-top:10px" onclick="vfCriarESalvarElementoHtmlVF()">Salvar</button>
     </div>
     <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModalComplementarVF()">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-anotacao-elemento-vf">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Anotação</h3>
+    <textarea id="vf-anotacao-elemento-texto" class="textarea-padrao" placeholder="Explicação pra esse pedaço" style="min-height:100px"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-anotacao-elemento-vf')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="vfConfirmarAnotacaoElementoVF()">Salvar</button>
+    </div>
+    <button id="vf-anotacao-elemento-btn-excluir" class="btn-secundario hidden" style="width:100%;margin-top:10px;color:#B23A34" onclick="vfExcluirAnotacaoElementoVF()">Excluir anotação</button>
   </div>
 </div>
 
@@ -1691,7 +1711,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-469';
+const VERSAO_APP = '2026-07-25-471';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4026,7 +4046,7 @@ function vfProcessarArrayLatexVF(texto){
 // tamanho reduzido mas ainda na escala do app (--fs-b, não px fixo),
 // cinza refinado igual ao resto da paleta da tabela
 function vfProcessarTextoPequenoVF(texto){
-  return texto.replace(/\\small\{([^}]*)\}/g, '<span style="font-size:var(--fs-b);color:#6B6B66">$1</span>');
+  return texto.replace(/\\small\{([^}]*)\}/g, '<div style="font-size:var(--fs-b);color:#6B6B66;margin-top:2px;padding-left:10px">$1</div>');
 }
 
 function vfAplicarMarcacaoMatematicaVF(textoEscapado){
@@ -4059,7 +4079,7 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     // visual bem menor que letras/números normais, mesmo com o mesmo
     // font-size (parecem "pequenos"/perdidos no meio do texto) - aumenta
     // esses especificamente pra ficarem no mesmo porte visual do resto
-    .replace(/[∼≈∝∘≃≅]/g, (s) => `<span style="font-size:1.35em;display:inline-block;vertical-align:-0.05em">${s}</span>`);
+    .replace(/[∼≈∝∘≃≅]/g, (s) => `<span style="font-size:1.7em;display:inline-block;vertical-align:-0.15em">${s}</span>`);
 }
 
 // extrai \begin{array}...\end{array} do texto CRU (antes do escapeHtml),
@@ -4678,11 +4698,15 @@ function vfRedimensionarCanvasDesenhoInternoVF(){
     canvas.style.height = '0px';
     if(canvasPreview) canvasPreview.style.height = '0px';
     if(vfTelaAtualVF() === 'flash'){
-      // fixed, cobre só a viewport visível - o conteúdo do Flash nunca
-      // é grande o bastante pra precisar de scroll, então não faz
-      // sentido medir scrollHeight aqui (isso inclusive era a causa do
-      // canvas ficar "maior que a tela" sem necessidade nesse contexto)
-      canvas.style.height = window.innerHeight + 'px';
+      // antes sempre window.innerHeight fixo - fazia sentido quando o
+      // conteúdo do Flash nunca crescia além da tela. Isso mudou com
+      // elementos HTML (tabelas) que podem ser anexados e crescer o
+      // conteúdo real bem além da viewport - usa o maior entre os dois,
+      // garantindo que o canvas sempre cobre pelo menos a tela inteira
+      // (caso normal, sem sobra de espaço morto) mas acompanha quando o
+      // conteúdo for maior de verdade
+      const alturaMaximaFlash = window.innerHeight * 4; // mesmo teto de segurança das outras telas, adaptado
+      canvas.style.height = Math.min(Math.max(window.innerHeight, content.scrollHeight, content.offsetHeight), alturaMaximaFlash) + 'px';
     }else{
       // teto de segurança: mesmo que outra causa de crescimento apareça no
       // futuro, o canvas nunca passa de 4x a altura da viewport - um
@@ -10006,10 +10030,24 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
 }
 
 // ---- balãozinho de explicação (\nota{}{} e anotações clicadas depois) ----
-function vfMostrarBalaoExplicacaoVF(evento, texto){
+// mostraEditar: quando true, o balão ganha um "✏️ editar" que abre o
+// modal de anotação pré-preenchido - usado só nas anotações de célula
+// (que têm dono e podem ser editadas), não no \nota{}{} do LaTeX (que é
+// parte do texto da questão em si, editado reescrevendo o LaTeX)
+function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   const balao = document.getElementById('vf-balao-explicacao');
   const span = document.getElementById('vf-balao-explicacao-texto');
   span.textContent = texto;
+  let btnEditar = document.getElementById('vf-balao-explicacao-editar');
+  if(btnEditar) btnEditar.remove();
+  if(aoEditar){
+    btnEditar = document.createElement('button');
+    btnEditar.id = 'vf-balao-explicacao-editar';
+    btnEditar.textContent = '✏️ editar';
+    btnEditar.style.cssText = 'display:block;margin-top:8px;background:none;border:none;color:#fff;opacity:0.85;font-size:var(--fs-a);padding:0;cursor:pointer;text-decoration:underline';
+    btnEditar.onclick = (e) => { e.stopPropagation(); vfEsconderBalaoExplicacaoVF(); aoEditar(); };
+    balao.appendChild(btnEditar);
+  }
   balao.classList.remove('hidden');
   // posiciona logo abaixo do ponto tocado, mas sem estourar a tela (nem
   // embaixo nem nas laterais) - mede DEPOIS de já estar visível, senão
@@ -10057,15 +10095,46 @@ async function vfCarregarBibliotecaComplementarVF(){
   const el = document.getElementById('vf-complementar-lista-biblioteca');
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px">Carregando...</p>';
   const {data, error} = await sb.from('elementos_html_vf').select('id, titulo, latex_fonte').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false});
-  if(error || !data || !data.length){
-    el.innerHTML = '<p style="color:#888;text-align:center;padding:20px">Sua biblioteca ainda está vazia. Crie um elemento novo na outra aba.</p>';
+  vfBibliotecaComplementarCacheVF = (!error && data) ? data : [];
+  document.getElementById('vf-complementar-busca').value = '';
+  vfRenderizarListaBibliotecaComplementarVF(vfBibliotecaComplementarCacheVF);
+}
+let vfBibliotecaComplementarCacheVF = []; // carregado uma vez, filtrado localmente pela busca (sem nova consulta a cada letra digitada)
+function vfFiltrarBibliotecaComplementarVF(){
+  const termo = document.getElementById('vf-complementar-busca').value.trim().toLowerCase();
+  const filtrados = termo ? vfBibliotecaComplementarCacheVF.filter(item => item.titulo.toLowerCase().includes(termo)) : vfBibliotecaComplementarCacheVF;
+  vfRenderizarListaBibliotecaComplementarVF(filtrados);
+}
+function vfRenderizarListaBibliotecaComplementarVF(lista){
+  const el = document.getElementById('vf-complementar-lista-biblioteca');
+  if(!lista.length){
+    el.innerHTML = `<p style="color:#888;text-align:center;padding:20px">${vfBibliotecaComplementarCacheVF.length ? 'Nada encontrado.' : 'Sua biblioteca ainda está vazia. Crie um elemento novo na outra aba.'}</p>`;
     return;
   }
-  el.innerHTML = data.map(item => `
-    <div style="border:0.5px solid #eee;border-radius:10px;padding:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px">
-      <span style="font-weight:600;font-size:var(--fs-d)">${escapeHtml(item.titulo)}</span>
-      <button class="btn-primario" style="width:auto;padding:8px 16px;flex-shrink:0" onclick="vfAnexarElementoExistenteVF('${item.id}')">Usar aqui</button>
+  el.innerHTML = lista.map(item => `
+    <div style="border:0.5px solid #eee;border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <span style="font-weight:600;font-size:var(--fs-d);cursor:pointer" onclick="vfTogglePreviewBibliotecaVF('${item.id}')">${escapeHtml(item.titulo)}</span>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn-secundario" style="width:auto;padding:6px 12px;font-size:var(--fs-c)" onclick="vfAnexarElementoExistenteVF('${item.id}')">Anexar</button>
+          <button style="width:auto;padding:6px 10px;font-size:var(--fs-c);border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#B23A34;cursor:pointer" onclick="vfExcluirElementoBibliotecaVF('${item.id}')" title="Excluir da biblioteca">✕</button>
+        </div>
+      </div>
+      <div id="vf-preview-biblioteca-${item.id}" class="hidden" style="margin-top:10px">${formatarTextoItemVF(item.latex_fonte)}</div>
     </div>`).join('');
+}
+async function vfExcluirElementoBibliotecaVF(elementoHtmlId){
+  if(!confirm('Excluir esse elemento da biblioteca de vez? Ele some de todas as questões onde estiver anexado, e não dá pra desfazer.')) return;
+  const {error} = await sb.from('elementos_html_vf').delete().eq('id', elementoHtmlId);
+  if(error){ alert('Erro ao excluir: '+error.message); return; }
+  vfCarregarBibliotecaComplementarVF();
+  // se a questão atual (embaixo do modal) tinha esse elemento anexado,
+  // atualiza a tela principal também - sem isso, ficaria mostrando um
+  // elemento que já não existe mais até a próxima navegação
+  if(vfQuestaoIdComplementarAtualVF) vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF);
+}
+function vfTogglePreviewBibliotecaVF(elementoId){
+  document.getElementById(`vf-preview-biblioteca-${elementoId}`).classList.toggle('hidden');
 }
 async function vfAnexarElementoExistenteVF(elementoHtmlId){
   if(!vfQuestaoIdComplementarAtualVF) return;
@@ -10105,12 +10174,8 @@ async function vfCarregarElementosAnexadosVF(questaoVfId){
     const {data: anotacoes} = await sb.from('anotacoes_elemento_html_vf').select('identificador, texto_explicacao').eq('elemento_html_id', elemento.id);
     const mapaAnotacoes = new Map((anotacoes||[]).map(a => [a.identificador, a.texto_explicacao]));
     const idBloco = `vf-elemento-html-${ligacao.id}`;
-    const cabecalho = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <span style="font-size:var(--fs-b);color:#888;font-weight:600">${escapeHtml(elemento.titulo)}</span>
-      <div style="display:flex;gap:6px">
-        <button class="vf-btn-modo-anotar" style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer" onclick="vfToggleModoAnotarVF('${elemento.id}', this)">✏️ Anotar</button>
-        <button style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer" onclick="vfDesanexarElementoVF('${ligacao.id}', '${questaoVfId}')">Desanexar</button>
-      </div>
+    const cabecalho = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+      <button style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="vfDesanexarElementoVF('${ligacao.id}', '${questaoVfId}')">Desanexar</button>
     </div>`;
     return `<div style="margin-top:14px">${cabecalho}<div id="${idBloco}" class="vf-elemento-html-bloco" data-elemento-id="${elemento.id}" data-mapa-anotacoes='${escapeHtml(JSON.stringify([...mapaAnotacoes]))}'>${formatarTextoItemVF(elemento.latex_fonte)}</div></div>`;
   }));
@@ -10125,59 +10190,74 @@ async function vfCarregarElementosAnexadosVF(questaoVfId){
 }
 // percorre as células (<td>) de um bloco renderizado, dando um
 // identificador de posição determinístico a cada uma (tabela-linha-col,
-// contando múltiplas tabelas dentro do mesmo bloco, como no sidebyside) -
-// se já tem anotação salva pra aquele identificador, deixa clicável
-// (sublinhado pontilhado); se o modo anotar estiver ativo pra esse
-// elemento, clicar numa célula sem anotação abre prompt pra criar uma
-let vfElementoEmModoAnotarVF = null; // id do elemento_html_vf sendo anotado agora, ou null
+// contando múltiplas tabelas dentro do mesmo bloco, como no sidebyside).
+// Sempre clicável, sem precisar de nenhum "modo" ligado: célula sem
+// anotação abre direto o modal pra criar uma; célula já anotada mostra o
+// balão (com "editar" dentro) - funciona tanto no toque quanto passando
+// o mouse por cima (hover), e sem o destaque cinza padrão do navegador
 function vfAplicarIdentificadoresECliquesVF(bloco, mapaAnotacoes, elementoHtmlId){
   bloco.querySelectorAll('table').forEach((tabela, indiceTabela) => {
     tabela.querySelectorAll('tr').forEach((linha, indiceLinha) => {
       linha.querySelectorAll('td').forEach((celula, indiceColuna) => {
         const identificador = `t${indiceTabela}-l${indiceLinha}-c${indiceColuna}`;
         celula.dataset.identificadorAnotacao = identificador;
+        celula.style.cursor = 'pointer';
+        celula.style.webkitTapHighlightColor = 'transparent';
         const explicacaoSalva = mapaAnotacoes.get(identificador);
+        const abrirModalEdicao = () => vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, explicacaoSalva || '', celula);
         if(explicacaoSalva){
-          celula.style.borderBottom = celula.style.borderBottom ? celula.style.borderBottom : '';
           celula.style.textDecoration = 'underline dotted';
           celula.style.textUnderlineOffset = '3px';
-          celula.style.cursor = 'pointer';
-          celula.onclick = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, explicacaoSalva); };
+          const mostrar = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, explicacaoSalva, abrirModalEdicao); };
+          celula.onclick = mostrar;
+          celula.onmouseenter = mostrar;
         }else{
-          celula.onclick = (e) => {
-            if(vfElementoEmModoAnotarVF !== elementoHtmlId) return;
-            e.stopPropagation();
-            vfCriarAnotacaoCliqueVF(elementoHtmlId, identificador, celula);
-          };
+          celula.onclick = (e) => { e.stopPropagation(); abrirModalEdicao(); };
         }
       });
     });
   });
 }
-async function vfCriarAnotacaoCliqueVF(elementoHtmlId, identificador, celulaEl){
-  const texto = prompt('Explicação pra essa célula:');
-  if(!texto || !texto.trim()) return;
-  const {error} = await sb.from('anotacoes_elemento_html_vf').upsert({elemento_html_id: elementoHtmlId, identificador, texto_explicacao: texto.trim()}, {onConflict: 'elemento_html_id,identificador'});
+// contexto temporário pro modal de anotação (qual célula está sendo
+// criada/editada agora) - preenchido ao abrir, usado só na hora de salvar
+let vfAnotacaoContextoAtualVF = null;
+function vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, textoAtual, celulaEl){
+  vfAnotacaoContextoAtualVF = {elementoHtmlId, identificador, celulaEl};
+  document.getElementById('vf-anotacao-elemento-texto').value = textoAtual || '';
+  document.getElementById('vf-anotacao-elemento-btn-excluir').classList.toggle('hidden', !textoAtual);
+  abrirModal('modal-anotacao-elemento-vf');
+}
+async function vfExcluirAnotacaoElementoVF(){
+  if(!vfAnotacaoContextoAtualVF) return;
+  if(!confirm('Excluir essa anotação?')) return;
+  const {elementoHtmlId, identificador, celulaEl} = vfAnotacaoContextoAtualVF;
+  const {error} = await sb.from('anotacoes_elemento_html_vf').delete().eq('elemento_html_id', elementoHtmlId).eq('identificador', identificador);
+  if(error){ alert('Erro ao excluir: '+error.message); return; }
+  fecharModal('modal-anotacao-elemento-vf');
+  celulaEl.style.textDecoration = '';
+  celulaEl.onclick = (e) => { e.stopPropagation(); vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, '', celulaEl); };
+  celulaEl.onmouseenter = null;
+}
+async function vfConfirmarAnotacaoElementoVF(){
+  if(!vfAnotacaoContextoAtualVF) return;
+  const {elementoHtmlId, identificador, celulaEl} = vfAnotacaoContextoAtualVF;
+  const texto = document.getElementById('vf-anotacao-elemento-texto').value.trim();
+  if(!texto) return;
+  const {error} = await sb.from('anotacoes_elemento_html_vf').upsert({elemento_html_id: elementoHtmlId, identificador, texto_explicacao: texto}, {onConflict: 'elemento_html_id,identificador'});
   if(error){ alert('Erro ao salvar anotação: '+error.message); return; }
+  fecharModal('modal-anotacao-elemento-vf');
   celulaEl.style.textDecoration = 'underline dotted';
   celulaEl.style.textUnderlineOffset = '3px';
-  celulaEl.style.cursor = 'pointer';
-  celulaEl.onclick = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, texto.trim()); };
+  const abrirModalEdicao = () => vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, texto, celulaEl);
+  const mostrar = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, texto, abrirModalEdicao); };
+  celulaEl.onclick = mostrar;
+  celulaEl.onmouseenter = mostrar;
 }
 async function vfDesanexarElementoVF(ligacaoId, questaoVfId){
   if(!confirm('Desanexar esse elemento dessa questão? Ele continua salvo na sua biblioteca.')) return;
   const {error} = await sb.from('questao_elemento_html_vf').delete().eq('id', ligacaoId);
   if(error){ alert('Erro ao desanexar: '+error.message); return; }
   vfCarregarElementosAnexadosVF(questaoVfId);
-}
-
-// alterna o modo anotar pra um elemento específico - enquanto ativo,
-// tocar numa célula sem anotação ainda abre o prompt pra criar uma
-function vfToggleModoAnotarVF(elementoHtmlId, botao){
-  const ativando = vfElementoEmModoAnotarVF !== elementoHtmlId;
-  vfElementoEmModoAnotarVF = ativando ? elementoHtmlId : null;
-  document.querySelectorAll('.vf-btn-modo-anotar').forEach(b => b.classList.remove('active'));
-  if(ativando && botao) botao.classList.add('active');
 }
 
 async function abrirNotaVF(questaoVfId){
