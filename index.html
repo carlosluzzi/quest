@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-485';
+const VERSAO_APP = '2026-07-25-487';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2963,6 +2963,13 @@ async function atualizarAbaAtual(){
 }
 
 function trocarAba(nome, pularContadorQuest){
+  // esconder uma aba via classList.add('hidden') NUNCA dispara blur
+  // automaticamente no navegador (diferente de mover o foco ou remover
+  // do DOM) - se estava editando enunciado/correção/explicação no Flash
+  // e trocou de aba direto, sem tocar em outro lugar antes, a edição era
+  // descartada em silêncio. Mesma causa raiz já corrigida antes pra
+  // Próxima/Anterior e abrir um salvo, só que por esse caminho também
+  if(typeof vfForcarSalvamentoEdicaoPendenteVF === 'function') vfForcarSalvamentoEdicaoPendenteVF();
   const abaJaEstavaAtiva = !document.getElementById('aba-'+nome).classList.contains('hidden');
   // pausa o cronômetro do V/F se estava nele e está saindo pra outra aba —
   // "trocar de tela dentro do próprio app" é um dos 5 pontos de pausa
@@ -3978,6 +3985,56 @@ function vfProcessarNotaClicavelVF(texto){
   resultado += texto.slice(pos);
   return resultado;
 }
+// \svg{...conteudo cru, sem escapar...} - permite colar SVG bruto (com
+// suas próprias classes/estilo local, tipo diagramas gerados por outros
+// chats) direto no texto. Usa chaves balanceadas: SVG real costuma ter
+// muitas chaves dentro do próprio <style> (regras CSS), regex simples
+// [^{}]* nunca daria conta de casar o bloco inteiro
+let vfContadorSvgVF = 0;
+function vfProcessarSvgBrutoVF(texto){
+  let resultado = '';
+  let pos = 0;
+  const regexInicio = /\\svg\{/g;
+  let match;
+  while((match = regexInicio.exec(texto))){
+    const grupo = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+    if(!grupo){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    resultado += texto.slice(pos, match.index);
+    resultado += vfMontarBlocoSvgEscopadoVF(grupo.conteudo, `vf-svg-${++vfContadorSvgVF}`);
+    pos = grupo.fimPos + 1;
+    regexInicio.lastIndex = pos;
+  }
+  resultado += texto.slice(pos);
+  return resultado;
+}
+// separa o <style> (se tiver) do resto do SVG - o resto já são elementos
+// com fill/stroke inline, funcionam sem CSS nenhum. O <style>, se
+// existir, é escopado com o id do bloco (nunca vaza pra fora dele) -
+// variáveis CSS (var(--nome)) são resolvidas usando os valores de :root
+// do próprio SVG, e qualquer bloco de modo escuro (data-mode,
+// prefers-color-scheme) é descartado, já que o app não distingue isso
+function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo){
+  const matchStyle = conteudoBruto.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+  let css = matchStyle ? matchStyle[1] : '';
+  const svgSemStyle = conteudoBruto.replace(/<style[^>]*>[\s\S]*?<\/style>/, '');
+  const matchRoot = css.match(/:root\s*\{([^}]*)\}/);
+  const variaveisRoot = {};
+  if(matchRoot){
+    matchRoot[1].split(';').forEach(decl => {
+      const [k, v] = decl.split(':').map(s => s && s.trim());
+      if(k && v) variaveisRoot[k] = v;
+    });
+  }
+  css = css.replace(/\[data-mode[^\]]*\]\s*\{[^}]*\}/g, '');
+  css = css.replace(/@media[^{]*\{[\s\S]*?\{[^}]*\}\s*\}/g, '');
+  css = css.replace(/:root\s*\{[^}]*\}/g, '');
+  css = css.replace(/var\((--[a-zA-Z0-9-]+)\)/g, (m, nome) => variaveisRoot[nome] || m);
+  const cssEscopado = css.replace(/([^{}]+)\{/g, (m, seletor) => {
+    return seletor.split(',').map(s => `#${idEscopo} ${s.trim()}`).join(', ') + '{';
+  });
+  return `<div id="${idEscopo}" style="margin:10px 0">${cssEscopado ? `<style>${cssEscopado}</style>` : ''}${svgSemStyle}</div>`;
+}
+
 function vfFormatarCelulaArrayVF(celula){
   let c = celula.trim();
   c = c.replace(/—/g, '–'); // travessão longo sempre vira curto, mesma regra do resto do texto
@@ -4140,6 +4197,26 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
 // das células - precisa rodar antes, com o & ainda literal
 function vfExtrairTabelasComoPlaceholderVF(texto){
   const tabelas = [];
+  // \svg{...} primeiro - isola completamente antes de qualquer outro
+  // processamento, já que o conteúdo (CSS/atributos) pode ter muitas
+  // chaves que não têm nada a ver com \nota{}{} ou \begin{array}
+  {
+    let semSvg = '';
+    let posSvg = 0;
+    const regexSvg = /\\svg\{/g;
+    let matchSvg;
+    while((matchSvg = regexSvg.exec(texto))){
+      const grupoSvg = vfExtrairGrupoBalanceadoVF(texto, matchSvg.index + matchSvg[0].length - 1);
+      if(!grupoSvg){ regexSvg.lastIndex = matchSvg.index + matchSvg[0].length; continue; }
+      semSvg += texto.slice(posSvg, matchSvg.index);
+      tabelas.push(vfMontarBlocoSvgEscopadoVF(grupoSvg.conteudo, `vf-svg-${++vfContadorSvgVF}`));
+      semSvg += `\u0000TABELA${tabelas.length - 1}\u0000`;
+      posSvg = grupoSvg.fimPos + 1;
+      regexSvg.lastIndex = posSvg;
+    }
+    semSvg += texto.slice(posSvg);
+    texto = semSvg;
+  }
   // \nota{X}{Y} - vira span clicável, com a explicação (Y) guardada como
   // atributo (escapada pra HTML). X fica cru dentro do span, pra ainda
   // passar pelas regras de formatação seguintes (gregas, subscrito, etc)
@@ -5925,6 +6002,7 @@ function vfAbrirAnotacaoSalvaVF(){
 
 
 async function vfAbrirFavoritosVF(){
+  if(typeof vfForcarSalvamentoEdicaoPendenteVF === 'function') vfForcarSalvamentoEdicaoPendenteVF();
   pausarTimerVF(); // a pendente continua rodando em background senão - agora alcança ela certo, seja qual for a posição de visualização
   const el = document.getElementById('vf-lista-favoritos');
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
@@ -5981,6 +6059,7 @@ function vfFecharFavoritosVF(){
 }
 
 async function vfAbrirFlashSalvosVF(){
+  if(typeof vfForcarSalvamentoEdicaoPendenteVF === 'function') vfForcarSalvamentoEdicaoPendenteVF();
   pausarTimerVF();
   const el = document.getElementById('vf-lista-flash-salvos');
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
