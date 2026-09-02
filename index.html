@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-482';
+const VERSAO_APP = '2026-07-25-484';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4941,6 +4941,7 @@ document.addEventListener('touchstart', (e) => {
   if(vfTocouNaBarra(e.target)) return; // deixa o toque chegar no botão normalmente
   if(e.target.closest('.vf-btn-resposta')) return; // idem pros botões Verdadeiro/Falso - nunca viram início de traço
   if(e.target.closest('#vf-sessao-balao')) return; // balão da sessão (arrastar, Pausar, Finalizar, fechar) - nunca vira início de traço, tem seu próprio sistema de arrasto/clique
+  if(e.target.closest('#vf-balao-explicacao')) return; // balão de explicação/anotação (\nota{}{} e anotações de célula) - não é um modal padrão, riscar em cima dele não pode vazar pro canvas por baixo
   if(vfBalaoArrastoInfoVF) return; // proteção redundante - nunca desenha enquanto o balão está sendo arrastado, mesmo que o toque não esteja mais fisicamente sobre ele
   if(e.target.closest('textarea')) return; // nunca vira início de traço - dentro de qualquer textarea (edição de explicação/enunciado/correção), o toque (caneta ou dedo) precisa ficar livre pro comportamento nativo de seleção/cursor, sem competir com o sistema de desenho
   if(e.target.closest('select')) return; // qualquer <select> nativo (filtros do Flash, e futuros) - nunca vira início de traço, o dropdown nativo do Safari precisa do toque limpo
@@ -5443,11 +5444,12 @@ function vfFinalizarTracoDesenho(e){
       const agora = Date.now();
       const pontoAtual = vfPontoInicialTracoAtualVF;
       const tapAnterior = vfUltimoTapLeveCanetaVF;
-      // janela e distância reduzidas de propósito (eram 350ms/30px) -
-      // achado real: sensível demais, qualquer coisa feita rápido perto
-      // do lugar anterior virava duplo toque sem intenção real. Exige
-      // agora um gesto mais preciso: rápido e no mesmo lugar de verdade
-      const virouDuploTap = tapAnterior && (agora - tapAnterior.quando) < 280 && Math.hypot(pontoAtual.x - tapAnterior.x, pontoAtual.y - tapAnterior.y) < 22;
+      // janela e distância reduzidas de novo - achado real: mesmo já
+      // apertadas antes (350ms/30px -> 280ms/22px), ainda pegavam dois
+      // caracteres pequenos e adjacentes escritos rápido (ex: o "1" e o
+      // "0" de "10") como se fossem o mesmo lugar tocado duas vezes.
+      // Exige agora ainda mais precisão: rápido E bem no mesmo lugar
+      const virouDuploTap = tapAnterior && (agora - tapAnterior.quando) < 200 && Math.hypot(pontoAtual.x - tapAnterior.x, pontoAtual.y - tapAnterior.y) < 12;
       vfPontoInicialTracoAtualVF = null;
       vfFormaTracoAtualVF = null;
       vfDesenhandoAgora = false;
