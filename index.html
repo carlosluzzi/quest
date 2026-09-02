@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-489';
+const VERSAO_APP = '2026-07-25-493';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2792,38 +2792,27 @@ function vfAtualizarVisibilidadeCanvasVF(){
   if(mostrar && !vfDesenhandoAgora) inicializarCanvasDesenhoVF();
 }
 
-// achado real (relatado pelo Carlos): mover o canvas pra dentro de
-// #content (position:absolute, rolando com o scroll) resolveu o traço
-// "grudado na tela" no Quest, onde questões longas realmente precisam
-// disso - mas isso foi aplicado nos dois contextos por engano. No Flash,
-// cada questão é curta o bastante pra nunca precisar de scroll, e o
-// comportamento antigo (position:fixed, cobrindo a viewport inteira,
-// desenhando em qualquer lugar da tela sem depender de onde o conteúdo
-// termina) era o correto - só o Quest precisava da mudança
+// histórico: mover o canvas pra dentro de #content (position:absolute,
+// rolando com o scroll) resolveu o traço "grudado na tela" no Quest,
+// onde questões longas realmente precisam disso - na época, foi feito
+// só pro Quest, sob a premissa de que "cada questão do Flash é curta o
+// bastante pra nunca precisar de scroll" (fixed, cobrindo a viewport
+// inteira, ficava certo lá). Essa premissa não é mais verdade desde que
+// tabelas/elementos HTML (\begin{array}, \svg{}, etc) passaram a poder
+// deixar uma questão do Flash maior que a tela - o mesmo traço "grudado"
+// (não acompanha o texto ao rolar) que motivou a mudança no Quest
+// também passou a acontecer no Flash. Sempre absolute dentro de
+// #content agora, nos dois contextos - sem mais distinção
 function vfAjustarPosicionamentoCanvasVF(){
   const canvasDesenho = document.getElementById('vf-canvas-desenho');
   const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
   const content = document.getElementById('content');
   if(!canvasDesenho || !canvasPreview || !content) return;
-  const tela = vfTelaAtualVF();
-  if(tela === 'flash'){
-    // fixed, direto no body - cobre a viewport inteira, "grudado",
-    // desenha em qualquer lugar independente do scroll
-    if(canvasDesenho.style.position !== 'fixed'){
-      document.body.appendChild(canvasDesenho);
-      document.body.appendChild(canvasPreview);
-      canvasDesenho.style.position = 'fixed';
-      canvasPreview.style.position = 'fixed';
-    }
-  }else{
-    // absolute, dentro de #content - rola junto com o texto (necessário
-    // no Quest, onde a questão pode ser mais longa que a tela)
-    if(canvasDesenho.style.position !== 'absolute' || canvasDesenho.parentElement !== content){
-      content.appendChild(canvasDesenho);
-      content.appendChild(canvasPreview);
-      canvasDesenho.style.position = 'absolute';
-      canvasPreview.style.position = 'absolute';
-    }
+  if(canvasDesenho.style.position !== 'absolute' || canvasDesenho.parentElement !== content){
+    content.appendChild(canvasDesenho);
+    content.appendChild(canvasPreview);
+    canvasDesenho.style.position = 'absolute';
+    canvasPreview.style.position = 'absolute';
   }
 }
 (function vfObservarResolucaoQuestParaCanvasVF(){
@@ -4042,6 +4031,10 @@ function vfFormatarCelulaArrayVF(celula){
   // geral (ver vfExtrairTabelasComoPlaceholderVF), célula também pode
   // ter uma palavra/número anotável clicável
   c = vfProcessarNotaClicavelVF(c);
+  // \newline dentro de célula quebra em múltiplas linhas na mesma célula -
+  // comando LaTeX padrão diferente de \\ (que já é o separador ENTRE
+  // linhas da tabela, não pode ser reaproveitado sem ambiguidade)
+  c = c.replace(/\\newline/g, '<br>');
   c = c.replace(/\\text\{([^}]*)\}/g, '$1');
   c = c.replace(/\{,\}/g, ',');
   c = c.replace(/\\,/g, ' ');
@@ -4685,6 +4678,16 @@ let vfCanvasBaseSnapshot = null; // retrato do canvas ANTES do traço atual come
 let vfCtxTracoTemp = null;
 let vfCtxPreviewDestaque = null; // canvas visível por cima, mostra o resultado final em tempo real enquanto desenha
 let vfDesenhandoAgora = false;
+// rastreia se o canvas PODE ter algum traço desenhado - true assim que
+// um traço começa, false só quando o canvas é explicitamente limpo.
+// Mais barata de checar que canvas.toDataURL() (que decodifica o bitmap
+// inteiro em base64) - achado real: redimensionar sempre chamava
+// toDataURL() se o canvas já tinha dimensões, mesmo sem nenhum pixel
+// desenhado de verdade (canvas em branco também "tem dimensões" > 0).
+// Qualquer mudança de layout (abrir/fechar o filtro, por exemplo) já
+// dispara um resize via ResizeObserver - sem essa flag, toDataURL()
+// rodava à toa em cada uma dessas mudanças, mesmo sem nada pra preservar
+let vfCanvasPodeTerConteudoVF = false;
 // controla o "modo de visualização" ao abrir uma questão salva que não é
 // da sessão atual - guarda de onde saiu pra poder voltar quando o usuário
 // clicar Próxima/Anterior/sair, em vez de continuar navegando a partir
@@ -4829,8 +4832,14 @@ function vfRedimensionarCanvasDesenhoInternoVF(){
       // antes disso - era exatamente essa garantia que criava o espaço
       // vazio sobrando embaixo. Usa só a altura real do conteúdo, igual
       // as outras telas do app já fazem - sem forçar nenhum mínimo
+      // NUNCA incluir content.clientHeight aqui - já foi tentado antes como
+      // "proteção extra" e recriou o mesmo bug do piso mínimo (clientHeight
+      // de um container com scroll é ~a altura da tela visível, sempre,
+      // independente do conteúdo real - garantia sempre pelo menos uma tela
+      // inteira de espaço de scroll, mesmo com conteúdo bem mais curto).
+      // Só scrollHeight/offsetHeight, que refletem o conteúdo de verdade
       const alturaMaximaFlash = window.innerHeight * 4; // mesmo teto de segurança das outras telas, adaptado
-      canvas.style.height = Math.min(Math.max(content.scrollHeight, content.offsetHeight, content.clientHeight), alturaMaximaFlash) + 'px';
+      canvas.style.height = Math.min(Math.max(content.scrollHeight, content.offsetHeight), alturaMaximaFlash) + 'px';
     }else{
       // teto de segurança: mesmo que outra causa de crescimento apareça no
       // futuro, o canvas nunca passa de 4x a altura da viewport - um
@@ -4851,7 +4860,14 @@ function vfRedimensionarCanvasDesenhoInternoVF(){
   // sumia sem aviso nenhum. Salva o conteúdo atual antes de redimensionar,
   // redesenha depois na nova escala
   const larguraAntiga = canvas.width, alturaAntiga = canvas.height;
-  const tinhaConteudoAntes = larguraAntiga > 0 && alturaAntiga > 0;
+  // usa a flag (não só "tinha dimensões > 0") - um canvas em branco
+  // também tem dimensões, mas não tem nada pra preservar. Evita
+  // toDataURL() (decodifica o bitmap inteiro em base64, operação
+  // genuinamente pesada) rodando à toa em qualquer resize disparado por
+  // mudança de layout sem relação nenhuma com desenho (abrir/fechar o
+  // filtro, por exemplo) - achado real: isso deixava até interações
+  // sem nada a ver com a caneta com uma sensação de travamento
+  const tinhaConteudoAntes = vfCanvasPodeTerConteudoVF && larguraAntiga > 0 && alturaAntiga > 0;
   const snapshotAntesDoResize = tinhaConteudoAntes ? canvas.toDataURL() : null;
   const larguraConteudoAntes = content ? content.clientWidth : null;
   const alturaConteudoAntes = content ? Math.min(Math.max(content.scrollHeight, content.offsetHeight), window.innerHeight * 8) : null;
@@ -5072,6 +5088,7 @@ document.addEventListener('touchstart', (e) => {
   if(!vfCtxDesenhoAtivoAgoraVF()) return;
   e.preventDefault();
   vfDesenhandoAgora = true;
+  vfCanvasPodeTerConteudoVF = true; // marca ANTES do traço desenhar de fato - mais seguro assumir que pode ter conteúdo do que arriscar perder um desenho num resize futuro
   document.body.classList.add('vf-tracando-agora'); // desliga o efeito de toque dos botões só ENQUANTO esse traço específico dura, não a sessão de desenho inteira
   vfTouchIdAtivo = touch.identifier;
   vfPointerIdAtivoVF = vfUltimoPointerIdCanetaVF;
@@ -5155,13 +5172,12 @@ document.addEventListener('touchstart', (e) => {
   // possível contra a tela tremendo atrás da caneta. Some ao soltar o traço
   document.body.style.touchAction = 'none';
   document.documentElement.style.overflow = 'hidden';
-  // o bloqueio de #content é só no Quest, de propósito - lá que o bug
-  // "a caneta rola a página" foi relatado (questão longa, precisa de
-  // scroll). No Flash isso não era necessário e mexer nesse scroll ali
-  // causava efeito colateral real (voltar ao comportamento de antes)
-  if(vfTelaAtualVF() === 'quest'){
-    vfTravarScrollContentVF();
-  }
+  // o bloqueio de #content evita "a caneta rola a página" durante um
+  // traço - antes só era necessário no Quest (só lá o canvas rolava
+  // junto com #content). Agora que o Flash também usa esse mesmo
+  // posicionamento (ver vfAjustarPosicionamentoCanvasVF), o mesmo risco
+  // se aplica aos dois - sempre trava, sem mais distinção por tela
+  vfTravarScrollContentVF();
   mostrarBarraDesenhoVF();
 }, {passive: false});
 
@@ -5181,6 +5197,7 @@ document.addEventListener('touchmove', (e) => {
         }
         if(vfCtxDesenhoAtivoAgoraVF()){
           vfDesenhandoAgora = true;
+          vfCanvasPodeTerConteudoVF = true; // mesma marcação do outro caminho de início de traço
           document.body.classList.add('vf-tracando-agora');
           if(typeof cancelarPressionarAlternativa === 'function') cancelarPressionarAlternativa(); // sem isso, o toque longo do próprio botão podia riscar a alternativa sozinho no meio da escrita
           vfTouchIdAtivo = vfBotaoPendenteToqueInfo.identifier;
@@ -5214,9 +5231,9 @@ document.addEventListener('touchmove', (e) => {
           }
           document.body.style.touchAction = 'none';
           document.documentElement.style.overflow = 'hidden';
-          if(vfTelaAtualVF() === 'quest'){
-            vfTravarScrollContentVF();
-          }
+          // mesmo raciocínio do outro caminho de início de traço - sempre
+          // trava, sem distinção por tela (ver comentário lá)
+          vfTravarScrollContentVF();
           mostrarBarraDesenhoVF();
         }
         vfBotaoPendenteToqueInfo = null;
@@ -7721,6 +7738,7 @@ function limparCanvasDesenhoVF(){
   if(!canvas || !vfCtxDesenho) return;
   const dpr = (window.devicePixelRatio || 1) * 1.5;
   vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+  vfCanvasPodeTerConteudoVF = false;
   vfModoBorracha = false;
   vfAtualizarEstiloBotaoBorracha();
 }
@@ -11551,6 +11569,7 @@ function vfRestaurarDesenhoQuestaoQuestVF(questaoId){
       alturaDestino = (img.height/dpr) * (novaAltura / salvo.alturaConteudo);
     }
     vfCtxDesenho.drawImage(img, 0, 0, larguraDestino, alturaDestino);
+    vfCanvasPodeTerConteudoVF = true; // desenho restaurado - precisa da mesma proteção contra apagar num resize futuro
     // esse desenho restaurado também precisa entrar no histórico de
     // desfazer/refazer da questão nova, senão "Desfazer" não teria o que desfazer
     vfSalvarEstadoHistoricoVF();
@@ -11646,6 +11665,7 @@ function vfRestaurarRascunhoLivreVF(){
       alturaDestino = (img.height/dpr) * (papel.clientHeight / salvo.altura);
     }
     vfCtxDesenho.drawImage(img, 0, 0, larguraDestino, alturaDestino);
+    vfCanvasPodeTerConteudoVF = true; // mesma proteção do outro caminho de restauração
     vfSalvarEstadoHistoricoVF(); // entra no histórico de desfazer, senão "Desfazer" não teria o que desfazer
   };
   img.src = salvo.dataUrl;
