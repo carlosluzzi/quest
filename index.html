@@ -1524,7 +1524,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <!-- balãozinho de explicação - aparece perto do que foi tocado (\nota{}{}
      no LaTeX ou uma anotação clicada depois numa célula), fecha ao tocar
      fora ou no X -->
-<div id="vf-balao-explicacao" class="hidden" style="position:fixed;z-index:400;max-width:280px;background:#B23A34;color:#fff;border-radius:10px;padding:10px 14px;font-size:var(--fs-c);line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,0.25)">
+<div id="vf-balao-explicacao" class="hidden" style="position:fixed;z-index:400;max-width:280px;background:#fff;color:#111;border:0.5px solid #eee;border-radius:10px;padding:10px 14px;font-size:var(--fs-c);line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,0.15)">
   <span id="vf-balao-explicacao-texto"></span>
 </div>
 
@@ -1537,7 +1537,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     </div>
     <div id="vf-complementar-conteudo-biblioteca">
       <input id="vf-complementar-busca" class="textarea-padrao" placeholder="Buscar na biblioteca..." style="margin-bottom:10px;min-height:auto" oninput="vfFiltrarBibliotecaComplementarVF()">
-      <div id="vf-complementar-lista-biblioteca" style="max-height:50vh;overflow-y:auto"></div>
+      <div id="vf-complementar-lista-biblioteca" style="min-height:300px;max-height:50vh;overflow-y:auto"></div>
     </div>
     <div id="vf-complementar-conteudo-criar" class="hidden">
       <input id="vf-complementar-titulo-novo" class="textarea-padrao" placeholder="Título (pra você reconhecer na biblioteca depois)" style="margin-bottom:10px;min-height:auto">
@@ -1711,7 +1711,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-472';
+const VERSAO_APP = '2026-07-25-475';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4079,7 +4079,7 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     // visual bem menor que letras/números normais, mesmo com o mesmo
     // font-size (parecem "pequenos"/perdidos no meio do texto) - aumenta
     // esses especificamente pra ficarem no mesmo porte visual do resto
-    .replace(/[∼≈∝∘≃≅]/g, (s) => `<span style="font-size:1.7em;display:inline-block;vertical-align:-0.15em">${s}</span>`);
+    .replace(/[∼≈∝∘≃≅]/g, (s) => `<span style="font-size:1.7em;line-height:0.75;display:inline-block;vertical-align:-0.15em">${s}</span>`);
 }
 
 // extrai \begin{array}...\end{array} do texto CRU (antes do escapeHtml),
@@ -10108,15 +10108,17 @@ function vfFiltrarBibliotecaComplementarVF(){
 function vfRenderizarListaBibliotecaComplementarVF(lista){
   const el = document.getElementById('vf-complementar-lista-biblioteca');
   if(!lista.length){
-    el.innerHTML = `<p style="color:#888;text-align:center;padding:20px">${vfBibliotecaComplementarCacheVF.length ? 'Nada encontrado.' : 'Sua biblioteca ainda está vazia. Crie um elemento novo na outra aba.'}</p>`;
+    el.style.cssText = 'min-height:300px;max-height:50vh;overflow-y:auto;display:flex;align-items:center;justify-content:center';
+    el.innerHTML = `<p style="color:#888;text-align:center;padding:20px;margin:0">${vfBibliotecaComplementarCacheVF.length ? 'Nada encontrado.' : 'Sua biblioteca ainda está vazia. Crie um elemento novo na outra aba.'}</p>`;
     return;
   }
+  el.style.cssText = 'min-height:300px;max-height:50vh;overflow-y:auto';
   el.innerHTML = lista.map(item => `
     <div style="border:0.5px solid #eee;border-radius:10px;padding:12px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
         <span style="font-weight:600;font-size:var(--fs-d);cursor:pointer" onclick="vfTogglePreviewBibliotecaVF('${item.id}')">${escapeHtml(item.titulo)}</span>
         <div style="display:flex;gap:6px;flex-shrink:0">
-          <button class="btn-secundario" style="width:auto;padding:6px 12px;font-size:var(--fs-c)" onclick="vfAnexarElementoExistenteVF('${item.id}')">Anexar</button>
+          <button class="btn-primario" style="width:auto;padding:6px 12px;font-size:var(--fs-c)" onclick="vfAnexarElementoExistenteVF('${item.id}')">Anexar</button>
           <button style="width:auto;padding:6px 10px;font-size:var(--fs-c);border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#B23A34;cursor:pointer" onclick="vfExcluirElementoBibliotecaVF('${item.id}')" title="Excluir da biblioteca">✕</button>
         </div>
       </div>
@@ -10148,7 +10150,7 @@ async function vfAnexarElementoExistenteVF(elementoHtmlId){
   vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF);
 }
 async function vfCriarESalvarElementoHtmlVF(){
-  const titulo = document.getElementById('vf-complementar-titulo-novo').value.trim();
+  const titulo = document.getElementById('vf-complementar-titulo-novo').value.trim().replace(/—/g, '–'); // travessão longo sempre vira curto, mesma regra do resto do app
   const latexFonte = document.getElementById('vf-complementar-latex-novo').value.trim();
   if(!titulo || !latexFonte){ alert('Preencha o título e o LaTeX.'); return; }
   const {data, error} = await sb.from('elementos_html_vf').insert({usuario_id: usuarioAtual.id, titulo, latex_fonte: latexFonte}).select('id').single();
@@ -10208,9 +10210,8 @@ function vfAplicarIdentificadoresECliquesVF(bloco, mapaAnotacoes, elementoHtmlId
         if(explicacaoSalva){
           celula.style.textDecoration = 'underline dotted';
           celula.style.textUnderlineOffset = '3px';
-          const mostrar = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, explicacaoSalva, abrirModalEdicao); };
-          celula.onclick = mostrar;
-          celula.onmouseenter = mostrar;
+          celula.onclick = (e) => { e.stopPropagation(); abrirModalEdicao(); };
+          celula.onmouseenter = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, explicacaoSalva); };
         }else{
           celula.onclick = (e) => { e.stopPropagation(); abrirModalEdicao(); };
         }
@@ -10249,9 +10250,8 @@ async function vfConfirmarAnotacaoElementoVF(){
   celulaEl.style.textDecoration = 'underline dotted';
   celulaEl.style.textUnderlineOffset = '3px';
   const abrirModalEdicao = () => vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, texto, celulaEl);
-  const mostrar = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, texto, abrirModalEdicao); };
-  celulaEl.onclick = mostrar;
-  celulaEl.onmouseenter = mostrar;
+  celulaEl.onclick = (e) => { e.stopPropagation(); abrirModalEdicao(); };
+  celulaEl.onmouseenter = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, texto); };
 }
 async function vfDesanexarElementoVF(ligacaoId, questaoVfId){
   if(!confirm('Desanexar esse elemento dessa questão? Ele continua salvo na sua biblioteca.')) return;
