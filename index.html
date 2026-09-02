@@ -333,7 +333,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
    sem highlight cinza nativo do navegador ao tocar, só o sublinhado
    pontilhado indicando que dá pra tocar */
 .vf-nota-clicavel, .vf-celula-anotavel{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none}
-.vf-nota-clicavel{border-bottom:1.5px dotted #B23A34;cursor:pointer}
+.vf-nota-clicavel{border-bottom:1.5px dotted #888;cursor:pointer}
 .vf-celula-anotavel-com-nota{text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
 .vf-celula-anotavel-sem-nota{cursor:pointer}
 .item-lista-modulo{padding:9px 8px;font-size:var(--fs-d);line-height:1.3;color:#111;cursor:pointer;border-bottom:0.5px solid #eee}
@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-494';
+const VERSAO_APP = '2026-07-25-495';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3967,7 +3967,7 @@ function vfProcessarNotaClicavelVF(texto){
     const grupo2 = vfExtrairGrupoBalanceadoVF(texto, pos2);
     if(!grupo2){ regexInicio.lastIndex = match.index + match[0].length; continue; }
     resultado += texto.slice(pos, match.index);
-    resultado += `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(grupo2.conteudo)}" onclick="event.stopPropagation();vfMostrarBalaoExplicacaoVF(event,this.dataset.explicacao)">${grupo1.conteudo}</span>`;
+    resultado += `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(grupo2.conteudo)}" onclick="vfCliqueNotaClicavelVF(event)">${grupo1.conteudo}</span>`;
     pos = grupo2.fimPos + 1;
     regexInicio.lastIndex = pos;
   }
@@ -3994,7 +3994,7 @@ function vfProcessarNotaClicavelComPlaceholderVF(texto, tabelas){
     const grupo2 = vfExtrairGrupoBalanceadoVF(texto, pos2);
     if(!grupo2){ regexInicio.lastIndex = match.index + match[0].length; continue; }
     resultado += texto.slice(pos, match.index);
-    const span = `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(grupo2.conteudo)}" onclick="event.stopPropagation();vfMostrarBalaoExplicacaoVF(event,this.dataset.explicacao)">${grupo1.conteudo}</span>`;
+    const span = `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(grupo2.conteudo)}" onclick="vfCliqueNotaClicavelVF(event)">${grupo1.conteudo}</span>`;
     tabelas.push(span);
     resultado += `\u0000TABELA${tabelas.length - 1}\u0000`;
     pos = grupo2.fimPos + 1;
@@ -10242,6 +10242,15 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
 // modal de anotação pré-preenchido - usado só nas anotações de célula
 // (que têm dono e podem ser editadas), não no \nota{}{} do LaTeX (que é
 // parte do texto da questão em si, editado reescrevendo o LaTeX)
+// wrapper usada pelo onclick inline do \nota{}{} solto no texto (gerado
+// como string HTML, não dá pra referenciar a função local ali) - mesma
+// proteção das células de tabela: se já tem um balão aberto, esse clique
+// só fecha, não troca direto pra outro balão no mesmo toque
+function vfCliqueNotaClicavelVF(evento){
+  evento.stopPropagation();
+  if(vfBalaoExplicacaoEstaAbertoVF()){ vfEsconderBalaoExplicacaoVF(); return; }
+  vfMostrarBalaoExplicacaoVF(evento, evento.currentTarget.dataset.explicacao);
+}
 function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   const balao = document.getElementById('vf-balao-explicacao');
   const span = document.getElementById('vf-balao-explicacao-texto');
@@ -10268,6 +10277,10 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
 }
 function vfEsconderBalaoExplicacaoVF(){
   document.getElementById('vf-balao-explicacao').classList.add('hidden');
+}
+function vfBalaoExplicacaoEstaAbertoVF(){
+  const balao = document.getElementById('vf-balao-explicacao');
+  return !!balao && !balao.classList.contains('hidden');
 }
 document.addEventListener('click', (e) => {
   const balao = document.getElementById('vf-balao-explicacao');
@@ -10455,12 +10468,27 @@ function vfAplicarIdentificadoresECliquesVF(bloco, mapaAnotacoes, elementoHtmlId
         const abrirModalEdicao = () => vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, explicacaoSalva || '', celula);
         if(explicacaoSalva){
           celula.style.textDecoration = 'underline dotted';
+          celula.style.textDecorationColor = '#888';
           celula.style.textUnderlineOffset = '3px';
-          const mostrar = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, explicacaoSalva, abrirModalEdicao); };
+          const mostrar = (e) => {
+            e.stopPropagation();
+            // se já tem um balão aberto (de outra célula), esse clique só
+            // fecha ele - achado real: sem essa checagem, "clicar fora"
+            // numa célula diferente pra fechar o balão atual abria direto
+            // outro balão no mesmo toque, nunca dando pra só cancelar
+            if(vfBalaoExplicacaoEstaAbertoVF()){ vfEsconderBalaoExplicacaoVF(); return; }
+            vfMostrarBalaoExplicacaoVF(e, explicacaoSalva, abrirModalEdicao);
+          };
           celula.onclick = mostrar;
           celula.onmouseenter = mostrar;
         }else{
-          celula.onclick = (e) => { e.stopPropagation(); abrirModalEdicao(); };
+          celula.onclick = (e) => {
+            e.stopPropagation();
+            // mesma proteção - clicar numa célula sem anotação enquanto um
+            // balão está aberto só fecha ele, não abre direto o modal de criar
+            if(vfBalaoExplicacaoEstaAbertoVF()){ vfEsconderBalaoExplicacaoVF(); return; }
+            abrirModalEdicao();
+          };
         }
       });
     });
@@ -10496,6 +10524,7 @@ async function vfConfirmarAnotacaoElementoVF(){
   if(error){ alert('Erro ao salvar anotação: '+error.message); return; }
   fecharModal('modal-anotacao-elemento-vf');
   celulaEl.style.textDecoration = 'underline dotted';
+  celulaEl.style.textDecorationColor = '#888';
   celulaEl.style.textUnderlineOffset = '3px';
   const abrirModalEdicao = () => vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, texto, celulaEl);
   const mostrar = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, texto, abrirModalEdicao); };
