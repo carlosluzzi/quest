@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-465';
+const VERSAO_APP = '2026-07-25-466';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3893,9 +3893,14 @@ function vfFormatarCelulaArrayVF(celula){
 }
 
 // gera só o <table> interno (sem o cartão em volta) - reaproveitado
-// tanto pela tabela sozinha quanto pelas duas lado a lado
-function vfGerarTabelaInternaVF(colunasStr, conteudo){
+// tanto pela tabela sozinha quanto pelas duas lado a lado. compacta=true
+// (usado só dentro de \sidebyside, onde cada tabela tem metade do
+// espaço) usa um padding horizontal menor - com o padding largo normal,
+// colunas estreitas cortavam palavras tipo "curva"/"quase reta" em duas
+// linhas ruins
+function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta){
   const alinhamentos = colunasStr.split('').map(c => c === 'l' ? 'left' : c === 'r' ? 'right' : 'center');
+  const paddingH = compacta ? '8px' : '14px';
   const semEspacamentos = conteudo.replace(/\[\d+pt\]/g, '');
   const linhas = semEspacamentos.split('\\\\').map(l => l.trim()).filter(Boolean);
   const linhasHtml = linhas.map((linha, indiceLinha) => {
@@ -3910,7 +3915,7 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo){
       // automaticamente, sem precisar de nenhum comando manual pra isso
       const ehSoTraco = /^[-–—]$/.test(conteudoCelula.trim());
       const corTraco = ehSoTraco ? 'color:#7A7A74;' : '';
-      return `<td style="padding:7px 14px;text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${bordaSuperior}${corTraco}">${conteudoCelula}</td>`;
+      return `<td style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${bordaSuperior}${corTraco}">${conteudoCelula}</td>`;
     }).join('');
     const estiloLinha = ehCabecalho ? 'background:#F0F0ED' : '';
     return `<tr style="${estiloLinha}">${celulasHtml}</tr>`;
@@ -3956,7 +3961,7 @@ function vfProcessarSideBySideVF(texto){
     resultado += texto.slice(pos, match.index);
     const extrairArray = (conteudoBruto) => {
       const m = conteudoBruto.match(/\\begin\{array\}\{([lcr]+)\}([\s\S]*)\\end\{array\}/);
-      return m ? vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(m[1], m[2])) : '';
+      return m ? vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(m[1], m[2], true)) : '';
     };
     const tabela1 = extrairArray(grupo1.conteudo);
     const tabela2 = extrairArray(grupo2.conteudo);
@@ -9921,15 +9926,23 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
   // outra questão enquanto isso, não pisa no preview da questão nova
   const elAtual = document.getElementById('vf-preview-nota');
   if(!elAtual || !data || !data.length) return;
-  // mantém a classe card-questao (já traz padding/borda/sombra corretos
-  // pro card próprio) - só ajusta o layout interno pra flex e o cursor
-  elAtual.style.marginTop = '14px';
-  elAtual.style.display = 'flex';
-  elAtual.style.gap = '10px';
-  elAtual.style.alignItems = 'center';
-  elAtual.style.cursor = 'pointer';
   elAtual.onclick = () => abrirNotaVF(questaoVfId);
-  elAtual.innerHTML = `${VF_ICONE_LAMPADA_SVG('24', '27', '#B23A34')}<div style="color:#333;line-height:1.4">${escapeHtml(data[0].texto)}</div>`;
+  // nota com tabela (\begin{array}, sozinha ou dentro de \sidebyside) não
+  // ganha lâmpada nem fica dentro de outro card - a tabela já tem seu
+  // próprio card/borda embutido, "card dentro de card" fica estranho.
+  // Lâmpada+card continua só pra nota puramente escrita, sem tabela
+  const temTabela = /\\begin\{array\}/.test(data[0].texto);
+  if(temTabela){
+    elAtual.classList.remove('card-questao');
+    elAtual.style.cssText = 'margin-top:14px;cursor:pointer';
+    elAtual.innerHTML = formatarTextoItemVF(data[0].texto);
+  }else{
+    // mantém a classe card-questao (já traz padding/borda/sombra corretos
+    // pro card próprio) - só ajusta o layout interno pra flex e o cursor
+    elAtual.classList.add('card-questao');
+    elAtual.style.cssText = 'margin-top:14px;display:flex;gap:10px;align-items:center;cursor:pointer';
+    elAtual.innerHTML = `${VF_ICONE_LAMPADA_SVG('24', '27', '#B23A34')}<div style="color:#333;line-height:1.4">${formatarTextoItemVF(data[0].texto)}</div>`;
+  }
 }
 
 async function abrirNotaVF(questaoVfId){
