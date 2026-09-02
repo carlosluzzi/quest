@@ -1665,7 +1665,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-458';
+const VERSAO_APP = '2026-07-25-464';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1778,7 +1778,18 @@ function vfLimparApostrofoUnderscoreVF(texto){
 //   1. Assertivas romanas (I) II) III)...)
 //   2. Parênteses vazios ( ) – questões de Certo/Errado ou ordenação
 //   3. Maiúsculas seguidas de ponto (A. B. C...) – questões de correlação
+// wrapper: extrai tabelas ANTES de qualquer processamento (protege o &
+// de virar &amp; no escapeHtml lá dentro), chama a função original com
+// placeholder no lugar, reinsere o HTML pronto da tabela no resultado
+// final - função original tem múltiplos pontos de retorno diferentes
+// (formatos de questão diferentes), reestruturar ela por dentro seria
+// arriscado; fazer por fora é seguro e não toca em nada existente
 function formatarEnunciado(texto){
+  if(!texto) return formatarEnunciadoInterno(texto);
+  const {textoComPlaceholder, tabelas} = vfExtrairTabelasComoPlaceholderVF(texto);
+  return vfReinserirTabelasVF(formatarEnunciadoInterno(textoComPlaceholder), tabelas);
+}
+function formatarEnunciadoInterno(texto){
   if(!texto) return '(enunciado vazio – questão pode estar malformada)';
   texto = vfLimparApostrofoUnderscoreVF(texto);
   // colapsa qualquer quebra de linha/espaço interno pra um espaço só, ANTES
@@ -3858,8 +3869,132 @@ const VF_NOMES_MATEMATICOS_REGEX = Object.keys({...VF_LETRAS_GREGAS, ...VF_OPERA
 // "qualquer sequência de letras") - ver VF_NOMES_MATEMATICOS_REGEX acima
 const VF_REGEX_NOME_COM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')\\{([^}]*)\\}', 'g');
 const VF_REGEX_NOME_SEM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')', 'g');
+// fonte serifada, exceção deliberada só pras tabelas (\begin{array}) -
+// o resto do app continua na fonte padrão sem serifa, intocada
+const VF_FONTE_TABELA = `'Charter','Iowan Old Style',Georgia,'Times New Roman',serif`;
+
+// processa o conteúdo de uma célula de tabela: comandos específicos de
+// célula primeiro (\text{}, vírgula decimal {,}, espaço fino \,), depois
+// reaproveita as mesmas regras matemáticas já usadas no resto do texto
+// (gregas, \sqrt, expoente com chaves) via vfAplicarMarcacaoMatematicaVF,
+// e por fim as regras de expoente com fração/parênteses e subscrito que
+// só existem hoje dentro de formatarTextoItemVF/formatarEnunciado -
+// duplicadas aqui porque aquelas não são reutilizáveis como função à parte
+function vfFormatarCelulaArrayVF(celula){
+  let c = celula.trim();
+  c = c.replace(/—/g, '–'); // travessão longo sempre vira curto, mesma regra do resto do texto
+  c = c.replace(/\\text\{([^}]*)\}/g, '$1');
+  c = c.replace(/\{,\}/g, ',');
+  c = c.replace(/\\,/g, ' ');
+  c = vfAplicarMarcacaoMatematicaVF(c);
+  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>');
+  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9]{1,6}))/g, '$1<sub>$2</sub>');
+  return c;
+}
+
+// gera só o <table> interno (sem o cartão em volta) - reaproveitado
+// tanto pela tabela sozinha quanto pelas duas lado a lado
+function vfGerarTabelaInternaVF(colunasStr, conteudo){
+  const alinhamentos = colunasStr.split('').map(c => c === 'l' ? 'left' : c === 'r' ? 'right' : 'center');
+  const semEspacamentos = conteudo.replace(/\[\d+pt\]/g, '');
+  const linhas = semEspacamentos.split('\\\\').map(l => l.trim()).filter(Boolean);
+  const linhasHtml = linhas.map((linha, indiceLinha) => {
+    const ehCabecalho = indiceLinha === 0;
+    const celulas = linha.split('&').map(c => c.trim());
+    const celulasHtml = celulas.map((c, i) => {
+      const alinhamento = alinhamentos[i] || 'center';
+      const pesoTexto = ehCabecalho ? 600 : 400;
+      const bordaSuperior = indiceLinha > 0 ? 'border-top:1px solid #EAEAE7;' : '';
+      const conteudoCelula = vfFormatarCelulaArrayVF(c);
+      // célula com só um traço solto (vazio/não se aplica) vira cinza
+      // automaticamente, sem precisar de nenhum comando manual pra isso
+      const ehSoTraco = /^[-–—]$/.test(conteudoCelula.trim());
+      const corTraco = ehSoTraco ? 'color:#7A7A74;' : '';
+      return `<td style="padding:7px 14px;text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${bordaSuperior}${corTraco}">${conteudoCelula}</td>`;
+    }).join('');
+    const estiloLinha = ehCabecalho ? 'background:#F0F0ED' : '';
+    return `<tr style="${estiloLinha}">${celulasHtml}</tr>`;
+  }).join('');
+  return `<table style="width:100%;border-collapse:collapse">${linhasHtml}</table>`;
+}
+// envolve uma tabela interna no cartão padrão (borda, cantos, sombra)
+function vfEnvolverEmCartaoVF(tabelaHtml){
+  return `<div style="border:1px solid #E6E6E3;border-radius:10px;overflow:hidden;background:#FBFBFA;box-shadow:0 1px 3px rgba(0,0,0,0.04)">${tabelaHtml}</div>`;
+}
+// acha o conteúdo entre chaves balanceadas a partir de uma posição que
+// aponta pro { de abertura - necessário porque o conteúdo interno (um
+// \begin{array}) já tem suas próprias chaves, um regex simples [^}]*
+// pararia na primeira chave errada, não na de fechamento de verdade
+function vfExtrairGrupoBalanceadoVF(texto, posicaoAbre){
+  let profundidade = 0;
+  for(let i = posicaoAbre; i < texto.length; i++){
+    if(texto[i] === '{') profundidade++;
+    else if(texto[i] === '}'){
+      profundidade--;
+      if(profundidade === 0) return {conteudo: texto.slice(posicaoAbre+1, i), fimPos: i};
+    }
+  }
+  return null;
+}
+// \sidebyside{ \begin{array}{...}...\end{array} }{ \begin{array}{...}...\end{array} }
+// duas tabelas num grid de 2 colunas, mesmo padrão visual das tabelas
+// normais - pra layout comparativo lado a lado. Empilha em coluna única
+// automaticamente em telas estreitas
+function vfProcessarSideBySideVF(texto){
+  let resultado = '';
+  let pos = 0;
+  const regexInicio = /\\sidebyside\{/g;
+  let match;
+  while((match = regexInicio.exec(texto))){
+    const grupo1 = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+    if(!grupo1){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    const pos2 = grupo1.fimPos + 1;
+    if(texto[pos2] !== '{'){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    const grupo2 = vfExtrairGrupoBalanceadoVF(texto, pos2);
+    if(!grupo2){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+
+    resultado += texto.slice(pos, match.index);
+    const extrairArray = (conteudoBruto) => {
+      const m = conteudoBruto.match(/\\begin\{array\}\{([lcr]+)\}([\s\S]*)\\end\{array\}/);
+      return m ? vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(m[1], m[2])) : '';
+    };
+    const tabela1 = extrairArray(grupo1.conteudo);
+    const tabela2 = extrairArray(grupo2.conteudo);
+    resultado += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-family:${VF_FONTE_TABELA};margin:10px 0">${tabela1}${tabela2}</div>`;
+    pos = grupo2.fimPos + 1;
+    regexInicio.lastIndex = pos;
+  }
+  resultado += texto.slice(pos);
+  return resultado;
+}
+
+// \begin{array}{lcc}...\end{array} - tabela no padrão visual aprovado:
+// primeira linha sempre vira cabeçalho (fundo cinza, negrito), paleta de
+// cinzas refinada (mesma da maquete aprovada), fonte serifada só aqui
+// dentro (ver VF_FONTE_TABELA), dimensões na escala tipográfica do app
+// (--fs-d, não px fixo). [Npt] entre linhas (espaçamento vertical do
+// LaTeX) é só removido - sem equivalente simples numa tabela HTML comum,
+// e não faz falta visualmente
+function vfProcessarArrayLatexVF(texto){
+  // sidebyside primeiro - senão o regex de array sozinho abaixo pegaria
+  // os arrays de dentro dele também, fora do grid de 2 colunas
+  texto = vfProcessarSideBySideVF(texto);
+  return texto.replace(/\\begin\{array\}\{([lcr]+)\}([\s\S]*?)\\end\{array\}/g, (match, colunas, conteudo) => {
+    return `<div style="font-family:${VF_FONTE_TABELA};margin:10px 0">${vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(colunas, conteudo))}</div>`;
+  });
+}
+
+// \small{...} - legenda/nota pequena (ex: embaixo de uma tabela),
+
+// tamanho reduzido mas ainda na escala do app (--fs-b, não px fixo),
+// cinza refinado igual ao resto da paleta da tabela
+function vfProcessarTextoPequenoVF(texto){
+  return texto.replace(/\\small\{([^}]*)\}/g, '<span style="font-size:var(--fs-b);color:#6B6B66">$1</span>');
+}
+
 function vfAplicarMarcacaoMatematicaVF(textoEscapado){
-  return textoEscapado
+  return vfProcessarTextoPequenoVF(textoEscapado)
+    .replace(/\\,/g, ' ') // espaço fino do LaTeX - espaço normal já resolve visualmente
     // \nome{conteudo} - letra grega/operador seguido de chaves SEM
     // expoente (ex: \delta{V_P}) - converte o símbolo e remove as
     // chaves, deixando só o conteúdo (que ainda passa pelas outras
@@ -3885,10 +4020,54 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9)\]])\^\{([^}]+)\}/g, '$1<sup>$2</sup>');
 }
 
+// extrai \begin{array}...\end{array} do texto CRU (antes do escapeHtml),
+// já convertendo pro HTML final da tabela, e substitui por um
+// placeholder de texto simples que sobrevive ao escapeHtml sem ser
+// afetado. Achado real: processar a tabela DEPOIS do escapeHtml
+// transformava o & (separador de células) em &amp;, quebrando a divisão
+// das células - precisa rodar antes, com o & ainda literal
+function vfExtrairTabelasComoPlaceholderVF(texto){
+  const tabelas = [];
+  // primeiro os \sidebyside{...}{...} completos (bloco inteiro, com os
+  // dois arrays de dentro juntos) - precisa ir antes dos arrays soltos,
+  // senão cada array dentro do sidebyside vira placeholder individual
+  // separado, e o sidebyside nunca mais vê os dois juntos pra combinar
+  let semSideBySide = '';
+  let pos = 0;
+  const regexInicio = /\\sidebyside\{/g;
+  let match;
+  while((match = regexInicio.exec(texto))){
+    const grupo1 = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+    if(!grupo1){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    const pos2 = grupo1.fimPos + 1;
+    if(texto[pos2] !== '{'){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    const grupo2 = vfExtrairGrupoBalanceadoVF(texto, pos2);
+    if(!grupo2){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    const blocoCompleto = texto.slice(match.index, grupo2.fimPos + 1);
+    semSideBySide += texto.slice(pos, match.index);
+    tabelas.push(vfProcessarArrayLatexVF(blocoCompleto));
+    semSideBySide += `\u0000TABELA${tabelas.length - 1}\u0000`;
+    pos = grupo2.fimPos + 1;
+    regexInicio.lastIndex = pos;
+  }
+  semSideBySide += texto.slice(pos);
+  // depois os \begin{array}...\end{array} soltos que sobraram (não
+  // estavam dentro de nenhum sidebyside)
+  const textoComPlaceholder = semSideBySide.replace(/\\begin\{array\}\{[lcr]+\}[\s\S]*?\\end\{array\}/g, (match) => {
+    tabelas.push(vfProcessarArrayLatexVF(match));
+    return `\u0000TABELA${tabelas.length - 1}\u0000`;
+  });
+  return {textoComPlaceholder, tabelas};
+}
+function vfReinserirTabelasVF(texto, tabelas){
+  return texto.replace(/\u0000TABELA(\d+)\u0000/g, (m, i) => tabelas[Number(i)] || '');
+}
+
 function formatarTextoItemVF(texto){
   if(!texto) return '';
   texto = vfLimparApostrofoUnderscoreVF(texto);
-  let resultado = escapeHtml(texto)
+  const {textoComPlaceholder, tabelas} = vfExtrairTabelasComoPlaceholderVF(texto);
+  let resultado = escapeHtml(textoComPlaceholder)
     // travessão longo (—) sempre vira curto (–) — o extrator às vezes
     // ainda manda o longo por engano, mesmo pedindo o curto; corrigir
     // aqui na exibição resolve de vez, sem precisar reeditar o PDF nem
@@ -3896,10 +4075,11 @@ function formatarTextoItemVF(texto){
     .replace(/—/g, '–')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
-  return resultado
+  resultado = resultado
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
+  return vfReinserirTabelasVF(resultado, tabelas);
 }
 
 // ============================================================
@@ -4556,6 +4736,11 @@ function vfFecharCanvasExplicacaoVF(){
   canvas.style.display = 'none';
   if(vfCtxDesenhoExplicacaoVF) vfCtxDesenhoExplicacaoVF.clearRect(0, 0, canvas.width, canvas.height);
   vfCtxDesenhoExplicacaoVF = null;
+  // reseta o histórico próprio da explicação também - senão a próxima
+  // explicação aberta herdaria o histórico (e o botão desfazer habilitado)
+  // de uma explicação diferente, já fechada
+  vfHistoricoDesenhoExplicacao = [];
+  vfIndiceHistoricoExplicacaoVF = -1;
 }
 
 // NOTA: chegou a existir aqui uma checagem extra "vfDentroDaAreaDesenho"
@@ -5275,12 +5460,12 @@ function vfFinalizarTracoDesenho(e){
       const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
       vfCtxPreviewDestaque.clearRect(0, 0, canvasPreview.width/dpr, canvasPreview.height/dpr);
     }
-    // histórico (desfazer/refazer) só existe pro canvas principal - a
-    // explicação nunca grava histórico, é sempre descartada ao fechar
-    if(!modalExplicacaoAberto) vfSalvarEstadoHistoricoVF();
+    // histórico (desfazer/refazer) agora existe tanto pro canvas
+    // principal quanto pro da explicação (cada um com o seu, separado) -
+    // vfSalvarEstadoHistoricoVF já detecta sozinha qual dos dois é
+    vfSalvarEstadoHistoricoVF();
   }else{
-    const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
-    if(!modalExplicacaoAberto) vfSalvarEstadoHistoricoVF();
+    vfSalvarEstadoHistoricoVF();
   }
 }
 document.addEventListener('touchend', vfFinalizarTracoDesenho);
@@ -5294,27 +5479,53 @@ document.addEventListener('touchcancel', vfFinalizarTracoDesenho);
 // Limite de 20 pra não pesar demais a memória
 let vfHistoricoDesenho = [];
 let vfIndiceHistoricoVF = -1;
+// histórico paralelo, exclusivo do canvas de desenho da explicação -
+// achado real: o desfazer/refazer nunca funcionava lá porque não existia
+// nenhum histórico próprio, só o do canvas principal (da questão)
+let vfHistoricoDesenhoExplicacao = [];
+let vfIndiceHistoricoExplicacaoVF = -1;
 const VF_LIMITE_HISTORICO = 20;
 
+// verdadeiro só quando o modal de explicação está de fato aberto - usado
+// pra rotear pro conjunto certo de variáveis/canvas em todas as funções
+// de histórico (salvar, restaurar, desfazer, refazer, atualizar botões)
+function vfModalExplicacaoAbertoVF(){
+  const modalExplicacao = document.getElementById('modal-explicacao-vf');
+  return !!(modalExplicacao && !modalExplicacao.classList.contains('hidden'));
+}
+
 function vfSalvarEstadoHistoricoVF(){
-  const canvas = document.getElementById('vf-canvas-desenho');
-  if(!canvas || !vfCtxDesenho) return;
+  const naExplicacao = vfModalExplicacaoAbertoVF();
+  const canvas = document.getElementById(naExplicacao ? 'vf-canvas-desenho-explicacao' : 'vf-canvas-desenho');
+  const ctx = naExplicacao ? vfCtxDesenhoExplicacaoVF : vfCtxDesenho;
+  if(!canvas || !ctx) return;
   const content = document.getElementById('content');
   // se o usuário tinha desfeito e desenhou algo novo, descarta o "futuro"
   // que ficou pra trás - não faz mais sentido poder refazer aquilo
-  vfHistoricoDesenho = vfHistoricoDesenho.slice(0, vfIndiceHistoricoVF + 1);
+  if(naExplicacao){
+    vfHistoricoDesenhoExplicacao = vfHistoricoDesenhoExplicacao.slice(0, vfIndiceHistoricoExplicacaoVF + 1);
+  }else{
+    vfHistoricoDesenho = vfHistoricoDesenho.slice(0, vfIndiceHistoricoVF + 1);
+  }
   // guarda a largura/altura REAIS do conteúdo (não da tela toda) junto
   // com a imagem - é o que permite calcular depois, ao girar a tela, um
   // fator de correção proporcional (não um "não faz nada" nem um
   // "estica pra viewport inteira", os dois já tentados e errados)
-  vfHistoricoDesenho.push({
+  const entrada = {
     dataUrl: canvas.toDataURL(),
     timestamp: Date.now(),
     larguraConteudo: content ? content.clientWidth : null,
     alturaConteudo: content ? content.scrollHeight : null
-  });
-  if(vfHistoricoDesenho.length > VF_LIMITE_HISTORICO) vfHistoricoDesenho.shift();
-  vfIndiceHistoricoVF = vfHistoricoDesenho.length - 1;
+  };
+  if(naExplicacao){
+    vfHistoricoDesenhoExplicacao.push(entrada);
+    if(vfHistoricoDesenhoExplicacao.length > VF_LIMITE_HISTORICO) vfHistoricoDesenhoExplicacao.shift();
+    vfIndiceHistoricoExplicacaoVF = vfHistoricoDesenhoExplicacao.length - 1;
+  }else{
+    vfHistoricoDesenho.push(entrada);
+    if(vfHistoricoDesenho.length > VF_LIMITE_HISTORICO) vfHistoricoDesenho.shift();
+    vfIndiceHistoricoVF = vfHistoricoDesenho.length - 1;
+  }
   vfAtualizarBotoesHistoricoVF();
 }
 
@@ -5363,13 +5574,15 @@ function vfRestaurarEstadoMarcacaoTextoVF(estado){
 
 let vfSequenciaRestauracaoVF = 0; // protege contra 2 restaurações se cruzando se clicar rápido demais
 function vfRestaurarEstadoHistoricoVF(estado){
-  const canvas = document.getElementById('vf-canvas-desenho');
-  if(!canvas || !vfCtxDesenho) return;
+  const naExplicacao = vfModalExplicacaoAbertoVF();
+  const canvas = document.getElementById(naExplicacao ? 'vf-canvas-desenho-explicacao' : 'vf-canvas-desenho');
+  const ctx = naExplicacao ? vfCtxDesenhoExplicacaoVF : vfCtxDesenho;
+  if(!canvas || !ctx) return;
   const dpr = (window.devicePixelRatio || 1) * 1.5;
   const minhaSequencia = ++vfSequenciaRestauracaoVF;
   if(!estado){
     // não tem nenhum estado anterior - só limpa mesmo (volta ao vazio)
-    vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+    ctx.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
     vfAtualizarBotoesHistoricoVF();
     return;
   }
@@ -5379,16 +5592,16 @@ function vfRestaurarEstadoHistoricoVF(estado){
   const img = new Image();
   img.onload = () => {
     if(minhaSequencia !== vfSequenciaRestauracaoVF) return; // já tem uma chamada mais nova, descarta essa
-    vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+    ctx.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
     // o modo de composição fica "destination-out" (apagar) depois de usar
     // a borracha, e ISSO NUNCA SE DESFAZIA SOZINHO — desenhar (restaurar)
     // em cima de um canvas já limpo usando modo "apagar" não pinta nada
     // de volta (apagar algo que já está transparente não muda nada).
     // Essa era a causa real do desfazer "parecer" apagar tudo em vez de
     // restaurar: a imagem restaurada simplesmente nunca era pintada
-    vfCtxDesenho.globalCompositeOperation = 'source-over';
-    vfCtxDesenho.globalAlpha = 1; // mesma lição do bug do modo "apagar" - o destaque deixa alpha reduzido, precisa resetar antes de restaurar
-    vfCtxDesenho.drawImage(img, 0, 0, canvas.width/dpr, canvas.height/dpr);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1; // mesma lição do bug do modo "apagar" - o destaque deixa alpha reduzido, precisa resetar antes de restaurar
+    ctx.drawImage(img, 0, 0, canvas.width/dpr, canvas.height/dpr);
     vfAtualizarBotoesHistoricoVF();
   };
   img.src = estado.dataUrl;
@@ -5400,14 +5613,20 @@ function vfRestaurarEstadoHistoricoVF(estado){
 // desenho, então grifar/sublinhar/riscar nunca eram desfeitos por aqui
 let vfUltimoDesfazerRefazerMs = 0; // debounce contra disparo duplo (reforço de clique da caneta + clique nativo no mesmo toque)
 function vfDesfazerDesenho(){
-  // a explicação nunca teve histórico próprio (ver vfFinalizarTracoDesenho)
-  // - sem essa checagem, desfazer aqui dentro acabava agindo no histórico
-  // da tela de baixo (o canvas principal), apagando o que tinha lá
-  const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
-  if(modalExplicacaoAberto) return;
   const agora = Date.now();
   if(agora - vfUltimoDesfazerRefazerMs < 250) return;
   vfUltimoDesfazerRefazerMs = agora;
+
+  const naExplicacao = vfModalExplicacaoAbertoVF();
+  if(naExplicacao){
+    // explicação: só tem desenho, não tem marcação de texto pra
+    // considerar - mais simples que o caso principal abaixo
+    if(vfIndiceHistoricoExplicacaoVF < 0) return;
+    vfIndiceHistoricoExplicacaoVF--;
+    const estadoAnterior = vfIndiceHistoricoExplicacaoVF >= 0 ? vfHistoricoDesenhoExplicacao[vfIndiceHistoricoExplicacaoVF] : null;
+    vfRestaurarEstadoHistoricoVF(estadoAnterior);
+    return;
+  }
 
   const topoDesenho = vfIndiceHistoricoVF >= 0 ? vfHistoricoDesenho[vfIndiceHistoricoVF] : null;
   const topoTexto = vfIndiceHistoricoMarcacaoTexto >= 0 ? vfHistoricoMarcacaoTexto[vfIndiceHistoricoMarcacaoTexto] : null;
@@ -5428,12 +5647,17 @@ function vfDesfazerDesenho(){
 }
 
 function vfRefazerDesenho(){
-  // mesma proteção do desfazer - ver comentário lá
-  const modalExplicacaoAberto = !document.getElementById('modal-explicacao-vf').classList.contains('hidden');
-  if(modalExplicacaoAberto) return;
   const agora = Date.now();
   if(agora - vfUltimoDesfazerRefazerMs < 250) return;
   vfUltimoDesfazerRefazerMs = agora;
+
+  const naExplicacao = vfModalExplicacaoAbertoVF();
+  if(naExplicacao){
+    if(vfIndiceHistoricoExplicacaoVF >= vfHistoricoDesenhoExplicacao.length - 1) return;
+    vfIndiceHistoricoExplicacaoVF++;
+    vfRestaurarEstadoHistoricoVF(vfHistoricoDesenhoExplicacao[vfIndiceHistoricoExplicacaoVF]);
+    return;
+  }
 
   const proximoDesenho = vfIndiceHistoricoVF < vfHistoricoDesenho.length - 1 ? vfHistoricoDesenho[vfIndiceHistoricoVF + 1] : null;
   const proximoTexto = vfIndiceHistoricoMarcacaoTexto < vfHistoricoMarcacaoTexto.length - 1 ? vfHistoricoMarcacaoTexto[vfIndiceHistoricoMarcacaoTexto + 1] : null;
@@ -5456,8 +5680,9 @@ function vfAtualizarBotoesHistoricoVF(){
   const btnDesfazer = document.getElementById('vf-btn-desfazer');
   const btnRefazer = document.getElementById('vf-btn-refazer');
   if(!btnDesfazer || !btnRefazer) return;
-  const podeDesfazer = vfIndiceHistoricoVF >= 0 || vfIndiceHistoricoMarcacaoTexto >= 0;
-  const podeRefazer = vfIndiceHistoricoVF < vfHistoricoDesenho.length - 1 || vfIndiceHistoricoMarcacaoTexto < vfHistoricoMarcacaoTexto.length - 1;
+  const naExplicacao = vfModalExplicacaoAbertoVF();
+  const podeDesfazer = naExplicacao ? vfIndiceHistoricoExplicacaoVF >= 0 : (vfIndiceHistoricoVF >= 0 || vfIndiceHistoricoMarcacaoTexto >= 0);
+  const podeRefazer = naExplicacao ? vfIndiceHistoricoExplicacaoVF < vfHistoricoDesenhoExplicacao.length - 1 : (vfIndiceHistoricoVF < vfHistoricoDesenho.length - 1 || vfIndiceHistoricoMarcacaoTexto < vfHistoricoMarcacaoTexto.length - 1);
   btnDesfazer.disabled = !podeDesfazer;
   btnDesfazer.style.opacity = podeDesfazer ? '1' : '0.4';
   btnDesfazer.style.color = podeDesfazer ? '#555' : '#ccc';
@@ -7834,8 +8059,8 @@ function vfDespausarSeNecessarioVF(){
 // que já existe pro caderno do Quest - reaproveita o MESMO modal de
 // confirmação e a mesma edge function, só o formato da questão muda
 // (V/F não tem alternativas múltiplas)
-function vfMontarRetratoParaTrackerVF(inicioSessaoMs, fimSessaoMs, sessaoVfId){
-  const respondidas = estadoVF?.historico?.filter(h => h.resposta !== null) || [];
+function vfMontarRetratoParaTrackerVF(inicioSessaoMs, fimSessaoMs, sessaoVfId, historico){
+  const respondidas = historico?.filter(h => h.resposta !== null) || [];
   if(!respondidas.length) return null;
   return {
     origemFlash: true,
@@ -7851,6 +8076,28 @@ function vfConfirmarFinalizarSessaoFlashVF(e){
   abrirModal('modal-confirmar-finalizar-vf');
 }
 
+// reconstrói um "histórico" utilizável a partir do banco, pro caso de
+// estadoVF ter se perdido (app atualizado no meio da sessão, "Finalizar"
+// clicado direto da tela Retomar/Finalizar, sem "Retomar" primeiro) -
+// sem isso, a sessão salva ficava com total_questoes_respondidas=0 e o
+// convite pra enviar ao Tracker nunca aparecia, mesmo com respostas reais
+// já gravadas individualmente. log_respostas_vf não guarda a resposta
+// dada (só se acertou), então infere: acertou = resposta igual ao
+// gabarito, errou = resposta oposta (sistema binário V/F)
+async function vfReconstruirHistoricoDeSessaoPerdidaVF(iniciadoEmMs){
+  const {data, error} = await sb.from('log_respostas_vf')
+    .select('acertou, questao_vf_id, questoes_vf(id, texto, correcao, resposta, capitulo, bibliografia_id, anulada)')
+    .eq('usuario_id', usuarioAtual.id)
+    .gte('respondida_em', new Date(iniciadoEmMs).toISOString())
+    .order('respondida_em');
+  if(error || !data) return [];
+  return data.filter(r => r.questoes_vf).map(r => {
+    const item = r.questoes_vf;
+    const respostaDada = r.acertou ? item.resposta : !item.resposta;
+    return {item, resposta: respostaDada, acertou: r.acertou};
+  });
+}
+
 async function vfFinalizarSessaoFlashVF(e){
   if(e) e.stopPropagation();
   if(!vfSessaoAtivaVF) return;
@@ -7858,11 +8105,19 @@ async function vfFinalizarSessaoFlashVF(e){
   const iniciadoEmMs = vfSessaoAtivaVF.iniciadoEm;
   const finalizadoEmMs = Date.now();
   const tempoTotalMs = vfCalcularElapsedMsVF();
+  // se estadoVF se perdeu (reload no meio da sessão) e "Finalizar" foi
+  // clicado direto, sem "Retomar" primeiro, reconstrói o histórico real
+  // a partir do banco antes de contar/montar o retrato pro Tracker -
+  // senão essa sessão ficava com contagem zerada e sem convite de envio,
+  // mesmo com respostas reais já salvas
+  const historicoParaContagem = (estadoVF && estadoVF.historico && estadoVF.historico.length)
+    ? estadoVF.historico
+    : await vfReconstruirHistoricoDeSessaoPerdidaVF(iniciadoEmMs);
   // total de questões respondidas nessa sessão - agora é exato, não uma
   // aproximação: como estadoVF reseta por completo ao finalizar (ver
   // abaixo), o histórico contado aqui É de fato só dessa sessão, nunca
   // mistura com uma sessão anterior que tenha rodado na mesma aba
-  const totalRespondidas = estadoVF?.historico?.filter(h => h.resposta !== null).length || 0;
+  const totalRespondidas = historicoParaContagem?.filter(h => h.resposta !== null).length || 0;
   // espera o insert completar (antes só disparava sem esperar) - precisa
   // do id da sessão criada pra poder marcar enviado_tracker_em/
   // id_atividade_tracker nela depois do envio ao Tracker, mesmo padrão
@@ -7877,7 +8132,7 @@ async function vfFinalizarSessaoFlashVF(e){
   if(erroInsertSessao) console.error('[Flash] Erro ao salvar sessão:', erroInsertSessao);
   // retrato pro Tracker montado ANTES de zerar a sessão - precisa do
   // início real dela (vfSessaoAtivaVF.iniciadoEm), que se perde depois
-  const retratoParaTracker = podeUsarIntegracaoTracker() ? vfMontarRetratoParaTrackerVF(iniciadoEmMs, finalizadoEmMs, sessaoInserida?.id) : null;
+  const retratoParaTracker = podeUsarIntegracaoTracker() ? vfMontarRetratoParaTrackerVF(iniciadoEmMs, finalizadoEmMs, sessaoInserida?.id, historicoParaContagem) : null;
   limparCanvasDesenhoVF(); // finalizar é finalizar tudo - o risco que estava na tela some junto, não fica "esquecido" por cima do resultado
   vfSessaoAtivaVF = null;
   vfSessaoRestauradaAguardandoDecisaoVF = false;
@@ -8545,6 +8800,15 @@ function dispararSincronizacaoEmSegundoPlanoVF(){
 }
 
 async function avancarParaProximaVF(){
+  // força o salvamento de qualquer edição pendente (enunciado/correção/
+  // explicação) ANTES de qualquer coisa - precisa acontecer enquanto
+  // estadoVF.posicao ainda aponta pra a questão que estava sendo editada,
+  // não a nova. Achado real: chamar isso só dentro de renderizarItemVF()
+  // (que roda depois da posição já ter mudado) fazia o salvamento ler a
+  // entrada errada do histórico, perdendo a edição em silêncio
+  document.getElementById('vf-textarea-enunciado')?.blur();
+  document.getElementById('vf-textarea-correcao')?.blur();
+  document.getElementById('vf-textarea-explicacao')?.blur();
   dispararSincronizacaoEmSegundoPlanoVF(); // não bloqueia mais o avanço
   const agoraMs = agoraCorrigidoVF();
   const pick = escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao, estadoVF.respostasDesdeUltimaNova, estadoVF.familiasRecentesVF);
@@ -9920,6 +10184,12 @@ function anteriorVF(){
   if(!estadoVF || estadoVF.posicao <= 0) return;
   if(agoraCorrigidoVF() < (estadoVF.bloqueadoAteMs||0)) return; // mesma trava de toque duplo acidental logo após responder
   if(vfVisualizandoSalvoInfoVF){ vfSairDoModoVisualizacaoSalvoVF(); renderizarItemVF(); return; } // mesmo raciocínio de proximoVF - só volta pra sessão real
+  // mesmo achado real de avancarParaProximaVF: força o salvamento de
+  // qualquer edição pendente ANTES de mudar estadoVF.posicao, senão o
+  // salvamento (disparado pelo blur) lê a entrada errada do histórico
+  document.getElementById('vf-textarea-enunciado')?.blur();
+  document.getElementById('vf-textarea-correcao')?.blur();
+  document.getElementById('vf-textarea-explicacao')?.blur();
   estadoVF.posicao--;
   limparCanvasDesenhoVF();
   renderizarItemVF();
