@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-479';
+const VERSAO_APP = '2026-07-25-481';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4739,15 +4739,14 @@ function vfRedimensionarCanvasDesenhoInternoVF(){
     canvas.style.height = '0px';
     if(canvasPreview) canvasPreview.style.height = '0px';
     if(vfTelaAtualVF() === 'flash'){
-      // antes sempre window.innerHeight fixo - fazia sentido quando o
-      // conteúdo do Flash nunca crescia além da tela. Isso mudou com
-      // elementos HTML (tabelas) que podem ser anexados e crescer o
-      // conteúdo real bem além da viewport - usa o maior entre os dois,
-      // garantindo que o canvas sempre cobre pelo menos a tela inteira
-      // (caso normal, sem sobra de espaço morto) mas acompanha quando o
-      // conteúdo for maior de verdade
+      // achado real: usar window.innerHeight como piso mínimo aqui
+      // GARANTIA sempre pelo menos uma tela inteira de altura de scroll,
+      // mesmo quando o conteúdo real (com ou sem tabela) terminava bem
+      // antes disso - era exatamente essa garantia que criava o espaço
+      // vazio sobrando embaixo. Usa só a altura real do conteúdo, igual
+      // as outras telas do app já fazem - sem forçar nenhum mínimo
       const alturaMaximaFlash = window.innerHeight * 4; // mesmo teto de segurança das outras telas, adaptado
-      canvas.style.height = Math.min(Math.max(window.innerHeight, content.scrollHeight, content.offsetHeight), alturaMaximaFlash) + 'px';
+      canvas.style.height = Math.min(Math.max(content.scrollHeight, content.offsetHeight, content.clientHeight), alturaMaximaFlash) + 'px';
     }else{
       // teto de segurança: mesmo que outra causa de crescimento apareça no
       // futuro, o canvas nunca passa de 4x a altura da viewport - um
@@ -10079,16 +10078,10 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   const balao = document.getElementById('vf-balao-explicacao');
   const span = document.getElementById('vf-balao-explicacao-texto');
   span.textContent = texto;
-  let btnEditar = document.getElementById('vf-balao-explicacao-editar');
-  if(btnEditar) btnEditar.remove();
-  if(aoEditar){
-    btnEditar = document.createElement('button');
-    btnEditar.id = 'vf-balao-explicacao-editar';
-    btnEditar.textContent = '✏️ editar';
-    btnEditar.style.cssText = 'display:block;margin-top:8px;background:none;border:none;color:#fff;opacity:0.85;font-size:var(--fs-a);padding:0;cursor:pointer;text-decoration:underline';
-    btnEditar.onclick = (e) => { e.stopPropagation(); vfEsconderBalaoExplicacaoVF(); aoEditar(); };
-    balao.appendChild(btnEditar);
-  }
+  // o balão inteiro (a informação em si) fica clicável quando há edição
+  // associada - sem nenhum link "editar" separado aparecendo dentro dele
+  balao.style.cursor = aoEditar ? 'pointer' : 'default';
+  balao.onclick = aoEditar ? (e) => { e.stopPropagation(); vfEsconderBalaoExplicacaoVF(); aoEditar(); } : null;
   balao.classList.remove('hidden');
   // posiciona logo abaixo do ponto tocado, mas sem estourar a tela (nem
   // embaixo nem nas laterais) - mede DEPOIS de já estar visível, senão
@@ -10107,7 +10100,6 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
 }
 function vfEsconderBalaoExplicacaoVF(){
   document.getElementById('vf-balao-explicacao').classList.add('hidden');
-  vfIdentificadorBalaoAbertoVF = null;
 }
 document.addEventListener('click', (e) => {
   const balao = document.getElementById('vf-balao-explicacao');
@@ -10281,12 +10273,9 @@ async function vfCarregarElementosAnexadosVF(questaoVfId){
 // identificador de posição determinístico a cada uma (tabela-linha-col,
 // contando múltiplas tabelas dentro do mesmo bloco, como no sidebyside).
 // Sempre clicável, sem precisar de nenhum "modo" ligado: célula sem
-// anotação abre direto o modal pra criar uma. Célula já anotada: PRIMEIRO
-// toque mostra o balão normal (a info em si) - só um SEGUNDO toque na
-// MESMA célula, com o balão dela já aberto, abre a edição. Sem essa
-// distinção, no toque (que não tem "hover" de verdade como o mouse) o
-// balão nunca chegava a aparecer, ia direto pra edição sempre
-let vfIdentificadorBalaoAbertoVF = null;
+// anotação abre direto o modal pra criar uma. Célula já anotada: toque
+// (ou hover no mouse) sempre mostra o balão normal (a info em si) -
+// tocar no PRÓPRIO BALÃO depois é que abre a edição, não a célula de novo
 function vfAplicarIdentificadoresECliquesVF(bloco, mapaAnotacoes, elementoHtmlId){
   bloco.querySelectorAll('table').forEach((tabela, indiceTabela) => {
     tabela.querySelectorAll('tr').forEach((linha, indiceLinha) => {
@@ -10300,14 +10289,9 @@ function vfAplicarIdentificadoresECliquesVF(bloco, mapaAnotacoes, elementoHtmlId
         if(explicacaoSalva){
           celula.style.textDecoration = 'underline dotted';
           celula.style.textUnderlineOffset = '3px';
-          celula.onclick = (e) => {
-            e.stopPropagation();
-            if(vfIdentificadorBalaoAbertoVF === identificador){ vfEsconderBalaoExplicacaoVF(); abrirModalEdicao(); return; }
-            vfIdentificadorBalaoAbertoVF = identificador;
-            vfMostrarBalaoExplicacaoVF(e, explicacaoSalva);
-          };
-          // hover continua funcionando normal no mouse/desktop - só mostra o balão, sem contar como "toque"
-          celula.onmouseenter = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, explicacaoSalva); };
+          const mostrar = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, explicacaoSalva, abrirModalEdicao); };
+          celula.onclick = mostrar;
+          celula.onmouseenter = mostrar;
         }else{
           celula.onclick = (e) => { e.stopPropagation(); abrirModalEdicao(); };
         }
@@ -10339,7 +10323,7 @@ async function vfExcluirAnotacaoElementoVF(){
 async function vfConfirmarAnotacaoElementoVF(){
   if(!vfAnotacaoContextoAtualVF) return;
   const {elementoHtmlId, identificador, celulaEl} = vfAnotacaoContextoAtualVF;
-  const texto = document.getElementById('vf-anotacao-elemento-texto').value.trim();
+  const texto = document.getElementById('vf-anotacao-elemento-texto').value.trim().replace(/—/g, '–'); // travessão longo sempre vira curto, mesma regra do resto do app
   if(!texto) return;
   const {error} = await sb.from('anotacoes_elemento_html_vf').upsert({elemento_html_id: elementoHtmlId, identificador, texto_explicacao: texto}, {onConflict: 'elemento_html_id,identificador'});
   if(error){ alert('Erro ao salvar anotação: '+error.message); return; }
@@ -10347,13 +10331,9 @@ async function vfConfirmarAnotacaoElementoVF(){
   celulaEl.style.textDecoration = 'underline dotted';
   celulaEl.style.textUnderlineOffset = '3px';
   const abrirModalEdicao = () => vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, texto, celulaEl);
-  celulaEl.onclick = (e) => {
-    e.stopPropagation();
-    if(vfIdentificadorBalaoAbertoVF === identificador){ vfEsconderBalaoExplicacaoVF(); abrirModalEdicao(); return; }
-    vfIdentificadorBalaoAbertoVF = identificador;
-    vfMostrarBalaoExplicacaoVF(e, texto);
-  };
-  celulaEl.onmouseenter = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, texto); };
+  const mostrar = (e) => { e.stopPropagation(); vfMostrarBalaoExplicacaoVF(e, texto, abrirModalEdicao); };
+  celulaEl.onclick = mostrar;
+  celulaEl.onmouseenter = mostrar;
 }
 async function vfDesanexarElementoVF(ligacaoId, questaoVfId){
   vfAbrirConfirmacaoGenericaVF('Desanexar elemento', 'Desanexar esse elemento dessa questão? Ele continua salvo na sua biblioteca.', async () => {
