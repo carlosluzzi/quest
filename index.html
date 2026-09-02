@@ -262,7 +262,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-barra-fixa{position:fixed;bottom:var(--nav-height, 76px);left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#FBFBFA;padding:14px 16px 18px;display:flex;flex-direction:column;gap:20px;z-index:150;box-sizing:border-box}
 .vf-barra-fixa,.vf-barra-fixa *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .vf-barra-fixa-principal{display:flex;gap:10px}
-.vf-barra-fixa-acoes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.vf-barra-fixa-acoes{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 @media(min-width:1100px){.vf-barra-fixa{max-width:none;left:250px;right:0;transform:none;width:auto}}
 @media(min-width:1100px){.vf-overlay-sessao{left:242px !important}}
 .nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative;-webkit-tap-highlight-color:transparent}
@@ -1534,7 +1534,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     <div id="vf-complementar-conteudo-criar" class="hidden">
       <input id="vf-complementar-titulo-novo" class="textarea-padrao" placeholder="Título (pra você reconhecer na biblioteca depois)" style="margin-bottom:10px">
       <textarea id="vf-complementar-latex-novo" class="textarea-padrao" placeholder="Cole aqui o LaTeX (\begin{array}...\end{array}, \sidebyside{}{}, \nota{}{}, etc)" style="min-height:180px;font-family:monospace;font-size:var(--fs-c)"></textarea>
-      <button class="btn-primario" style="width:100%;margin-top:10px" onclick="vfCriarESalvarElementoHtmlVF()">Criar e anexar aqui</button>
+      <button class="btn-primario" style="width:100%;margin-top:10px" onclick="vfCriarESalvarElementoHtmlVF()">Salvar</button>
     </div>
     <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModalComplementarVF()">Fechar</button>
   </div>
@@ -1691,7 +1691,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-468';
+const VERSAO_APP = '2026-07-25-469';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
