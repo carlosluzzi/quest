@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-493';
+const VERSAO_APP = '2026-07-25-494';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3974,6 +3974,35 @@ function vfProcessarNotaClicavelVF(texto){
   resultado += texto.slice(pos);
   return resultado;
 }
+// mesma coisa, mas empurrando o <span> gerado pro array de placeholders
+// (igual tabelas/svg) em vez de devolver o HTML cru no texto - usada só
+// na chamada GLOBAL (fora de tabela), que roda antes do escapeHtml geral
+// em formatarTextoItemVF. Sem isso, o <span> virava texto escapado de
+// novo (<span> → &lt;span&gt;), aparecendo cru na tela em vez de
+// renderizar o balãozinho. Dentro de célula de tabela, a versão normal
+// acima já é segura (a tabela inteira já é um placeholder protegido)
+function vfProcessarNotaClicavelComPlaceholderVF(texto, tabelas){
+  let resultado = '';
+  let pos = 0;
+  const regexInicio = /\\nota\{/g;
+  let match;
+  while((match = regexInicio.exec(texto))){
+    const grupo1 = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+    if(!grupo1){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    const pos2 = grupo1.fimPos + 1;
+    if(texto[pos2] !== '{'){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    const grupo2 = vfExtrairGrupoBalanceadoVF(texto, pos2);
+    if(!grupo2){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    resultado += texto.slice(pos, match.index);
+    const span = `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(grupo2.conteudo)}" onclick="event.stopPropagation();vfMostrarBalaoExplicacaoVF(event,this.dataset.explicacao)">${grupo1.conteudo}</span>`;
+    tabelas.push(span);
+    resultado += `\u0000TABELA${tabelas.length - 1}\u0000`;
+    pos = grupo2.fimPos + 1;
+    regexInicio.lastIndex = pos;
+  }
+  resultado += texto.slice(pos);
+  return resultado;
+}
 // \svg{...conteudo cru, sem escapar...} - permite colar SVG bruto (com
 // suas próprias classes/estilo local, tipo diagramas gerados por outros
 // chats) direto no texto. Usa chaves balanceadas: SVG real costuma ter
@@ -4210,13 +4239,15 @@ function vfExtrairTabelasComoPlaceholderVF(texto){
     semSvg += texto.slice(posSvg);
     texto = semSvg;
   }
-  // \nota{X}{Y} - vira span clicável, com a explicação (Y) guardada como
-  // atributo (escapada pra HTML). X fica cru dentro do span, pra ainda
-  // passar pelas regras de formatação seguintes (gregas, subscrito, etc)
-  // normalmente - só \nota em si precisa ser resolvido antes do
-  // escapeHtml geral, senão as chaves/barra invertida seriam escapadas
-  // também e a regex nunca mais casaria
-  texto = vfProcessarNotaClicavelVF(texto);
+  // \nota{X}{Y} fora de tabela é processado só DEPOIS de extrair as
+  // tabelas (mais abaixo) - achado real: processar isso aqui, ANTES da
+  // tabela ser dividida em células, gerava um <span data-explicacao="...">
+  // cujo texto escapado (ex: "ship&#39;s") contém um "&" literal (da
+  // própria entidade HTML) - esse "&" era então confundido com o
+  // separador de coluna real da tabela (&), quebrando a célula no meio.
+  // Dentro de tabela, vfFormatarCelulaArrayVF já chama
+  // vfProcessarNotaClicavelVF por célula, depois do split por & já ter
+  // acontecido - sempre seguro, então \nota{}{} funciona igual nos dois casos
   // primeiro os \sidebyside{...}{...} completos (bloco inteiro, com os
   // dois arrays de dentro juntos) - precisa ir antes dos arrays soltos,
   // senão cada array dentro do sidebyside vira placeholder individual
@@ -4246,7 +4277,15 @@ function vfExtrairTabelasComoPlaceholderVF(texto){
     tabelas.push(vfProcessarArrayLatexVF(match));
     return `\u0000TABELA${tabelas.length - 1}\u0000`;
   });
-  return {textoComPlaceholder, tabelas};
+  // só agora, com as tabelas já fora do texto (substituídas por
+  // placeholder), \nota{}{} solto no resto do texto é processado com
+  // segurança - usa a versão com placeholder (protege o <span> gerado
+  // contra o escapeHtml geral que roda logo depois, em
+  // formatarTextoItemVF). Dentro de cada tabela, isso já foi feito
+  // célula por célula com a versão normal (ver vfFormatarCelulaArrayVF),
+  // segura ali porque a tabela inteira já vira um placeholder protegido
+  const textoFinal = vfProcessarNotaClicavelComPlaceholderVF(textoComPlaceholder, tabelas);
+  return {textoComPlaceholder: textoFinal, tabelas};
 }
 function vfReinserirTabelasVF(texto, tabelas){
   return texto.replace(/\u0000TABELA(\d+)\u0000/g, (m, i) => tabelas[Number(i)] || '');
