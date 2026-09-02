@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-481';
+const VERSAO_APP = '2026-07-25-482';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3648,6 +3648,13 @@ let quantidadeSelecionada = 15;
 function rotuloCapituloDoLivro(titulo){
   const bib = (bibliografiaCache || []).find(b => b.titulo === titulo);
   if(bib?.rotulo_capitulo) return bib.rotulo_capitulo;
+  // fallback pro cache do Flash (indexado por id, não por título) - o
+  // cache geral pode não estar carregado ainda nesse contexto
+  if(typeof vfBibliografiaCache !== 'undefined' && vfBibliografiaCache){
+    for(const b of vfBibliografiaCache.values()){
+      if(b.titulo === titulo && b.rotulo_capitulo) return b.rotulo_capitulo;
+    }
+  }
   if(/resistance and flow/i.test(titulo || '')) return 'Section';
   const palavrasInglesas = /\b(the|of|and|for|in|on|ship|guide|practice|practices|principles|design|resistance|flow|hydrodynamics|dimensions|data|infrastructure|channels|approach)\b/i;
   return palavrasInglesas.test(titulo || '') ? 'Chapter' : 'Capítulo';
@@ -7779,9 +7786,9 @@ let notasVF = new Set();
 // de join nenhum na query pesada das 7.700+ questões
 async function vfCarregarBibliografiaCacheVF(){
   if(vfBibliografiaCache.size > 0) return; // já carregado nessa sessão
-  const {data, error} = await sb.from('bibliografia').select('id, titulo, nome_exibicao, modulo_pscpp');
+  const {data, error} = await sb.from('bibliografia').select('id, titulo, nome_exibicao, modulo_pscpp, rotulo_capitulo');
   if(error || !data) return;
-  vfBibliografiaCache = new Map(data.map(b => [b.id, {titulo: b.nome_exibicao || b.titulo, modulo_pscpp: b.modulo_pscpp}]));
+  vfBibliografiaCache = new Map(data.map(b => [b.id, {titulo: b.nome_exibicao || b.titulo, modulo_pscpp: b.modulo_pscpp, rotulo_capitulo: b.rotulo_capitulo}]));
 }
 
 // busca o conteúdo PESADO (texto/explicação/correção) de uma questão sob
