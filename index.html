@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-484';
+const VERSAO_APP = '2026-07-25-485';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6032,6 +6032,7 @@ async function vfAbrirFlashSalvosVF(){
 }
 
 async function vfIrParaQuestaoSalvaVF(questaoVfId){
+  vfForcarSalvamentoEdicaoPendenteVF();
   pausarTimerVF(); // pausa a pendente ANTES de sair dela - senão continuava rodando escondida em background
   document.getElementById('pagina-flash-salvos-vf').classList.add('hidden');
   document.getElementById('pagina-favoritos-vf').classList.add('hidden');
@@ -6082,6 +6083,7 @@ async function vfIrParaQuestaoSalvaVF(questaoVfId){
 // de deixar a navegação continuar a partir da posição antiga do salvo
 function vfSairDoModoVisualizacaoSalvoVF(){
   if(!vfVisualizandoSalvoInfoVF) return;
+  vfForcarSalvamentoEdicaoPendenteVF();
   const {posicaoOriginal, indiceTemporario} = vfVisualizandoSalvoInfoVF;
   if(indiceTemporario !== null) estadoVF.historico.splice(indiceTemporario, 1); // remove a entrada temporária criada só pra essa visualização
   estadoVF.posicao = posicaoOriginal;
@@ -8923,16 +8925,24 @@ function dispararSincronizacaoEmSegundoPlanoVF(){
   sincronizarPoolVF().catch(() => {});
 }
 
-async function avancarParaProximaVF(){
-  // força o salvamento de qualquer edição pendente (enunciado/correção/
-  // explicação) ANTES de qualquer coisa - precisa acontecer enquanto
-  // estadoVF.posicao ainda aponta pra a questão que estava sendo editada,
-  // não a nova. Achado real: chamar isso só dentro de renderizarItemVF()
-  // (que roda depois da posição já ter mudado) fazia o salvamento ler a
-  // entrada errada do histórico, perdendo a edição em silêncio
+// força o salvamento de qualquer edição pendente (enunciado/correção/
+// explicação) ANTES de qualquer coisa que mude estadoVF.posicao ou
+// destrua o DOM da questão atual - precisa acontecer enquanto a posição
+// ainda aponta pra a questão que estava sendo editada, não a nova.
+// Achado real: chamar isso só dentro de renderizarItemVF() (que roda
+// DEPOIS da posição já ter mudado) fazia o salvamento ler a entrada
+// errada do histórico, perdendo a edição em silêncio - achado real #2:
+// isso não valia só pra Próxima/Anterior, qualquer forma de navegação
+// (abrir um salvo/favorito, sair do modo de visualização de salvo, etc)
+// tinha o mesmo problema
+function vfForcarSalvamentoEdicaoPendenteVF(){
   document.getElementById('vf-textarea-enunciado')?.blur();
   document.getElementById('vf-textarea-correcao')?.blur();
   document.getElementById('vf-textarea-explicacao')?.blur();
+}
+
+async function avancarParaProximaVF(){
+  vfForcarSalvamentoEdicaoPendenteVF();
   dispararSincronizacaoEmSegundoPlanoVF(); // não bloqueia mais o avanço
   const agoraMs = agoraCorrigidoVF();
   const pick = escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao, estadoVF.respostasDesdeUltimaNova, estadoVF.familiasRecentesVF);
@@ -9181,12 +9191,7 @@ function renderizarItemVF(){
   // destruído sem passar pelo blur, descartando a edição inteira em
   // silêncio - o mesmo tipo de perda de dados já corrigido antes pro
   // modal de explicação, mas por esse outro caminho (trocar de questão)
-  document.getElementById('vf-textarea-enunciado')?.blur();
-  document.getElementById('vf-textarea-correcao')?.blur();
-  document.getElementById('vf-textarea-explicacao')?.blur();
-  // trava de segurança: se a questão mudar (ex: clicou em Próxima) enquanto
-  // ainda estava editando a afirmação, o textarea é destruído sem passar
-  // pelo blur — sem isso, a barra de baixo podia ficar escondida pra sempre
+  vfForcarSalvamentoEdicaoPendenteVF();
   document.getElementById('bottom-nav')?.classList.remove('teclado-aberto');
   document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
 
@@ -10607,9 +10612,7 @@ function anteriorVF(){
   // mesmo achado real de avancarParaProximaVF: força o salvamento de
   // qualquer edição pendente ANTES de mudar estadoVF.posicao, senão o
   // salvamento (disparado pelo blur) lê a entrada errada do histórico
-  document.getElementById('vf-textarea-enunciado')?.blur();
-  document.getElementById('vf-textarea-correcao')?.blur();
-  document.getElementById('vf-textarea-explicacao')?.blur();
+  vfForcarSalvamentoEdicaoPendenteVF();
   estadoVF.posicao--;
   limparCanvasDesenhoVF();
   renderizarItemVF();
