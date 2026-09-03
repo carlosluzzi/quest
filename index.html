@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-500';
+const VERSAO_APP = '2026-07-25-502';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4080,6 +4080,7 @@ function vfFormatarCelulaArrayVF(celula){
   c = c.replace(/\\text\{([^}]*)\}/g, '$1');
   c = c.replace(/\{,\}/g, ',');
   c = c.replace(/\\,/g, ' ');
+  c = c.replace(/\\ /g, ' '); // \  (barra + espaço) força espaço em LaTeX de verdade, mas aqui um espaço normal já resolve - sem isso, aparecia a barra literal na tela
   c = vfAplicarMarcacaoMatematicaVF(c);
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>');
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9]{1,6}))/g, '$1<sub>$2</sub>');
@@ -4114,11 +4115,11 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta){
     const estiloLinha = ehCabecalho ? 'background:#F0F0ED' : '';
     return `<tr style="${estiloLinha}">${celulasHtml}</tr>`;
   }).join('');
-  return `<table style="width:100%;border-collapse:collapse">${linhasHtml}</table>`;
+  return `<table style="width:auto;max-width:100%;border-collapse:collapse">${linhasHtml}</table>`;
 }
 // envolve uma tabela interna no cartão padrão (borda, cantos, sombra)
 function vfEnvolverEmCartaoVF(tabelaHtml){
-  return `<div style="border:1px solid #E6E6E3;border-radius:10px;overflow:hidden;background:#FBFBFA;box-shadow:0 1px 3px rgba(0,0,0,0.04)">${tabelaHtml}</div>`;
+  return `<div style="border:1px solid #E6E6E3;border-radius:10px;overflow-x:auto;overflow-y:hidden;background:#FBFBFA;box-shadow:0 1px 3px rgba(0,0,0,0.04)">${tabelaHtml}</div>`;
 }
 // acha o conteúdo entre chaves balanceadas a partir de uma posição que
 // aponta pro { de abertura - necessário porque o conteúdo interno (um
@@ -4194,6 +4195,7 @@ function vfProcessarTextoPequenoVF(texto){
 function vfAplicarMarcacaoMatematicaVF(textoEscapado){
   return vfProcessarTextoPequenoVF(textoEscapado)
     .replace(/\\,/g, ' ') // espaço fino do LaTeX - espaço normal já resolve visualmente
+    .replace(/\\ /g, ' ') // \  (barra + espaço) força espaço em LaTeX de verdade - mesma ideia, espaço normal já resolve
     // \nome{conteudo} - letra grega/operador seguido de chaves SEM
     // expoente (ex: \delta{V_P}) - converte o símbolo e remove as
     // chaves, deixando só o conteúdo (que ainda passa pelas outras
@@ -9589,6 +9591,28 @@ function vfAutoAlturaTextareaVF(textarea){
   textarea.style.height = textarea.scrollHeight + 'px';
 }
 
+// tenta salvar até 3 vezes (1 tentativa + 2 retries), com um pequeno
+// intervalo crescente entre elas - achado real: "TypeError: Load failed"
+// (mensagem própria do Safari pra falha de rede, não de permissão/dado)
+// podia acontecer bem depois do usuário já ter navegado pra outra
+// questão, e nesse caso o alerta de erro chegava tarde demais pra fazer
+// sentido - a maioria dessas falhas é passageira (rede instável um
+// instante), e resolve sozinha numa segunda tentativa. Se falhar de
+// verdade nas 3, mostra um erro mais claro com um trecho do texto que
+// não salvou, pra dar pro usuário saber exatamente o que precisa refazer
+async function vfSalvarComRetryVF(operacaoAsync, descricaoErro, textoParaMostrarSeFalhar){
+  let ultimoErro = null;
+  for(let tentativa = 1; tentativa <= 3; tentativa++){
+    const {error} = await operacaoAsync();
+    if(!error) return true;
+    ultimoErro = error;
+    if(tentativa < 3) await new Promise(r => setTimeout(r, tentativa * 800));
+  }
+  const trecho = textoParaMostrarSeFalhar ? `"${textoParaMostrarSeFalhar.slice(0,60)}${textoParaMostrarSeFalhar.length>60?'…':''}"` : '';
+  alert(`Não consegui salvar ${descricaoErro} depois de tentar 3 vezes (${ultimoErro.message}). Talvez precise refazer: ${trecho}`);
+  return false;
+}
+
 async function vfSalvarEdicaoEnunciadoVF(questaoId, textoOriginal){
   const textarea = document.getElementById('vf-textarea-enunciado');
   const div = document.getElementById('vf-enunciado-atual');
@@ -9622,10 +9646,11 @@ async function vfSalvarEdicaoEnunciadoVF(questaoId, textoOriginal){
   // pelo resto da sessão mesmo já estando salva certinho no banco (D1)
   const cacheAtualEnunciado = vfConteudoCompletoCache.get(questaoId) || {};
   vfConteudoCompletoCache.set(questaoId, {...cacheAtualEnunciado, texto: textoNovo});
-  const {error} = await sb.from('questoes_vf').update({texto: textoNovo, n_palavras: novoNPalavras}).eq('id', questaoId);
-  if(error){
-    alert('Erro ao salvar a edição da afirmação: '+error.message);
-  }
+  await vfSalvarComRetryVF(
+    () => sb.from('questoes_vf').update({texto: textoNovo, n_palavras: novoNPalavras}).eq('id', questaoId),
+    'a edição da afirmação',
+    textoNovo
+  );
 }
 
 // copia só a afirmação verdadeira (o texto original se a questão é
@@ -9796,10 +9821,11 @@ async function vfSalvarEdicaoCorrecaoVF(questaoId, textoOriginal){
   div.innerHTML = formatarTextoItemVF(textoNovo);
   const cacheAtualCorrecao = vfConteudoCompletoCache.get(questaoId) || {};
   vfConteudoCompletoCache.set(questaoId, {...cacheAtualCorrecao, correcao: textoNovo});
-  const {error} = await sb.from('questoes_vf').update({correcao: textoNovo}).eq('id', questaoId);
-  if(error){
-    alert('Erro ao salvar a edição da correção: '+error.message);
-  }
+  await vfSalvarComRetryVF(
+    () => sb.from('questoes_vf').update({correcao: textoNovo}).eq('id', questaoId),
+    'a edição da correção',
+    textoNovo
+  );
 }
 
 function renderizarBarraFixaVF(item, jaRespondida){
@@ -10741,10 +10767,11 @@ async function vfSalvarEdicaoExplicacaoVF(questaoId, textoOriginal){
   div.innerHTML = textoNovo ? formatarTextoItemVF(textoNovo) : 'Sem explicação cadastrada – segure aqui pra adicionar.';
   const cacheAtualExplicacao = vfConteudoCompletoCache.get(questaoId) || {};
   vfConteudoCompletoCache.set(questaoId, {...cacheAtualExplicacao, explicacao: textoNovo || null});
-  const {error} = await sb.from('questoes_vf').update({explicacao: textoNovo || null}).eq('id', questaoId);
-  if(error){
-    alert('Erro ao salvar a edição da explicação: '+error.message);
-  }
+  await vfSalvarComRetryVF(
+    () => sb.from('questoes_vf').update({explicacao: textoNovo || null}).eq('id', questaoId),
+    'a edição da explicação',
+    textoNovo
+  );
 }
 
 async function vfCopiarExplicacaoParaClaude(botao){
@@ -11522,9 +11549,12 @@ async function vfSalvarEdicaoEnunciadoQuestVF(questaoId, textoOriginal){
   const idx = questoesCaderno.findIndex(x=>x.id===questaoId);
   if(idx !== -1) questoesCaderno[idx] = {...questoesCaderno[idx], enunciado: textoNovo};
   renderizarQuestaoAtual();
-  const {error} = await sb.from('questoes').update({enunciado: textoNovo, atualizado_em: new Date().toISOString()}).eq('id', questaoId);
-  if(error){ alert('Erro ao salvar: '+error.message); return; }
-  await sb.from('relatos_formatacao').update({visto:true}).eq('questao_id', questaoId);
+  const salvouCerto = await vfSalvarComRetryVF(
+    () => sb.from('questoes').update({enunciado: textoNovo, atualizado_em: new Date().toISOString()}).eq('id', questaoId),
+    'a edição do enunciado',
+    textoNovo
+  );
+  if(salvouCerto) await sb.from('relatos_formatacao').update({visto:true}).eq('questao_id', questaoId);
 }
 
 // --- alternativas (uma de cada vez, reconstruindo o campo inteiro por trás) ---
@@ -11605,9 +11635,12 @@ async function vfSalvarEdicaoAlternativaQuestVF(letra, textoOriginal){
   const idx = questoesCaderno.findIndex(x=>x.id===q.id);
   if(idx !== -1) questoesCaderno[idx] = {...questoesCaderno[idx], alternativas: alternativasNovas};
   renderizarQuestaoAtual();
-  const {error} = await sb.from('questoes').update({alternativas: alternativasNovas, atualizado_em: new Date().toISOString()}).eq('id', q.id);
-  if(error){ alert('Erro ao salvar: '+error.message); return; }
-  await sb.from('relatos_formatacao').update({visto:true}).eq('questao_id', q.id);
+  const salvouCerto = await vfSalvarComRetryVF(
+    () => sb.from('questoes').update({alternativas: alternativasNovas, atualizado_em: new Date().toISOString()}).eq('id', q.id),
+    `a edição da alternativa ${letra.toUpperCase()}`,
+    textoNovo
+  );
+  if(salvouCerto) await sb.from('relatos_formatacao').update({visto:true}).eq('questao_id', q.id);
 }
 
 // --- gabarito: toque rápido no ícone (não precisa segurar) marca aquela
