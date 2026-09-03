@@ -333,6 +333,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
    sem highlight cinza nativo do navegador ao tocar, só o sublinhado
    pontilhado indicando que dá pra tocar */
 .vf-nota-clicavel, .vf-celula-anotavel{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none}
+.vf-svg-bloco,.vf-svg-bloco *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .vf-nota-clicavel{border-bottom:1.5px dotted #888;cursor:pointer}
 .vf-celula-anotavel-com-nota{text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
 .vf-celula-anotavel-sem-nota{cursor:pointer}
@@ -1754,7 +1755,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-510';
+const VERSAO_APP = '2026-07-25-511';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
