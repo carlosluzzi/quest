@@ -1547,7 +1547,11 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
         Gerar tabela visualmente
       </button>
       <textarea id="vf-complementar-latex-novo" class="textarea-padrao" placeholder="Cole aqui o LaTeX (\begin{array}...\end{array}, \sidebyside{}{}, \nota{}{}, etc)" style="min-height:180px;font-family:monospace;font-size:var(--fs-c)"></textarea>
-      <button class="btn-primario" style="width:100%;margin-top:10px" onclick="vfCriarESalvarElementoHtmlVF()">Salvar</button>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-secundario" style="flex:1" onclick="vfUsarComplementarLocalVF()">Usar só aqui</button>
+        <button class="btn-primario" style="flex:1" onclick="vfCriarESalvarElementoHtmlVF()">Salvar na biblioteca</button>
+      </div>
+      <button id="vf-complementar-btn-remover-local" class="btn-secundario hidden" style="width:100%;margin-top:10px;color:#B23A34" onclick="vfRemoverComplementarLocalVF(vfQuestaoIdComplementarAtualVF)">Remover conteúdo local dessa questão</button>
     </div>
     <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModalComplementarVF()">Fechar</button>
   </div>
@@ -1755,7 +1759,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-521';
+const VERSAO_APP = '2026-07-25-523';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8171,6 +8175,10 @@ async function sincronizarPoolVFReal(){
   if(novaMarca) ultimaSincronizacaoVF = novaMarca;
 }
 let notasVF = new Set();
+// questões cuja nota fixada (ver coluna fixada em notas_vf) deve aparecer
+// visível na página - subconjunto de notasVF, só quem foi explicitamente
+// fixada pelo usuário, não qualquer nota salva
+let notasFixadasVF = new Set();
 
 // busca todas as questões do pool atual (respeitando filtro), já com o
 // estado de repetição de cada uma (ou 'nova' implícito se nunca respondida)
@@ -8193,7 +8201,7 @@ async function vfGarantirConteudoCompletoVF(item){
   if(item.explicacao !== undefined) return; // já carregado nesse próprio objeto (explicacao é o sinal certo agora - texto já vem preenchido desde o pool leve, por causa da Regra 2/família)
   const emCache = vfConteudoCompletoCache.get(item.id);
   if(emCache){ Object.assign(item, emCache); return; }
-  const {data, error} = await sb.from('questoes_vf').select('texto, resposta, explicacao, correcao, dificuldade, inconsistente').eq('id', item.id).single();
+  const {data, error} = await sb.from('questoes_vf').select('texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local').eq('id', item.id).single();
   if(error || !data) return;
   vfConteudoCompletoCache.set(item.id, data);
   Object.assign(item, data);
@@ -8204,20 +8212,17 @@ async function vfGarantirConteudoCompletoVF(item){
 // da nota (string) ou null (já buscou, confirmado que não tem nenhuma)
 const vfNotaPreviewCacheVF = new Map();
 
-// busca em lote a nota MAIS RECENTE de cada questão de uma vez só - uma
-// query com .in(), pedindo todas ordenadas por criado_em desc; a primeira
-// ocorrência de cada questao_vf_id nessa ordem já é a mais recente dela,
-// sem precisar de uma query por questão nem de agregação especial no banco
+// busca em lote a nota FIXADA de cada questão de uma vez só - uma query
+// com .in() + fixada=true, então cada questão tem no máximo 1 resultado
+// (a fixada), sem precisar de uma query por questão
 async function vfBuscarNotasEmLoteVF(questaoIds){
-  const pendentes = questaoIds.filter(id => notasVF.has(id) && !vfNotaPreviewCacheVF.has(id));
+  const pendentes = questaoIds.filter(id => notasFixadasVF.has(id) && !vfNotaPreviewCacheVF.has(id));
   if(!pendentes.length) return;
   const {data, error} = await sb.from('notas_vf').select('questao_vf_id, texto')
-    .eq('usuario_id', usuarioAtual.id).in('questao_vf_id', pendentes).order('criado_em', {ascending: false});
+    .eq('usuario_id', usuarioAtual.id).eq('fixada', true).in('questao_vf_id', pendentes);
   if(error) return;
   pendentes.forEach(id => vfNotaPreviewCacheVF.set(id, null)); // marca como "já buscou" mesmo se não achar nada, evita rebuscar
-  (data || []).forEach(n => {
-    if(!vfNotaPreviewCacheVF.get(n.questao_vf_id)) vfNotaPreviewCacheVF.set(n.questao_vf_id, n.texto); // só a primeira (mais recente) de cada questão
-  });
+  (data || []).forEach(n => vfNotaPreviewCacheVF.set(n.questao_vf_id, n.texto));
 }
 
 // mesma coisa, mas em LOTE - uma única query com .in('id', [...]) pra
@@ -8229,7 +8234,7 @@ async function vfBuscarConteudoEmLoteVF(itens){
   const pendentes = itens.filter(item => item.explicacao === undefined && !vfConteudoCompletoCache.has(item.id));
   if(!pendentes.length) return;
   const ids = pendentes.map(item => item.id);
-  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente').in('id', ids);
+  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local').in('id', ids);
   if(error || !data) return;
   const porId = new Map(data.map(d => [d.id, d]));
   pendentes.forEach(item => {
@@ -8422,7 +8427,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
-    sb.from('notas_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
+    sb.from('notas_vf').select('questao_vf_id, fixada').eq('usuario_id', usuarioAtual.id),
     sb.from('flashs_salvos_vf').select('questao_vf_id, motivo').eq('usuario_id', usuarioAtual.id),
     sb.from('tags_vf').select('id, nome').order('nome'),
     sb.from('questoes_vf_tags').select('questao_vf_id, tags_vf(id, nome)'),
@@ -8440,6 +8445,10 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   }
   favoritosVF = new Set((favData||[]).map(f=>f.questao_vf_id));
   notasVF = new Set((notaData||[]).map(n=>n.questao_vf_id));
+  // achado real: fixar uma nota pra ela aparecer visível na página (mesmo
+  // padrão do "anexar" do Complementar) - antes, QUALQUER nota salva
+  // fazia a lâmpada aparecer sozinha na tela, mesmo sem o usuário pedir
+  notasFixadasVF = new Set((notaData||[]).filter(n=>n.fixada).map(n=>n.questao_vf_id));
   flashsSalvosVF = new Map((salvosData||[]).map(s=>[s.questao_vf_id, s.motivo]));
   vfTodasTagsCacheVF = todasTagsData || [];
   vfTagsPorQuestaoVF = new Map();
@@ -9636,17 +9645,14 @@ function renderizarItemVF(){
     `;
   }
 
-  // preview do mnemônico/nota - card próprio, separado do card da
-  // resposta (pedido do Carlos). Convite (sem nota ainda, sabemos na
-  // hora pelo Set notasVF, sem precisar de busca) ou vazio aguardando a
-  // busca assíncrona (vfCarregarPreviewNotaVF, chamada logo abaixo, fora
-  // desse template) preencher com o texto de verdade
-  const cardNotaHtml = !jaRespondida ? '' : (notasVF.has(item.id)
+  // preview da nota FIXADA - card próprio, separado do card da resposta.
+  // Achado real: antes, QUALQUER nota salva fazia esse card aparecer
+  // sozinho (com um convite pontilhado quando ainda não tinha nota) -
+  // agora só aparece se o usuário fixou uma nota explicitamente (mesmo
+  // padrão do "anexar" do Complementar). Sem nota fixada, fica sem nada
+  const cardNotaHtml = (jaRespondida && notasFixadasVF.has(item.id))
     ? `<div class="card-questao" id="vf-preview-nota" style="margin-top:14px"></div>`
-    : `<div class="card-questao" id="vf-preview-nota" onclick="abrirNotaVF('${item.id}')" style="margin-top:14px;border:1.5px dashed #ddd;box-shadow:none;display:flex;gap:6px;align-items:center;justify-content:center;color:#999;cursor:pointer">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
-        ${VF_ICONE_LAMPADA_SVG('20', '23', '#999')}
-      </div>`);
+    : '';
 
 
   const tagsPublicacao = [
@@ -9692,7 +9698,7 @@ function renderizarItemVF(){
       ${blocoResultado}
     </div>
     ${cardNotaHtml}
-    ${jaRespondida ? `<div id="vf-elementos-html-anexados"></div>` : ''}
+    ${jaRespondida ? `<div id="vf-elementos-html-anexados"></div><div id="vf-complementar-local"></div>` : ''}
   `;
 
   renderizarBarraFixaVF(item, jaRespondida);
@@ -9713,8 +9719,9 @@ function renderizarItemVF(){
   // "restaurar desenho" assíncrono por cima, dando uma sensação visível
   // de travamento/pisca-pisca ao entrar numa questão já respondida
   if(jaRespondida){
+    vfRenderizarComplementarLocalVF(item); // síncrono - o conteúdo já está no item, sem busca nenhuma
     Promise.all([
-      notasVF.has(item.id) ? vfCarregarPreviewNotaVF(item.id) : Promise.resolve(),
+      notasFixadasVF.has(item.id) ? vfCarregarPreviewNotaVF(item.id) : Promise.resolve(),
       vfCarregarElementosAnexadosVF(item.id)
     ]).then(() => {
       if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF();
@@ -9971,10 +9978,20 @@ document.addEventListener('mousedown', vfIniciarPressionarSvgVF);
 function vfIniciarPressionarSvgVF(evento){
   const bloco = evento.target.closest?.('.vf-svg-bloco');
   if(!bloco || vfBlocoSvgAlcaAtivaVF) return; // já tem alça ativa noutro bloco, ignora
+  // tocar na própria alça ou na barra de alinhamento (já visíveis) não
+  // deve rearmar esse timer de "segurar pra mostrar" - são controles já
+  // ativos, tocar neles é uso normal, não um novo "segurar"
+  if(evento.target.closest('.vf-svg-alca, .vf-svg-alinhamento')) return;
   clearTimeout(vfTimerPressionarSvgVF);
   vfTimerPressionarSvgVF = setTimeout(() => vfMostrarAlcaRedimensionarSvgVF(bloco), 500);
   const cancelarSeMoveu = () => { clearTimeout(vfTimerPressionarSvgVF); limpar(); };
   const limpar = () => {
+    // achado real: faltava isso aqui - um toque rápido sem arrastar
+    // (touchend/mouseup direto, sem passar por touchmove) deixava o
+    // timer pendente rodando escondido, disparando 500ms depois e
+    // reconstruindo a alça/barra do zero de surpresa, no meio de
+    // qualquer outra interação (inclusive nos próprios botões)
+    clearTimeout(vfTimerPressionarSvgVF);
     document.removeEventListener('touchmove', cancelarSeMoveu);
     document.removeEventListener('touchend', limpar);
     document.removeEventListener('mouseup', limpar);
@@ -10027,10 +10044,13 @@ function vfMostrarAlcaRedimensionarSvgVF(bloco){
   });
   bloco.appendChild(barra);
 
-  // clicar fora esconde a alça e a barra sem mudar nada - stopPropagation
-  // nos handlers dos próprios controles já impede isso de disparar quando
-  // o toque é neles mesmos
-  const esconderSeTocarFora = () => {
+  // clicar fora esconde a alça e a barra sem mudar nada - verifica o
+  // alvo do toque, não confia só em stopPropagation: esse listener
+  // escuta touchstart, que acontece ANTES do evento click (onde o
+  // stopPropagation dos botões roda) - sem essa checagem, tocar num
+  // botão de alinhamento já removia ele do DOM antes do clique completar
+  const esconderSeTocarFora = (e) => {
+    if(e && e.target && e.target.closest('.vf-svg-alca, .vf-svg-alinhamento')) return;
     alca.remove();
     barra.remove();
     document.removeEventListener('touchstart', esconderSeTocarFora);
@@ -10306,7 +10326,7 @@ function medirAlturaBarraFixaVF(){
   const conteudo = document.getElementById('vf-conteudo');
   if(!barraFixa || !conteudo) return;
   const altura = barraFixa.offsetHeight;
-  if(altura > 0) conteudo.style.paddingBottom = (altura + 20) + 'px'; // +20px de respiro extra
+  if(altura > 0) conteudo.style.paddingBottom = (altura + 2) + 'px'; // achado real: a barra fixa já tem seu próprio padding-top interno (14px) antes do primeiro botão aparecer - somar 20px aqui além disso deixava o espaço visual embaixo (34px) bem maior que o espaço no topo da página (16px). +2px aqui + 14px da barra = 16px, igual ao topo
   // reflete a altura real da barra fixa numa variável CSS - usada pelo
   // balão da sessão pra ficar acima dela, só quando ela realmente pode
   // sobrepor ele. Achado real: a partir de 1100px de largura (telas
@@ -10737,7 +10757,7 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
     vfMontarPreviewNotaVF(el, vfNotaPreviewCacheVF.get(questaoVfId), questaoVfId);
     return;
   }
-  const {data} = await sb.from('notas_vf').select('id, texto').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).order('criado_em', {ascending:false}).limit(1);
+  const {data} = await sb.from('notas_vf').select('id, texto').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).eq('fixada', true).limit(1);
   const texto = (data && data.length) ? data[0].texto : null;
   vfNotaPreviewCacheVF.set(questaoVfId, texto);
   // reconfere o elemento depois do await - se a pessoa já avançou pra
@@ -10827,6 +10847,7 @@ function vfAbrirComplementarVF(questaoVfId){
   vfQuestaoIdComplementarAtualVF = questaoVfId;
   document.getElementById('vf-complementar-titulo-novo').value = '';
   document.getElementById('vf-complementar-latex-novo').value = '';
+  document.getElementById('vf-complementar-btn-remover-local').classList.add('hidden');
   vfMudarAbaComplementarVF('biblioteca');
   abrirModal('modal-complementar-vf');
 }
@@ -11172,6 +11193,45 @@ async function vfAnexarElementoExistenteVF(elementoHtmlId){
   fecharModalComplementarVF();
   vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
 }
+// renderiza o conteúdo complementar local (se houver) - síncrono, o
+// conteúdo já vem junto no item, sem busca nenhuma. Cabeçalho "Editar"
+// no mesmo padrão visual do "Desanexar" dos elementos da biblioteca
+function vfRenderizarComplementarLocalVF(item){
+  const container = document.getElementById('vf-complementar-local');
+  if(!container) return;
+  if(!item.complementar_local){ container.innerHTML = ''; return; }
+  const cabecalho = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+    <button style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="vfEditarComplementarLocalVF('${item.id}')">Editar</button>
+  </div>`;
+  container.innerHTML = `<div style="margin-top:14px">${cabecalho}${formatarTextoItemVF(item.complementar_local)}</div>`;
+}
+
+// reabre o modal Complementar já com o conteúdo local atual preenchido
+// no textarea, pronto pra editar e salvar de novo (sobrescreve) ou
+// limpar completamente (Remover)
+function vfEditarComplementarLocalVF(questaoId){
+  const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
+  const conteudoAtual = entrada?.item?.complementar_local || '';
+  vfQuestaoIdComplementarAtualVF = questaoId;
+  document.getElementById('vf-complementar-titulo-novo').value = '';
+  document.getElementById('vf-complementar-latex-novo').value = conteudoAtual;
+  document.getElementById('vf-complementar-btn-remover-local').classList.remove('hidden');
+  vfMudarAbaComplementarVF('criar');
+  abrirModal('modal-complementar-vf');
+}
+
+// remove o conteúdo complementar local por completo
+async function vfRemoverComplementarLocalVF(questaoId){
+  const {error} = await sb.from('questoes_vf').update({complementar_local: null}).eq('id', questaoId);
+  if(error){ alert('Erro ao remover: '+error.message); return; }
+  const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
+  if(entrada) entrada.item.complementar_local = null;
+  const cacheAtual = vfConteudoCompletoCache.get(questaoId) || {};
+  vfConteudoCompletoCache.set(questaoId, {...cacheAtual, complementar_local: null});
+  fecharModalComplementarVF();
+  if(entrada) vfRenderizarComplementarLocalVF(entrada.item);
+}
+
 async function vfCriarESalvarElementoHtmlVF(){
   const titulo = document.getElementById('vf-complementar-titulo-novo').value.trim().replace(/—/g, '–'); // travessão longo sempre vira curto, mesma regra do resto do app
   const latexFonte = document.getElementById('vf-complementar-latex-novo').value.trim();
@@ -11179,6 +11239,29 @@ async function vfCriarESalvarElementoHtmlVF(){
   const {data, error} = await sb.from('elementos_html_vf').insert({usuario_id: usuarioAtual.id, titulo, latex_fonte: latexFonte}).select('id').single();
   if(error){ alert('Erro ao criar: '+error.message); return; }
   await vfAnexarElementoExistenteVF(data.id);
+}
+
+// aplica o conteúdo direto na questão atual, sem passar pela biblioteca
+// reutilizável (elementos_html_vf) - pra conteúdo que só faz sentido
+// ali, sem precisar nomear/guardar pra reusar depois. Persistido em
+// questoes_vf.complementar_local, editável voltando na questão (não
+// precisa de título, já que não aparece em nenhuma lista pra reconhecer)
+async function vfUsarComplementarLocalVF(){
+  const questaoId = vfQuestaoIdComplementarAtualVF;
+  if(!questaoId) return;
+  const latexFonte = document.getElementById('vf-complementar-latex-novo').value.trim();
+  if(!latexFonte){ alert('Cole o LaTeX primeiro.'); return; }
+  const {error} = await sb.from('questoes_vf').update({complementar_local: latexFonte}).eq('id', questaoId);
+  if(error){ alert('Erro ao salvar: '+error.message); return; }
+  // atualiza local imediatamente - sensação instantânea, sem esperar
+  // buscar de novo do banco
+  const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
+  if(entrada) entrada.item.complementar_local = latexFonte;
+  const cacheAtual = vfConteudoCompletoCache.get(questaoId) || {};
+  vfConteudoCompletoCache.set(questaoId, {...cacheAtual, complementar_local: latexFonte});
+  fecharModalComplementarVF();
+  vfRenderizarComplementarLocalVF(questaoId);
+  if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF();
 }
 
 // ---- renderiza os elementos HTML anexados a uma questão (podem ser
@@ -11321,11 +11404,13 @@ async function abrirNotaVF(questaoVfId){
 
 async function renderizarListaNotasVF(){
   const el = document.getElementById('lista-notas-vf');
-  const {data} = await sb.from('notas_vf').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false});
+  const {data} = await sb.from('notas_vf').select('id, texto, criado_em, fixada').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false});
   if(!data || !data.length){ el.innerHTML = ''; el.style.maxHeight = '0px'; return; }
+  const iconePin = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-7.5 8-13a8 8 0 0 0-16 0c0 5.5 8 13 8 13z"/><circle cx="12" cy="9" r="3"/></svg>';
   el.innerHTML = `<div style="margin-bottom:14px">` + data.map(n => `
     <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
       <div style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${formatarTextoItemVF(n.texto)}</div>
+      <button onclick="vfAlternarFixarNotaVF('${n.id}')" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.fixada?'#B23A34':'#ddd'};background:${n.fixada?'#B23A34':'#fff'};color:${n.fixada?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.fixada?'Desafixar (deixa de aparecer na página)':'Fixar (aparece na página da questão)'}">${iconePin}</button>
       <button onclick="excluirNotaVF('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
     </div>`).join('') + `</div>`;
   // altura grande o bastante pra caber qualquer lista realista de notas -
@@ -11497,8 +11582,34 @@ async function excluirNotaVF(notaId){
   await sb.from('notas_vf').delete().eq('id', notaId);
   await renderizarListaNotasVF();
   const {count} = await sb.from('notas_vf').select('id', {count:'exact', head:true}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual);
-  if(!count) notasVF.delete(questaoNotaVfAtual);
+  if(!count){
+    notasVF.delete(questaoNotaVfAtual);
+    notasFixadasVF.delete(questaoNotaVfAtual); // se não sobrou nenhuma nota, também não tem mais nenhuma fixada
+  }
   vfNotaPreviewCacheVF.delete(questaoNotaVfAtual); // invalida - texto pode ter mudado (outra nota virou a mais recente) ou sumido de vez
+  renderizarItemVF();
+}
+
+// fixa uma nota específica (mostra ela na página da questão, mesmo
+// padrão do "anexar" do Complementar) ou desafixa se já estava fixada.
+// Só uma nota fixada por vez por questão - fixar uma nova desfixa
+// automaticamente qualquer outra que já estivesse fixada antes
+async function vfAlternarFixarNotaVF(notaId){
+  const {data: notaAtual} = await sb.from('notas_vf').select('fixada').eq('id', notaId).single();
+  if(!notaAtual) return;
+  if(notaAtual.fixada){
+    await sb.from('notas_vf').update({fixada: false}).eq('id', notaId);
+    notasFixadasVF.delete(questaoNotaVfAtual);
+  }else{
+    // desfixa qualquer outra nota fixada dessa mesma questão primeiro -
+    // sem isso, poderia ficar mais de uma marcada como fixada ao mesmo
+    // tempo, e a página só tem espaço pra mostrar uma
+    await sb.from('notas_vf').update({fixada: false}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).eq('fixada', true);
+    await sb.from('notas_vf').update({fixada: true}).eq('id', notaId);
+    notasFixadasVF.add(questaoNotaVfAtual);
+  }
+  vfNotaPreviewCacheVF.delete(questaoNotaVfAtual); // invalida - a nota fixada mudou (ou deixou de existir)
+  await renderizarListaNotasVF();
   renderizarItemVF();
 }
 
