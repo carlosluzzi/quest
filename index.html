@@ -61,6 +61,13 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .config-title-menor{font-size:var(--fs-e)}
 .modal-conteudo p{margin:0 0 20px 0;line-height:1.5}
 .textarea-padrao{width:100%;min-height:100px;font-size:16px;padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;font-family:inherit;color:#111;resize:vertical;line-height:1.5;margin-bottom:14px}
+#vf-editor-rich-caixa table{border-collapse:collapse;margin:4px 0}
+#vf-editor-rich-caixa table td{border:1px solid #ccc;padding:6px 10px;min-width:32px}
+#vf-editor-rich-caixa table tr:first-child td{background:#EAECF1;font-weight:600}
+.vf-editor-tabela-wrap{position:relative;display:inline-block;margin:6px 0}
+.vf-editor-add-col,.vf-editor-add-row{position:absolute;border:1px dashed #ccc;background:#fff;color:#999;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:var(--fs-c);font-weight:700;border-radius:5px;-webkit-tap-highlight-color:transparent}
+.vf-editor-add-col{top:0;bottom:0;right:-24px;width:20px}
+.vf-editor-add-row{left:0;right:0;bottom:-24px;height:20px}
 button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* só nas telas onde a caneta compete com botões pelo toque (Flash e
 resolução do Quest) - evita que o navegador comece a processar um
@@ -335,6 +342,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-nota-clicavel, .vf-celula-anotavel{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none}
 .vf-svg-bloco,.vf-svg-bloco *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .vf-tabela-alinhamento,.vf-tabela-alinhamento *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+.vf-tabela-bloco,.vf-tabela-bloco *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .vf-nota-clicavel{border-bottom:1.5px dotted #888;cursor:pointer}
 .vf-celula-anotavel-com-nota{text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
 .vf-celula-anotavel-sem-nota{cursor:pointer}
@@ -1543,14 +1551,21 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     </div>
     <div id="vf-complementar-conteudo-criar" class="hidden">
       <input id="vf-complementar-titulo-novo" class="textarea-padrao" placeholder="Título (pra você reconhecer na biblioteca depois)" style="margin-bottom:10px;min-height:auto">
-      <button class="btn-secundario" style="width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="vfAbrirGeradorTabelaVF()">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-        Gerar tabela visualmente
-      </button>
-      <textarea id="vf-complementar-latex-novo" class="textarea-padrao" placeholder="Cole aqui o LaTeX (\begin{array}...\end{array}, \sidebyside{}{}, \nota{}{}, etc)" style="min-height:180px;font-family:monospace;font-size:var(--fs-c)"></textarea>
+      <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;background:#f7f7f5;border-radius:8px;padding:5px">
+        <button type="button" title="Negrito" onmousedown="event.preventDefault()" onclick="vfEditorRichAplicarFormatoVF('negrito')" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;font-weight:700;font-size:var(--fs-e);color:#333">B</button>
+        <button type="button" title="Itálico" onmousedown="event.preventDefault()" onclick="vfEditorRichAplicarFormatoVF('italico')" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;font-style:italic;font-size:var(--fs-e);color:#333">I</button>
+        <div style="width:1px;background:#ddd;margin:4px 2px"></div>
+        <button type="button" title="Alinhar à esquerda" onmousedown="event.preventDefault()" onclick="vfEditorRichAlinharVF('esquerda')" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="7" x2="19" y2="7"/><line x1="5" y1="12" x2="15" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/></svg></button>
+        <button type="button" title="Centralizar" onmousedown="event.preventDefault()" onclick="vfEditorRichAlinharVF('centro')" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="7" x2="19" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/></svg></button>
+        <button type="button" title="Alinhar à direita" onmousedown="event.preventDefault()" onclick="vfEditorRichAlinharVF('direita')" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="7" x2="19" y2="7"/><line x1="9" y1="12" x2="19" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/></svg></button>
+        <div style="width:1px;background:#ddd;margin:4px 2px"></div>
+        <button type="button" title="Inserir tabela" onmousedown="event.preventDefault()" onclick="vfEditorRichInserirTabelaVF()" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg></button>
+      </div>
+      <div id="vf-editor-rich-caixa" contenteditable="true" class="textarea-padrao" style="min-height:180px;overflow-y:auto"></div>
+      <textarea id="vf-complementar-latex-novo" class="hidden"></textarea>
       <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn-secundario" style="flex:1" onclick="vfUsarComplementarLocalVF()">Usar só aqui</button>
-        <button class="btn-primario" style="flex:1" onclick="vfCriarESalvarElementoHtmlVF()">Salvar na biblioteca</button>
+        <button id="vf-complementar-btn-usar-local" class="btn-secundario" style="flex:1" onclick="vfUsarComplementarLocalVF()">Usar só aqui</button>
+        <button id="vf-complementar-btn-salvar-biblioteca" class="btn-primario" style="flex:1" onclick="vfCriarESalvarElementoHtmlVF()">Salvar na biblioteca</button>
       </div>
       <button id="vf-complementar-btn-remover-local" class="btn-secundario hidden" style="width:100%;margin-top:10px;color:#B23A34" onclick="vfRemoverComplementarLocalVF(vfQuestaoIdComplementarAtualVF)">Remover conteúdo local dessa questão</button>
     </div>
@@ -1599,13 +1614,11 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="modal-editar-elemento-html-vf" onclick="if(event.target===this) fecharModal('modal-editar-elemento-html-vf')">
-  <div class="modal-conteudo popup-formulario" style="max-width:600px">
-    <h3 class="config-title">Editar elemento</h3>
-    <input id="vf-editar-elemento-titulo" class="textarea-padrao" placeholder="Título" style="margin-bottom:10px;min-height:auto">
-    <textarea id="vf-editar-elemento-latex" class="textarea-padrao" placeholder="LaTeX" style="min-height:180px;font-family:monospace;font-size:var(--fs-c)"></textarea>
-    <button class="btn-primario" style="width:100%;margin-top:10px" onclick="vfSalvarEdicaoElementoHtmlVF()">Salvar</button>
-    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-editar-elemento-html-vf')">Cancelar</button>
+<div class="modal-overlay hidden" id="modal-aviso-vf" onclick="if(event.target===this) vfFecharAvisoVF()">
+  <div class="modal-conteudo">
+    <h3 class="config-title" id="vf-aviso-titulo">Aviso</h3>
+    <p id="vf-aviso-texto" style="white-space:pre-line"></p>
+    <button class="btn-primario" style="width:100%" onclick="vfFecharAvisoVF()">OK</button>
   </div>
 </div>
 
@@ -1760,7 +1773,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-527';
+const VERSAO_APP = '2026-07-25-529';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4208,7 +4221,7 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta){
       const corTraco = ehSoTraco ? 'color:#7A7A74;' : '';
       return `<td style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${bordaSuperior}${corTraco}">${conteudoCelula}</td>`;
     }).join('');
-    const estiloLinha = ehCabecalho ? 'background:#F0F0ED' : '';
+    const estiloLinha = ehCabecalho ? 'background:#EAECF1' : '';
     return `<tr style="${estiloLinha}">${celulasHtml}</tr>`;
   }).join('');
   return `<table style="width:auto;max-width:100%;border-collapse:collapse">${linhasHtml}</table>`;
@@ -4327,6 +4340,13 @@ function vfProcessarTextoPequenoVF(texto){
       return `<div style="display:flex;gap:8px;${margemBaixo}"><span style="flex-shrink:0">•</span><span>${item}</span></div>`;
     }).join('');
     return `<div style="margin-top:6px">${itensHtml}</div>`;
+  });
+  // \alinhar[centro|direita]{texto} - alinha um parágrafo inteiro
+  // (esquerda é o padrão do fluxo normal, não precisa de comando) - usado
+  // pelo editor de conteúdo (toolbar de alinhamento), mesma ferramenta
+  // pra texto normal e texto dentro de tabela
+  texto = texto.replace(/\\alinhar\[(centro|direita)\]\{([^}]*)\}/g, (m, alinhamento, conteudo) => {
+    return `<div style="text-align:${alinhamento === 'centro' ? 'center' : 'right'}">${conteudo}</div>`;
   });
   return texto;
 }
@@ -4524,6 +4544,7 @@ function formatarTextoItemVF(texto){
     // reenviar o pedido toda vez que acontecer
     .replace(/—/g, '–')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
     // quebras de linha reais (\n\n entre parágrafos, por exemplo) viram
     // <br> - sem isso, o HTML colapsa qualquer quebra de linha do texto
     // original num espaço só, mesmo que o texto no banco já tenha os
@@ -9670,7 +9691,12 @@ function renderizarItemVF(){
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
       </div>
-      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;margin-left:-8px;margin-right:-8px;margin-bottom:-8px;text-align:left;font-weight:400;position:relative" ${atributosEdicaoCorrecao}>${formatarTextoItemVF(item.correcao || item.texto)}</div>` : ''}
+      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;margin-left:-8px;margin-right:-8px;margin-bottom:-8px;text-align:left;font-weight:400;position:relative" ${atributosEdicaoCorrecao}>${(() => {
+        vfContextoRenderizacaoSvgVF = {tipo: 'campo-vf', questaoId: item.id, campo: item.correcao ? 'correcao' : 'texto'};
+        const html = formatarTextoItemVF(item.correcao || item.texto);
+        vfContextoRenderizacaoSvgVF = null;
+        return html;
+      })()}</div>` : ''}
     `;
   }
 
@@ -9723,7 +9749,12 @@ function renderizarItemVF(){
           ${iconeTagAdicionar}
         </div>
       </div>
-      <div class="enunciado" id="vf-enunciado-atual" style="margin-top:10px;position:relative" data-editavel-vf="1" ontouchstart="vfIniciarPressionarEnunciado(event)" ontouchend="vfSoltarPressionarEnunciado(event)" ontouchmove="vfCancelarPressionarEnunciadoSilencioso(event)" onmousedown="vfIniciarPressionarEnunciado(event)" onmouseup="vfSoltarPressionarEnunciado()" onmouseleave="vfCancelarPressionarEnunciadoSilencioso()">${formatarTextoItemVF(item.texto)}</div>
+      <div class="enunciado" id="vf-enunciado-atual" style="margin-top:10px;position:relative" data-editavel-vf="1" ontouchstart="vfIniciarPressionarEnunciado(event)" ontouchend="vfSoltarPressionarEnunciado(event)" ontouchmove="vfCancelarPressionarEnunciadoSilencioso(event)" onmousedown="vfIniciarPressionarEnunciado(event)" onmouseup="vfSoltarPressionarEnunciado()" onmouseleave="vfCancelarPressionarEnunciadoSilencioso()">${(() => {
+        vfContextoRenderizacaoSvgVF = {tipo: 'campo-vf', questaoId: item.id, campo: 'texto'};
+        const html = formatarTextoItemVF(item.texto);
+        vfContextoRenderizacaoSvgVF = null;
+        return html;
+      })()}</div>
       ${blocoResultado}
     </div>
     ${cardNotaHtml}
@@ -10143,7 +10174,7 @@ function vfIniciarArrastoAlcaSvgVF(evento, bloco, alca){
 async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
   const origem = vfSvgOrigemVF.get(blocoId);
   if(!origem || !origem.contexto){
-    alert('Não consegui salvar essa mudança (não achei de onde esse desenho veio). A mudança visual continua nessa tela, mas não fica salva.');
+    vfMostrarAvisoVF('Não consegui salvar essa mudança (não achei de onde esse desenho veio). A mudança visual continua nessa tela, mas não fica salva.');
     return;
   }
   const {contexto, textoOriginalMatch, textoOriginalEraCru} = origem;
@@ -10166,7 +10197,7 @@ async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
     const entrada = estadoVF.historico.find(h => h.item.id === contexto.questaoId);
     const textoAtual = entrada?.item?.[contexto.campo];
     if(!entrada || textoAtual === undefined || !textoAtual.includes(textoOriginalMatch)){
-      alert('Não consegui salvar essa mudança (o texto pode ter mudado nesse meio tempo). Tenta segurar de novo.');
+      vfMostrarAvisoVF('Não consegui salvar essa mudança (o texto pode ter mudado nesse meio tempo). Tenta segurar de novo.');
       return;
     }
     const textoNovo = textoAtual.replace(textoOriginalMatch, novoTrecho);
@@ -10181,7 +10212,7 @@ async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
   }else if(contexto.tipo === 'elemento-html'){
     const {data, error: erroBusca} = await sb.from('elementos_html_vf').select('latex_fonte').eq('id', contexto.elementoId).single();
     if(erroBusca || !data || !data.latex_fonte.includes(textoOriginalMatch)){
-      alert('Não consegui salvar essa mudança (o elemento pode ter mudado nesse meio tempo). Tenta segurar de novo.');
+      vfMostrarAvisoVF('Não consegui salvar essa mudança (o elemento pode ter mudado nesse meio tempo). Tenta segurar de novo.');
       return;
     }
     const textoNovo = data.latex_fonte.replace(textoOriginalMatch, novoTrecho);
@@ -10283,7 +10314,7 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
 async function vfSalvarAlinhamentoTabelaVF(blocoId, alinhamento){
   const origem = vfTabelaOrigemVF.get(blocoId);
   if(!origem || !origem.contexto){
-    alert('Não consegui salvar esse alinhamento (não achei de onde essa tabela veio). A mudança visual continua nessa tela, mas não fica salva.');
+    vfMostrarAvisoVF('Não consegui salvar esse alinhamento (não achei de onde essa tabela veio). A mudança visual continua nessa tela, mas não fica salva.');
     return;
   }
   const {contexto, textoOriginalMatch} = origem;
@@ -10295,7 +10326,7 @@ async function vfSalvarAlinhamentoTabelaVF(blocoId, alinhamento){
     const entrada = estadoVF.historico.find(h => h.item.id === contexto.questaoId);
     const textoAtual = entrada?.item?.[contexto.campo];
     if(!entrada || textoAtual === undefined || !textoAtual.includes(textoOriginalMatch)){
-      alert('Não consegui salvar esse alinhamento (o texto pode ter mudado nesse meio tempo). Tenta segurar de novo.');
+      vfMostrarAvisoVF('Não consegui salvar esse alinhamento (o texto pode ter mudado nesse meio tempo). Tenta segurar de novo.');
       return;
     }
     const textoNovo = textoAtual.replace(textoOriginalMatch, novoTrecho);
@@ -10310,7 +10341,7 @@ async function vfSalvarAlinhamentoTabelaVF(blocoId, alinhamento){
   }else if(contexto.tipo === 'elemento-html'){
     const {data, error: erroBusca} = await sb.from('elementos_html_vf').select('latex_fonte').eq('id', contexto.elementoId).single();
     if(erroBusca || !data || !data.latex_fonte.includes(textoOriginalMatch)){
-      alert('Não consegui salvar esse alinhamento (o elemento pode ter mudado nesse meio tempo). Tenta segurar de novo.');
+      vfMostrarAvisoVF('Não consegui salvar esse alinhamento (o elemento pode ter mudado nesse meio tempo). Tenta segurar de novo.');
       return;
     }
     const textoNovo = data.latex_fonte.replace(textoOriginalMatch, novoTrecho);
@@ -10989,11 +11020,209 @@ document.addEventListener('click', (e) => {
 
 // ---- Complementar: biblioteca de elementos HTML + criar/anexar ----
 let vfQuestaoIdComplementarAtualVF = null;
+// ---- editor de conteúdo rich text (Complementar): caixa contenteditable
+// única com barra de ferramentas - negrito/itálico, alinhar (mesma
+// ferramenta funciona dentro ou fora de tabela), inserir tabela com "+"
+// de linha/coluna grudados nela. Converte pro nosso formato interno
+// (\begin{array}{lcr}...\end{array}, **negrito**, *itálico*,
+// \alinhar[centro|direita]{}) na hora de salvar, e faz o caminho
+// inverso na hora de abrir algo já existente pra editar ----
+function vfEditorRichAplicarFormatoVF(tipo){
+  document.execCommand(tipo === 'negrito' ? 'bold' : 'italic', false, null);
+}
+
+function vfEditorRichAlinharVF(alinhamento){
+  const caixa = document.getElementById('vf-editor-rich-caixa');
+  const alignCss = alinhamento === 'centro' ? 'center' : alinhamento === 'direita' ? 'right' : '';
+  const selecao = window.getSelection();
+  if(!selecao.rangeCount) return;
+  const no = selecao.getRangeAt(0).commonAncestorContainer;
+  const elemento = no.nodeType === 3 ? no.parentElement : no;
+  const celula = elemento.closest('td');
+  if(celula){
+    // dentro de tabela: alinha a COLUNA inteira, não só a célula - nosso
+    // sistema de renderização só suporta alinhamento por coluna (mesmo
+    // modelo do \begin{array}{lcr}), não por célula individual
+    const tabela = celula.closest('table');
+    const indiceColuna = Array.from(celula.parentElement.children).indexOf(celula);
+    tabela.querySelectorAll('tr').forEach(tr => {
+      const td = tr.children[indiceColuna];
+      if(td) td.style.textAlign = alignCss;
+    });
+    return;
+  }
+  // fora de tabela: garante que a seleção esteja dentro de um bloco
+  // (div), depois aplica o alinhamento nesse bloco - formatBlock cria um
+  // <div> novo em volta se ainda não tiver nenhum bloco explícito
+  document.execCommand('formatBlock', false, 'div');
+  const selecao2 = window.getSelection();
+  if(!selecao2.rangeCount) return;
+  const no2 = selecao2.getRangeAt(0).commonAncestorContainer;
+  let bloco = no2.nodeType === 3 ? no2.parentElement : no2;
+  while(bloco && bloco !== caixa && bloco.parentElement !== caixa) bloco = bloco.parentElement;
+  if(bloco && bloco !== caixa) bloco.style.textAlign = alignCss;
+}
+
+function vfEditorRichInserirTabelaVF(){
+  const caixa = document.getElementById('vf-editor-rich-caixa');
+  caixa.focus();
+  const html = `<div class="vf-editor-tabela-wrap" contenteditable="false"><table><tr><td contenteditable="true">Cabeçalho 1</td><td contenteditable="true">Cabeçalho 2</td></tr><tr><td contenteditable="true"></td><td contenteditable="true"></td></tr></table><button type="button" class="vf-editor-add-col" contenteditable="false" onclick="vfEditorRichAdicionarColunaVF(this)">+</button><button type="button" class="vf-editor-add-row" contenteditable="false" onclick="vfEditorRichAdicionarLinhaVF(this)">+</button></div><div><br></div>`;
+  document.execCommand('insertHTML', false, html);
+}
+
+function vfEditorRichAdicionarColunaVF(botao){
+  const tabela = botao.closest('.vf-editor-tabela-wrap').querySelector('table');
+  tabela.querySelectorAll('tr').forEach(tr => {
+    const td = document.createElement('td');
+    td.contentEditable = 'true';
+    tr.appendChild(td);
+  });
+}
+function vfEditorRichAdicionarLinhaVF(botao){
+  const tabela = botao.closest('.vf-editor-tabela-wrap').querySelector('table');
+  const numColunas = tabela.querySelector('tr').children.length;
+  const tr = document.createElement('tr');
+  for(let i = 0; i < numColunas; i++){
+    const td = document.createElement('td');
+    td.contentEditable = 'true';
+    tr.appendChild(td);
+  }
+  tabela.appendChild(tr);
+}
+
+// converte o conteúdo da caixa (HTML) pro nosso formato interno - roda
+// bem antes de salvar (ver vfEditorRichSincronizarAntesDeSalvarVF)
+function vfEditorRichParaLatexVF(){
+  const caixa = document.getElementById('vf-editor-rich-caixa');
+  const partes = [];
+  // converte um único filho INLINE (texto solto, negrito, itálico, quebra
+  // de linha) pro nosso formato - usado tanto por converterInline (que
+  // itera todos os filhos de um nó, ex: dentro de célula de tabela)
+  // quanto diretamente no loop principal, pra filhos soltos sem <div> pai
+  function converterFilhoInline(filho){
+    if(filho.nodeType === 3) return filho.textContent.replace(/\u00a0/g, ' ');
+    if(filho.nodeType !== 1) return '';
+    const tag = filho.tagName;
+    if(tag === 'B' || tag === 'STRONG') return `**${converterInline(filho)}**`;
+    if(tag === 'I' || tag === 'EM') return `*${converterInline(filho)}*`;
+    if(tag === 'BR') return '\n';
+    return converterInline(filho); // fallback: só pega o texto de dentro, ignora a tag em si
+  }
+  function converterInline(no){
+    let resultado = '';
+    no.childNodes.forEach(filho => { resultado += converterFilhoInline(filho); });
+    return resultado;
+  }
+  // acumula filhos soltos (texto e formatação inline sem um <div> pai -
+  // acontece quando o usuário digita direto sem apertar Enter antes,
+  // comportamento padrão do contenteditable) até fechar num parágrafo,
+  // seja ao encontrar um bloco explícito (div/p/tabela) ou no final
+  let bufferSolto = '';
+  function fecharBufferSolto(){
+    const txt = bufferSolto.trim();
+    if(txt) partes.push(txt);
+    bufferSolto = '';
+  }
+  caixa.childNodes.forEach(no => {
+    if(no.nodeType === 3){
+      bufferSolto += no.textContent;
+      return;
+    }
+    if(no.nodeType !== 1) return;
+    if(no.classList && no.classList.contains('vf-editor-tabela-wrap')){
+      fecharBufferSolto();
+      const tabela = no.querySelector('table');
+      const linhas = Array.from(tabela.querySelectorAll('tr'));
+      if(!linhas.length) return;
+      const numColunas = linhas[0].children.length;
+      // descobre o alinhamento de cada coluna olhando a primeira célula
+      // dela - todas as células da mesma coluna têm o mesmo alinhamento,
+      // já que vfEditorRichAlinharVF sempre aplica na coluna inteira
+      const alinhamentos = [];
+      for(let c = 0; c < numColunas; c++){
+        const align = linhas[0].children[c]?.style.textAlign;
+        alinhamentos.push(align === 'center' ? 'c' : align === 'right' ? 'r' : 'l');
+      }
+      const linhasTexto = linhas.map(tr =>
+        Array.from(tr.children).map(td => converterInline(td).trim()).join('&')
+      );
+      partes.push(`\\begin{array}{${alinhamentos.join('')}}${linhasTexto.join('\\\\')}\\end{array}`);
+    }else if(no.tagName === 'DIV' || no.tagName === 'P'){
+      fecharBufferSolto();
+      const align = no.style.textAlign;
+      const conteudoInline = converterInline(no).trim();
+      if(!conteudoInline) return; // parágrafo vazio (ex: <div><br></div> deixado por Enter) - ignora
+      if(align === 'center') partes.push(`\\alinhar[centro]{${conteudoInline}}`);
+      else if(align === 'right') partes.push(`\\alinhar[direita]{${conteudoInline}}`);
+      else partes.push(conteudoInline);
+    }else{
+      // elemento inline solto direto na caixa (negrito/itálico/br sem um
+      // <div> pai) - acumula no buffer, não fecha ainda
+      bufferSolto += converterFilhoInline(no);
+    }
+  });
+  fecharBufferSolto(); // fecha qualquer resto solto no final
+  return partes.join('\n\n');
+}
+
+// caminho inverso: pega texto no nosso formato interno (já salvo antes)
+// e monta o HTML editável correspondente - usado ao abrir algo já
+// existente pra editar (elemento da biblioteca, ou complementar local)
+function vfEditorRichDeLatexVF(texto){
+  if(!texto) return '';
+  const converterInlineParaHtml = (t) => escapeHtml(t)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+  const blocos = [];
+  let pos = 0;
+  const regex = /\\begin\{array\}\{([lcr]+)\}([\s\S]*?)\\end\{array\}|\\alinhar\[(centro|direita)\]\{([^}]*)\}/g;
+  let match;
+  const paragrafosNormais = (trecho) => {
+    trecho.trim().split(/\n\n+/).forEach(p => { if(p.trim()) blocos.push(`<div>${converterInlineParaHtml(p.trim())}</div>`); });
+  };
+  while((match = regex.exec(texto))){
+    const antes = texto.slice(pos, match.index);
+    if(antes.trim()) paragrafosNormais(antes);
+    if(match[1] !== undefined){
+      // é uma tabela
+      const colunas = match[1].split('');
+      const linhas = match[2].split('\\\\').map(l => l.trim()).filter(Boolean);
+      const linhasHtml = linhas.map(l => {
+        const celulas = l.split('&').map(c => c.trim());
+        return '<tr>' + celulas.map((c, i) => {
+          const align = colunas[i] === 'c' ? 'center' : colunas[i] === 'r' ? 'right' : '';
+          return `<td contenteditable="true"${align ? ` style="text-align:${align}"` : ''}>${converterInlineParaHtml(c)}</td>`;
+        }).join('') + '</tr>';
+      }).join('');
+      blocos.push(`<div class="vf-editor-tabela-wrap" contenteditable="false"><table>${linhasHtml}</table><button type="button" class="vf-editor-add-col" contenteditable="false" onclick="vfEditorRichAdicionarColunaVF(this)">+</button><button type="button" class="vf-editor-add-row" contenteditable="false" onclick="vfEditorRichAdicionarLinhaVF(this)">+</button></div>`);
+    }else{
+      // é \alinhar[...]{}
+      const align = match[3] === 'centro' ? 'center' : 'right';
+      blocos.push(`<div style="text-align:${align}">${converterInlineParaHtml(match[4])}</div>`);
+    }
+    pos = match.index + match[0].length;
+  }
+  const resto = texto.slice(pos);
+  if(resto.trim()) paragrafosNormais(resto);
+  return blocos.join('');
+}
+
+// roda logo antes de qualquer salvamento (Usar só aqui / Salvar na
+// biblioteca) - converte o conteúdo atual da caixa pro campo escondido
+// que as funções de salvar já existentes leem, sem precisar mudar elas
+function vfEditorRichSincronizarAntesDeSalvarVF(){
+  document.getElementById('vf-complementar-latex-novo').value = vfEditorRichParaLatexVF();
+}
+
 function vfAbrirComplementarVF(questaoVfId){
   vfQuestaoIdComplementarAtualVF = questaoVfId;
+  vfElementoIdEmEdicaoVF = null;
   document.getElementById('vf-complementar-titulo-novo').value = '';
   document.getElementById('vf-complementar-latex-novo').value = '';
+  document.getElementById('vf-editor-rich-caixa').innerHTML = '';
   document.getElementById('vf-complementar-btn-remover-local').classList.add('hidden');
+  document.getElementById('vf-complementar-btn-usar-local').classList.remove('hidden');
+  document.getElementById('vf-complementar-btn-salvar-biblioteca').textContent = 'Salvar na biblioteca';
   vfMudarAbaComplementarVF('biblioteca');
   abrirModal('modal-complementar-vf');
 }
@@ -11216,7 +11445,7 @@ async function vfCopiarCodigoGeradorTabelaVF(botao){
     await navigator.clipboard.writeText(vfEditorGerarCodigoVF());
     vfMostrarSelinhoCopiadoVF(botao);
   }catch(e){
-    alert('Não consegui copiar automaticamente. O código está no campo de LaTeX da aba "Criar novo" - copia de lá.');
+    vfMostrarAvisoVF('Não consegui copiar automaticamente. O código está no campo de LaTeX da aba "Criar novo" - copia de lá.');
     vfUsarTabelaGeradaVF();
   }
 }
@@ -11290,11 +11519,21 @@ function vfConfirmarGenericoVF(){
   vfCallbackConfirmacaoGenericaVF = null;
   if(callback) callback();
 }
+// modal de aviso genérico e reutilizável - substitui alert() nativo.
+// Só um botão OK (diferente do de confirmação, que tem cancelar também)
+function vfMostrarAvisoVF(texto, titulo){
+  document.getElementById('vf-aviso-titulo').textContent = titulo || 'Aviso';
+  document.getElementById('vf-aviso-texto').textContent = texto;
+  abrirModal('modal-aviso-vf');
+}
+function vfFecharAvisoVF(){
+  fecharModal('modal-aviso-vf');
+}
 
 async function vfExcluirElementoBibliotecaVF(elementoHtmlId){
   vfAbrirConfirmacaoGenericaVF('Excluir elemento', 'Excluir esse elemento da biblioteca de vez? Ele some de todas as questões onde estiver anexado, e não dá pra desfazer.', async () => {
     const {error} = await sb.from('elementos_html_vf').delete().eq('id', elementoHtmlId);
-    if(error){ alert('Erro ao excluir: '+error.message); return; }
+    if(error){ vfMostrarAvisoVF('Erro ao excluir: '+error.message); return; }
     vfCarregarBibliotecaComplementarVF();
     // se a questão atual (embaixo do modal) tinha esse elemento anexado,
     // atualiza a tela principal também - sem isso, ficaria mostrando um
@@ -11307,22 +11546,18 @@ function vfAbrirEdicaoElementoHtmlVF(elementoHtmlId){
   const item = vfBibliotecaComplementarCacheVF.find(i => i.id === elementoHtmlId);
   if(!item) return;
   vfElementoIdEmEdicaoVF = elementoHtmlId;
-  document.getElementById('vf-editar-elemento-titulo').value = item.titulo;
-  document.getElementById('vf-editar-elemento-latex').value = item.latex_fonte;
-  abrirModal('modal-editar-elemento-html-vf');
-}
-async function vfSalvarEdicaoElementoHtmlVF(){
-  if(!vfElementoIdEmEdicaoVF) return;
-  const titulo = document.getElementById('vf-editar-elemento-titulo').value.trim().replace(/—/g, '–');
-  const latexFonte = document.getElementById('vf-editar-elemento-latex').value.trim();
-  if(!titulo || !latexFonte){ alert('Preencha o título e o LaTeX.'); return; }
-  const {error} = await sb.from('elementos_html_vf').update({titulo, latex_fonte: latexFonte, atualizado_em: new Date().toISOString()}).eq('id', vfElementoIdEmEdicaoVF);
-  if(error){ alert('Erro ao salvar: '+error.message); return; }
-  fecharModal('modal-editar-elemento-html-vf');
-  vfCarregarBibliotecaComplementarVF();
-  // atualiza a tela principal também, já que o elemento pode estar
-  // anexado (e visível) na questão atual embaixo do modal
-  if(vfQuestaoIdComplementarAtualVF) vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
+  document.getElementById('vf-complementar-titulo-novo').value = item.titulo;
+  document.getElementById('vf-complementar-latex-novo').value = item.latex_fonte;
+  document.getElementById('vf-editor-rich-caixa').innerHTML = vfEditorRichDeLatexVF(item.latex_fonte);
+  document.getElementById('vf-complementar-btn-remover-local').classList.add('hidden');
+  // editando um elemento já existente da biblioteca - "Usar só aqui" não
+  // faz sentido aqui (esse elemento já está na biblioteca, não é local),
+  // e o botão de salvar precisa deixar claro que está ATUALIZANDO, não
+  // criando um elemento novo do zero
+  document.getElementById('vf-complementar-btn-usar-local').classList.add('hidden');
+  document.getElementById('vf-complementar-btn-salvar-biblioteca').textContent = 'Salvar alterações';
+  vfMudarAbaComplementarVF('criar');
+  abrirModal('modal-complementar-vf');
 }
 function vfTogglePreviewBibliotecaVF(elementoId){
   document.getElementById(`vf-preview-biblioteca-${elementoId}`).classList.toggle('hidden');
@@ -11335,7 +11570,7 @@ async function vfAnexarElementoExistenteVF(elementoHtmlId){
     elemento_html_id: elementoHtmlId,
     usuario_id: usuarioAtual.id
   });
-  if(error && error.code !== '23505'){ alert('Erro ao anexar: '+error.message); return; } // 23505 = já estava anexado (unique constraint), inofensivo
+  if(error && error.code !== '23505'){ vfMostrarAvisoVF('Erro ao anexar: '+error.message); return; } // 23505 = já estava anexado (unique constraint), inofensivo
   fecharModalComplementarVF();
   vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
 }
@@ -11349,7 +11584,12 @@ function vfRenderizarComplementarLocalVF(item){
   const cabecalho = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px">
     <button style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="vfEditarComplementarLocalVF('${item.id}')">Editar</button>
   </div>`;
-  container.innerHTML = `<div style="margin-top:14px">${cabecalho}${formatarTextoItemVF(item.complementar_local)}</div>`;
+  container.innerHTML = `<div style="margin-top:14px">${cabecalho}${(() => {
+    vfContextoRenderizacaoSvgVF = {tipo: 'campo-vf', questaoId: item.id, campo: 'complementar_local'};
+    const html = formatarTextoItemVF(item.complementar_local);
+    vfContextoRenderizacaoSvgVF = null;
+    return html;
+  })()}</div>`;
 }
 
 // reabre o modal Complementar já com o conteúdo local atual preenchido
@@ -11359,9 +11599,13 @@ function vfEditarComplementarLocalVF(questaoId){
   const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
   const conteudoAtual = entrada?.item?.complementar_local || '';
   vfQuestaoIdComplementarAtualVF = questaoId;
+  vfElementoIdEmEdicaoVF = null;
   document.getElementById('vf-complementar-titulo-novo').value = '';
   document.getElementById('vf-complementar-latex-novo').value = conteudoAtual;
+  document.getElementById('vf-editor-rich-caixa').innerHTML = vfEditorRichDeLatexVF(conteudoAtual);
   document.getElementById('vf-complementar-btn-remover-local').classList.remove('hidden');
+  document.getElementById('vf-complementar-btn-usar-local').classList.remove('hidden');
+  document.getElementById('vf-complementar-btn-salvar-biblioteca').textContent = 'Salvar na biblioteca';
   vfMudarAbaComplementarVF('criar');
   abrirModal('modal-complementar-vf');
 }
@@ -11369,7 +11613,7 @@ function vfEditarComplementarLocalVF(questaoId){
 // remove o conteúdo complementar local por completo
 async function vfRemoverComplementarLocalVF(questaoId){
   const {error} = await sb.from('questoes_vf').update({complementar_local: null}).eq('id', questaoId);
-  if(error){ alert('Erro ao remover: '+error.message); return; }
+  if(error){ vfMostrarAvisoVF('Erro ao remover: '+error.message); return; }
   const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
   if(entrada) entrada.item.complementar_local = null;
   const cacheAtual = vfConteudoCompletoCache.get(questaoId) || {};
@@ -11379,11 +11623,28 @@ async function vfRemoverComplementarLocalVF(questaoId){
 }
 
 async function vfCriarESalvarElementoHtmlVF(){
+  vfEditorRichSincronizarAntesDeSalvarVF();
   const titulo = document.getElementById('vf-complementar-titulo-novo').value.trim().replace(/—/g, '–'); // travessão longo sempre vira curto, mesma regra do resto do app
   const latexFonte = document.getElementById('vf-complementar-latex-novo').value.trim();
-  if(!titulo || !latexFonte){ alert('Preencha o título e o LaTeX.'); return; }
+  if(!titulo || !latexFonte){ vfMostrarAvisoVF('Preencha o título e escreva algo no conteúdo.'); return; }
+  // editando um elemento já existente da biblioteca (veio de
+  // vfAbrirEdicaoElementoHtmlVF) - atualiza em vez de criar um novo, e
+  // não anexa nada (ele já está onde precisa estar)
+  if(vfElementoIdEmEdicaoVF){
+    const {error} = await sb.from('elementos_html_vf').update({titulo, latex_fonte: latexFonte, atualizado_em: new Date().toISOString()}).eq('id', vfElementoIdEmEdicaoVF);
+    if(error){ vfMostrarAvisoVF('Erro ao salvar: '+error.message); return; }
+    vfElementoIdEmEdicaoVF = null;
+    document.getElementById('vf-complementar-btn-usar-local').classList.remove('hidden');
+    document.getElementById('vf-complementar-btn-salvar-biblioteca').textContent = 'Salvar na biblioteca';
+    fecharModalComplementarVF();
+    vfCarregarBibliotecaComplementarVF();
+    // atualiza a tela principal também, já que o elemento pode estar
+    // anexado (e visível) na questão atual embaixo do modal
+    if(vfQuestaoIdComplementarAtualVF) vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
+    return;
+  }
   const {data, error} = await sb.from('elementos_html_vf').insert({usuario_id: usuarioAtual.id, titulo, latex_fonte: latexFonte}).select('id').single();
-  if(error){ alert('Erro ao criar: '+error.message); return; }
+  if(error){ vfMostrarAvisoVF('Erro ao criar: '+error.message); return; }
   await vfAnexarElementoExistenteVF(data.id);
 }
 
@@ -11393,12 +11654,13 @@ async function vfCriarESalvarElementoHtmlVF(){
 // questoes_vf.complementar_local, editável voltando na questão (não
 // precisa de título, já que não aparece em nenhuma lista pra reconhecer)
 async function vfUsarComplementarLocalVF(){
+  vfEditorRichSincronizarAntesDeSalvarVF();
   const questaoId = vfQuestaoIdComplementarAtualVF;
   if(!questaoId) return;
   const latexFonte = document.getElementById('vf-complementar-latex-novo').value.trim();
-  if(!latexFonte){ alert('Cole o LaTeX primeiro.'); return; }
+  if(!latexFonte){ vfMostrarAvisoVF('Escreva algo no conteúdo primeiro.'); return; }
   const {error} = await sb.from('questoes_vf').update({complementar_local: latexFonte}).eq('id', questaoId);
-  if(error){ alert('Erro ao salvar: '+error.message); return; }
+  if(error){ vfMostrarAvisoVF('Erro ao salvar: '+error.message); return; }
   // atualiza local imediatamente - sensação instantânea, sem esperar
   // buscar de novo do banco
   const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
@@ -11504,7 +11766,7 @@ async function vfExcluirAnotacaoElementoVF(){
   fecharModal('modal-anotacao-elemento-vf');
   vfAbrirConfirmacaoGenericaVF('Excluir anotação', 'Excluir essa anotação?', async () => {
     const {error} = await sb.from('anotacoes_elemento_html_vf').delete().eq('elemento_html_id', elementoHtmlId).eq('identificador', identificador);
-    if(error){ alert('Erro ao excluir: '+error.message); return; }
+    if(error){ vfMostrarAvisoVF('Erro ao excluir: '+error.message); return; }
     celulaEl.style.textDecoration = '';
     celulaEl.onclick = (e) => { e.stopPropagation(); vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, '', celulaEl); };
     celulaEl.onmouseenter = null;
@@ -11516,7 +11778,7 @@ async function vfConfirmarAnotacaoElementoVF(){
   const texto = document.getElementById('vf-anotacao-elemento-texto').value.trim().replace(/—/g, '–'); // travessão longo sempre vira curto, mesma regra do resto do app
   if(!texto) return;
   const {error} = await sb.from('anotacoes_elemento_html_vf').upsert({elemento_html_id: elementoHtmlId, identificador, texto_explicacao: texto}, {onConflict: 'elemento_html_id,identificador'});
-  if(error){ alert('Erro ao salvar anotação: '+error.message); return; }
+  if(error){ vfMostrarAvisoVF('Erro ao salvar anotação: '+error.message); return; }
   fecharModal('modal-anotacao-elemento-vf');
   celulaEl.style.textDecoration = 'underline dotted';
   celulaEl.style.textDecorationColor = '#888';
@@ -11529,7 +11791,7 @@ async function vfConfirmarAnotacaoElementoVF(){
 async function vfDesanexarElementoVF(ligacaoId, questaoVfId){
   vfAbrirConfirmacaoGenericaVF('Desanexar elemento', 'Desanexar esse elemento dessa questão? Ele continua salvo na sua biblioteca.', async () => {
     const {error} = await sb.from('questao_elemento_html_vf').delete().eq('id', ligacaoId);
-    if(error){ alert('Erro ao desanexar: '+error.message); return; }
+    if(error){ vfMostrarAvisoVF('Erro ao desanexar: '+error.message); return; }
     vfCarregarElementosAnexadosVF(questaoVfId).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
   });
 }
