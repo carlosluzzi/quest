@@ -1755,7 +1755,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-518';
+const VERSAO_APP = '2026-07-25-521';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1864,6 +1864,12 @@ function vfLimparApostrofoUnderscoreVF(texto){
   // as regex de subscrito/expoente, que só reconhecem ' (reto) e ′
   // (prime matemático) - o subscrito simplesmente não era aplicado
   texto = texto.replace(/[’‘]/g, "'");
+  // mesmo problema, mas com o circunflexo: "ˆ" (modificador, U+02C6) é
+  // visualmente quase idêntico a "^" (ASCII normal) e o teclado/editor
+  // de origem às vezes autocorrige um pro outro sem a pessoa notar -
+  // "2ˆ{nd}" não batia com a regex de sobrescrito (só reconhece ^ ASCII),
+  // então "2ˆ{nd}" ficava sem elevar enquanto "2^{nd}" funcionava normal
+  texto = texto.replace(/[ˆ˄]/g, "^");
   return texto.replace(/'_([A-Za-zÀ-ÿ]{2,})/g, "'$1");
 }
 // extrai {letra, texto} de cada alternativa a partir do campo "alternativas" da questão,
@@ -4093,6 +4099,19 @@ function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo, larguraPx, alinhame
   // válida - inserida via innerHTML dentro da página normal, impedia o
   // navegador de processar o resto do SVG corretamente (não desenhava nada)
   conteudoBruto = conteudoBruto.replace(/^\s*<\?xml[^?]*\?>\s*/i, '');
+  // se o <svg> não tem width/height como atributos (só viewBox), ele não
+  // tem "tamanho intrínseco" nenhum pro navegador usar - dentro do div
+  // pai (width:fit-content, necessário pra alça de redimensionar), isso
+  // criava uma dependência circular (pai quer se ajustar ao filho, filho
+  // quer ser 100% do pai) que colapsava os dois pra 0x0, invisível.
+  // Confirmado ao vivo num navegador real antes dessa correção. Deriva
+  // width/height do viewBox quando ausentes, resolvendo o ciclo
+  conteudoBruto = conteudoBruto.replace(/<svg([^>]*)>/i, (m, atributos) => {
+    if(/\bwidth\s*=/.test(atributos)) return m; // já tem width, não mexe
+    const matchViewBox = atributos.match(/viewBox\s*=\s*["']\s*[\d.-]+\s+[\d.-]+\s+([\d.]+)\s+([\d.]+)\s*["']/i);
+    if(!matchViewBox) return m; // sem viewBox também, nada a derivar
+    return `<svg${atributos} width="${matchViewBox[1]}" height="${matchViewBox[2]}">`;
+  });
   const matchStyle = conteudoBruto.match(/<style[^>]*>([\s\S]*?)<\/style>/);
   let css = matchStyle ? matchStyle[1] : '';
   const svgSemStyle = conteudoBruto.replace(/<style[^>]*>[\s\S]*?<\/style>/, '');
@@ -8180,6 +8199,27 @@ async function vfGarantirConteudoCompletoVF(item){
   Object.assign(item, data);
 }
 
+// cache de preview de nota (texto da nota mais recente de cada questão) -
+// mesmo padrão de vfConteudoCompletoCache. Chave: questaoId, valor: texto
+// da nota (string) ou null (já buscou, confirmado que não tem nenhuma)
+const vfNotaPreviewCacheVF = new Map();
+
+// busca em lote a nota MAIS RECENTE de cada questão de uma vez só - uma
+// query com .in(), pedindo todas ordenadas por criado_em desc; a primeira
+// ocorrência de cada questao_vf_id nessa ordem já é a mais recente dela,
+// sem precisar de uma query por questão nem de agregação especial no banco
+async function vfBuscarNotasEmLoteVF(questaoIds){
+  const pendentes = questaoIds.filter(id => notasVF.has(id) && !vfNotaPreviewCacheVF.has(id));
+  if(!pendentes.length) return;
+  const {data, error} = await sb.from('notas_vf').select('questao_vf_id, texto')
+    .eq('usuario_id', usuarioAtual.id).in('questao_vf_id', pendentes).order('criado_em', {ascending: false});
+  if(error) return;
+  pendentes.forEach(id => vfNotaPreviewCacheVF.set(id, null)); // marca como "já buscou" mesmo se não achar nada, evita rebuscar
+  (data || []).forEach(n => {
+    if(!vfNotaPreviewCacheVF.get(n.questao_vf_id)) vfNotaPreviewCacheVF.set(n.questao_vf_id, n.texto); // só a primeira (mais recente) de cada questão
+  });
+}
+
 // mesma coisa, mas em LOTE - uma única query com .in('id', [...]) pra
 // várias questões de uma vez, em vez de uma viagem de rede por questão.
 // Usada pela pré-busca (que hoje tenta preparar até 8 candidatas de uma
@@ -8261,7 +8301,12 @@ function vfPreBuscarProximasVF(){
     .slice(0, 3)
     .map(c => c.q);
 
-  vfBuscarConteudoEmLoteVF([...aprendendoElegiveis, ...revisaoPorScore, ...novasPorScore]).catch(() => {});
+  const candidatasVF = [...aprendendoElegiveis, ...revisaoPorScore, ...novasPorScore];
+  vfBuscarConteudoEmLoteVF(candidatasVF).catch(() => {});
+  // pré-busca a nota (lâmpada) das mesmas candidatas, em paralelo - sem
+  // isso, a nota só era buscada depois que o card já tinha virado,
+  // aparecendo "atrasada" em relação ao resto da resposta
+  vfBuscarNotasEmLoteVF(candidatasVF.map(q => q.id)).catch(() => {});
 }
 
 // token de geração - incrementa toda vez que uma carga de pool começa.
@@ -10683,27 +10728,46 @@ function VF_ICONE_LAMPADA_SVG(largura, altura, cor){
 async function vfCarregarPreviewNotaVF(questaoVfId){
   const el = document.getElementById('vf-preview-nota');
   if(!el) return; // a tela já pode ter mudado de questão antes da resposta chegar
+  // checa o cache primeiro (pré-buscado junto com o resto do conteúdo em
+  // vfPreBuscarProximasVF) - se já tem, monta na hora, sem esperar rede
+  // nenhuma, junto com o resto da resposta. Só busca ao vivo se não veio
+  // pré-carregado (por exemplo, resposta rápida demais pra pré-busca ter
+  // terminado a tempo)
+  if(vfNotaPreviewCacheVF.has(questaoVfId)){
+    vfMontarPreviewNotaVF(el, vfNotaPreviewCacheVF.get(questaoVfId), questaoVfId);
+    return;
+  }
   const {data} = await sb.from('notas_vf').select('id, texto').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).order('criado_em', {ascending:false}).limit(1);
+  const texto = (data && data.length) ? data[0].texto : null;
+  vfNotaPreviewCacheVF.set(questaoVfId, texto);
   // reconfere o elemento depois do await - se a pessoa já avançou pra
   // outra questão enquanto isso, não pisa no preview da questão nova
   const elAtual = document.getElementById('vf-preview-nota');
-  if(!elAtual || !data || !data.length) return;
+  if(!elAtual) return;
+  vfMontarPreviewNotaVF(elAtual, texto, questaoVfId);
+}
+
+// monta o card/lâmpada do preview de nota a partir do texto já em mãos -
+// síncrono, sem nenhuma consulta - reusado tanto pelo caminho com cache
+// quanto pelo fallback que buscou ao vivo
+function vfMontarPreviewNotaVF(elAtual, texto, questaoVfId){
+  if(!texto) return;
   elAtual.onclick = () => abrirNotaVF(questaoVfId);
   // nota com tabela (\begin{array}, sozinha ou dentro de \sidebyside) não
   // ganha lâmpada nem fica dentro de outro card - a tabela já tem seu
   // próprio card/borda embutido, "card dentro de card" fica estranho.
   // Lâmpada+card continua só pra nota puramente escrita, sem tabela
-  const temTabela = /\\begin\{array\}/.test(data[0].texto);
+  const temTabela = /\\begin\{array\}/.test(texto);
   if(temTabela){
     elAtual.classList.remove('card-questao');
     elAtual.style.cssText = 'margin-top:20px;cursor:pointer';
-    elAtual.innerHTML = formatarTextoItemVF(data[0].texto);
+    elAtual.innerHTML = formatarTextoItemVF(texto);
   }else{
     // mantém a classe card-questao (já traz padding/borda/sombra corretos
     // pro card próprio) - só ajusta o layout interno pra flex e o cursor
     elAtual.classList.add('card-questao');
     elAtual.style.cssText = 'margin-top:14px;display:flex;gap:10px;align-items:center;cursor:pointer';
-    elAtual.innerHTML = `${VF_ICONE_LAMPADA_SVG('24', '27', '#B23A34')}<div style="color:#333;line-height:1.4">${formatarTextoItemVF(data[0].texto)}</div>`;
+    elAtual.innerHTML = `${VF_ICONE_LAMPADA_SVG('24', '27', '#B23A34')}<div style="color:#333;line-height:1.4">${formatarTextoItemVF(texto)}</div>`;
   }
 }
 
@@ -11424,6 +11488,7 @@ async function adicionarNotaVF(){
   await sb.from('notas_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoNotaVfAtual, texto});
   campo.value = '';
   notasVF.add(questaoNotaVfAtual);
+  vfNotaPreviewCacheVF.delete(questaoNotaVfAtual); // invalida - a próxima vez que essa questão for vista, busca de novo (agora tem nota nova)
   await renderizarListaNotasVF();
   renderizarItemVF();
 }
@@ -11433,6 +11498,7 @@ async function excluirNotaVF(notaId){
   await renderizarListaNotasVF();
   const {count} = await sb.from('notas_vf').select('id', {count:'exact', head:true}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual);
   if(!count) notasVF.delete(questaoNotaVfAtual);
+  vfNotaPreviewCacheVF.delete(questaoNotaVfAtual); // invalida - texto pode ter mudado (outra nota virou a mais recente) ou sumido de vez
   renderizarItemVF();
 }
 
