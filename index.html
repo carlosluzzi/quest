@@ -1760,7 +1760,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-525';
+const VERSAO_APP = '2026-07-25-527';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9037,8 +9037,9 @@ function vfMontarPlaceholderPanoramaVF(){
     <div class="vf-secao-titulo">${tituloSecao}</div>
     ${linhasFiltro}
     <div class="vf-filtro-linha"><span>Total de afirmações</span><span class="vf-filtro-valor">—</span></div>
-    <div class="vf-filtro-linha"><span>Você já viu ao menos 1 vez</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha"><span>Vistas ao menos uma vez</span><span class="vf-filtro-valor">—</span></div>
     <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha"><span>Excluídas nesse filtro</span><span class="vf-filtro-valor">—</span></div>
   `;
 }
 
@@ -9068,19 +9069,21 @@ async function vfCarregarPanoramaFiltroVF(){
   });
   const totalFiltro = panorama?.[0]?.total || 0;
   const jaVistas = panorama?.[0]?.ja_vistas || 0;
+  const excluidas = panorama?.[0]?.excluidas || 0;
   // se o painel já foi fechado enquanto essa busca rodava, não escreve nada
   const elAtual = document.getElementById('vf-painel-secao-filtro');
   if(!elAtual) return;
-  // só troca os 3 números - a estrutura (título/linhas de filtro) já foi
+  // só troca os 4 números - a estrutura (título/linhas de filtro) já foi
   // montada pelo placeholder síncrono (vfMontarPlaceholderPanoramaVF),
   // então a altura do painel não muda mais nesse momento, sem o pulo
   // visual de antes
   const valores = elAtual.querySelectorAll('.vf-filtro-valor');
   const nValores = valores.length;
-  if(nValores >= 3){
-    valores[nValores-3].textContent = totalFiltro||0;
-    valores[nValores-2].textContent = jaVistas;
-    valores[nValores-1].textContent = Math.max(0,(totalFiltro||0)-jaVistas);
+  if(nValores >= 4){
+    valores[nValores-4].textContent = totalFiltro||0;
+    valores[nValores-3].textContent = jaVistas;
+    valores[nValores-2].textContent = Math.max(0,(totalFiltro||0)-jaVistas);
+    valores[nValores-1].textContent = excluidas;
   }
   vfReajustarAlturaPainelSessaoVF(); // proteção extra - normalmente não muda nada agora, já que o placeholder já tinha a altura certa
 }
