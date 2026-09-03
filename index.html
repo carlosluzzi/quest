@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-496';
+const VERSAO_APP = '2026-07-25-495';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9447,17 +9447,6 @@ function renderizarItemVF(){
     ]).then(() => {
       if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF();
     });
-  }else{
-    // sem isso, o canvas só seria redimensionado pelo ResizeObserver
-    // (assíncrono, debounced) - achado real: #vf-conteudo nasce no HTML
-    // estático com um padding-bottom "chutado" (170px) antes de qualquer
-    // medição de verdade acontecer. renderizarBarraFixaVF (linha acima)
-    // já corrige esse padding pro valor real da barra fixa nesse ponto -
-    // redimensiona o canvas EXPLICITAMENTE logo em seguida, garantindo
-    // que ele sempre meça com o padding já certo, em vez de torcer pro
-    // ResizeObserver disparar depois dessa correção (sem garantia de
-    // ordem) e arriscar "prender" o canvas maior que o necessário
-    if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF();
   }
 }
 
