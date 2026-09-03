@@ -334,6 +334,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
    pontilhado indicando que dá pra tocar */
 .vf-nota-clicavel, .vf-celula-anotavel{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none}
 .vf-svg-bloco,.vf-svg-bloco *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+.vf-tabela-alinhamento,.vf-tabela-alinhamento *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .vf-nota-clicavel{border-bottom:1.5px dotted #888;cursor:pointer}
 .vf-celula-anotavel-com-nota{text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
 .vf-celula-anotavel-sem-nota{cursor:pointer}
@@ -1759,7 +1760,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-523';
+const VERSAO_APP = '2026-07-25-525';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4063,6 +4064,11 @@ function vfProcessarNotaClicavelComPlaceholderVF(texto, tabelas){
 // muitas chaves dentro do próprio <style> (regras CSS), regex simples
 // [^{}]* nunca daria conta de casar o bloco inteiro
 let vfContadorSvgVF = 0;
+// mesmo padrão do svg, mas pra tabelas (\begin{array}{...}) - permite
+// alinhar a tabela inteira na tela (esquerda/centro/direita), segurando
+// nela igual já funciona pro desenho
+let vfContadorTabelaVF = 0;
+const vfTabelaOrigemVF = new Map();
 // mapa: id do bloco svg renderizado (ex: "vf-svg-3") -> de onde veio
 // (contexto: campo + id do registro), o texto original exato dessa
 // ocorrência no texto-fonte, e a largura atual em px (se já tinha
@@ -4072,7 +4078,8 @@ const vfSvgOrigemVF = new Map();
 // setado logo antes de cada chamada de formatarTextoItemVF em contextos
 // onde SVG pode aparecer e precisa ser redimensionável/salvável (ver
 // vfSvgOrigemVF acima) - null nos demais contextos (SVG aparece, mas o
-// redimensionador não tenta salvar nada, por segurança)
+// redimensionador não tenta salvar nada, por segurança). Reaproveitado
+// também pelas tabelas, mesmo contexto genérico de renderização
 let vfContextoRenderizacaoSvgVF = null;
 function vfProcessarSvgBrutoVF(texto){
   let resultado = '';
@@ -4268,8 +4275,19 @@ function vfProcessarArrayLatexVF(texto){
   // sidebyside primeiro - senão o regex de array sozinho abaixo pegaria
   // os arrays de dentro dele também, fora do grid de 2 colunas
   texto = vfProcessarSideBySideVF(texto);
-  return texto.replace(/\\begin\{array\}\{([lcr]+)\}([\s\S]*?)\\end\{array\}/g, (match, colunas, conteudo) => {
-    return `<div style="font-family:${VF_FONTE_TABELA};margin:10px 0">${vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(colunas, conteudo))}</div>`;
+  let contadorTabela = 0;
+  return texto.replace(/\\begin\{array\}(?:\[(centro|direita)\])?\{([lcr]+)\}([\s\S]*?)\\end\{array\}/g, (match, alinhamento, colunas, conteudo) => {
+    const idEscopo = `vf-tabela-${++vfContadorTabelaVF}`;
+    const alinhamentoFinal = alinhamento || 'esquerda';
+    vfTabelaOrigemVF.set(idEscopo, {
+      contexto: vfContextoRenderizacaoSvgVF,
+      textoOriginalMatch: match,
+      alinhamentoAtual: alinhamentoFinal
+    });
+    const margemAlinhamento = alinhamentoFinal === 'centro' ? 'margin-left:auto;margin-right:auto;'
+      : alinhamentoFinal === 'direita' ? 'margin-left:auto;margin-right:0;'
+      : '';
+    return `<div id="${idEscopo}" class="vf-tabela-bloco" data-alinhamento-tabela="${alinhamentoFinal}" style="font-family:${VF_FONTE_TABELA};margin:10px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}">${vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(colunas, conteudo))}</div>`;
   });
 }
 
@@ -4477,7 +4495,7 @@ function vfExtrairTabelasComoPlaceholderVF(texto){
   semSideBySide += texto.slice(pos);
   // depois os \begin{array}...\end{array} soltos que sobraram (não
   // estavam dentro de nenhum sidebyside)
-  const textoComPlaceholder = semSideBySide.replace(/\\begin\{array\}\{[lcr]+\}[\s\S]*?\\end\{array\}/g, (match) => {
+  const textoComPlaceholder = semSideBySide.replace(/\\begin\{array\}(?:\[(?:centro|direita)\])?\{[lcr]+\}[\s\S]*?\\end\{array\}/g, (match) => {
     tabelas.push(vfProcessarArrayLatexVF(match));
     return `\u0000TABELA${tabelas.length - 1}\u0000`;
   });
@@ -8886,17 +8904,24 @@ function vfAbrirPainelSessaoVF(){
   // transição - sem isso, o navegador pode agrupar as mudanças de estilo
   // e pular direto pro estado final, sem morph nenhum
   requestAnimationFrame(() => {
-    painel.style.transition = '';
     const larguraFinal = Math.min(440, window.innerWidth * 0.92);
+    // aplica a largura final SEM transição (instantâneo) antes de medir -
+    // achado real: definir width com a transição do CSS ainda ativa não
+    // muda o valor visual/computado na hora (é uma animação gradual de
+    // .32s) - lendo scrollHeight logo em seguida ainda pegava o layout
+    // com a largura ANTIGA (pequena, do balão original), inflando a
+    // altura calculada e deixando espaço sobrando embaixo do conteúdo
+    painel.style.width = larguraFinal + 'px';
+    void painel.offsetWidth; // força o reflow síncrono com a largura já aplicada, antes de medir
     // altura pelo conteúdo real, não um valor fixo - achado real: com a
     // seção de panorama sempre presente agora, um valor fixo (era 560px)
     // não cabia mais tudo, forçando rolagem interna à toa. Cap de 90% da
     // tela só como proteção pra telas pequenas/conteúdo muito grande
     const alturaConteudoReal = document.getElementById('vf-painel-sessao-conteudo').scrollHeight;
     const alturaFinal = Math.min(alturaConteudoReal, window.innerHeight * 0.96);
+    painel.style.transition = ''; // reativa a transição só agora, pra top/height/borderRadius animarem suavemente
     painel.style.top = ((window.innerHeight - alturaFinal) / 2) + 'px';
     painel.style.left = ((window.innerWidth - larguraFinal) / 2) + 'px';
-    painel.style.width = larguraFinal + 'px';
     painel.style.height = alturaFinal + 'px';
     painel.style.borderRadius = '18px';
     painel.classList.add('aberto');
@@ -9068,6 +9093,7 @@ function vfReajustarAlturaPainelSessaoVF(){
   const painel = document.getElementById('vf-painel-sessao-vf');
   const conteudo = document.getElementById('vf-painel-sessao-conteudo');
   if(!painel || !conteudo || !painel.classList.contains('aberto')) return;
+  void painel.offsetWidth; // garante reflow com a largura já estável antes de medir, mesma proteção de vfAbrirPainelSessaoVF
   const alturaConteudoReal = conteudo.scrollHeight;
   const alturaFinal = Math.min(alturaConteudoReal, window.innerHeight * 0.96);
   painel.style.height = alturaFinal + 'px';
@@ -10180,6 +10206,123 @@ function vfSalvarAlinhamentoSvgVF(blocoId, alinhamento){
   return vfSalvarAtributosSvgVF(blocoId, null, alinhamento);
 }
 
+// ---- alinhamento de tabela (\begin{array}{...}) na tela: segurar a
+// tabela mostra 3 botões (esquerda/centro/direita), mesmo padrão visual
+// do svg - mas sem alça de redimensionar, tabela não precisa disso ----
+let vfTimerPressionarTabelaVF = null;
+
+document.addEventListener('touchstart', vfIniciarPressionarTabelaVF, {passive: true});
+document.addEventListener('mousedown', vfIniciarPressionarTabelaVF);
+
+function vfIniciarPressionarTabelaVF(evento){
+  const bloco = evento.target.closest?.('.vf-tabela-bloco');
+  if(!bloco) return;
+  if(evento.target.closest('.vf-tabela-alinhamento')) return; // já tocando no próprio controle, não rearma
+  clearTimeout(vfTimerPressionarTabelaVF);
+  vfTimerPressionarTabelaVF = setTimeout(() => vfMostrarBotoesAlinhamentoTabelaVF(bloco), 500);
+  const cancelarSeMoveu = () => { clearTimeout(vfTimerPressionarTabelaVF); limpar(); };
+  const limpar = () => {
+    clearTimeout(vfTimerPressionarTabelaVF); // achado real (mesmo do svg): toque rápido sem mover precisa cancelar aqui também, não só no touchmove
+    document.removeEventListener('touchmove', cancelarSeMoveu);
+    document.removeEventListener('touchend', limpar);
+    document.removeEventListener('mouseup', limpar);
+  };
+  document.addEventListener('touchmove', cancelarSeMoveu, {passive: true, once: true});
+  document.addEventListener('touchend', limpar, {once: true});
+  document.addEventListener('mouseup', limpar, {once: true});
+}
+
+function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
+  bloco.querySelector('.vf-tabela-alinhamento')?.remove();
+  const barra = document.createElement('div');
+  barra.className = 'vf-tabela-alinhamento';
+  barra.style.cssText = 'position:absolute;top:-38px;left:0;display:flex;gap:4px;background:#fff;padding:4px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,0.2);z-index:5';
+  const opcoes = [
+    {valor: 'esquerda', x1: 5, x2: 15},
+    {valor: 'centro', x1: 7, x2: 17},
+    {valor: 'direita', x1: 9, x2: 19}
+  ];
+  opcoes.forEach(op => {
+    const btn = document.createElement('button');
+    const ativo = (bloco.dataset.alinhamentoTabela || 'esquerda') === op.valor;
+    btn.style.cssText = `width:28px;height:28px;border:none;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:${ativo ? '#B23A34' : 'transparent'};color:${ativo ? '#fff' : '#666'}`;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="7" x2="19" y2="7"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="${op.x1}" y1="17" x2="${op.x2}" y2="17"/></svg>`;
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      bloco.dataset.alinhamentoTabela = op.valor;
+      bloco.style.marginLeft = op.valor === 'centro' ? 'auto' : op.valor === 'direita' ? 'auto' : '';
+      bloco.style.marginRight = op.valor === 'centro' ? 'auto' : '0';
+      barra.querySelectorAll('button').forEach((b, i) => {
+        const ativoAgora = opcoes[i].valor === op.valor;
+        b.style.background = ativoAgora ? '#B23A34' : 'transparent';
+        b.style.color = ativoAgora ? '#fff' : '#666';
+      });
+      vfSalvarAlinhamentoTabelaVF(bloco.id, op.valor);
+    };
+    barra.appendChild(btn);
+  });
+  bloco.appendChild(barra);
+  const esconderSeTocarFora = (e) => {
+    if(e && e.target && e.target.closest('.vf-tabela-alinhamento')) return;
+    barra.remove();
+    document.removeEventListener('touchstart', esconderSeTocarFora);
+    document.removeEventListener('mousedown', esconderSeTocarFora);
+  };
+  setTimeout(() => {
+    document.addEventListener('touchstart', esconderSeTocarFora, {passive: true});
+    document.addEventListener('mousedown', esconderSeTocarFora);
+  }, 50);
+}
+
+// localiza a ocorrência exata dessa tabela no texto-fonte e substitui só
+// ela, adicionando/atualizando o parâmetro [alinhamento] - mesma lógica
+// de vfSalvarAtributosSvgVF, mas pro \begin{array}
+async function vfSalvarAlinhamentoTabelaVF(blocoId, alinhamento){
+  const origem = vfTabelaOrigemVF.get(blocoId);
+  if(!origem || !origem.contexto){
+    alert('Não consegui salvar esse alinhamento (não achei de onde essa tabela veio). A mudança visual continua nessa tela, mas não fica salva.');
+    return;
+  }
+  const {contexto, textoOriginalMatch} = origem;
+  const novoTrecho = alinhamento === 'esquerda'
+    ? textoOriginalMatch.replace(/^\\begin\{array\}(?:\[(?:centro|direita)\])?/, '\\begin{array}')
+    : textoOriginalMatch.replace(/^\\begin\{array\}(?:\[(?:centro|direita)\])?/, `\\begin{array}[${alinhamento}]`);
+
+  if(contexto.tipo === 'campo-vf'){
+    const entrada = estadoVF.historico.find(h => h.item.id === contexto.questaoId);
+    const textoAtual = entrada?.item?.[contexto.campo];
+    if(!entrada || textoAtual === undefined || !textoAtual.includes(textoOriginalMatch)){
+      alert('Não consegui salvar esse alinhamento (o texto pode ter mudado nesse meio tempo). Tenta segurar de novo.');
+      return;
+    }
+    const textoNovo = textoAtual.replace(textoOriginalMatch, novoTrecho);
+    entrada.item[contexto.campo] = textoNovo;
+    const cacheAtual = vfConteudoCompletoCache.get(contexto.questaoId) || {};
+    vfConteudoCompletoCache.set(contexto.questaoId, {...cacheAtual, [contexto.campo]: textoNovo});
+    await vfSalvarComRetryVF(
+      () => sb.from('questoes_vf').update({[contexto.campo]: textoNovo}).eq('id', contexto.questaoId),
+      'o alinhamento da tabela',
+      null
+    );
+  }else if(contexto.tipo === 'elemento-html'){
+    const {data, error: erroBusca} = await sb.from('elementos_html_vf').select('latex_fonte').eq('id', contexto.elementoId).single();
+    if(erroBusca || !data || !data.latex_fonte.includes(textoOriginalMatch)){
+      alert('Não consegui salvar esse alinhamento (o elemento pode ter mudado nesse meio tempo). Tenta segurar de novo.');
+      return;
+    }
+    const textoNovo = data.latex_fonte.replace(textoOriginalMatch, novoTrecho);
+    const itemCache = vfBibliotecaComplementarCacheVF?.find(e => e.id === contexto.elementoId);
+    if(itemCache) itemCache.latex_fonte = textoNovo;
+    await vfSalvarComRetryVF(
+      () => sb.from('elementos_html_vf').update({latex_fonte: textoNovo}).eq('id', contexto.elementoId),
+      'o alinhamento da tabela',
+      null
+    );
+  }
+  origem.textoOriginalMatch = novoTrecho;
+  origem.alinhamentoAtual = alinhamento;
+}
+
 function vfMostrarSelinhoCopiadoVF(elemento){
   elemento.querySelector(':scope > .vf-selinho-copiado')?.remove(); // se já tinha um preso de um toque anterior
   const selinho = document.createElement('span');
@@ -11260,7 +11403,7 @@ async function vfUsarComplementarLocalVF(){
   const cacheAtual = vfConteudoCompletoCache.get(questaoId) || {};
   vfConteudoCompletoCache.set(questaoId, {...cacheAtual, complementar_local: latexFonte});
   fecharModalComplementarVF();
-  vfRenderizarComplementarLocalVF(questaoId);
+  if(entrada) vfRenderizarComplementarLocalVF(entrada.item);
   if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF();
 }
 
