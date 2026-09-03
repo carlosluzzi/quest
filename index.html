@@ -1553,21 +1553,18 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 </div>
 
 <div class="modal-overlay hidden" id="modal-gerador-tabela-vf" onclick="if(event.target===this) vfFecharGeradorTabelaVF()">
-  <div class="modal-conteudo popup-formulario" style="max-width:720px;display:flex;flex-direction:column">
-    <h3 class="config-title" style="flex-shrink:0">Gerar tabela</h3>
-    <div style="display:flex;gap:8px;margin-bottom:10px;flex-shrink:0">
-      <button class="btn-secundario" style="flex:1;padding:8px" onclick="vfGeradorTabelaAdicionarLinhaVF()">+ Linha</button>
-      <button class="btn-secundario" style="flex:1;padding:8px" onclick="vfGeradorTabelaRemoverLinhaVF()">– Linha</button>
-      <button class="btn-secundario" style="flex:1;padding:8px" onclick="vfGeradorTabelaAdicionarColunaVF()">+ Coluna</button>
-      <button class="btn-secundario" style="flex:1;padding:8px" onclick="vfGeradorTabelaRemoverColunaVF()">– Coluna</button>
+  <div class="modal-conteudo popup-formulario" style="max-width:760px;display:flex;flex-direction:column">
+    <h3 class="config-title" style="flex-shrink:0">Editor de conteúdo</h3>
+    <div id="vf-editor-blocos-lista" style="flex-shrink:0"></div>
+    <div style="display:flex;gap:8px;margin:4px 0 14px;flex-shrink:0">
+      <button class="btn-secundario" style="flex:1;padding:8px" onclick="vfEditorAdicionarBlocoVF('tabela')">+ Tabela</button>
+      <button class="btn-secundario" style="flex:1;padding:8px" onclick="vfEditorAdicionarBlocoVF('texto')">+ Texto</button>
     </div>
-    <div style="font-size:var(--fs-a);color:#999;margin-bottom:8px;flex-shrink:0">A primeira linha vira o cabeçalho automaticamente. Clique nas letras (E/C/D) pra mudar o alinhamento de cada coluna.</div>
-    <div id="vf-gerador-tabela-grid" style="overflow-x:auto;margin-bottom:14px;flex-shrink:0"></div>
     <div style="font-size:var(--fs-a);color:#999;margin-bottom:4px;flex-shrink:0">Prévia (exatamente como vai aparecer no Pilotquest):</div>
-    <div id="vf-gerador-tabela-preview" style="min-height:0;overflow-y:auto;flex:1;margin-bottom:14px"></div>
+    <div id="vf-gerador-tabela-preview" style="min-height:0;overflow-y:auto;flex:1;margin-bottom:14px;border:1px solid #f0f0ee;border-radius:8px;padding:10px"></div>
     <div style="display:flex;gap:8px;flex-shrink:0">
       <button class="btn-secundario" style="flex:1;position:relative" onclick="vfCopiarCodigoGeradorTabelaVF(this)">Copiar código</button>
-      <button class="btn-primario" style="flex:1" onclick="vfUsarTabelaGeradaVF()">Usar essa tabela</button>
+      <button class="btn-primario" style="flex:1" onclick="vfUsarTabelaGeradaVF()">Usar esse conteúdo</button>
     </div>
     <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="vfFecharGeradorTabelaVF()">Cancelar</button>
   </div>
@@ -1757,7 +1754,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-503';
+const VERSAO_APP = '2026-07-25-507';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4144,7 +4141,7 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta){
 }
 // envolve uma tabela interna no cartão padrão (borda, cantos, sombra)
 function vfEnvolverEmCartaoVF(tabelaHtml){
-  return `<div style="border:1px solid #E6E6E3;border-radius:10px;overflow-x:auto;overflow-y:hidden;background:#FBFBFA;box-shadow:0 1px 3px rgba(0,0,0,0.04)">${tabelaHtml}</div>`;
+  return `<div style="display:table;max-width:100%;border:1px solid #E6E6E3;border-radius:10px;overflow-x:auto;overflow-y:hidden;background:#FBFBFA;box-shadow:0 1px 3px rgba(0,0,0,0.04)">${tabelaHtml}</div>`;
 }
 // acha o conteúdo entre chaves balanceadas a partir de uma posição que
 // aponta pro { de abertura - necessário porque o conteúdo interno (um
@@ -4214,7 +4211,39 @@ function vfProcessarArrayLatexVF(texto){
 // tamanho reduzido mas ainda na escala do app (--fs-b, não px fixo),
 // cinza refinado igual ao resto da paleta da tabela
 function vfProcessarTextoPequenoVF(texto){
-  return texto.replace(/\\small\{([^}]*)\}/g, '<div style="font-size:var(--fs-b);color:#6B6B66;margin-top:2px;padding-left:10px">$1</div>');
+  texto = texto.replace(/\\small\{([^}]*)\}/g, '<div style="font-size:var(--fs-b);color:#6B6B66;margin-top:2px;padding-left:10px">$1</div>');
+  // \legenda[espaco]{texto} - igual \small, mas com o espaçamento acima
+  // (margin-top, em px) configurável - usado pelo editor visual de
+  // blocos, onde cada bloco de texto pode ter seu próprio respiro em
+  // relação ao bloco anterior. [espaco] é opcional, usa 2px se omitido
+  // (igual o valor fixo que \small sempre teve)
+  texto = texto.replace(/\\legenda(?:\[(\d+)px\])?\{([^}]*)\}/g, (m, espaco, conteudo) => {
+    const espacoPx = espaco !== undefined ? espaco : '2';
+    return `<div style="font-size:var(--fs-b);color:#6B6B66;margin-top:${espacoPx}px;padding-left:10px">${conteudo}</div>`;
+  });
+  // \paragrafo[espaco]{texto} - texto no tamanho normal (mesmo da
+  // explicação/enunciado), com espaçamento acima configurável - pro
+  // caso de querer um parágrafo solto (não legenda pequena) com um
+  // respiro próprio em relação ao bloco anterior
+  texto = texto.replace(/\\paragrafo(?:\[(\d+)px\])?\{([^}]*)\}/g, (m, espaco, conteudo) => {
+    const espacoPx = espaco !== undefined ? espaco : '8';
+    return `<div style="margin-top:${espacoPx}px">${conteudo}</div>`;
+  });
+  // \lista[espaco]{item1\\item2\\item3} - lista com marcadores (•),
+  // espaçamento ENTRE itens configurável (margin-bottom de cada item,
+  // exceto o último) - separador de item é \\, igual separador de linha
+  // de tabela, pelo mesmo motivo (já é o padrão usado em todo o resto
+  // do sistema pra "próximo item/linha")
+  texto = texto.replace(/\\lista(?:\[(\d+)px\])?\{([^}]*)\}/g, (m, espaco, conteudo) => {
+    const espacoPx = espaco !== undefined ? espaco : '4';
+    const itens = conteudo.split('\\\\').map(i => i.trim()).filter(Boolean);
+    const itensHtml = itens.map((item, i) => {
+      const margemBaixo = i < itens.length - 1 ? `margin-bottom:${espacoPx}px;` : '';
+      return `<div style="display:flex;gap:8px;${margemBaixo}"><span style="flex-shrink:0">•</span><span>${item}</span></div>`;
+    }).join('');
+    return `<div style="margin-top:6px">${itensHtml}</div>`;
+  });
+  return texto;
 }
 
 function vfAplicarMarcacaoMatematicaVF(textoEscapado){
@@ -10427,22 +10456,23 @@ function fecharModalComplementarVF(){
   fecharModal('modal-complementar-vf');
 }
 
-// ---- gerador visual de tabela - monta o \begin{array}{...}\end{array}
-// sem precisar escrever a sintaxe na mão. Estado: matriz 2D de strings
-// (conteúdo de cada célula) + array de alinhamentos (um por coluna,
-// 'l'/'c'/'r'). O preview usa formatarTextoItemVF, o MESMO motor que
-// renderiza de verdade no app - "o que você vê é o que vai ter", sem
-// risco de divergência entre o preview e o resultado real
-let vfGeradorTabelaDadosVF = [];
-let vfGeradorTabelaAlinhamentosVF = [];
+// ---- editor visual de blocos - monta uma sequência de blocos (tabela
+// e/ou texto) sem precisar escrever a sintaxe LaTeX simplificada na mão.
+// Cada bloco é {id, tipo: 'tabela'|'texto', ...dados específicos do tipo}.
+// tabela: {dados: matriz 2D de strings, alinhamentos: array 'l'/'c'/'r'}
+// texto: {estilo: 'normal'|'legenda'|'lista', espaco: número em px,
+//         itens: array de strings - só 1 item pra normal/legenda, vários
+//         pra lista (um por marcador)}
+// O preview usa formatarTextoItemVF, o MESMO motor que renderiza de
+// verdade no app - "o que você vê é o que vai ter", sem risco de
+// divergência entre o preview e o resultado real
+let vfEditorBlocosVF = [];
+let vfEditorProximoIdVF = 1;
 
 function vfAbrirGeradorTabelaVF(){
-  // começa com 2 linhas (a primeira já vira cabeçalho) e 2 colunas -
-  // tamanho mínimo útil, cresce/encolhe com os botões +/- linha/coluna
-  vfGeradorTabelaDadosVF = [['', ''], ['', '']];
-  vfGeradorTabelaAlinhamentosVF = ['l', 'l'];
-  vfGeradorTabelaRenderizarGridVF();
-  vfGeradorTabelaAtualizarPreviewVF();
+  vfEditorBlocosVF = [];
+  vfEditorProximoIdVF = 1;
+  vfEditorAdicionarBlocoVF('tabela'); // já começa com uma tabela, caso mais comum
   abrirModal('modal-gerador-tabela-vf');
 }
 
@@ -10450,84 +10480,195 @@ function vfFecharGeradorTabelaVF(){
   fecharModal('modal-gerador-tabela-vf');
 }
 
-function vfGeradorTabelaRenderizarGridVF(){
-  const grid = document.getElementById('vf-gerador-tabela-grid');
-  const numColunas = vfGeradorTabelaAlinhamentosVF.length;
+function vfEditorAdicionarBlocoVF(tipo){
+  const id = vfEditorProximoIdVF++;
+  if(tipo === 'tabela'){
+    // começa 2x2 (a primeira linha já vira cabeçalho) - cresce/encolhe
+    // com o "+" estilo planilha na última linha/coluna
+    vfEditorBlocosVF.push({id, tipo: 'tabela', dados: [['', ''], ['', '']], alinhamentos: ['l', 'l']});
+  }else{
+    vfEditorBlocosVF.push({id, tipo: 'texto', estilo: 'normal', espaco: 8, itens: ['']});
+  }
+  vfEditorRenderizarListaVF();
+  vfEditorAtualizarPreviewVF();
+}
+
+function vfEditorRemoverBlocoVF(id){
+  vfEditorBlocosVF = vfEditorBlocosVF.filter(b => b.id !== id);
+  vfEditorRenderizarListaVF();
+  vfEditorAtualizarPreviewVF();
+}
+
+// move um bloco pra cima (-1) ou baixo (+1) na lista - setas em vez de
+// arrastar de verdade: a API nativa de drag-and-drop do HTML5 é
+// inconsistente em touch (Safari/iPad), setas são muito mais confiáveis
+// e funcionam igual bem em toque ou mouse
+function vfEditorMoverBlocoVF(id, direcao){
+  const i = vfEditorBlocosVF.findIndex(b => b.id === id);
+  const j = i + direcao;
+  if(i < 0 || j < 0 || j >= vfEditorBlocosVF.length) return;
+  [vfEditorBlocosVF[i], vfEditorBlocosVF[j]] = [vfEditorBlocosVF[j], vfEditorBlocosVF[i]];
+  vfEditorRenderizarListaVF();
+  vfEditorAtualizarPreviewVF();
+}
+
+function vfEditorRenderizarListaVF(){
+  const lista = document.getElementById('vf-editor-blocos-lista');
+  lista.innerHTML = vfEditorBlocosVF.map((bloco, i) => {
+    const controles = `
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px">
+        <button onclick="vfEditorMoverBlocoVF(${bloco.id},-1)" ${i===0?'disabled':''} style="width:28px;height:28px;padding:0;border-radius:6px;border:1px solid #ddd;background:#fff;color:#666;cursor:pointer;opacity:${i===0?'0.3':'1'}">▲</button>
+        <button onclick="vfEditorMoverBlocoVF(${bloco.id},1)" ${i===vfEditorBlocosVF.length-1?'disabled':''} style="width:28px;height:28px;padding:0;border-radius:6px;border:1px solid #ddd;background:#fff;color:#666;cursor:pointer;opacity:${i===vfEditorBlocosVF.length-1?'0.3':'1'}">▼</button>
+        <span style="font-size:var(--fs-a);color:#999;flex:1">${bloco.tipo === 'tabela' ? 'Tabela' : 'Texto'}</span>
+        <button onclick="vfEditorRemoverBlocoVF(${bloco.id})" style="width:28px;height:28px;padding:0;border-radius:6px;border:1px solid #ddd;background:#fff;color:#B23A34;cursor:pointer">✕</button>
+      </div>`;
+    const conteudo = bloco.tipo === 'tabela' ? vfEditorHtmlBlocoTabelaVF(bloco) : vfEditorHtmlBlocoTextoVF(bloco);
+    return `<div style="border:1px solid #eee;border-radius:10px;padding:10px;margin-bottom:10px;background:#fafaf9">${controles}${conteudo}</div>`;
+  }).join('');
+}
+
+// ---- bloco tabela: grid com "+" estilo planilha (Excel/Numbers) - uma
+// linha extra no final com "+" (cria linha nova), uma coluna extra no
+// final com "+" (cria coluna nova), em vez de botões separados +/- linha
+// e +/- coluna fora da grade
+function vfEditorHtmlBlocoTabelaVF(bloco){
+  const numColunas = bloco.alinhamentos.length;
   const rotuloAlinhamento = {l: 'E', c: 'C', r: 'D'};
-  let html = '<table style="border-collapse:collapse;width:max-content">';
-  // linha de controle de alinhamento, uma célula por coluna - clicar
-  // cicla entre esquerda/centro/direita
+  let html = '<div style="font-size:var(--fs-a);color:#999;margin-bottom:6px">A 1ª linha vira cabeçalho. Clique em E/C/D pra mudar o alinhamento da coluna.</div>';
+  html += '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:max-content">';
   html += '<tr>';
   for(let c = 0; c < numColunas; c++){
-    html += `<td style="padding:2px"><button onclick="vfGeradorTabelaAlternarAlinhamentoVF(${c})" style="width:100%;padding:4px;font-size:var(--fs-a);font-weight:700;background:#f0f0ed;border:1px solid #ddd;border-radius:6px;cursor:pointer;color:#666">${rotuloAlinhamento[vfGeradorTabelaAlinhamentosVF[c]]}</button></td>`;
+    html += `<td style="padding:2px"><button onclick="vfEditorTabelaAlternarAlinhamentoVF(${bloco.id},${c})" style="width:100%;padding:4px;font-size:var(--fs-a);font-weight:700;background:#f0f0ed;border:1px solid #ddd;border-radius:6px;cursor:pointer;color:#666">${rotuloAlinhamento[bloco.alinhamentos[c]]}</button></td>`;
   }
+  html += `<td style="padding:2px"><button onclick="vfEditorTabelaAdicionarColunaVF(${bloco.id})" title="Adicionar coluna" style="width:32px;height:100%;padding:4px;font-size:var(--fs-c);font-weight:700;background:#fff;border:1px dashed #ccc;border-radius:6px;cursor:pointer;color:#999">+</button></td>`;
   html += '</tr>';
-  vfGeradorTabelaDadosVF.forEach((linha, l) => {
+  bloco.dados.forEach((linha, l) => {
     html += '<tr>';
     linha.forEach((celula, c) => {
       const ehCabecalho = l === 0;
-      html += `<td style="padding:2px"><input value="${escapeHtml(celula)}" oninput="vfGeradorTabelaAtualizarCelulaVF(${l},${c},this.value)" style="width:130px;padding:6px 8px;font-size:var(--fs-c);border:1px solid #ddd;border-radius:6px;font-weight:${ehCabecalho?600:400};background:${ehCabecalho?'#faf9f7':'#fff'}"></td>`;
+      html += `<td style="padding:2px"><input value="${escapeHtml(celula)}" oninput="vfEditorTabelaAtualizarCelulaVF(${bloco.id},${l},${c},this.value)" style="width:130px;padding:6px 8px;font-size:var(--fs-c);border:1px solid #ddd;border-radius:6px;font-weight:${ehCabecalho?600:400};background:${ehCabecalho?'#faf9f7':'#fff'}"></td>`;
     });
     html += '</tr>';
   });
-  html += '</table>';
-  grid.innerHTML = html;
+  // linha extra no final, com "+" ocupando todas as colunas - cria linha nova
+  html += `<tr><td colspan="${numColunas+1}" style="padding:2px"><button onclick="vfEditorTabelaAdicionarLinhaVF(${bloco.id})" title="Adicionar linha" style="width:100%;padding:6px;font-size:var(--fs-c);font-weight:700;background:#fff;border:1px dashed #ccc;border-radius:6px;cursor:pointer;color:#999">+</button></td></tr>`;
+  html += '</table></div>';
+  return html;
 }
 
-function vfGeradorTabelaAtualizarCelulaVF(linha, coluna, valor){
-  vfGeradorTabelaDadosVF[linha][coluna] = valor;
-  vfGeradorTabelaAtualizarPreviewVF();
+function vfEditorBuscarBlocoVF(id){
+  return vfEditorBlocosVF.find(b => b.id === id);
 }
 
-function vfGeradorTabelaAlternarAlinhamentoVF(coluna){
+function vfEditorTabelaAtualizarCelulaVF(id, linha, coluna, valor){
+  vfEditorBuscarBlocoVF(id).dados[linha][coluna] = valor;
+  vfEditorAtualizarPreviewVF(); // não precisa re-renderizar a lista inteira aqui, só o preview - o input já mantém o próprio valor digitado
+}
+
+function vfEditorTabelaAlternarAlinhamentoVF(id, coluna){
   const ordem = {l: 'c', c: 'r', r: 'l'};
-  vfGeradorTabelaAlinhamentosVF[coluna] = ordem[vfGeradorTabelaAlinhamentosVF[coluna]];
-  vfGeradorTabelaRenderizarGridVF();
-  vfGeradorTabelaAtualizarPreviewVF();
+  const bloco = vfEditorBuscarBlocoVF(id);
+  bloco.alinhamentos[coluna] = ordem[bloco.alinhamentos[coluna]];
+  vfEditorRenderizarListaVF();
+  vfEditorAtualizarPreviewVF();
 }
 
-function vfGeradorTabelaAdicionarLinhaVF(){
-  const numColunas = vfGeradorTabelaAlinhamentosVF.length;
-  vfGeradorTabelaDadosVF.push(new Array(numColunas).fill(''));
-  vfGeradorTabelaRenderizarGridVF();
-  vfGeradorTabelaAtualizarPreviewVF();
+function vfEditorTabelaAdicionarLinhaVF(id){
+  const bloco = vfEditorBuscarBlocoVF(id);
+  bloco.dados.push(new Array(bloco.alinhamentos.length).fill(''));
+  vfEditorRenderizarListaVF();
+  vfEditorAtualizarPreviewVF();
 }
-function vfGeradorTabelaRemoverLinhaVF(){
-  if(vfGeradorTabelaDadosVF.length <= 1) return; // sempre pelo menos 1 linha
-  vfGeradorTabelaDadosVF.pop();
-  vfGeradorTabelaRenderizarGridVF();
-  vfGeradorTabelaAtualizarPreviewVF();
-}
-function vfGeradorTabelaAdicionarColunaVF(){
-  vfGeradorTabelaAlinhamentosVF.push('l');
-  vfGeradorTabelaDadosVF.forEach(linha => linha.push(''));
-  vfGeradorTabelaRenderizarGridVF();
-  vfGeradorTabelaAtualizarPreviewVF();
-}
-function vfGeradorTabelaRemoverColunaVF(){
-  if(vfGeradorTabelaAlinhamentosVF.length <= 1) return; // sempre pelo menos 1 coluna
-  vfGeradorTabelaAlinhamentosVF.pop();
-  vfGeradorTabelaDadosVF.forEach(linha => linha.pop());
-  vfGeradorTabelaRenderizarGridVF();
-  vfGeradorTabelaAtualizarPreviewVF();
+function vfEditorTabelaAdicionarColunaVF(id){
+  const bloco = vfEditorBuscarBlocoVF(id);
+  bloco.alinhamentos.push('l');
+  bloco.dados.forEach(linha => linha.push(''));
+  vfEditorRenderizarListaVF();
+  vfEditorAtualizarPreviewVF();
 }
 
-// monta o \begin{array}{...}\end{array} a partir do estado atual - essa
-// string é o que vira tanto o preview quanto o código final copiado/usado
-function vfGeradorTabelaGerarCodigoVF(){
-  const colunas = vfGeradorTabelaAlinhamentosVF.join('');
-  const linhas = vfGeradorTabelaDadosVF.map(linha => linha.map(c => c.trim() || '-').join(' & ')).join('\\\\\n');
-  return `\\begin{array}{${colunas}}\n${linhas}\n\\end{array}`;
+// ---- bloco texto: estilo (normal/legenda/lista) + espaçamento (px) +
+// conteúdo. Lista tem vários itens (um campo por marcador, com + pra
+// adicionar mais); normal/legenda usam só 1 campo (o texto inteiro)
+function vfEditorHtmlBlocoTextoVF(bloco){
+  const opcoesEstilo = [
+    {valor: 'normal', rotulo: 'Texto normal'},
+    {valor: 'legenda', rotulo: 'Legenda pequena'},
+    {valor: 'lista', rotulo: 'Lista com marcadores'}
+  ];
+  let html = '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">';
+  html += `<select onchange="vfEditorTextoMudarEstiloVF(${bloco.id},this.value)" style="flex:1;min-width:140px;padding:6px 8px;font-size:var(--fs-c);border:1px solid #ddd;border-radius:6px;background:#fff">`;
+  html += opcoesEstilo.map(o => `<option value="${o.valor}" ${bloco.estilo===o.valor?'selected':''}>${o.rotulo}</option>`).join('');
+  html += '</select>';
+  html += `<label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-a);color:#999">Espaço acima<input type="number" min="0" max="60" value="${bloco.espaco}" oninput="vfEditorTextoMudarEspacoVF(${bloco.id},this.value)" style="width:50px;padding:5px;font-size:var(--fs-c);border:1px solid #ddd;border-radius:6px">px</label>`;
+  html += '</div>';
+  if(bloco.estilo === 'lista'){
+    html += bloco.itens.map((item, i) => `
+      <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+        <span style="color:#999">•</span>
+        <input value="${escapeHtml(item)}" oninput="vfEditorTextoAtualizarItemVF(${bloco.id},${i},this.value)" placeholder="Item da lista" style="flex:1;padding:6px 8px;font-size:var(--fs-c);border:1px solid #ddd;border-radius:6px">
+        ${bloco.itens.length > 1 ? `<button onclick="vfEditorTextoRemoverItemVF(${bloco.id},${i})" style="width:26px;height:26px;padding:0;border-radius:6px;border:1px solid #ddd;background:#fff;color:#B23A34;cursor:pointer">✕</button>` : ''}
+      </div>`).join('');
+    html += `<button onclick="vfEditorTextoAdicionarItemVF(${bloco.id})" style="width:100%;padding:6px;font-size:var(--fs-c);background:#fff;border:1px dashed #ccc;border-radius:6px;cursor:pointer;color:#999">+ Item</button>`;
+  }else{
+    html += `<textarea oninput="vfEditorTextoAtualizarItemVF(${bloco.id},0,this.value)" placeholder="${bloco.estilo==='legenda'?'Texto pequeno, tipo fonte/observação':'Texto normal'}" style="width:100%;min-height:60px;padding:8px;font-size:var(--fs-c);border:1px solid #ddd;border-radius:6px;font-family:inherit">${escapeHtml(bloco.itens[0])}</textarea>`;
+  }
+  return html;
 }
 
-function vfGeradorTabelaAtualizarPreviewVF(){
+function vfEditorTextoMudarEstiloVF(id, estilo){
+  const bloco = vfEditorBuscarBlocoVF(id);
+  bloco.estilo = estilo;
+  if(estilo === 'lista' && bloco.itens.length < 1) bloco.itens = [''];
+  vfEditorRenderizarListaVF();
+  vfEditorAtualizarPreviewVF();
+}
+function vfEditorTextoMudarEspacoVF(id, valor){
+  vfEditorBuscarBlocoVF(id).espaco = parseInt(valor) || 0;
+  vfEditorAtualizarPreviewVF();
+}
+function vfEditorTextoAtualizarItemVF(id, indice, valor){
+  vfEditorBuscarBlocoVF(id).itens[indice] = valor;
+  vfEditorAtualizarPreviewVF();
+}
+function vfEditorTextoAdicionarItemVF(id){
+  vfEditorBuscarBlocoVF(id).itens.push('');
+  vfEditorRenderizarListaVF();
+  vfEditorAtualizarPreviewVF();
+}
+function vfEditorTextoRemoverItemVF(id, indice){
+  vfEditorBuscarBlocoVF(id).itens.splice(indice, 1);
+  vfEditorRenderizarListaVF();
+  vfEditorAtualizarPreviewVF();
+}
+
+// monta o código final concatenando todos os blocos, na ordem da lista -
+// essa string é o que vira tanto o preview quanto o código copiado/usado
+function vfEditorGerarCodigoVF(){
+  return vfEditorBlocosVF.map(bloco => {
+    if(bloco.tipo === 'tabela'){
+      const colunas = bloco.alinhamentos.join('');
+      const linhas = bloco.dados.map(linha => linha.map(c => c.trim() || '-').join(' & ')).join('\\\\\n');
+      return `\\begin{array}{${colunas}}\n${linhas}\n\\end{array}`;
+    }
+    if(bloco.estilo === 'lista'){
+      const itensValidos = bloco.itens.map(i => i.trim()).filter(Boolean);
+      return `\\lista[${bloco.espaco}px]{${itensValidos.join('\\\\')}}`;
+    }
+    const comando = bloco.estilo === 'legenda' ? 'legenda' : 'paragrafo';
+    return `\\${comando}[${bloco.espaco}px]{${bloco.itens[0].trim()}}`;
+  }).join('\n\n');
+}
+
+function vfEditorAtualizarPreviewVF(){
   const preview = document.getElementById('vf-gerador-tabela-preview');
-  preview.innerHTML = formatarTextoItemVF(vfGeradorTabelaGerarCodigoVF());
+  const codigo = vfEditorGerarCodigoVF();
+  preview.innerHTML = codigo.trim() ? formatarTextoItemVF(codigo) : '<p style="color:#bbb;text-align:center;padding:20px 0">Adicione um bloco pra ver a prévia aqui</p>';
 }
 
 async function vfCopiarCodigoGeradorTabelaVF(botao){
   try{
-    await navigator.clipboard.writeText(vfGeradorTabelaGerarCodigoVF());
+    await navigator.clipboard.writeText(vfEditorGerarCodigoVF());
     vfMostrarSelinhoCopiadoVF(botao);
   }catch(e){
     alert('Não consegui copiar automaticamente. O código está no campo de LaTeX da aba "Criar novo" - copia de lá.');
@@ -10539,7 +10680,7 @@ async function vfCopiarCodigoGeradorTabelaVF(botao){
 // Carlos só precisa preencher o título e clicar Salvar, reaproveitando
 // o fluxo que já existia pra colar LaTeX manualmente
 function vfUsarTabelaGeradaVF(){
-  document.getElementById('vf-complementar-latex-novo').value = vfGeradorTabelaGerarCodigoVF();
+  document.getElementById('vf-complementar-latex-novo').value = vfEditorGerarCodigoVF();
   vfFecharGeradorTabelaVF();
 }
 
@@ -11932,6 +12073,11 @@ function abrirRascunhoLivreVF(){
   if(textoVoltar) textoVoltar.textContent = nomesAbaVF[vfAbaAnteriorAoRascunhoVF] || 'Voltar';
   document.querySelectorAll('.view-aba').forEach(el => el.classList.add('hidden'));
   if(questResolucaoVisivel) questResolucaoVisivel.classList.add('hidden');
+  // a barra fixa (Anterior/Próxima + ações) é position:fixed, separada
+  // das .view-aba normais - escondê-las não escondia ela junto, então
+  // ficava sobrepondo a folha de rascunho por cima. Escondida aqui,
+  // restaurada em fecharRascunhoLivreVF() se fizer sentido pra tela de volta
+  document.getElementById('vf-barra-fixa')?.classList.add('hidden');
   document.getElementById('aba-rascunho-livre-vf').classList.remove('hidden');
   vfAtualizarVisibilidadeCanvasVF();
   limparCanvasDesenhoVF(); // qualquer traço da tela anterior nunca deveria "vazar" pra cá
@@ -11953,6 +12099,12 @@ function fecharRascunhoLivreVF(){
     document.getElementById('quests-resolucao')?.classList.remove('hidden');
   }else{
     document.getElementById(idVolta)?.classList.remove('hidden');
+  }
+  // restaura a barra fixa só se a tela de volta for Flash ou Quest (onde
+  // ela existe de verdade) - nas outras (Início, Fórum, etc) ela nunca
+  // deveria aparecer, então não mexe nela nesses casos
+  if(idVolta === 'aba-vf' || idVolta === 'quests-resolucao'){
+    document.getElementById('vf-barra-fixa')?.classList.remove('hidden');
   }
   vfAtualizarVisibilidadeCanvasVF();
   const nomeNavAlvo = idVolta === 'quests-resolucao' ? 'quests' : idVolta.replace(/^aba-/, '');
