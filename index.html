@@ -1754,7 +1754,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-508';
+const VERSAO_APP = '2026-07-25-510';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4044,6 +4044,17 @@ function vfProcessarNotaClicavelComPlaceholderVF(texto, tabelas){
 // muitas chaves dentro do próprio <style> (regras CSS), regex simples
 // [^{}]* nunca daria conta de casar o bloco inteiro
 let vfContadorSvgVF = 0;
+// mapa: id do bloco svg renderizado (ex: "vf-svg-3") -> de onde veio
+// (contexto: campo + id do registro), o texto original exato dessa
+// ocorrência no texto-fonte, e a largura atual em px (se já tinha
+// \svg[Npx]{} antes). Usado pelo redimensionador (segurar + arrastar) pra
+// saber COMO e ONDE salvar o novo tamanho de volta no banco
+const vfSvgOrigemVF = new Map();
+// setado logo antes de cada chamada de formatarTextoItemVF em contextos
+// onde SVG pode aparecer e precisa ser redimensionável/salvável (ver
+// vfSvgOrigemVF acima) - null nos demais contextos (SVG aparece, mas o
+// redimensionador não tenta salvar nada, por segurança)
+let vfContextoRenderizacaoSvgVF = null;
 function vfProcessarSvgBrutoVF(texto){
   let resultado = '';
   let pos = 0;
@@ -4066,7 +4077,7 @@ function vfProcessarSvgBrutoVF(texto){
 // variáveis CSS (var(--nome)) são resolvidas usando os valores de :root
 // do próprio SVG, e qualquer bloco de modo escuro (data-mode,
 // prefers-color-scheme) é descartado, já que o app não distingue isso
-function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo){
+function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo, larguraPx){
   // remove a declaração XML (<?xml version="1.0" ...?>) do início, se
   // vier - comum em SVGs exportados de ferramentas tipo Illustrator/
   // Figma. Só é válida em arquivos .svg standalone, não é sintaxe HTML
@@ -4091,7 +4102,13 @@ function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo){
   const cssEscopado = css.replace(/([^{}]+)\{/g, (m, seletor) => {
     return seletor.split(',').map(s => `#${idEscopo} ${s.trim()}`).join(', ') + '{';
   });
-  return `<div id="${idEscopo}" style="margin:10px 0">${cssEscopado ? `<style>${cssEscopado}</style>` : ''}${svgSemStyle}</div>`;
+  // largura máxima sempre igual à largura disponível na tela (nunca
+  // estoura), mantendo a proporção original via height:auto - aplicado
+  // sempre, independente do SVG já ter seu próprio <style> ou não.
+  // Se uma largura fixa foi especificada (\svg[Npx]{}, ou já redimensionado
+  // antes), o svg usa ela como largura real, ainda limitada por max-width
+  const cssBase = `#${idEscopo} svg{${larguraPx ? `width:${larguraPx}px;` : ''}max-width:100%;height:auto;display:block}`;
+  return `<div id="${idEscopo}" class="vf-svg-bloco" style="margin:10px 0;position:relative"><style>${cssBase}${cssEscopado}</style>${svgSemStyle}</div>`;
 }
 
 function vfFormatarCelulaArrayVF(celula){
@@ -4313,25 +4330,66 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
 // das células - precisa rodar antes, com o & ainda literal
 function vfExtrairTabelasComoPlaceholderVF(texto){
   const tabelas = [];
-  // \svg{...} primeiro - isola completamente antes de qualquer outro
-  // processamento, já que o conteúdo (CSS/atributos) pode ter muitas
-  // chaves que não têm nada a ver com \nota{}{} ou \begin{array}
+  // \svg[Npx]{...} (a largura é opcional) primeiro - isola completamente
+  // antes de qualquer outro processamento, já que o conteúdo (CSS/
+  // atributos) pode ter muitas chaves que não têm nada a ver com
+  // \nota{}{} ou \begin{array}
   {
     let semSvg = '';
     let posSvg = 0;
-    const regexSvg = /\\svg\{/g;
+    const regexSvg = /\\svg(?:\[(\d+)px\])?\{/g;
     let matchSvg;
     while((matchSvg = regexSvg.exec(texto))){
       const grupoSvg = vfExtrairGrupoBalanceadoVF(texto, matchSvg.index + matchSvg[0].length - 1);
       if(!grupoSvg){ regexSvg.lastIndex = matchSvg.index + matchSvg[0].length; continue; }
+      const idEscopo = `vf-svg-${++vfContadorSvgVF}`;
+      const larguraPx = matchSvg[1] ? parseInt(matchSvg[1]) : null;
       semSvg += texto.slice(posSvg, matchSvg.index);
-      tabelas.push(vfMontarBlocoSvgEscopadoVF(grupoSvg.conteudo, `vf-svg-${++vfContadorSvgVF}`));
+      tabelas.push(vfMontarBlocoSvgEscopadoVF(grupoSvg.conteudo, idEscopo, larguraPx));
+      // guarda o texto original exato dessa ocorrência (do \svg até o }
+      // de fechamento) - usado depois pra localizar e substituir só essa
+      // ocorrência específica no texto-fonte, quando o usuário redimensionar
+      vfSvgOrigemVF.set(idEscopo, {
+        contexto: vfContextoRenderizacaoSvgVF,
+        textoOriginalMatch: texto.slice(matchSvg.index, grupoSvg.fimPos + 1),
+        larguraAtualPx: larguraPx
+      });
       semSvg += `\u0000TABELA${tabelas.length - 1}\u0000`;
       posSvg = grupoSvg.fimPos + 1;
       regexSvg.lastIndex = posSvg;
     }
     semSvg += texto.slice(posSvg);
     texto = semSvg;
+  }
+  // <svg>...</svg> colado direto, SEM o \svg{} em volta - achado real:
+  // fácil de esquecer o wrapper ao colar um bloco grande de SVG copiado
+  // de outra ferramenta (Illustrator, Figma, etc) - sem essa detecção,
+  // o conteúdo aparecia cru/escapado na tela, sem desenhar nada. Detecta
+  // um <style> opcional logo antes do <svg> (mesmo padrão do \svg{}), e
+  // trata do mesmo jeito
+  {
+    let semSvgCru = '';
+    let posSvgCru = 0;
+    const regexSvgCru = /(?:<\?xml[^?]*\?>\s*)?(?:<style[^>]*>[\s\S]*?<\/style>\s*)?<svg[\s\S]*?<\/svg>/gi;
+    let matchSvgCru;
+    while((matchSvgCru = regexSvgCru.exec(texto))){
+      const idEscopo = `vf-svg-${++vfContadorSvgVF}`;
+      semSvgCru += texto.slice(posSvgCru, matchSvgCru.index);
+      tabelas.push(vfMontarBlocoSvgEscopadoVF(matchSvgCru[0], idEscopo, null));
+      // SVG colado direto (sem \svg{}) - ao redimensionar, precisa
+      // ENVOLVER em \svg[Npx]{} na hora de salvar, já que não tinha
+      // nenhum comando antes pra adicionar o parâmetro
+      vfSvgOrigemVF.set(idEscopo, {
+        contexto: vfContextoRenderizacaoSvgVF,
+        textoOriginalMatch: matchSvgCru[0],
+        textoOriginalEraCru: true,
+        larguraAtualPx: null
+      });
+      semSvgCru += `\u0000TABELA${tabelas.length - 1}\u0000`;
+      posSvgCru = matchSvgCru.index + matchSvgCru[0].length;
+    }
+    semSvgCru += texto.slice(posSvgCru);
+    texto = semSvgCru;
   }
   // \nota{X}{Y} fora de tabela é processado só DEPOIS de extrair as
   // tabelas (mais abaixo) - achado real: processar isso aqui, ANTES da
@@ -9807,6 +9865,152 @@ function vfCliqueNaExplicacaoQuestVF(evento){
 
 // selinho de texto "Copiado" flutuando acima do elemento, estilo apps de
 // banco - some sozinho depois de um tempo
+// ---- redimensionar SVG: segura o desenho (toque longo, mesmo padrão já
+// usado pra editar texto) pra mostrar uma alça no canto inferior direito;
+// arrastar ela muda o tamanho ao vivo, com um selo mostrando a largura
+// atual; soltar salva sozinho. Delegado no document (os blocos .vf-svg-
+// -bloco são criados dinamicamente, em vários lugares diferentes)
+let vfTimerPressionarSvgVF = null;
+let vfBlocoSvgAlcaAtivaVF = null; // {blocoId, svg, largInicial, xInicial}
+
+document.addEventListener('touchstart', vfIniciarPressionarSvgVF, {passive: true});
+document.addEventListener('mousedown', vfIniciarPressionarSvgVF);
+
+function vfIniciarPressionarSvgVF(evento){
+  const bloco = evento.target.closest?.('.vf-svg-bloco');
+  if(!bloco || vfBlocoSvgAlcaAtivaVF) return; // já tem alça ativa noutro bloco, ignora
+  clearTimeout(vfTimerPressionarSvgVF);
+  vfTimerPressionarSvgVF = setTimeout(() => vfMostrarAlcaRedimensionarSvgVF(bloco), 500);
+  const cancelarSeMoveu = () => { clearTimeout(vfTimerPressionarSvgVF); limpar(); };
+  const limpar = () => {
+    document.removeEventListener('touchmove', cancelarSeMoveu);
+    document.removeEventListener('touchend', limpar);
+    document.removeEventListener('mouseup', limpar);
+  };
+  document.addEventListener('touchmove', cancelarSeMoveu, {passive: true, once: true});
+  document.addEventListener('touchend', limpar, {once: true});
+  document.addEventListener('mouseup', limpar, {once: true});
+}
+
+function vfMostrarAlcaRedimensionarSvgVF(bloco){
+  bloco.querySelector('.vf-svg-alca')?.remove();
+  const alca = document.createElement('div');
+  alca.className = 'vf-svg-alca';
+  alca.style.cssText = 'position:absolute;right:-6px;bottom:-6px;width:26px;height:26px;background:#B23A34;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);cursor:nwse-resize;z-index:5;touch-action:none';
+  bloco.appendChild(alca);
+  alca.addEventListener('touchstart', (e) => vfIniciarArrastoAlcaSvgVF(e, bloco, alca), {passive: false});
+  alca.addEventListener('mousedown', (e) => vfIniciarArrastoAlcaSvgVF(e, bloco, alca));
+  // clicar fora esconde a alça sem redimensionar nada - stopPropagation
+  // no handler de arrasto da própria alça já impede isso de disparar
+  // quando o toque é nela mesma
+  const esconderSeTocarFora = () => {
+    alca.remove();
+    document.removeEventListener('touchstart', esconderSeTocarFora);
+    document.removeEventListener('mousedown', esconderSeTocarFora);
+  };
+  setTimeout(() => {
+    document.addEventListener('touchstart', esconderSeTocarFora, {passive: true});
+    document.addEventListener('mousedown', esconderSeTocarFora);
+  }, 50);
+}
+
+function vfIniciarArrastoAlcaSvgVF(evento, bloco, alca){
+  evento.preventDefault();
+  evento.stopPropagation();
+  const svg = bloco.querySelector('svg');
+  if(!svg) return;
+  const toque = evento.touches ? evento.touches[0] : evento;
+  const rect = svg.getBoundingClientRect();
+  vfBlocoSvgAlcaAtivaVF = {blocoId: bloco.id, svg, largInicial: rect.width, xInicial: toque.clientX};
+  const selo = document.createElement('div');
+  selo.className = 'vf-svg-selo-tamanho';
+  selo.style.cssText = 'position:absolute;top:8px;right:8px;background:#111;color:#fff;font-size:var(--fs-b);font-weight:600;padding:4px 9px;border-radius:6px;z-index:6;pointer-events:none';
+  bloco.appendChild(selo);
+  const atualizarSelo = (largura) => { selo.textContent = Math.round(largura) + 'px'; };
+  atualizarSelo(rect.width);
+  const mover = (e) => {
+    if(!vfBlocoSvgAlcaAtivaVF) return;
+    const t = e.touches ? e.touches[0] : e;
+    const delta = t.clientX - vfBlocoSvgAlcaAtivaVF.xInicial;
+    // largura mínima de 80px - abaixo disso o desenho fica ilegível/
+    // impossível de continuar segurando a alça direito
+    const novaLargura = Math.max(80, Math.round(vfBlocoSvgAlcaAtivaVF.largInicial + delta));
+    svg.style.width = novaLargura + 'px';
+    atualizarSelo(novaLargura);
+  };
+  const soltar = () => {
+    document.removeEventListener('touchmove', mover);
+    document.removeEventListener('mousemove', mover);
+    document.removeEventListener('touchend', soltar);
+    document.removeEventListener('mouseup', soltar);
+    selo.remove();
+    alca.remove();
+    const larguraFinal = parseInt(svg.style.width) || Math.round(vfBlocoSvgAlcaAtivaVF.largInicial);
+    vfBlocoSvgAlcaAtivaVF = null;
+    vfSalvarRedimensionamentoSvgVF(bloco.id, larguraFinal);
+  };
+  document.addEventListener('touchmove', mover, {passive: true});
+  document.addEventListener('mousemove', mover);
+  document.addEventListener('touchend', soltar, {once: true});
+  document.addEventListener('mouseup', soltar, {once: true});
+}
+
+// localiza a ocorrência exata desse SVG no texto-fonte (usando o texto
+// original guardado no momento da renderização) e substitui só ela,
+// adicionando/atualizando o parâmetro [Npx] - salva de volta no campo
+// certo (explicação da questão, ou latex_fonte do elemento da biblioteca)
+async function vfSalvarRedimensionamentoSvgVF(blocoId, larguraPx){
+  const origem = vfSvgOrigemVF.get(blocoId);
+  if(!origem || !origem.contexto){
+    alert('Não consegui salvar esse tamanho (não achei de onde esse desenho veio). O redimensionamento visual continua nessa tela, mas não fica salvo.');
+    return;
+  }
+  const {contexto, textoOriginalMatch, textoOriginalEraCru} = origem;
+  // monta o novo comando: envolve em \svg[Npx]{} se era um <svg> cru sem
+  // wrapper nenhum, ou só troca o \svg{ / \svg[Xpx]{ de abertura se já
+  // vinha com o comando (preserva o conteúdo interno inteiro, intocado)
+  const novoTrecho = textoOriginalEraCru
+    ? `\\svg[${larguraPx}px]{${textoOriginalMatch}}`
+    : textoOriginalMatch.replace(/^\\svg(?:\[\d+px\])?\{/, `\\svg[${larguraPx}px]{`);
+
+  if(contexto.tipo === 'campo-vf'){
+    const entrada = estadoVF.historico.find(h => h.item.id === contexto.questaoId);
+    const textoAtual = entrada?.item?.[contexto.campo];
+    if(!entrada || textoAtual === undefined || !textoAtual.includes(textoOriginalMatch)){
+      alert('Não consegui salvar esse tamanho (o texto pode ter mudado nesse meio tempo). Tenta segurar e redimensionar de novo.');
+      return;
+    }
+    const textoNovo = textoAtual.replace(textoOriginalMatch, novoTrecho);
+    entrada.item[contexto.campo] = textoNovo;
+    const cacheAtual = vfConteudoCompletoCache.get(contexto.questaoId) || {};
+    vfConteudoCompletoCache.set(contexto.questaoId, {...cacheAtual, [contexto.campo]: textoNovo});
+    await vfSalvarComRetryVF(
+      () => sb.from('questoes_vf').update({[contexto.campo]: textoNovo}).eq('id', contexto.questaoId),
+      'o tamanho do desenho',
+      null
+    );
+  }else if(contexto.tipo === 'elemento-html'){
+    const {data, error: erroBusca} = await sb.from('elementos_html_vf').select('latex_fonte').eq('id', contexto.elementoId).single();
+    if(erroBusca || !data || !data.latex_fonte.includes(textoOriginalMatch)){
+      alert('Não consegui salvar esse tamanho (o elemento pode ter mudado nesse meio tempo). Tenta segurar e redimensionar de novo.');
+      return;
+    }
+    const textoNovo = data.latex_fonte.replace(textoOriginalMatch, novoTrecho);
+    const itemCache = vfBibliotecaComplementarCacheVF?.find(e => e.id === contexto.elementoId);
+    if(itemCache) itemCache.latex_fonte = textoNovo;
+    await vfSalvarComRetryVF(
+      () => sb.from('elementos_html_vf').update({latex_fonte: textoNovo}).eq('id', contexto.elementoId),
+      'o tamanho do desenho',
+      null
+    );
+  }
+  // atualiza o registro de origem com a largura nova - se redimensionar
+  // de novo em seguida (mesma tela, sem sair), continua funcionando
+  origem.textoOriginalMatch = novoTrecho;
+  origem.textoOriginalEraCru = false;
+  origem.larguraAtualPx = larguraPx;
+}
+
 function vfMostrarSelinhoCopiadoVF(elemento){
   elemento.querySelector(':scope > .vf-selinho-copiado')?.remove(); // se já tinha um preso de um toque anterior
   const selinho = document.createElement('span');
@@ -10830,7 +11034,10 @@ async function vfCarregarElementosAnexadosVF(questaoVfId){
     const cabecalho = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px">
       <button style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="vfDesanexarElementoVF('${ligacao.id}', '${questaoVfId}')">Desanexar</button>
     </div>`;
-    return `<div style="margin-top:14px">${cabecalho}<div id="${idBloco}" class="vf-elemento-html-bloco" data-elemento-id="${elemento.id}" data-mapa-anotacoes='${escapeHtml(JSON.stringify([...mapaAnotacoes]))}'>${formatarTextoItemVF(elemento.latex_fonte)}</div></div>`;
+    vfContextoRenderizacaoSvgVF = {tipo: 'elemento-html', elementoId: elemento.id};
+    const conteudoFormatado = formatarTextoItemVF(elemento.latex_fonte);
+    vfContextoRenderizacaoSvgVF = null;
+    return `<div style="margin-top:14px">${cabecalho}<div id="${idBloco}" class="vf-elemento-html-bloco" data-elemento-id="${elemento.id}" data-mapa-anotacoes='${escapeHtml(JSON.stringify([...mapaAnotacoes]))}'>${conteudoFormatado}</div></div>`;
   }));
   container.innerHTML = blocos.join('');
   // aplica as anotações já salvas em cada bloco recém-inserido - depois
@@ -10988,8 +11195,11 @@ function abrirExplicacaoVF(questaoVfId){
   if(!entrada){ el.innerHTML = ''; abrirModal('modal-explicacao-vf'); vfAbrirCanvasExplicacaoVF(); return; }
   const explicacao = entrada.item.explicacao || '';
   const atributosEdicao = `id="vf-explicacao-atual" ${souCarlos() ? 'data-editavel-vf="1"' : ''} ontouchstart="vfIniciarPressionarExplicacao(event)" ontouchend="vfSoltarPressionarExplicacao(event)" ontouchmove="vfCancelarPressionarExplicacaoSilencioso(event)" onmousedown="vfIniciarPressionarExplicacao(event)" onmouseup="vfSoltarPressionarExplicacao()" onmouseleave="vfCancelarPressionarExplicacaoSilencioso()"`;
+  vfContextoRenderizacaoSvgVF = {tipo: 'campo-vf', questaoId: questaoVfId, campo: 'explicacao'};
+  const explicacaoFormatada = explicacao ? formatarTextoItemVF(explicacao) : '';
+  vfContextoRenderizacaoSvgVF = null;
   el.innerHTML = explicacao
-    ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;line-height:1.5;color:#111;position:relative">${formatarTextoItemVF(explicacao)}</div>`
+    ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;line-height:1.5;color:#111;position:relative">${explicacaoFormatada}</div>`
     : `<p ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;color:#666;position:relative">${souCarlos() ? 'Sem explicação cadastrada – segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
   abrirModal('modal-explicacao-vf');
   vfAbrirCanvasExplicacaoVF();
