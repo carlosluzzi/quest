@@ -1524,7 +1524,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <!-- balãozinho de explicação - aparece perto do que foi tocado (\nota{}{}
      no LaTeX ou uma anotação clicada depois numa célula), fecha ao tocar
      fora ou no X -->
-<div id="vf-balao-explicacao" class="hidden" style="position:fixed;z-index:400;max-width:280px;background:#F0F0ED;color:#111;border:0.5px solid #D8D8D3;border-radius:10px;padding:10px 14px;font-size:var(--fs-c);line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,0.18)">
+<div id="vf-balao-explicacao" class="hidden" style="position:fixed;z-index:400;max-width:280px;background:#F0F0ED;color:#111;border:0.5px solid #D8D8D3;border-radius:10px;padding:10px 14px;font-size:var(--fs-c);line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,0.18);white-space:pre-line">
   <span id="vf-balao-explicacao-texto"></span>
 </div>
 
@@ -1631,7 +1631,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-explicacao-questao" onclick="if(event.target===this) fecharModal('modal-explicacao-questao')">
   <div class="modal-conteudo" style="max-width:700px;display:flex;flex-direction:column">
     <h3 class="config-title" style="flex-shrink:0">Explicação</h3>
-    <div id="conteudo-explicacao-questao" style="flex:1;min-height:0;overflow-y:auto;cursor:pointer" onclick="vfCliqueNaExplicacaoQuestVF(event)"></div>
+    <div id="conteudo-explicacao-questao" style="flex:1;min-height:0;overflow-y:auto;cursor:pointer" ontouchstart="vfMarcarToqueCanetaExplicacaoQuestVF(event)" onclick="vfCliqueNaExplicacaoQuestVF(event)"></div>
     <button class="btn-secundario" style="width:100%;margin-top:14px;flex-shrink:0" onclick="fecharModal('modal-explicacao-questao')">Fechar</button>
   </div>
 </div>
@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-495';
+const VERSAO_APP = '2026-07-25-500';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2794,25 +2794,38 @@ function vfAtualizarVisibilidadeCanvasVF(){
 
 // histórico: mover o canvas pra dentro de #content (position:absolute,
 // rolando com o scroll) resolveu o traço "grudado na tela" no Quest,
-// onde questões longas realmente precisam disso - na época, foi feito
-// só pro Quest, sob a premissa de que "cada questão do Flash é curta o
-// bastante pra nunca precisar de scroll" (fixed, cobrindo a viewport
-// inteira, ficava certo lá). Essa premissa não é mais verdade desde que
-// tabelas/elementos HTML (\begin{array}, \svg{}, etc) passaram a poder
-// deixar uma questão do Flash maior que a tela - o mesmo traço "grudado"
-// (não acompanha o texto ao rolar) que motivou a mudança no Quest
-// também passou a acontecer no Flash. Sempre absolute dentro de
-// #content agora, nos dois contextos - sem mais distinção
+// onde questões longas realmente precisam disso - depois isso passou a
+// valer pro Flash também (ver comentário mais antigo removido daqui:
+// tabelas/\svg{} podem deixar uma questão do Flash maior que a tela).
+// MAS o Rascunho livre é um caso diferente dos dois: é um overlay
+// position:fixed;inset:0 cobrindo a viewport INTEIRA, inclusive as áreas
+// onde normalmente ficam o menu lateral e o header (fora de #content,
+// que é menor). Um canvas absolute dentro de #content nunca cobriria
+// essas áreas extras - achado real: forçar sempre absolute (sem
+// considerar o Rascunho) deixava a caneta sem funcionar nessas bordas, e
+// ainda desalinhava a posição do traço em relação ao toque real (o
+// canvas ficava com largura/offset herdados de #content, não da tela
+// inteira que o Rascunho realmente ocupa)
 function vfAjustarPosicionamentoCanvasVF(){
   const canvasDesenho = document.getElementById('vf-canvas-desenho');
   const canvasPreview = document.getElementById('vf-canvas-preview-destaque');
   const content = document.getElementById('content');
   if(!canvasDesenho || !canvasPreview || !content) return;
-  if(canvasDesenho.style.position !== 'absolute' || canvasDesenho.parentElement !== content){
-    content.appendChild(canvasDesenho);
-    content.appendChild(canvasPreview);
-    canvasDesenho.style.position = 'absolute';
-    canvasPreview.style.position = 'absolute';
+  const noRascunho = !document.getElementById('aba-rascunho-livre-vf')?.classList.contains('hidden');
+  if(noRascunho){
+    if(canvasDesenho.style.position !== 'fixed'){
+      document.body.appendChild(canvasDesenho);
+      document.body.appendChild(canvasPreview);
+      canvasDesenho.style.position = 'fixed';
+      canvasPreview.style.position = 'fixed';
+    }
+  }else{
+    if(canvasDesenho.style.position !== 'absolute' || canvasDesenho.parentElement !== content){
+      content.appendChild(canvasDesenho);
+      content.appendChild(canvasPreview);
+      canvasDesenho.style.position = 'absolute';
+      canvasPreview.style.position = 'absolute';
+    }
   }
 }
 (function vfObservarResolucaoQuestParaCanvasVF(){
@@ -4301,7 +4314,12 @@ function formatarTextoItemVF(texto){
     // aqui na exibição resolve de vez, sem precisar reeditar o PDF nem
     // reenviar o pedido toda vez que acontecer
     .replace(/—/g, '–')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // quebras de linha reais (\n\n entre parágrafos, por exemplo) viram
+    // <br> - sem isso, o HTML colapsa qualquer quebra de linha do texto
+    // original num espaço só, mesmo que o texto no banco já tenha os
+    // parágrafos bem separados
+    .replace(/\n/g, '<br>');
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
   resultado = resultado
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>')
@@ -4864,7 +4882,17 @@ function vfRedimensionarCanvasDesenhoInternoVF(){
   if(content){
     canvas.style.height = '0px';
     if(canvasPreview) canvasPreview.style.height = '0px';
-    if(vfTelaAtualVF() === 'flash'){
+    const noRascunho = !document.getElementById('aba-rascunho-livre-vf')?.classList.contains('hidden');
+    if(noRascunho){
+      // canvas é fixed nesse contexto (ver vfAjustarPosicionamentoCanvasVF) -
+      // cobre a viewport inteira, não só a área de #content (que não
+      // inclui onde ficaria o menu lateral/header). Usar
+      // content.scrollHeight aqui deixava o canvas menor que a tela real
+      // do rascunho, sem cobrir essas bordas - a caneta não desenhava
+      // ali, e o cálculo de posição do traço saía desalinhado
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+    }else if(vfTelaAtualVF() === 'flash'){
       // achado real: usar window.innerHeight como piso mínimo aqui
       // GARANTIA sempre pelo menos uma tela inteira de altura de scroll,
       // mesmo quando o conteúdo real (com ou sem tabela) terminava bem
@@ -4908,8 +4936,9 @@ function vfRedimensionarCanvasDesenhoInternoVF(){
   // sem nada a ver com a caneta com uma sensação de travamento
   const tinhaConteudoAntes = vfCanvasPodeTerConteudoVF && larguraAntiga > 0 && alturaAntiga > 0;
   const snapshotAntesDoResize = tinhaConteudoAntes ? canvas.toDataURL() : null;
-  const larguraConteudoAntes = content ? content.clientWidth : null;
-  const alturaConteudoAntes = content ? Math.min(Math.max(content.scrollHeight, content.offsetHeight), window.innerHeight * 8) : null;
+  const noRascunhoAgora = !document.getElementById('aba-rascunho-livre-vf')?.classList.contains('hidden');
+  const larguraConteudoAntes = noRascunhoAgora ? window.innerWidth : (content ? content.clientWidth : null);
+  const alturaConteudoAntes = noRascunhoAgora ? window.innerHeight : (content ? Math.min(Math.max(content.scrollHeight, content.offsetHeight), window.innerHeight * 8) : null);
   // supersampling: renderiza em resolução MAIOR que o DPR nativo da tela
   // pede, e deixa o navegador comprimir na exibição — isso deixa curvas e
   // bordas mais suaves/nítidas do que renderizar exatamente 1:1 com os
@@ -5061,6 +5090,18 @@ if(VF_SUPORTA_COALESCED_VF){
     if(e.pointerType === 'pen') vfUltimoPointerIdCanetaVF = e.pointerId;
   }, {capture: true, passive: true});
 }
+// rastreamento simples e sempre disponível (não depende de suporte a
+// PointerEvent/coalesced) - usado como fallback nos handlers de "toque
+// pra copiar" quando o evento recebido não carrega essa informação.
+// Achado real: onmouseup="funcao()" (sem passar o evento) é chamado pelo
+// Safari com um mouseup SINTÉTICO logo depois de um touchend real -
+// nesse handler, sem o touch original, não tinha como saber se aquele
+// toque físico tinha sido caneta ou dedo, e a cópia acontecia mesmo
+// sendo caneta (mesmo já tendo sido corretamente bloqueada no touchend)
+let vfUltimoToqueFoiCanetaVF = false;
+document.addEventListener('touchstart', (e) => {
+  vfUltimoToqueFoiCanetaVF = vfEhToqueDeCaneta(e.changedTouches?.[0]);
+}, {capture: true, passive: true});
 
 let vfBotaoPendenteToqueInfo = null; // {x, y, identifier, limiar} - toque começou num ícone pequeno, decisão adiada até ver se vira arrasto
 // achado real: 8px era sensível demais - o tremor natural da mão/caneta
@@ -9447,6 +9488,17 @@ function renderizarItemVF(){
     ]).then(() => {
       if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF();
     });
+  }else{
+    // sem isso, o canvas só seria redimensionado pelo ResizeObserver
+    // (assíncrono, debounced) - achado real: #vf-conteudo nasce no HTML
+    // estático com um padding-bottom "chutado" (170px) antes de qualquer
+    // medição de verdade acontecer. renderizarBarraFixaVF (linha acima)
+    // já corrige esse padding pro valor real da barra fixa nesse ponto -
+    // redimensiona o canvas EXPLICITAMENTE logo em seguida, garantindo
+    // que ele sempre meça com o padding já certo, em vez de torcer pro
+    // ResizeObserver disparar depois dessa correção (sem garantia de
+    // ordem) e arriscar "prender" o canvas maior que o necessário
+    if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF();
   }
 }
 
@@ -9581,27 +9633,22 @@ async function vfSalvarEdicaoEnunciadoVF(questaoId, textoOriginal){
 // copia o texto exato passado (não precisa mais buscar "afirmação
 // verdadeira" com lógica própria - agora cada bloco de texto copia
 // exatamente o que está escrito nele mesmo)
-// decide COMO copiar dependendo de quem tocou - dedo/mouse copia na
-// hora (não tem conflito nenhum ali). Caneta espera um pouco antes de
-// copiar de verdade, dando tempo do sistema de duplo toque (que troca
-// caneta<->borracha) confirmar uma troca nesse meio tempo - se isso
-// acontecer, cancela a cópia, já que aquele toque era metade de um
-// duplo toque, não um toque limpo pra copiar
+// copiar-por-toque é só pro dedo/mouse - a caneta nunca copia, mesmo
+// sendo um toque limpo (sem virar traço de desenho). Achado real: antes
+// a caneta ainda copiava, só com um atraso de 320ms (dando tempo do
+// sistema de duplo toque, que troca caneta<->borracha, confirmar uma
+// troca nesse meio tempo) - mas isso ainda disparava cópia toda vez que
+// o Carlos tocava com a caneta pra começar a escrever ali, cada
+// toque/traço virando uma cópia indesejada. Com a caneta, o objetivo é
+// sempre desenhar, nunca copiar - não tem ambiguidade real pra proteger
 function vfCopiarComProtecaoDuploToqueVF(elemento, evento){
-  const tocouComCaneta = evento && vfEhToqueDeCaneta(evento.changedTouches?.[0]);
-  if(!tocouComCaneta){
-    vfCopiarTextoElementoVF(elemento);
-    return;
-  }
-  // guarda o estado da ferramenta agora - se um duplo toque confirmar
-  // troca antes do timeout disparar, vfModoBorracha vai ter mudado
-  const modoBorrachaAntes = vfModoBorracha;
-  // um pouco maior que a janela de duplo toque (280ms) - margem de
-  // segurança pra garantir que a confirmação (se vier) já aconteceu
-  setTimeout(() => {
-    if(vfModoBorracha !== modoBorrachaAntes) return; // duplo toque confirmou troca - não copia
-    vfCopiarTextoElementoVF(elemento);
-  }, 320);
+  // se o evento não carrega a informação própria (ex: mouseup sintético
+  // do Safari, chamado sem argumento - ver comentário em
+  // vfUltimoToqueFoiCanetaVF), cai no rastreamento global do último
+  // toque físico real que aconteceu na tela
+  const tocouComCaneta = evento?.changedTouches ? vfEhToqueDeCaneta(evento.changedTouches[0]) : vfUltimoToqueFoiCanetaVF;
+  if(tocouComCaneta) return; // caneta nunca copia - só desenha
+  vfCopiarTextoElementoVF(elemento);
 }
 
 async function vfCopiarTextoElementoVF(elemento){
@@ -9635,11 +9682,21 @@ async function vfCopiarLinhaExplicacaoQuestVF(elemento){
   }
 }
 
+// onclick (evento sintético) não dá acesso direto a changedTouches -
+// ontouchstart no mesmo elemento marca ANTES se o toque que originou
+// esse clique foi caneta, pra vfCliqueNaExplicacaoQuestVF poder checar
+let vfUltimoToqueExplicacaoQuestFoiCanetaVF = false;
+function vfMarcarToqueCanetaExplicacaoQuestVF(evento){
+  vfUltimoToqueExplicacaoQuestFoiCanetaVF = vfEhToqueDeCaneta(evento.changedTouches?.[0]);
+}
 // toca em qualquer linha da explicação do Quest (alternativa, "Correto:",
 // trecho da fonte) pra copiar só aquele trecho específico - detecta a
 // linha mais próxima do toque (.linha-numerada tem marcador+texto juntos,
 // .enunciado-linha é só texto solto, tipo os parágrafos de TRECHOS DA FONTE)
+// caneta nunca copia - só desenha, mesmo objetivo da mesma proteção já
+// aplicada em vfCopiarComProtecaoDuploToqueVF
 function vfCliqueNaExplicacaoQuestVF(evento){
+  if(vfUltimoToqueExplicacaoQuestFoiCanetaVF) return;
   const linha = evento.target.closest('.linha-numerada, .enunciado-linha');
   if(linha) vfCopiarLinhaExplicacaoQuestVF(linha);
 }
@@ -10693,6 +10750,15 @@ async function vfSalvarEdicaoExplicacaoVF(questaoId, textoOriginal){
 async function vfCopiarExplicacaoParaClaude(botao){
   const el = document.getElementById('conteudo-explicacao-vf');
   if(!el) return;
+  // remove qualquer selinho "Copiado" que ainda esteja preso em qualquer
+  // profundidade dentro do container - achado real: tocar numa linha
+  // específica da explicação (vfCopiarTextoElementoVF) mostra um selinho
+  // "Copiado" que só é removido do DOM de verdade ~1.4s depois (mesmo
+  // sumindo visualmente antes, via transição de opacidade). Se o botão
+  // geral "Copiar pra IA" fosse clicado nesse intervalo, o textContent
+  // pegava a palavra "Copiado" junto, no meio do texto - .querySelector
+  // com :scope > só pegava filho direto, não em qualquer profundidade
+  el.querySelectorAll('.vf-selinho-copiado').forEach(s => s.remove());
   const texto = el.textContent.trim();
   try{
     await navigator.clipboard.writeText(texto);
