@@ -1732,7 +1732,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-502';
+const VERSAO_APP = '2026-07-25-503';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4196,6 +4196,25 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
   return vfProcessarTextoPequenoVF(textoEscapado)
     .replace(/\\,/g, ' ') // espaço fino do LaTeX - espaço normal já resolve visualmente
     .replace(/\\ /g, ' ') // \  (barra + espaço) força espaço em LaTeX de verdade - mesma ideia, espaço normal já resolve
+    // \frac{a}{b} - usa o caractere Unicode pronto quando a fração é uma
+    // das comuns (½, ⅓, ¾, etc - existem prontos no teclado/fonte,
+    // ficam mais limpos que qualquer HTML). Quando não existe um pronto
+    // pra aquela combinação exata, cai num fallback tipográfico:
+    // numerador sobrescrito + barra de fração (⁄, caractere próprio pra
+    // isso, diferente da barra normal /) + denominador subscrito -
+    // sem isso, \frac{}{} aparecia cru, com a palavra "frac" e as
+    // chaves visíveis na tela
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, (m, num, den) => {
+      const fracoesUnicode = {
+        '1/2':'½', '1/3':'⅓', '2/3':'⅔', '1/4':'¼', '3/4':'¾',
+        '1/5':'⅕', '2/5':'⅖', '3/5':'⅗', '4/5':'⅘',
+        '1/6':'⅙', '5/6':'⅚', '1/7':'⅐', '1/8':'⅛', '3/8':'⅜',
+        '5/8':'⅝', '7/8':'⅞', '1/9':'⅑', '1/10':'⅒'
+      };
+      const chave = `${num}/${den}`;
+      if(fracoesUnicode[chave]) return fracoesUnicode[chave];
+      return `<sup>${num}</sup>⁄<sub>${den}</sub>`;
+    })
     // \nome{conteudo} - letra grega/operador seguido de chaves SEM
     // expoente (ex: \delta{V_P}) - converte o símbolo e remove as
     // chaves, deixando só o conteúdo (que ainda passa pelas outras
