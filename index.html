@@ -1754,7 +1754,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-507';
+const VERSAO_APP = '2026-07-25-508';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4067,6 +4067,12 @@ function vfProcessarSvgBrutoVF(texto){
 // do próprio SVG, e qualquer bloco de modo escuro (data-mode,
 // prefers-color-scheme) é descartado, já que o app não distingue isso
 function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo){
+  // remove a declaração XML (<?xml version="1.0" ...?>) do início, se
+  // vier - comum em SVGs exportados de ferramentas tipo Illustrator/
+  // Figma. Só é válida em arquivos .svg standalone, não é sintaxe HTML
+  // válida - inserida via innerHTML dentro da página normal, impedia o
+  // navegador de processar o resto do SVG corretamente (não desenhava nada)
+  conteudoBruto = conteudoBruto.replace(/^\s*<\?xml[^?]*\?>\s*/i, '');
   const matchStyle = conteudoBruto.match(/<style[^>]*>([\s\S]*?)<\/style>/);
   let css = matchStyle ? matchStyle[1] : '';
   const svgSemStyle = conteudoBruto.replace(/<style[^>]*>[\s\S]*?<\/style>/, '');
