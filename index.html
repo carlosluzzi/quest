@@ -246,7 +246,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 #vf-barra-desenho,#vf-barra-desenho *,#vf-painel-caneta,#vf-painel-caneta *,#vf-painel-borracha,#vf-painel-borracha *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:#B23A34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0;border:none;padding:0;margin:0;-webkit-appearance:none;appearance:none;cursor:pointer;overflow:hidden}
 
-.content{position:relative;flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
+.content{position:relative;flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;overscroll-behavior-y:none;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
 #aba-vf{overscroll-behavior-y:none;margin:-16px -16px 0 -16px;padding:6px 6px 0 6px}
 #ptr-indicator{display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height 0.2s ease;flex-shrink:0;position:relative}
 #ptr-indicator.ativo{transition:none}
@@ -1755,7 +1755,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-513';
+const VERSAO_APP = '2026-07-25-515';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5318,7 +5318,10 @@ document.addEventListener('touchstart', (e) => {
   vfPointerIdAtivoVF = vfUltimoPointerIdCanetaVF;
   vfPontoInicialTracoAtualVF = {x: touch.clientX, y: touch.clientY};
   vfFormaTracoAtualVF = {minX: touch.clientX, maxX: touch.clientX, minY: touch.clientY, maxY: touch.clientY, comprimento: 0, ultimoX: touch.clientX, ultimoY: touch.clientY};
-  const canvas = document.getElementById('vf-canvas-desenho');
+  // usa o canvas certo conforme o contexto - achado real: sempre pegava
+  // o canvas PRINCIPAL aqui, mesmo desenhando em cima da explicação
+  // (canvas diferente, outra posição/offset na tela), deslocando o traço
+  const canvas = document.getElementById(vfModalExplicacaoAbertoVF() ? 'vf-canvas-desenho-explicacao' : 'vf-canvas-desenho');
 
   const rect = canvas.getBoundingClientRect();
   const ponto = {x: touch.clientX - rect.left, y: touch.clientY - rect.top};
@@ -5426,7 +5429,9 @@ document.addEventListener('touchmove', (e) => {
           if(typeof cancelarPressionarAlternativa === 'function') cancelarPressionarAlternativa(); // sem isso, o toque longo do próprio botão podia riscar a alternativa sozinho no meio da escrita
           vfTouchIdAtivo = vfBotaoPendenteToqueInfo.identifier;
           vfPointerIdAtivoVF = vfUltimoPointerIdCanetaVF;
-          const canvas = document.getElementById('vf-canvas-desenho');
+          // mesma correção do caminho normal de início de traço - usa o
+          // canvas certo conforme o contexto, não sempre o principal
+          const canvas = document.getElementById(vfModalExplicacaoAbertoVF() ? 'vf-canvas-desenho-explicacao' : 'vf-canvas-desenho');
           const rect = canvas.getBoundingClientRect();
           const ponto = {x: vfBotaoPendenteToqueInfo.x - rect.left, y: vfBotaoPendenteToqueInfo.y - rect.top};
           vfUltimoPontoDesenho = ponto;
@@ -5473,7 +5478,12 @@ document.addEventListener('touchmove', (e) => {
   // o touchmove sozinho não vê) - aqui só cuida de prevenir o scroll/
   // gesto padrão do navegador, sem desenhar duas vezes o mesmo traço
   if(VF_SUPORTA_COALESCED_VF) return;
-  const canvas = document.getElementById('vf-canvas-desenho');
+  // usa o canvas certo conforme o contexto - achado real: estava sempre
+  // pegando o rect do canvas PRINCIPAL, mesmo desenhando em cima da
+  // explicação (canvas diferente, em outra posição/offset na tela),
+  // deslocando o traço pra longe de onde a caneta realmente tocava
+  const naExplicacaoAgora = vfModalExplicacaoAbertoVF();
+  const canvas = document.getElementById(naExplicacaoAgora ? 'vf-canvas-desenho-explicacao' : 'vf-canvas-desenho');
   const rect = canvas.getBoundingClientRect();
   vfProcessarPontoDesenhoVF(touch.clientX, touch.clientY, touch.force, rect);
   vfAtualizarPreviewDestaqueVF();
@@ -5732,7 +5742,10 @@ if(VF_SUPORTA_COALESCED_VF){
   document.addEventListener('pointermove', (e) => {
     if(!vfDesenhandoAgora) return;
     if(e.pointerId !== vfPointerIdAtivoVF) return;
-    const canvas = document.getElementById('vf-canvas-desenho');
+    // mesma correção do fallback de touchmove logo acima: usa o canvas
+    // certo conforme o contexto, não sempre o principal
+    const naExplicacaoAgora = vfModalExplicacaoAbertoVF();
+    const canvas = document.getElementById(naExplicacaoAgora ? 'vf-canvas-desenho-explicacao' : 'vf-canvas-desenho');
     const rect = canvas.getBoundingClientRect();
     const eventos = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
     // getCoalescedEvents() pode devolver lista vazia em alguns casos raros
