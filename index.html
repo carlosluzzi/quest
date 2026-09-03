@@ -1755,7 +1755,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-515';
+const VERSAO_APP = '2026-07-25-518';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1858,6 +1858,12 @@ function formatQuestaoCompleta(texto){
 // que só evitar a conversão pra <sub> não bastava - tinha ficado visível
 function vfLimparApostrofoUnderscoreVF(texto){
   if(!texto) return texto;
+  // apóstrofo curvo (comum quando o teclado/editor de origem autocorrige,
+  // tipo iPad/Word/Pages) sempre vira reto - mesmo padrão já usado pro
+  // travessão longo virando curto. Sem isso, "N’_v" (curvo) não batia com
+  // as regex de subscrito/expoente, que só reconhecem ' (reto) e ′
+  // (prime matemático) - o subscrito simplesmente não era aplicado
+  texto = texto.replace(/[’‘]/g, "'");
   return texto.replace(/'_([A-Za-zÀ-ÿ]{2,})/g, "'$1");
 }
 // extrai {letra, texto} de cada alternativa a partir do campo "alternativas" da questão,
@@ -1892,6 +1898,7 @@ function formatarEnunciadoInterno(texto){
   escapedCompleto = escapedCompleto
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, '$1<sub>$2</sub>') // subscrito com chaves explícitas (ex: "N_{v(Munk)}", "Y'_{v(L)}") — permite parênteses/letras/números dentro, sem limite de 6 caracteres da regra de baixo
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // isola a seção "TRECHOS DA FONTE" ANTES de qualquer divisão em
@@ -2094,6 +2101,7 @@ function extrairAlternativas(alternativasTexto){
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
@@ -4078,7 +4086,7 @@ function vfProcessarSvgBrutoVF(texto){
 // variáveis CSS (var(--nome)) são resolvidas usando os valores de :root
 // do próprio SVG, e qualquer bloco de modo escuro (data-mode,
 // prefers-color-scheme) é descartado, já que o app não distingue isso
-function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo, larguraPx){
+function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo, larguraPx, alinhamento){
   // remove a declaração XML (<?xml version="1.0" ...?>) do início, se
   // vier - comum em SVGs exportados de ferramentas tipo Illustrator/
   // Figma. Só é válida em arquivos .svg standalone, não é sintaxe HTML
@@ -4112,8 +4120,15 @@ function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo, larguraPx){
   // width:fit-content faz o div acompanhar o tamanho real do svg (em vez
   // de sempre ocupar a largura total da tela) - essencial pra alça de
   // redimensionar (posicionada no canto do div) ficar grudada no canto
-  // real do desenho, e não presa longe dele enquanto o svg encolhe
-  return `<div id="${idEscopo}" class="vf-svg-bloco" style="margin:10px 0;position:relative;width:fit-content;max-width:100%"><style>${cssBase}${cssEscopado}</style>${svgSemStyle}</div>`;
+  // real do desenho, e não presa longe dele enquanto o svg encolhe.
+  // Alinhamento via margin auto: esquerda é o padrão do fluxo normal
+  // (sem margin extra), centro usa auto nos dois lados, direita só no
+  // esquerdo - empurra o bloco (que já tem largura própria, fit-content)
+  // até a borda direita do container
+  const margemAlinhamento = alinhamento === 'centro' ? 'margin-left:auto;margin-right:auto;'
+    : alinhamento === 'direita' ? 'margin-left:auto;margin-right:0;'
+    : '';
+  return `<div id="${idEscopo}" class="vf-svg-bloco" data-alinhamento-svg="${alinhamento || 'esquerda'}" style="margin:10px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}"><style>${cssBase}${cssEscopado}</style>${svgSemStyle}</div>`;
 }
 
 function vfFormatarCelulaArrayVF(celula){
@@ -4133,6 +4148,7 @@ function vfFormatarCelulaArrayVF(celula){
   c = c.replace(/\\ /g, ' '); // \  (barra + espaço) força espaço em LaTeX de verdade, mas aqui um espaço normal já resolve - sem isso, aparecia a barra literal na tela
   c = vfAplicarMarcacaoMatematicaVF(c);
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>');
+  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_\{([^{}]+)\}/g, '$1<sub>$2</sub>');
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9]{1,6}))/g, '$1<sub>$2</sub>');
   return c;
 }
@@ -4335,29 +4351,36 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
 // das células - precisa rodar antes, com o & ainda literal
 function vfExtrairTabelasComoPlaceholderVF(texto){
   const tabelas = [];
-  // \svg[Npx]{...} (a largura é opcional) primeiro - isola completamente
-  // antes de qualquer outro processamento, já que o conteúdo (CSS/
-  // atributos) pode ter muitas chaves que não têm nada a ver com
-  // \nota{}{} ou \begin{array}
+  // \svg[...]{...} primeiro - isola completamente antes de qualquer
+  // outro processamento, já que o conteúdo (CSS/atributos) pode ter
+  // muitas chaves que não têm nada a ver com \nota{}{} ou \begin{array}.
+  // Dentro dos colchetes (opcionais): largura em px e/ou alinhamento
+  // (esquerda/centro/direita), em qualquer ordem, separados por vírgula -
+  // ex: \svg[400px,centro]{...}, \svg[centro]{...}, \svg[400px]{...}
   {
     let semSvg = '';
     let posSvg = 0;
-    const regexSvg = /\\svg(?:\[(\d+)px\])?\{/g;
+    const regexSvg = /\\svg(?:\[([^\]]*)\])?\{/g;
     let matchSvg;
     while((matchSvg = regexSvg.exec(texto))){
       const grupoSvg = vfExtrairGrupoBalanceadoVF(texto, matchSvg.index + matchSvg[0].length - 1);
       if(!grupoSvg){ regexSvg.lastIndex = matchSvg.index + matchSvg[0].length; continue; }
       const idEscopo = `vf-svg-${++vfContadorSvgVF}`;
-      const larguraPx = matchSvg[1] ? parseInt(matchSvg[1]) : null;
+      const tokens = (matchSvg[1] || '').split(',').map(t => t.trim()).filter(Boolean);
+      const tokenLargura = tokens.find(t => /^\d+px$/.test(t));
+      const larguraPx = tokenLargura ? parseInt(tokenLargura) : null;
+      const alinhamento = tokens.find(t => t === 'centro' || t === 'direita') || 'esquerda';
       semSvg += texto.slice(posSvg, matchSvg.index);
-      tabelas.push(vfMontarBlocoSvgEscopadoVF(grupoSvg.conteudo, idEscopo, larguraPx));
+      tabelas.push(vfMontarBlocoSvgEscopadoVF(grupoSvg.conteudo, idEscopo, larguraPx, alinhamento));
       // guarda o texto original exato dessa ocorrência (do \svg até o }
       // de fechamento) - usado depois pra localizar e substituir só essa
       // ocorrência específica no texto-fonte, quando o usuário redimensionar
+      // ou realinhar
       vfSvgOrigemVF.set(idEscopo, {
         contexto: vfContextoRenderizacaoSvgVF,
         textoOriginalMatch: texto.slice(matchSvg.index, grupoSvg.fimPos + 1),
-        larguraAtualPx: larguraPx
+        larguraAtualPx: larguraPx,
+        alinhamentoAtual: alinhamento
       });
       semSvg += `\u0000TABELA${tabelas.length - 1}\u0000`;
       posSvg = grupoSvg.fimPos + 1;
@@ -4380,15 +4403,16 @@ function vfExtrairTabelasComoPlaceholderVF(texto){
     while((matchSvgCru = regexSvgCru.exec(texto))){
       const idEscopo = `vf-svg-${++vfContadorSvgVF}`;
       semSvgCru += texto.slice(posSvgCru, matchSvgCru.index);
-      tabelas.push(vfMontarBlocoSvgEscopadoVF(matchSvgCru[0], idEscopo, null));
-      // SVG colado direto (sem \svg{}) - ao redimensionar, precisa
-      // ENVOLVER em \svg[Npx]{} na hora de salvar, já que não tinha
-      // nenhum comando antes pra adicionar o parâmetro
+      tabelas.push(vfMontarBlocoSvgEscopadoVF(matchSvgCru[0], idEscopo, null, 'esquerda'));
+      // SVG colado direto (sem \svg{}) - ao redimensionar/realinhar,
+      // precisa ENVOLVER em \svg[...]{} na hora de salvar, já que não
+      // tinha nenhum comando antes pra adicionar o parâmetro
       vfSvgOrigemVF.set(idEscopo, {
         contexto: vfContextoRenderizacaoSvgVF,
         textoOriginalMatch: matchSvgCru[0],
         textoOriginalEraCru: true,
-        larguraAtualPx: null
+        larguraAtualPx: null,
+        alinhamentoAtual: 'esquerda'
       });
       semSvgCru += `\u0000TABELA${tabelas.length - 1}\u0000`;
       posSvgCru = matchSvgCru.index + matchSvgCru[0].length;
@@ -4468,6 +4492,7 @@ function formatarTextoItemVF(texto){
   resultado = resultado
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
   return vfReinserirTabelasVF(resultado, tabelas);
 }
@@ -9916,17 +9941,53 @@ function vfIniciarPressionarSvgVF(evento){
 
 function vfMostrarAlcaRedimensionarSvgVF(bloco){
   bloco.querySelector('.vf-svg-alca')?.remove();
+  bloco.querySelector('.vf-svg-alinhamento')?.remove();
   const alca = document.createElement('div');
   alca.className = 'vf-svg-alca';
   alca.style.cssText = 'position:absolute;right:-6px;bottom:-6px;width:26px;height:26px;background:#B23A34;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3);cursor:nwse-resize;z-index:5;touch-action:none';
   bloco.appendChild(alca);
   alca.addEventListener('touchstart', (e) => vfIniciarArrastoAlcaSvgVF(e, bloco, alca), {passive: false});
   alca.addEventListener('mousedown', (e) => vfIniciarArrastoAlcaSvgVF(e, bloco, alca));
-  // clicar fora esconde a alça sem redimensionar nada - stopPropagation
-  // no handler de arrasto da própria alça já impede isso de disparar
-  // quando o toque é nela mesma
+
+  // 3 botões de alinhamento (esquerda/centro/direita), acima do desenho -
+  // cada ícone é 3 traços horizontais, o de baixo deslocado pra indicar
+  // o lado (imita o ícone universal de "alinhar texto")
+  const barra = document.createElement('div');
+  barra.className = 'vf-svg-alinhamento';
+  barra.style.cssText = 'position:absolute;top:-38px;left:0;display:flex;gap:4px;background:#fff;padding:4px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,0.2);z-index:5';
+  const opcoes = [
+    {valor: 'esquerda', x1: 5, x2: 15},
+    {valor: 'centro', x1: 7, x2: 17},
+    {valor: 'direita', x1: 9, x2: 19}
+  ];
+  opcoes.forEach(op => {
+    const btn = document.createElement('button');
+    const ativo = (bloco.dataset.alinhamentoSvg || 'esquerda') === op.valor;
+    btn.style.cssText = `width:28px;height:28px;border:none;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:${ativo ? '#B23A34' : 'transparent'};color:${ativo ? '#fff' : '#666'}`;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="7" x2="19" y2="7"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="${op.x1}" y1="17" x2="${op.x2}" y2="17"/></svg>`;
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      bloco.dataset.alinhamentoSvg = op.valor;
+      bloco.style.marginLeft = op.valor === 'centro' ? 'auto' : op.valor === 'direita' ? 'auto' : '';
+      bloco.style.marginRight = op.valor === 'centro' ? 'auto' : '0';
+      // reflete o estado ativo nos 3 botões sem precisar reconstruir tudo
+      barra.querySelectorAll('button').forEach((b, i) => {
+        const ativoAgora = opcoes[i].valor === op.valor;
+        b.style.background = ativoAgora ? '#B23A34' : 'transparent';
+        b.style.color = ativoAgora ? '#fff' : '#666';
+      });
+      vfSalvarAlinhamentoSvgVF(bloco.id, op.valor);
+    };
+    barra.appendChild(btn);
+  });
+  bloco.appendChild(barra);
+
+  // clicar fora esconde a alça e a barra sem mudar nada - stopPropagation
+  // nos handlers dos próprios controles já impede isso de disparar quando
+  // o toque é neles mesmos
   const esconderSeTocarFora = () => {
     alca.remove();
+    barra.remove();
     document.removeEventListener('touchstart', esconderSeTocarFora);
     document.removeEventListener('mousedown', esconderSeTocarFora);
   };
@@ -9981,25 +10042,37 @@ function vfIniciarArrastoAlcaSvgVF(evento, bloco, alca){
 // original guardado no momento da renderização) e substitui só ela,
 // adicionando/atualizando o parâmetro [Npx] - salva de volta no campo
 // certo (explicação da questão, ou latex_fonte do elemento da biblioteca)
-async function vfSalvarRedimensionamentoSvgVF(blocoId, larguraPx){
+// atualiza largura e/ou alinhamento do \svg[...]{} - passar null num dos
+// dois mantém o valor atual (não sobrescreve). Reusada tanto pelo
+// redimensionador (passa só largura) quanto pelos botões de alinhamento
+// (passa só alinhamento)
+async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
   const origem = vfSvgOrigemVF.get(blocoId);
   if(!origem || !origem.contexto){
-    alert('Não consegui salvar esse tamanho (não achei de onde esse desenho veio). O redimensionamento visual continua nessa tela, mas não fica salvo.');
+    alert('Não consegui salvar essa mudança (não achei de onde esse desenho veio). A mudança visual continua nessa tela, mas não fica salva.');
     return;
   }
   const {contexto, textoOriginalMatch, textoOriginalEraCru} = origem;
-  // monta o novo comando: envolve em \svg[Npx]{} se era um <svg> cru sem
-  // wrapper nenhum, ou só troca o \svg{ / \svg[Xpx]{ de abertura se já
-  // vinha com o comando (preserva o conteúdo interno inteiro, intocado)
+  const larguraFinal = novaLarguraPx !== null ? novaLarguraPx : origem.larguraAtualPx;
+  const alinhamentoFinal = novoAlinhamento !== null ? novoAlinhamento : (origem.alinhamentoAtual || 'esquerda');
+  // monta os tokens dentro dos colchetes: largura (se tiver) + alinhamento
+  // (só se não for o padrão "esquerda", pra manter \svg{} limpo quando dá)
+  const tokens = [];
+  if(larguraFinal) tokens.push(`${larguraFinal}px`);
+  if(alinhamentoFinal !== 'esquerda') tokens.push(alinhamentoFinal);
+  const colchetes = tokens.length ? `[${tokens.join(',')}]` : '';
+  // monta o novo comando: envolve em \svg[...]{} se era um <svg> cru sem
+  // wrapper nenhum, ou só troca o \svg[...]{ de abertura se já vinha com
+  // o comando (preserva o conteúdo interno inteiro, intocado)
   const novoTrecho = textoOriginalEraCru
-    ? `\\svg[${larguraPx}px]{${textoOriginalMatch}}`
-    : textoOriginalMatch.replace(/^\\svg(?:\[\d+px\])?\{/, `\\svg[${larguraPx}px]{`);
+    ? `\\svg${colchetes}{${textoOriginalMatch}}`
+    : textoOriginalMatch.replace(/^\\svg(?:\[[^\]]*\])?\{/, `\\svg${colchetes}{`);
 
   if(contexto.tipo === 'campo-vf'){
     const entrada = estadoVF.historico.find(h => h.item.id === contexto.questaoId);
     const textoAtual = entrada?.item?.[contexto.campo];
     if(!entrada || textoAtual === undefined || !textoAtual.includes(textoOriginalMatch)){
-      alert('Não consegui salvar esse tamanho (o texto pode ter mudado nesse meio tempo). Tenta segurar e redimensionar de novo.');
+      alert('Não consegui salvar essa mudança (o texto pode ter mudado nesse meio tempo). Tenta segurar de novo.');
       return;
     }
     const textoNovo = textoAtual.replace(textoOriginalMatch, novoTrecho);
@@ -10008,13 +10081,13 @@ async function vfSalvarRedimensionamentoSvgVF(blocoId, larguraPx){
     vfConteudoCompletoCache.set(contexto.questaoId, {...cacheAtual, [contexto.campo]: textoNovo});
     await vfSalvarComRetryVF(
       () => sb.from('questoes_vf').update({[contexto.campo]: textoNovo}).eq('id', contexto.questaoId),
-      'o tamanho do desenho',
+      'a mudança no desenho',
       null
     );
   }else if(contexto.tipo === 'elemento-html'){
     const {data, error: erroBusca} = await sb.from('elementos_html_vf').select('latex_fonte').eq('id', contexto.elementoId).single();
     if(erroBusca || !data || !data.latex_fonte.includes(textoOriginalMatch)){
-      alert('Não consegui salvar esse tamanho (o elemento pode ter mudado nesse meio tempo). Tenta segurar e redimensionar de novo.');
+      alert('Não consegui salvar essa mudança (o elemento pode ter mudado nesse meio tempo). Tenta segurar de novo.');
       return;
     }
     const textoNovo = data.latex_fonte.replace(textoOriginalMatch, novoTrecho);
@@ -10022,15 +10095,24 @@ async function vfSalvarRedimensionamentoSvgVF(blocoId, larguraPx){
     if(itemCache) itemCache.latex_fonte = textoNovo;
     await vfSalvarComRetryVF(
       () => sb.from('elementos_html_vf').update({latex_fonte: textoNovo}).eq('id', contexto.elementoId),
-      'o tamanho do desenho',
+      'a mudança no desenho',
       null
     );
   }
-  // atualiza o registro de origem com a largura nova - se redimensionar
-  // de novo em seguida (mesma tela, sem sair), continua funcionando
+  // atualiza o registro de origem com os valores novos - se mexer de
+  // novo em seguida (mesma tela, sem sair), continua funcionando
   origem.textoOriginalMatch = novoTrecho;
   origem.textoOriginalEraCru = false;
-  origem.larguraAtualPx = larguraPx;
+  origem.larguraAtualPx = larguraFinal;
+  origem.alinhamentoAtual = alinhamentoFinal;
+}
+// mantém o nome antigo funcionando (só largura) - usado pelo arrasto da alça
+function vfSalvarRedimensionamentoSvgVF(blocoId, larguraPx){
+  return vfSalvarAtributosSvgVF(blocoId, larguraPx, null);
+}
+// usado pelos 3 botões de alinhamento
+function vfSalvarAlinhamentoSvgVF(blocoId, alinhamento){
+  return vfSalvarAtributosSvgVF(blocoId, null, alinhamento);
 }
 
 function vfMostrarSelinhoCopiadoVF(elemento){
@@ -13455,6 +13537,7 @@ async function verificarMaioriaTopico(topicoId){
 // roda de novo e recoloca os marcadores certos automaticamente
 function removerMarcadoresSubscrito(texto){
   return (texto||'')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_\{([^{}]+)\}/g, '$1$2')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1$2')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
 }
