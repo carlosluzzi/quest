@@ -1773,7 +1773,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-531';
+const VERSAO_APP = '2026-07-25-532';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9234,7 +9234,7 @@ function vfPersistirEstadoSessaoVF(){
   if(!vfSessaoAtivaVF || !estadoVF) return;
   vfSessaoAtivaVF.historicoResumido = estadoVF.historico
     .filter(h => h.resposta !== null) // só as já respondidas - a pendente atual não precisa, o fluxo normal cria uma nova ao restaurar
-    .map(h => ({id: h.item.id, resposta: h.resposta, acertou: h.acertou, estadoAntesDeResponder: h.estadoAntesDeResponder}));
+    .map(h => ({id: h.item.id, resposta: h.resposta, acertou: h.acertou, estadoAntesDeResponder: h.estadoAntesDeResponder, tempoAtivoMs: h.tempoAtivoMs}));
   vfSessaoAtivaVF.acertosSessao = estadoVF.acertosSessao;
   vfSessaoAtivaVF.respondidasSessao = estadoVF.respondidasSessao;
   vfSessaoAtivaVF.sementeSessao = estadoVF.sementeSessao;
@@ -9257,7 +9257,7 @@ async function vfReconstruirHistoricoDaSessaoVF(){
   const historico = resumo.map(r => {
     const item = porId.get(r.id);
     if(!item) return null; // questão pode ter sido excluída/anulada entre uma sessão e outra - pula sem quebrar o resto
-    return {item, resposta: r.resposta, acertou: r.acertou, estadoAntesDeResponder: r.estadoAntesDeResponder, tempoAtivoMs: 0, ativoDesdeMs: null, apareceuEmMs: Date.now()};
+    return {item, resposta: r.resposta, acertou: r.acertou, estadoAntesDeResponder: r.estadoAntesDeResponder, tempoAtivoMs: r.tempoAtivoMs||0, ativoDesdeMs: null, apareceuEmMs: Date.now()};
   }).filter(Boolean);
   if(!historico.length) return null;
   return {
