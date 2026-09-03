@@ -1541,10 +1541,35 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     </div>
     <div id="vf-complementar-conteudo-criar" class="hidden">
       <input id="vf-complementar-titulo-novo" class="textarea-padrao" placeholder="Título (pra você reconhecer na biblioteca depois)" style="margin-bottom:10px;min-height:auto">
+      <button class="btn-secundario" style="width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="vfAbrirGeradorTabelaVF()">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+        Gerar tabela visualmente
+      </button>
       <textarea id="vf-complementar-latex-novo" class="textarea-padrao" placeholder="Cole aqui o LaTeX (\begin{array}...\end{array}, \sidebyside{}{}, \nota{}{}, etc)" style="min-height:180px;font-family:monospace;font-size:var(--fs-c)"></textarea>
       <button class="btn-primario" style="width:100%;margin-top:10px" onclick="vfCriarESalvarElementoHtmlVF()">Salvar</button>
     </div>
     <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModalComplementarVF()">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-gerador-tabela-vf" onclick="if(event.target===this) vfFecharGeradorTabelaVF()">
+  <div class="modal-conteudo popup-formulario" style="max-width:720px;display:flex;flex-direction:column">
+    <h3 class="config-title" style="flex-shrink:0">Gerar tabela</h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-shrink:0">
+      <button class="btn-secundario" style="flex:1;padding:8px" onclick="vfGeradorTabelaAdicionarLinhaVF()">+ Linha</button>
+      <button class="btn-secundario" style="flex:1;padding:8px" onclick="vfGeradorTabelaRemoverLinhaVF()">– Linha</button>
+      <button class="btn-secundario" style="flex:1;padding:8px" onclick="vfGeradorTabelaAdicionarColunaVF()">+ Coluna</button>
+      <button class="btn-secundario" style="flex:1;padding:8px" onclick="vfGeradorTabelaRemoverColunaVF()">– Coluna</button>
+    </div>
+    <div style="font-size:var(--fs-a);color:#999;margin-bottom:8px;flex-shrink:0">A primeira linha vira o cabeçalho automaticamente. Clique nas letras (E/C/D) pra mudar o alinhamento de cada coluna.</div>
+    <div id="vf-gerador-tabela-grid" style="overflow-x:auto;margin-bottom:14px;flex-shrink:0"></div>
+    <div style="font-size:var(--fs-a);color:#999;margin-bottom:4px;flex-shrink:0">Prévia (exatamente como vai aparecer no Pilotquest):</div>
+    <div id="vf-gerador-tabela-preview" style="min-height:0;overflow-y:auto;flex:1;margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button class="btn-secundario" style="flex:1;position:relative" onclick="vfCopiarCodigoGeradorTabelaVF(this)">Copiar código</button>
+      <button class="btn-primario" style="flex:1" onclick="vfUsarTabelaGeradaVF()">Usar essa tabela</button>
+    </div>
+    <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="vfFecharGeradorTabelaVF()">Cancelar</button>
   </div>
 </div>
 
@@ -10401,6 +10426,123 @@ function vfAbrirComplementarVF(questaoVfId){
 function fecharModalComplementarVF(){
   fecharModal('modal-complementar-vf');
 }
+
+// ---- gerador visual de tabela - monta o \begin{array}{...}\end{array}
+// sem precisar escrever a sintaxe na mão. Estado: matriz 2D de strings
+// (conteúdo de cada célula) + array de alinhamentos (um por coluna,
+// 'l'/'c'/'r'). O preview usa formatarTextoItemVF, o MESMO motor que
+// renderiza de verdade no app - "o que você vê é o que vai ter", sem
+// risco de divergência entre o preview e o resultado real
+let vfGeradorTabelaDadosVF = [];
+let vfGeradorTabelaAlinhamentosVF = [];
+
+function vfAbrirGeradorTabelaVF(){
+  // começa com 2 linhas (a primeira já vira cabeçalho) e 2 colunas -
+  // tamanho mínimo útil, cresce/encolhe com os botões +/- linha/coluna
+  vfGeradorTabelaDadosVF = [['', ''], ['', '']];
+  vfGeradorTabelaAlinhamentosVF = ['l', 'l'];
+  vfGeradorTabelaRenderizarGridVF();
+  vfGeradorTabelaAtualizarPreviewVF();
+  abrirModal('modal-gerador-tabela-vf');
+}
+
+function vfFecharGeradorTabelaVF(){
+  fecharModal('modal-gerador-tabela-vf');
+}
+
+function vfGeradorTabelaRenderizarGridVF(){
+  const grid = document.getElementById('vf-gerador-tabela-grid');
+  const numColunas = vfGeradorTabelaAlinhamentosVF.length;
+  const rotuloAlinhamento = {l: 'E', c: 'C', r: 'D'};
+  let html = '<table style="border-collapse:collapse;width:max-content">';
+  // linha de controle de alinhamento, uma célula por coluna - clicar
+  // cicla entre esquerda/centro/direita
+  html += '<tr>';
+  for(let c = 0; c < numColunas; c++){
+    html += `<td style="padding:2px"><button onclick="vfGeradorTabelaAlternarAlinhamentoVF(${c})" style="width:100%;padding:4px;font-size:var(--fs-a);font-weight:700;background:#f0f0ed;border:1px solid #ddd;border-radius:6px;cursor:pointer;color:#666">${rotuloAlinhamento[vfGeradorTabelaAlinhamentosVF[c]]}</button></td>`;
+  }
+  html += '</tr>';
+  vfGeradorTabelaDadosVF.forEach((linha, l) => {
+    html += '<tr>';
+    linha.forEach((celula, c) => {
+      const ehCabecalho = l === 0;
+      html += `<td style="padding:2px"><input value="${escapeHtml(celula)}" oninput="vfGeradorTabelaAtualizarCelulaVF(${l},${c},this.value)" style="width:130px;padding:6px 8px;font-size:var(--fs-c);border:1px solid #ddd;border-radius:6px;font-weight:${ehCabecalho?600:400};background:${ehCabecalho?'#faf9f7':'#fff'}"></td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+  grid.innerHTML = html;
+}
+
+function vfGeradorTabelaAtualizarCelulaVF(linha, coluna, valor){
+  vfGeradorTabelaDadosVF[linha][coluna] = valor;
+  vfGeradorTabelaAtualizarPreviewVF();
+}
+
+function vfGeradorTabelaAlternarAlinhamentoVF(coluna){
+  const ordem = {l: 'c', c: 'r', r: 'l'};
+  vfGeradorTabelaAlinhamentosVF[coluna] = ordem[vfGeradorTabelaAlinhamentosVF[coluna]];
+  vfGeradorTabelaRenderizarGridVF();
+  vfGeradorTabelaAtualizarPreviewVF();
+}
+
+function vfGeradorTabelaAdicionarLinhaVF(){
+  const numColunas = vfGeradorTabelaAlinhamentosVF.length;
+  vfGeradorTabelaDadosVF.push(new Array(numColunas).fill(''));
+  vfGeradorTabelaRenderizarGridVF();
+  vfGeradorTabelaAtualizarPreviewVF();
+}
+function vfGeradorTabelaRemoverLinhaVF(){
+  if(vfGeradorTabelaDadosVF.length <= 1) return; // sempre pelo menos 1 linha
+  vfGeradorTabelaDadosVF.pop();
+  vfGeradorTabelaRenderizarGridVF();
+  vfGeradorTabelaAtualizarPreviewVF();
+}
+function vfGeradorTabelaAdicionarColunaVF(){
+  vfGeradorTabelaAlinhamentosVF.push('l');
+  vfGeradorTabelaDadosVF.forEach(linha => linha.push(''));
+  vfGeradorTabelaRenderizarGridVF();
+  vfGeradorTabelaAtualizarPreviewVF();
+}
+function vfGeradorTabelaRemoverColunaVF(){
+  if(vfGeradorTabelaAlinhamentosVF.length <= 1) return; // sempre pelo menos 1 coluna
+  vfGeradorTabelaAlinhamentosVF.pop();
+  vfGeradorTabelaDadosVF.forEach(linha => linha.pop());
+  vfGeradorTabelaRenderizarGridVF();
+  vfGeradorTabelaAtualizarPreviewVF();
+}
+
+// monta o \begin{array}{...}\end{array} a partir do estado atual - essa
+// string é o que vira tanto o preview quanto o código final copiado/usado
+function vfGeradorTabelaGerarCodigoVF(){
+  const colunas = vfGeradorTabelaAlinhamentosVF.join('');
+  const linhas = vfGeradorTabelaDadosVF.map(linha => linha.map(c => c.trim() || '-').join(' & ')).join('\\\\\n');
+  return `\\begin{array}{${colunas}}\n${linhas}\n\\end{array}`;
+}
+
+function vfGeradorTabelaAtualizarPreviewVF(){
+  const preview = document.getElementById('vf-gerador-tabela-preview');
+  preview.innerHTML = formatarTextoItemVF(vfGeradorTabelaGerarCodigoVF());
+}
+
+async function vfCopiarCodigoGeradorTabelaVF(botao){
+  try{
+    await navigator.clipboard.writeText(vfGeradorTabelaGerarCodigoVF());
+    vfMostrarSelinhoCopiadoVF(botao);
+  }catch(e){
+    alert('Não consegui copiar automaticamente. O código está no campo de LaTeX da aba "Criar novo" - copia de lá.');
+    vfUsarTabelaGeradaVF();
+  }
+}
+
+// joga o código gerado direto no campo de LaTeX da aba "Criar novo" -
+// Carlos só precisa preencher o título e clicar Salvar, reaproveitando
+// o fluxo que já existia pra colar LaTeX manualmente
+function vfUsarTabelaGeradaVF(){
+  document.getElementById('vf-complementar-latex-novo').value = vfGeradorTabelaGerarCodigoVF();
+  vfFecharGeradorTabelaVF();
+}
+
 function vfMudarAbaComplementarVF(aba){
   document.getElementById('vf-complementar-conteudo-biblioteca').classList.toggle('hidden', aba !== 'biblioteca');
   document.getElementById('vf-complementar-conteudo-criar').classList.toggle('hidden', aba !== 'criar');
