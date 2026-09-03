@@ -1755,7 +1755,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-511';
+const VERSAO_APP = '2026-07-25-513';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4109,7 +4109,11 @@ function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo, larguraPx){
   // Se uma largura fixa foi especificada (\svg[Npx]{}, ou já redimensionado
   // antes), o svg usa ela como largura real, ainda limitada por max-width
   const cssBase = `#${idEscopo} svg{${larguraPx ? `width:${larguraPx}px;` : ''}max-width:100%;height:auto;display:block}`;
-  return `<div id="${idEscopo}" class="vf-svg-bloco" style="margin:10px 0;position:relative"><style>${cssBase}${cssEscopado}</style>${svgSemStyle}</div>`;
+  // width:fit-content faz o div acompanhar o tamanho real do svg (em vez
+  // de sempre ocupar a largura total da tela) - essencial pra alça de
+  // redimensionar (posicionada no canto do div) ficar grudada no canto
+  // real do desenho, e não presa longe dele enquanto o svg encolhe
+  return `<div id="${idEscopo}" class="vf-svg-bloco" style="margin:10px 0;position:relative;width:fit-content;max-width:100%"><style>${cssBase}${cssEscopado}</style>${svgSemStyle}</div>`;
 }
 
 function vfFormatarCelulaArrayVF(celula){
@@ -9290,13 +9294,17 @@ async function avancarParaProximaVF(){
   // depois, o dedo ainda solto acertar Verdadeiro/Falso da questão nova antes
   // mesmo dela ser lida — ignora clique nesses botões por um instante
   estadoVF.bloqueadoAteMs = agoraMs + 400;
-  limparCanvasDesenhoVF(); // questão nova = rascunho da anterior some
   // busca o conteúdo pesado (texto/explicação/correção) dessa questão -
   // se já foi pré-buscada em segundo plano (vfPreBuscarProximasVF, chamada
   // depois de renderizar a questão anterior), isso é instantâneo (já
   // está em vfConteudoCompletoCache). Se não, é uma busca rápida de uma
   // linha só (~50ms), não o pool inteiro como era antes
   await vfGarantirConteudoCompletoVF(pick.item);
+  // só limpa o rascunho AGORA, junto com a troca de tela - achado real:
+  // limpar antes do await de cima deixava um intervalo visível (às vezes
+  // perceptível) onde o rascunho já tinha sumido mas a questão nova ainda
+  // não tinha aparecido, toda vez que a busca não vinha do cache
+  limparCanvasDesenhoVF(); // questão nova = rascunho da anterior some
   renderizarItemVF();
   retomarTimerVF(); // só agora, com a questão já na tela, o cronômetro começa a contar
   vfPreBuscarProximasVF(); // não espera - roda solta em segundo plano enquanto o usuário lê
