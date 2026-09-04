@@ -63,11 +63,12 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .textarea-padrao{width:100%;min-height:100px;font-size:16px;padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;font-family:inherit;color:#111;resize:vertical;line-height:1.5;margin-bottom:14px}
 #vf-editor-rich-caixa table{border-collapse:collapse;margin:4px 0}
 #vf-editor-rich-caixa table td{border:1px solid #ccc;padding:6px 10px;min-width:32px}
-#vf-editor-rich-caixa table tr:first-child td{background:#EAECF1;font-weight:600}
-.vf-editor-tabela-wrap{position:relative;display:inline-block;margin:6px 0}
-.vf-editor-add-col,.vf-editor-add-row{position:absolute;border:1px dashed #ccc;background:#fff;color:#999;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:var(--fs-c);font-weight:700;border-radius:5px;-webkit-tap-highlight-color:transparent}
-.vf-editor-add-col{top:0;bottom:0;right:-24px;width:20px}
-.vf-editor-add-row{left:0;right:0;bottom:-24px;height:20px}
+#vf-editor-rich-caixa table tr:first-child.vf-editor-tr-cabecalho td{background:#EAECF1;font-weight:600}
+.vf-editor-tabela-wrap{position:relative;display:inline-block;margin:6px 16px 20px 6px}
+.vf-editor-tabela-alca{position:absolute;right:-14px;bottom:-14px;width:22px;height:22px;border-radius:6px;background:#fff;border:1.5px solid #999;color:#666;display:flex;align-items:center;justify-content:center;cursor:nwse-resize;-webkit-tap-highlight-color:transparent;touch-action:none;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
+.vf-editor-tabela-cabecalho-toggle{position:absolute;left:-14px;top:-14px;width:22px;height:22px;border-radius:6px;background:#fff;border:1.5px solid #999;color:#666;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
+.vf-editor-tabela-cabecalho-toggle.ativo{background:#EAECF1;border-color:#7A87B5;color:#3A4270}
+.vf-editor-tabela-tooltip{position:fixed;background:#2a2a2e;color:#fff;font-size:var(--fs-c);font-weight:600;padding:5px 10px;border-radius:7px;z-index:600;pointer-events:none;white-space:nowrap}
 button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* só nas telas onde a caneta compete com botões pelo toque (Flash e
 resolução do Quest) - evita que o navegador comece a processar um
@@ -1622,6 +1623,14 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-lista-excluidas-vf" onclick="if(event.target===this) fecharModal('modal-lista-excluidas-vf')">
+  <div class="modal-conteudo" style="max-width:600px;max-height:80vh;display:flex;flex-direction:column">
+    <h3 class="config-title">Excluídas nesse filtro</h3>
+    <div id="vf-lista-excluidas-corpo" style="overflow-y:auto;flex:1;min-height:0"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:14px;flex-shrink:0" onclick="fecharModal('modal-lista-excluidas-vf')">Fechar</button>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-explicacao-vf">
   <div class="modal-conteudo" style="max-width:700px;display:flex;flex-direction:column">
     <h3 class="config-title" style="flex-shrink:0">Explicação</h3>
@@ -1773,7 +1782,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-532';
+const VERSAO_APP = '2026-07-25-535';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4202,13 +4211,14 @@ function vfFormatarCelulaArrayVF(celula){
 // espaço) usa um padding horizontal menor - com o padding largo normal,
 // colunas estreitas cortavam palavras tipo "curva"/"quase reta" em duas
 // linhas ruins
-function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta){
+function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho){
+  if(temCabecalho === undefined) temCabecalho = true; // padrão: mantém compatibilidade com chamadas existentes (sidebyside, preview da biblioteca, etc)
   const alinhamentos = colunasStr.split('').map(c => c === 'l' ? 'left' : c === 'r' ? 'right' : 'center');
   const paddingH = compacta ? '8px' : '14px';
   const semEspacamentos = conteudo.replace(/\[\d+pt\]/g, '');
   const linhas = semEspacamentos.split('\\\\').map(l => l.trim()).filter(Boolean);
   const linhasHtml = linhas.map((linha, indiceLinha) => {
-    const ehCabecalho = indiceLinha === 0;
+    const ehCabecalho = temCabecalho && indiceLinha === 0;
     const celulas = linha.split('&').map(c => c.trim());
     const celulasHtml = celulas.map((c, i) => {
       const alinhamento = alinhamentos[i] || 'center';
@@ -4289,18 +4299,21 @@ function vfProcessarArrayLatexVF(texto){
   // os arrays de dentro dele também, fora do grid de 2 colunas
   texto = vfProcessarSideBySideVF(texto);
   let contadorTabela = 0;
-  return texto.replace(/\\begin\{array\}(?:\[(centro|direita)\])?\{([lcr]+)\}([\s\S]*?)\\end\{array\}/g, (match, alinhamento, colunas, conteudo) => {
+  return texto.replace(/\\begin\{array\}(?:\[([^\]]*)\])?\{([lcr]+)\}([\s\S]*?)\\end\{array\}/g, (match, opcoesStr, colunas, conteudo) => {
     const idEscopo = `vf-tabela-${++vfContadorTabelaVF}`;
-    const alinhamentoFinal = alinhamento || 'esquerda';
+    const opcoes = (opcoesStr || '').split(',').map(o => o.trim()).filter(Boolean);
+    const alinhamentoFinal = opcoes.includes('centro') ? 'centro' : opcoes.includes('direita') ? 'direita' : 'esquerda';
+    const temCabecalho = !opcoes.includes('semcabecalho');
     vfTabelaOrigemVF.set(idEscopo, {
       contexto: vfContextoRenderizacaoSvgVF,
       textoOriginalMatch: match,
-      alinhamentoAtual: alinhamentoFinal
+      alinhamentoAtual: alinhamentoFinal,
+      temCabecalhoAtual: temCabecalho
     });
     const margemAlinhamento = alinhamentoFinal === 'centro' ? 'margin-left:auto;margin-right:auto;'
       : alinhamentoFinal === 'direita' ? 'margin-left:auto;margin-right:0;'
       : '';
-    return `<div id="${idEscopo}" class="vf-tabela-bloco" data-alinhamento-tabela="${alinhamentoFinal}" style="font-family:${VF_FONTE_TABELA};margin:10px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}">${vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(colunas, conteudo))}</div>`;
+    return `<div id="${idEscopo}" class="vf-tabela-bloco" data-alinhamento-tabela="${alinhamentoFinal}" data-tem-cabecalho="${temCabecalho}" style="font-family:${VF_FONTE_TABELA};margin:10px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}">${vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(colunas, conteudo, false, temCabecalho))}</div>`;
   });
 }
 
@@ -4515,7 +4528,7 @@ function vfExtrairTabelasComoPlaceholderVF(texto){
   semSideBySide += texto.slice(pos);
   // depois os \begin{array}...\end{array} soltos que sobraram (não
   // estavam dentro de nenhum sidebyside)
-  const textoComPlaceholder = semSideBySide.replace(/\\begin\{array\}(?:\[(?:centro|direita)\])?\{[lcr]+\}[\s\S]*?\\end\{array\}/g, (match) => {
+  const textoComPlaceholder = semSideBySide.replace(/\\begin\{array\}(?:\[[^\]]*\])?\{[lcr]+\}[\s\S]*?\\end\{array\}/g, (match) => {
     tabelas.push(vfProcessarArrayLatexVF(match));
     return `\u0000TABELA${tabelas.length - 1}\u0000`;
   });
@@ -9060,7 +9073,8 @@ function vfMontarPlaceholderPanoramaVF(){
     <div class="vf-filtro-linha"><span>Total de afirmações</span><span class="vf-filtro-valor">—</span></div>
     <div class="vf-filtro-linha"><span>Vistas ao menos uma vez</span><span class="vf-filtro-valor">—</span></div>
     <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor">—</span></div>
-    <div class="vf-filtro-linha"><span>Excluídas nesse filtro</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaExcluidasVF()"><span>Excluídas nesse filtro ›</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaExcluidasVF()"><span>Excluídas sem nunca ter visto ›</span><span class="vf-filtro-valor">—</span></div>
   `;
 }
 
@@ -9091,20 +9105,26 @@ async function vfCarregarPanoramaFiltroVF(){
   const totalFiltro = panorama?.[0]?.total || 0;
   const jaVistas = panorama?.[0]?.ja_vistas || 0;
   const excluidas = panorama?.[0]?.excluidas || 0;
+  const excluidasSemVer = panorama?.[0]?.excluidas_sem_ver || 0;
   // se o painel já foi fechado enquanto essa busca rodava, não escreve nada
   const elAtual = document.getElementById('vf-painel-secao-filtro');
   if(!elAtual) return;
-  // só troca os 4 números - a estrutura (título/linhas de filtro) já foi
+  // só troca os 5 números - a estrutura (título/linhas de filtro) já foi
   // montada pelo placeholder síncrono (vfMontarPlaceholderPanoramaVF),
   // então a altura do painel não muda mais nesse momento, sem o pulo
   // visual de antes
   const valores = elAtual.querySelectorAll('.vf-filtro-valor');
   const nValores = valores.length;
-  if(nValores >= 4){
-    valores[nValores-4].textContent = totalFiltro||0;
-    valores[nValores-3].textContent = jaVistas;
-    valores[nValores-2].textContent = Math.max(0,(totalFiltro||0)-jaVistas);
-    valores[nValores-1].textContent = excluidas;
+  if(nValores >= 5){
+    valores[nValores-5].textContent = totalFiltro||0;
+    valores[nValores-4].textContent = jaVistas;
+    // nunca vistas = total - excluídas - vistas: excluídas nunca voltam
+    // a aparecer na fila, então não contam como "ainda por ver" - achado
+    // real: antes não descontava excluídas, contando-as como se
+    // pudessem aparecer de novo
+    valores[nValores-3].textContent = Math.max(0,(totalFiltro||0)-excluidas-jaVistas);
+    valores[nValores-2].textContent = excluidas;
+    valores[nValores-1].textContent = excluidasSemVer;
   }
   vfReajustarAlturaPainelSessaoVF(); // proteção extra - normalmente não muda nada agora, já que o placeholder já tinha a altura certa
 }
@@ -10245,6 +10265,21 @@ function vfSalvarAlinhamentoSvgVF(blocoId, alinhamento){
 // do svg - mas sem alça de redimensionar, tabela não precisa disso ----
 let vfTimerPressionarTabelaVF = null;
 
+// colar sempre como texto puro, nunca com a formatação de origem (fonte,
+// tamanho, cor) - sem isso, colar de um PDF/Word/Pages trazia o estilo
+// original visível no editor até salvar e reabrir (só aí a conversão pro
+// nosso formato interno descartava a formatação estranha). Preserva
+// quebras de linha reais como parágrafos próprios, uma linha por vez
+document.getElementById('vf-editor-rich-caixa')?.addEventListener('paste', (evento) => {
+  evento.preventDefault();
+  const texto = (evento.clipboardData || window.clipboardData).getData('text/plain');
+  const linhas = texto.split(/\r\n|\r|\n/);
+  linhas.forEach((linha, i) => {
+    if(i > 0) document.execCommand('insertParagraph', false, null);
+    if(linha) document.execCommand('insertText', false, linha);
+  });
+});
+
 document.addEventListener('touchstart', vfIniciarPressionarTabelaVF, {passive: true});
 document.addEventListener('mousedown', vfIniciarPressionarTabelaVF);
 
@@ -10270,7 +10305,7 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
   bloco.querySelector('.vf-tabela-alinhamento')?.remove();
   const barra = document.createElement('div');
   barra.className = 'vf-tabela-alinhamento';
-  barra.style.cssText = 'position:absolute;top:-38px;left:0;display:flex;gap:4px;background:#fff;padding:4px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,0.2);z-index:5';
+  barra.style.cssText = 'position:absolute;top:-38px;left:0;display:flex;align-items:center;gap:4px;background:#fff;padding:4px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,0.2);z-index:5';
   const opcoes = [
     {valor: 'esquerda', x1: 5, x2: 15},
     {valor: 'centro', x1: 7, x2: 17},
@@ -10286,15 +10321,38 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
       bloco.dataset.alinhamentoTabela = op.valor;
       bloco.style.marginLeft = op.valor === 'centro' ? 'auto' : op.valor === 'direita' ? 'auto' : '';
       bloco.style.marginRight = op.valor === 'centro' ? 'auto' : '0';
-      barra.querySelectorAll('button').forEach((b, i) => {
+      barra.querySelectorAll('.vf-tabela-alinhamento-btn').forEach((b, i) => {
         const ativoAgora = opcoes[i].valor === op.valor;
         b.style.background = ativoAgora ? '#B23A34' : 'transparent';
         b.style.color = ativoAgora ? '#fff' : '#666';
       });
       vfSalvarAlinhamentoTabelaVF(bloco.id, op.valor);
     };
+    btn.className = 'vf-tabela-alinhamento-btn';
     barra.appendChild(btn);
   });
+  const separador = document.createElement('div');
+  separador.style.cssText = 'width:1px;height:20px;background:#e0e0e0;margin:0 2px';
+  barra.appendChild(separador);
+  const btnCabecalho = document.createElement('button');
+  const temCabecalhoAgora = bloco.dataset.temCabecalho !== 'false';
+  btnCabecalho.style.cssText = `width:28px;height:28px;border:none;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:${temCabecalhoAgora ? '#B23A34' : 'transparent'};color:${temCabecalhoAgora ? '#fff' : '#666'}`;
+  btnCabecalho.title = 'Primeira linha como cabeçalho';
+  btnCabecalho.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18" stroke-width="3"/></svg>`;
+  btnCabecalho.onclick = (e) => {
+    e.stopPropagation();
+    const novoValor = bloco.dataset.temCabecalho === 'false' ? true : false;
+    bloco.dataset.temCabecalho = novoValor;
+    const primeiraLinha = bloco.querySelector('table tr:first-child');
+    if(primeiraLinha){
+      primeiraLinha.style.background = novoValor ? '#EAECF1' : '';
+      primeiraLinha.querySelectorAll('td').forEach(td => { td.style.fontWeight = novoValor ? '600' : '400'; });
+    }
+    btnCabecalho.style.background = novoValor ? '#B23A34' : 'transparent';
+    btnCabecalho.style.color = novoValor ? '#fff' : '#666';
+    vfSalvarCabecalhoTabelaVF(bloco.id, novoValor);
+  };
+  barra.appendChild(btnCabecalho);
   bloco.appendChild(barra);
   const esconderSeTocarFora = (e) => {
     if(e && e.target && e.target.closest('.vf-tabela-alinhamento')) return;
@@ -10309,24 +10367,31 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
 }
 
 // localiza a ocorrência exata dessa tabela no texto-fonte e substitui só
-// ela, adicionando/atualizando o parâmetro [alinhamento] - mesma lógica
-// de vfSalvarAtributosSvgVF, mas pro \begin{array}
-async function vfSalvarAlinhamentoTabelaVF(blocoId, alinhamento){
+// ela, atualizando o(s) parâmetro(s) entre colchetes (alinhamento e/ou
+// semcabecalho) - mesma lógica de vfSalvarAtributosSvgVF, mas pro
+// \begin{array}. Aceita mudança parcial: passa só o que mudou, preserva
+// o resto do que já estava lá
+async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho} = {}){
   const origem = vfTabelaOrigemVF.get(blocoId);
   if(!origem || !origem.contexto){
-    vfMostrarAvisoVF('Não consegui salvar esse alinhamento (não achei de onde essa tabela veio). A mudança visual continua nessa tela, mas não fica salva.');
+    vfMostrarAvisoVF('Não consegui salvar essa mudança (não achei de onde essa tabela veio). A mudança visual continua nessa tela, mas não fica salva.');
     return;
   }
+  const alinhamentoFinal = alinhamento !== undefined ? alinhamento : (origem.alinhamentoAtual || 'esquerda');
+  const temCabecalhoFinal = temCabecalho !== undefined ? temCabecalho : (origem.temCabecalhoAtual !== false);
+  const tokens = [];
+  if(alinhamentoFinal !== 'esquerda') tokens.push(alinhamentoFinal);
+  if(!temCabecalhoFinal) tokens.push('semcabecalho');
+  const colchetes = tokens.length ? `[${tokens.join(',')}]` : '';
+
   const {contexto, textoOriginalMatch} = origem;
-  const novoTrecho = alinhamento === 'esquerda'
-    ? textoOriginalMatch.replace(/^\\begin\{array\}(?:\[(?:centro|direita)\])?/, '\\begin{array}')
-    : textoOriginalMatch.replace(/^\\begin\{array\}(?:\[(?:centro|direita)\])?/, `\\begin{array}[${alinhamento}]`);
+  const novoTrecho = textoOriginalMatch.replace(/^\\begin\{array\}(?:\[[^\]]*\])?/, `\\begin{array}${colchetes}`);
 
   if(contexto.tipo === 'campo-vf'){
     const entrada = estadoVF.historico.find(h => h.item.id === contexto.questaoId);
     const textoAtual = entrada?.item?.[contexto.campo];
     if(!entrada || textoAtual === undefined || !textoAtual.includes(textoOriginalMatch)){
-      vfMostrarAvisoVF('Não consegui salvar esse alinhamento (o texto pode ter mudado nesse meio tempo). Tenta segurar de novo.');
+      vfMostrarAvisoVF('Não consegui salvar essa mudança (o texto pode ter mudado nesse meio tempo). Tenta segurar de novo.');
       return;
     }
     const textoNovo = textoAtual.replace(textoOriginalMatch, novoTrecho);
@@ -10335,13 +10400,13 @@ async function vfSalvarAlinhamentoTabelaVF(blocoId, alinhamento){
     vfConteudoCompletoCache.set(contexto.questaoId, {...cacheAtual, [contexto.campo]: textoNovo});
     await vfSalvarComRetryVF(
       () => sb.from('questoes_vf').update({[contexto.campo]: textoNovo}).eq('id', contexto.questaoId),
-      'o alinhamento da tabela',
+      'a mudança na tabela',
       null
     );
   }else if(contexto.tipo === 'elemento-html'){
     const {data, error: erroBusca} = await sb.from('elementos_html_vf').select('latex_fonte').eq('id', contexto.elementoId).single();
     if(erroBusca || !data || !data.latex_fonte.includes(textoOriginalMatch)){
-      vfMostrarAvisoVF('Não consegui salvar esse alinhamento (o elemento pode ter mudado nesse meio tempo). Tenta segurar de novo.');
+      vfMostrarAvisoVF('Não consegui salvar essa mudança (o elemento pode ter mudado nesse meio tempo). Tenta segurar de novo.');
       return;
     }
     const textoNovo = data.latex_fonte.replace(textoOriginalMatch, novoTrecho);
@@ -10349,12 +10414,19 @@ async function vfSalvarAlinhamentoTabelaVF(blocoId, alinhamento){
     if(itemCache) itemCache.latex_fonte = textoNovo;
     await vfSalvarComRetryVF(
       () => sb.from('elementos_html_vf').update({latex_fonte: textoNovo}).eq('id', contexto.elementoId),
-      'o alinhamento da tabela',
+      'a mudança na tabela',
       null
     );
   }
   origem.textoOriginalMatch = novoTrecho;
-  origem.alinhamentoAtual = alinhamento;
+  origem.alinhamentoAtual = alinhamentoFinal;
+  origem.temCabecalhoAtual = temCabecalhoFinal;
+}
+function vfSalvarAlinhamentoTabelaVF(blocoId, alinhamento){
+  return vfSalvarOpcoesTabelaVF(blocoId, {alinhamento});
+}
+function vfSalvarCabecalhoTabelaVF(blocoId, temCabecalho){
+  return vfSalvarOpcoesTabelaVF(blocoId, {temCabecalho});
 }
 
 function vfMostrarSelinhoCopiadoVF(elemento){
@@ -11066,28 +11138,119 @@ function vfEditorRichAlinharVF(alinhamento){
 function vfEditorRichInserirTabelaVF(){
   const caixa = document.getElementById('vf-editor-rich-caixa');
   caixa.focus();
-  const html = `<div class="vf-editor-tabela-wrap" contenteditable="false"><table><tr><td contenteditable="true">Cabeçalho 1</td><td contenteditable="true">Cabeçalho 2</td></tr><tr><td contenteditable="true"></td><td contenteditable="true"></td></tr></table><button type="button" class="vf-editor-add-col" contenteditable="false" onclick="vfEditorRichAdicionarColunaVF(this)">+</button><button type="button" class="vf-editor-add-row" contenteditable="false" onclick="vfEditorRichAdicionarLinhaVF(this)">+</button></div><div><br></div>`;
+  const iconeAlca = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 20 L20 14 M20 20 L14 20 M20 20 L9 20 M20 20 L20 9"/></svg>`;
+  const iconeCabecalho = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18" stroke-width="3"/></svg>`;
+  const html = `<div class="vf-editor-tabela-wrap" contenteditable="false"><table><tr class="vf-editor-tr-cabecalho"><td contenteditable="true">Cabeçalho 1</td><td contenteditable="true">Cabeçalho 2</td></tr><tr><td contenteditable="true"></td><td contenteditable="true"></td></tr></table><button type="button" class="vf-editor-tabela-cabecalho-toggle ativo" contenteditable="false" onclick="vfEditorRichToggleCabecalhoVF(this)" title="Tem cabeçalho">${iconeCabecalho}</button><div class="vf-editor-tabela-alca" contenteditable="false">${iconeAlca}</div></div><div><br></div>`;
   document.execCommand('insertHTML', false, html);
 }
 
-function vfEditorRichAdicionarColunaVF(botao){
-  const tabela = botao.closest('.vf-editor-tabela-wrap').querySelector('table');
-  tabela.querySelectorAll('tr').forEach(tr => {
-    const td = document.createElement('td');
-    td.contentEditable = 'true';
-    tr.appendChild(td);
-  });
+// alterna se a primeira linha é cabeçalho (fundo destacado, negrito) ou
+// uma linha normal como as outras
+function vfEditorRichToggleCabecalhoVF(botao){
+  const wrap = botao.closest('.vf-editor-tabela-wrap');
+  const primeiraLinha = wrap.querySelector('table tr:first-child');
+  const ativo = primeiraLinha.classList.toggle('vf-editor-tr-cabecalho');
+  botao.classList.toggle('ativo', ativo);
 }
-function vfEditorRichAdicionarLinhaVF(botao){
-  const tabela = botao.closest('.vf-editor-tabela-wrap').querySelector('table');
-  const numColunas = tabela.querySelector('tr').children.length;
-  const tr = document.createElement('tr');
-  for(let i = 0; i < numColunas; i++){
-    const td = document.createElement('td');
-    td.contentEditable = 'true';
-    tr.appendChild(td);
+
+// ajusta o número de linhas/colunas da tabela pro alvo pedido (adiciona
+// ou remove conforme necessário), sempre mantendo pelo menos 1x1
+function vfEditorRichAjustarTamanhoTabelaVF(tabela, linhasAlvo, colunasAlvo){
+  linhasAlvo = Math.max(1, linhasAlvo);
+  colunasAlvo = Math.max(1, colunasAlvo);
+  const linhas = Array.from(tabela.querySelectorAll('tr'));
+  const colunasAtuais = linhas[0]?.children.length || 0;
+  // colunas: adiciona ou remove em CADA linha existente
+  if(colunasAlvo > colunasAtuais){
+    linhas.forEach(tr => {
+      for(let i = colunasAtuais; i < colunasAlvo; i++){
+        const td = document.createElement('td');
+        td.contentEditable = 'true';
+        tr.appendChild(td);
+      }
+    });
+  }else if(colunasAlvo < colunasAtuais){
+    linhas.forEach(tr => {
+      while(tr.children.length > colunasAlvo) tr.lastElementChild.remove();
+    });
   }
-  tabela.appendChild(tr);
+  // linhas: adiciona ou remove no final da tabela
+  if(linhasAlvo > linhas.length){
+    for(let i = linhas.length; i < linhasAlvo; i++){
+      const tr = document.createElement('tr');
+      for(let c = 0; c < colunasAlvo; c++){
+        const td = document.createElement('td');
+        td.contentEditable = 'true';
+        tr.appendChild(td);
+      }
+      tabela.appendChild(tr);
+    }
+  }else if(linhasAlvo < linhas.length){
+    for(let i = linhas.length - 1; i >= linhasAlvo; i--) linhas[i].remove();
+  }
+}
+
+// arrastar a alça (canto inferior-direito) redimensiona linhas e colunas
+// juntos, calculando quantas cabem no espaço arrastado com base no
+// tamanho médio atual de uma célula - mesmo padrão do Numbers/Pages
+let vfRedimensionarTabelaEstadoVF = null;
+document.addEventListener('mousedown', vfEditorRichIniciarRedimensionarTabelaVF);
+document.addEventListener('touchstart', vfEditorRichIniciarRedimensionarTabelaVF, {passive: false});
+
+function vfEditorRichIniciarRedimensionarTabelaVF(evento){
+  const alca = evento.target.closest?.('.vf-editor-tabela-alca');
+  if(!alca) return;
+  evento.preventDefault();
+  const wrap = alca.closest('.vf-editor-tabela-wrap');
+  const tabela = wrap.querySelector('table');
+  const linhas = tabela.querySelectorAll('tr');
+  const rect = tabela.getBoundingClientRect();
+  const tooltip = document.createElement('div');
+  tooltip.className = 'vf-editor-tabela-tooltip';
+  document.body.appendChild(tooltip);
+  vfRedimensionarTabelaEstadoVF = {
+    tabela,
+    origemX: rect.left,
+    origemY: rect.top,
+    // tamanho médio de UMA célula agora - referência fixa durante todo o
+    // arrasto, não recalculada a cada movimento (senão o cálculo ficaria
+    // instável conforme a tabela muda de tamanho durante o próprio gesto)
+    larguraCelula: rect.width / (linhas[0]?.children.length || 1),
+    alturaCelula: rect.height / (linhas.length || 1),
+    tooltip
+  };
+  vfEditorRichAtualizarTooltipRedimensionarVF(evento);
+  document.addEventListener('mousemove', vfEditorRichMoverRedimensionarTabelaVF);
+  document.addEventListener('touchmove', vfEditorRichMoverRedimensionarTabelaVF, {passive: false});
+  document.addEventListener('mouseup', vfEditorRichSoltarRedimensionarTabelaVF, {once: true});
+  document.addEventListener('touchend', vfEditorRichSoltarRedimensionarTabelaVF, {once: true});
+}
+
+function vfEditorRichMoverRedimensionarTabelaVF(evento){
+  if(!vfRedimensionarTabelaEstadoVF) return;
+  evento.preventDefault();
+  vfEditorRichAtualizarTooltipRedimensionarVF(evento);
+}
+
+function vfEditorRichAtualizarTooltipRedimensionarVF(evento){
+  const estado = vfRedimensionarTabelaEstadoVF;
+  const ponto = evento.touches ? evento.touches[0] : evento;
+  const larguraVirtual = ponto.clientX - estado.origemX;
+  const alturaVirtual = ponto.clientY - estado.origemY;
+  const colunasAlvo = Math.max(1, Math.round(larguraVirtual / estado.larguraCelula));
+  const linhasAlvo = Math.max(1, Math.round(alturaVirtual / estado.alturaCelula));
+  vfEditorRichAjustarTamanhoTabelaVF(estado.tabela, linhasAlvo, colunasAlvo);
+  estado.tooltip.textContent = `${linhasAlvo} linha${linhasAlvo===1?'':'s'} × ${colunasAlvo} coluna${colunasAlvo===1?'':'s'}`;
+  estado.tooltip.style.left = (ponto.clientX + 16) + 'px';
+  estado.tooltip.style.top = (ponto.clientY + 16) + 'px';
+}
+
+function vfEditorRichSoltarRedimensionarTabelaVF(){
+  if(!vfRedimensionarTabelaEstadoVF) return;
+  vfRedimensionarTabelaEstadoVF.tooltip.remove();
+  vfRedimensionarTabelaEstadoVF = null;
+  document.removeEventListener('mousemove', vfEditorRichMoverRedimensionarTabelaVF);
+  document.removeEventListener('touchmove', vfEditorRichMoverRedimensionarTabelaVF);
 }
 
 // converte o conteúdo da caixa (HTML) pro nosso formato interno - roda
@@ -11146,7 +11309,9 @@ function vfEditorRichParaLatexVF(){
       const linhasTexto = linhas.map(tr =>
         Array.from(tr.children).map(td => converterInline(td).trim()).join('&')
       );
-      partes.push(`\\begin{array}{${alinhamentos.join('')}}${linhasTexto.join('\\\\')}\\end{array}`);
+      const temCabecalho = linhas[0].classList.contains('vf-editor-tr-cabecalho');
+      const colchetes = temCabecalho ? '' : '[semcabecalho]';
+      partes.push(`\\begin{array}${colchetes}{${alinhamentos.join('')}}${linhasTexto.join('\\\\')}\\end{array}`);
     }else if(no.tagName === 'DIV' || no.tagName === 'P'){
       fecharBufferSolto();
       const align = no.style.textAlign;
@@ -11162,7 +11327,7 @@ function vfEditorRichParaLatexVF(){
     }
   });
   fecharBufferSolto(); // fecha qualquer resto solto no final
-  return partes.join('\n\n');
+  return partes.join('\n');
 }
 
 // caminho inverso: pega texto no nosso formato interno (já salvo antes)
@@ -11173,32 +11338,38 @@ function vfEditorRichDeLatexVF(texto){
   const converterInlineParaHtml = (t) => escapeHtml(t)
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>');
+  const iconeAlca = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 20 L20 14 M20 20 L14 20 M20 20 L9 20 M20 20 L20 9"/></svg>`;
+  const iconeCabecalho = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18" stroke-width="3"/></svg>`;
   const blocos = [];
   let pos = 0;
-  const regex = /\\begin\{array\}\{([lcr]+)\}([\s\S]*?)\\end\{array\}|\\alinhar\[(centro|direita)\]\{([^}]*)\}/g;
+  const regex = /\\begin\{array\}(?:\[([^\]]*)\])?\{([lcr]+)\}([\s\S]*?)\\end\{array\}|\\alinhar\[(centro|direita)\]\{([^}]*)\}/g;
   let match;
   const paragrafosNormais = (trecho) => {
-    trecho.trim().split(/\n\n+/).forEach(p => { if(p.trim()) blocos.push(`<div>${converterInlineParaHtml(p.trim())}</div>`); });
+    trecho.trim().split(/\n+/).forEach(p => { if(p.trim()) blocos.push(`<div>${converterInlineParaHtml(p.trim())}</div>`); });
   };
   while((match = regex.exec(texto))){
     const antes = texto.slice(pos, match.index);
     if(antes.trim()) paragrafosNormais(antes);
-    if(match[1] !== undefined){
+    if(match[2] !== undefined){
       // é uma tabela
-      const colunas = match[1].split('');
-      const linhas = match[2].split('\\\\').map(l => l.trim()).filter(Boolean);
-      const linhasHtml = linhas.map(l => {
+      const opcoes = (match[1] || '').split(',').map(o => o.trim()).filter(Boolean);
+      const temCabecalho = !opcoes.includes('semcabecalho');
+      const colunas = match[2].split('');
+      const linhas = match[3].split('\\\\').map(l => l.trim()).filter(Boolean);
+      const linhasHtml = linhas.map((l, indiceLinha) => {
         const celulas = l.split('&').map(c => c.trim());
-        return '<tr>' + celulas.map((c, i) => {
+        const classeCabecalho = (temCabecalho && indiceLinha === 0) ? ' class="vf-editor-tr-cabecalho"' : '';
+        return `<tr${classeCabecalho}>` + celulas.map((c, i) => {
           const align = colunas[i] === 'c' ? 'center' : colunas[i] === 'r' ? 'right' : '';
           return `<td contenteditable="true"${align ? ` style="text-align:${align}"` : ''}>${converterInlineParaHtml(c)}</td>`;
         }).join('') + '</tr>';
       }).join('');
-      blocos.push(`<div class="vf-editor-tabela-wrap" contenteditable="false"><table>${linhasHtml}</table><button type="button" class="vf-editor-add-col" contenteditable="false" onclick="vfEditorRichAdicionarColunaVF(this)">+</button><button type="button" class="vf-editor-add-row" contenteditable="false" onclick="vfEditorRichAdicionarLinhaVF(this)">+</button></div>`);
+      const classeAtivo = temCabecalho ? ' ativo' : '';
+      blocos.push(`<div class="vf-editor-tabela-wrap" contenteditable="false"><table>${linhasHtml}</table><button type="button" class="vf-editor-tabela-cabecalho-toggle${classeAtivo}" contenteditable="false" onclick="vfEditorRichToggleCabecalhoVF(this)" title="Tem cabeçalho">${iconeCabecalho}</button><div class="vf-editor-tabela-alca" contenteditable="false">${iconeAlca}</div></div>`);
     }else{
       // é \alinhar[...]{}
-      const align = match[3] === 'centro' ? 'center' : 'right';
-      blocos.push(`<div style="text-align:${align}">${converterInlineParaHtml(match[4])}</div>`);
+      const align = match[4] === 'centro' ? 'center' : 'right';
+      blocos.push(`<div style="text-align:${align}">${converterInlineParaHtml(match[5])}</div>`);
     }
     pos = match.index + match[0].length;
   }
@@ -11528,6 +11699,55 @@ function vfMostrarAvisoVF(texto, titulo){
 }
 function vfFecharAvisoVF(){
   fecharModal('modal-aviso-vf');
+}
+
+// busca e mostra a lista de questões excluídas dentro do mesmo filtro
+// do painel de sessão (módulo/publicação/capítulo/tipo), cada uma com
+// botão pra desfazer a exclusão
+async function vfAbrirListaExcluidasVF(){
+  const idsBibliografia = filtroVF.publicacao
+    ? [filtroVF.publicacao]
+    : (filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null);
+  const corpo = document.getElementById('vf-lista-excluidas-corpo');
+  corpo.innerHTML = '<p style="text-align:center;color:#999;padding:20px 0">Carregando...</p>';
+  abrirModal('modal-lista-excluidas-vf');
+  const {data, error} = await sb.rpc('listar_excluidas_filtro_vf', {
+    p_usuario_id: usuarioAtual.id,
+    p_ids_bibliografia: idsBibliografia,
+    p_capitulo: filtroVF.capitulo || null,
+    p_numero: !!filtroVF.numero,
+    p_lista: !!filtroVF.lista
+  });
+  if(error){ corpo.innerHTML = `<p style="text-align:center;color:#A32D2D;padding:20px 0">Erro ao carregar: ${escapeHtml(error.message)}</p>`; return; }
+  vfRenderizarListaExcluidasVF(data || []);
+}
+
+function vfRenderizarListaExcluidasVF(itens){
+  const corpo = document.getElementById('vf-lista-excluidas-corpo');
+  if(!itens.length){ corpo.innerHTML = '<p style="text-align:center;color:#999;padding:20px 0">Nenhuma excluída nesse filtro.</p>'; return; }
+  corpo.innerHTML = itens.map(item => `
+    <div id="vf-excluida-item-${item.questao_id}" style="padding:12px 0;border-bottom:0.5px solid #f0f0ee;display:flex;align-items:flex-start;gap:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:var(--fs-d)">${formatarTextoItemVF(item.texto)}</div>
+        ${item.motivo ? `<div style="font-size:var(--fs-a);color:#999;margin-top:4px">Motivo: ${escapeHtml(item.motivo)}</div>` : ''}
+      </div>
+      <button class="btn-secundario" style="flex-shrink:0;width:auto;padding:6px 12px;font-size:var(--fs-c)" onclick="vfDesfazerExclusaoVF('${item.questao_id}')">Desfazer</button>
+    </div>
+  `).join('');
+}
+
+// remove o registro de exclusão - a questão volta a poder aparecer na
+// fila normalmente na próxima vez que o pool for carregado (abrir o
+// Flash de novo), não muda a sessão que já está em andamento agora
+async function vfDesfazerExclusaoVF(questaoId){
+  const {error} = await sb.from('exclusoes_vf').delete().eq('questao_vf_id', questaoId).eq('usuario_id', usuarioAtual.id);
+  if(error){ vfMostrarAvisoVF('Erro ao desfazer: '+error.message); return; }
+  document.getElementById(`vf-excluida-item-${questaoId}`)?.remove();
+  const corpo = document.getElementById('vf-lista-excluidas-corpo');
+  if(corpo && !corpo.querySelector('[id^="vf-excluida-item-"]')){
+    corpo.innerHTML = '<p style="text-align:center;color:#999;padding:20px 0">Nenhuma excluída nesse filtro.</p>';
+  }
+  vfCarregarPanoramaFiltroVF(); // atualiza os números do painel (excluídas -1, nunca vistas +1)
 }
 
 async function vfExcluirElementoBibliotecaVF(elementoHtmlId){
