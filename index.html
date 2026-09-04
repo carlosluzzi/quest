@@ -962,11 +962,11 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
           <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 10px;font-size:var(--fs-d);font-weight:500;cursor:pointer;font-family:inherit">Lista</button>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
-          <span style="font-size:var(--fs-d);color:#333">Varredura (sem repetir)</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333">Varredura (sem repetir) <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-varredura-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
           <button id="vf-toggle-varredura" onclick="vfToggleVarreduraVF()" style="width:44px;height:26px;border-radius:13px;border:none;background:#ddd;position:relative;cursor:pointer;flex-shrink:0;transition:background 0.2s"><span id="vf-toggle-varredura-bolinha" style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:transform 0.2s"></span></button>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
-          <span style="font-size:var(--fs-d);color:#333">Avançar no acerto</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333">Avançar no acerto <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-autoavanco-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
           <button id="vf-toggle-autoavanco" onclick="vfToggleAutoAvancoVF()" style="width:44px;height:26px;border-radius:13px;border:none;background:#ddd;position:relative;cursor:pointer;flex-shrink:0;transition:background 0.2s"><span id="vf-toggle-autoavanco-bolinha" style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:transform 0.2s"></span></button>
         </div>
       </div>
@@ -1399,6 +1399,30 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-info-varredura-vf">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Varredura (sem repetir)</h3>
+    <p>Com a varredura ligada, cada questão desse filtro aparece uma única vez, sem repetir, até você desligar de novo — mesmo fechando e abrindo o app nesse meio tempo. A ordem muda: primeiro as revisões mais atrasadas (mesmo que ainda não tenham vencido de todo), depois as que você está aprendendo, depois as novas. Se você errar alguma, ela entra na escada de aprendizado normalmente, mas só volta a aparecer depois que você desligar a varredura. É útil pra passar rápido por um caderno inteiro, por exemplo perto da prova.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-varredura-vf')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-autoavanco-vf">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Avançar no acerto</h3>
+    <p>Com esse modo ligado, depois que você acerta uma questão, o app passa sozinho pra próxima em cerca de meio segundo, sem precisar tocar em nada. No erro, ele nunca avança sozinho — a explicação sempre precisa ser lida. Se você tocar em qualquer coisa antes desse meio segundo passar (voltar, abrir uma nota, abrir a explicação, favoritar), o avanço automático é cancelado na hora, pra você poder ler em paz.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-autoavanco-vf')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-leech-vf">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Leech</h3>
+    <p>"Leech" (sanguessuga, termo emprestado do Anki) é o selo que aparece numa questão que você já errou muitas vezes seguidas - a partir de 4 erros. É um sinal de que aquela afirmação específica não está entrando do jeito que ela foi escrita: talvez o enunciado esteja confuso, misture informação demais numa frase só, ou dependa de decorar um número solto sem contexto. Vale a pena reescrever ela, quebrar em partes menores, ou até excluir se não estiver valendo o tempo gasto reforçando ela sempre. O número ao lado do selo (ex: "8 erros") é quantas vezes você errou essa questão desde que ela foi cadastrada.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-leech-vf')">Fechar</button>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-anotacao-sessao-vf">
   <div class="modal-conteudo" style="max-width:600px;max-height:90vh">
     <h3 class="config-title">O que você escreveu</h3>
@@ -1515,7 +1539,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       <datalist id="vf-tags-datalist"></datalist>
       <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfAdicionarTagVF()">+</button>
     </div>
-    <p id="vf-tags-status" style="font-size:var(--fs-c);margin-top:6px"></p>
+    <p id="vf-tags-status" style="font-size:var(--fs-c);margin-top:6px;min-height:2.8em;line-height:1.4"></p>
     <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="vfFecharPopupTagsVF()">Fechar</button>
   </div>
 </div>
@@ -1807,7 +1831,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-537';
+const VERSAO_APP = '2026-07-25-541';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9804,7 +9828,20 @@ async function vfDesligarVarreduraVF(){
   vfSalvarFiltroNoStorageVF();
   vfAtualizarVisualTogglesFiltroVF();
   await recarregarPoolEContinuarVF();
-  vfMostrarAvisoVF(`Varredura desligada. Você tem ${aprendendoNoFiltro.length} questão${aprendendoNoFiltro.length===1?'':'ões'} na escada de aprendizado nesse filtro, ${elegiveisAgora.length} já elegível${elegiveisAgora.length===1?'':'eis'} agora.`);
+  const total = aprendendoNoFiltro.length;
+  const elegiveis = elegiveisAgora.length;
+  const palavraQuestao = total === 1 ? 'questão' : 'questões';
+  let mensagem;
+  if(total === 0){
+    mensagem = 'Varredura desligada. Nenhuma errada ficou pendente - você acertou tudo que respondeu.';
+  }else if(elegiveis === total){
+    mensagem = `Varredura desligada. Você errou ${total} ${palavraQuestao} - ${total===1?'ela já pode':'todas já podem'} voltar a aparecer agora.`;
+  }else if(elegiveis === 0){
+    mensagem = `Varredura desligada. Você errou ${total} ${palavraQuestao} - ainda vão demorar um pouco pra voltar a aparecer.`;
+  }else{
+    mensagem = `Varredura desligada. Você errou ${total} questões - ${elegiveis} já podem voltar a aparecer agora, o resto ainda vai demorar um pouco.`;
+  }
+  vfMostrarAvisoVF(mensagem);
 }
 
 // liga/desliga o avanço automático no acerto (seção 6) - persistido à
@@ -10025,7 +10062,7 @@ function renderizarItemVF(){
     item.eh_numero ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center">NÚMERO</span>` : '',
     item.eh_lista ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center">LISTA</span>` : '',
     item.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : '',
-    (item.total_erros||0) >= VF_ALGO.LEECH_ERROS ? `<span style="background:#F5E6C8;color:#8A6D1D;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center" title="Errada muitas vezes - pode valer a pena reescrever, quebrar em partes menores, ou excluir">LEECH · ${item.total_erros} ERROS</span>` : ''
+    (item.total_erros||0) >= VF_ALGO.LEECH_ERROS ? `<span onclick="event.stopPropagation();abrirModal('modal-info-leech-vf')" style="background:#F5E6C8;color:#8A6D1D;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center;cursor:pointer">LEECH · ${item.total_erros} ERROS</span>` : ''
   ].filter(Boolean).join('');
 
   // tags customizadas (livres, criadas pelo usuário) - borda e texto na
