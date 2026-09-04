@@ -961,6 +961,14 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
           <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 10px;font-size:var(--fs-d);font-weight:500;cursor:pointer;font-family:inherit">Número</button>
           <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 10px;font-size:var(--fs-d);font-weight:500;cursor:pointer;font-family:inherit">Lista</button>
         </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
+          <span style="font-size:var(--fs-d);color:#333">Varredura (sem repetir)</span>
+          <button id="vf-toggle-varredura" onclick="vfToggleVarreduraVF()" style="width:44px;height:26px;border-radius:13px;border:none;background:#ddd;position:relative;cursor:pointer;flex-shrink:0;transition:background 0.2s"><span id="vf-toggle-varredura-bolinha" style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:transform 0.2s"></span></button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+          <span style="font-size:var(--fs-d);color:#333">Avançar no acerto</span>
+          <button id="vf-toggle-autoavanco" onclick="vfToggleAutoAvancoVF()" style="width:44px;height:26px;border-radius:13px;border:none;background:#ddd;position:relative;cursor:pointer;flex-shrink:0;transition:background 0.2s"><span id="vf-toggle-autoavanco-bolinha" style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:transform 0.2s"></span></button>
+        </div>
       </div>
     </div>
     <div id="vf-conteudo" style="padding-bottom:170px;position:relative">
@@ -1547,6 +1555,14 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       <button id="vf-complementar-aba-criar" class="btn-secundario" style="flex:1" onclick="vfMudarAbaComplementarVF('criar')">Criar novo</button>
     </div>
     <div id="vf-complementar-conteudo-biblioteca">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <select id="vf-complementar-filtro-modulo" class="filter-select" style="flex:1" onchange="vfMudarModuloFiltroBibliotecaVF()">
+          <option value="">Todos os módulos</option>
+        </select>
+        <select id="vf-complementar-filtro-publicacao" class="filter-select" style="flex:1" onchange="vfFiltrarBibliotecaComplementarVF()" disabled>
+          <option value="">Todas as publicações</option>
+        </select>
+      </div>
       <input id="vf-complementar-busca" class="textarea-padrao" placeholder="Buscar na biblioteca..." style="margin-bottom:10px;min-height:auto" oninput="vfFiltrarBibliotecaComplementarVF()">
       <div id="vf-complementar-lista-biblioteca" style="min-height:300px;max-height:50vh;overflow-y:auto"></div>
     </div>
@@ -1628,6 +1644,15 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     <h3 class="config-title">Excluídas nesse filtro</h3>
     <div id="vf-lista-excluidas-corpo" style="overflow-y:auto;flex:1;min-height:0"></div>
     <button class="btn-secundario" style="width:100%;margin-top:14px;flex-shrink:0" onclick="fecharModal('modal-lista-excluidas-vf')">Fechar</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-lista-leeches-vf" onclick="if(event.target===this) fecharModal('modal-lista-leeches-vf')">
+  <div class="modal-conteudo" style="max-width:600px;max-height:80vh;display:flex;flex-direction:column">
+    <h3 class="config-title">Leeches (4+ erros)</h3>
+    <p style="color:#888;font-size:var(--fs-c);margin:-8px 0 10px">Questões que você errou muitas vezes - pode valer a pena reescrever, quebrar em partes menores, ou excluir.</p>
+    <div id="vf-lista-leeches-corpo" style="overflow-y:auto;flex:1;min-height:0"></div>
+    <button class="btn-secundario" style="width:100%;margin-top:14px;flex-shrink:0" onclick="fecharModal('modal-lista-leeches-vf')">Fechar</button>
   </div>
 </div>
 
@@ -1782,7 +1807,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-535';
+const VERSAO_APP = '2026-07-25-537';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4019,6 +4044,10 @@ const VF_REGEX_NOME_SEM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX
 // fonte serifada, exceção deliberada só pras tabelas (\begin{array}) -
 // o resto do app continua na fonte padrão sem serifa, intocada
 const VF_FONTE_TABELA = `'Charter','Iowan Old Style',Georgia,'Times New Roman',serif`;
+// ícone de alfinete usado no botão de "fixar" - mesmo botão/lógica tanto
+// nas notas quanto nos elementos complementares anexados: fixa = aparece
+// na página principal da questão
+const VF_ICONE_PIN_VF = '<svg viewBox="0 0 32 32" width="16" height="16" fill="none"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M28 11.333L20.667 4l-6.076 6.38a2 2 0 01-1.448.62H9.414c-.89 0-1.337 1.077-.707 1.707l10.586 10.586c.63.63 1.707.184 1.707-.707v-3.729a2 2 0 01.62-1.448L28 11.333zM14 18l-8 8"/></svg>';
 
 // processa o conteúdo de uma célula de tabela: comandos específicos de
 // célula primeiro (\text{}, vírgula decimal {,}, espaço fino \,), depois
@@ -4667,20 +4696,20 @@ let offsetRelogioVF = 0;
 function agoraCorrigidoVF(){ return Date.now() + offsetRelogioVF; }
 
 const VF_ALGO = {
-  FATOR_INI: 2.2, FATOR_MIN: 1.3, FATOR_MAX: 2.8,
-  PRIMEIRO_ACERTO_H: 24,
-  GRADUA_NOVA_H: 12,
-  QUEDA_MANTEM: 0.30, QUEDA_MIN_H: 12, QUEDA_MAX_H: 72,
-  DEGRAUS_NOVA: [6, 20],
-  DEGRAUS_QUEDA: [6],
-  TMIN_DEGRAU_MIN: [2, 10],
-  ESCAPE_H: [6, 12],
-  TETO_H: 2160,
-  FUZZ: 0.05,
-  JITTER_FILA: 0.02,
-  BOOST_FAVORITO: 1.25, // favorita "vence" a fila mais cedo (~80% do intervalo em vez de 100%) - calibrado pelo Fable pra não virar spam nem dominar o topo
-  NOVA_A_CADA: 3, // Regra 1 - fluxo garantido de novas (1 a cada 3 respostas), evita represar novas atrás de um backlog de revisões vencidas
-  GAP_FAMILIA: 15 // Regra 2 - anti-irmãs, intervalo mínimo (em respostas) entre duas questões da mesma família (mesmo fato gerador)
+  FATOR_INI: 2.2, FATOR_MIN: 1.3, FATOR_MAX: 2.8, // inalterado
+  PRIMEIRO_ACERTO_H: 24,                          // inalterado
+  GRADUA_NOVA_H: 12,                              // inalterado
+  QUEDA_MANTEM: 0.30, QUEDA_MIN_H: 12, QUEDA_MAX_H: 72, // inalterado
+  BONUS_MIN: 0.6, BONUS_MAX: 1.5, // era 0.6-1.3 (hardcoded no clamp) - sobe o teto: acerto rápido em nova nasce com até 36h, já que velocidade prevê memória (100% de acerto na próxima aparição quando respondida em <80% do tempo esperado)
+  DEGRAUS_NOVA: [60],  // era [6, 20] - um só degrau: o segundo não trazia informação (91% de acerto voltando pela escada, sem ensinar nada)
+  DEGRAUS_QUEDA: [40], // era [6] - revisão errada volta depois de 40 respostas: a memória já existia antes, precisa de menos reforço que uma nova
+  TMIN_DEGRAU_MIN: [60], // era [2, 10] - mínimo de 60 min de relógio além das respostas, pra não repetir só porque poucas outras questões passaram rápido
+  ESCAPE_H: [12], // era [6, 12] - se parou de estudar, fica elegível 12h depois (próxima sessão), não importa o contador de respostas
+  TETO_H: 2160, FUZZ: 0.05, JITTER_FILA: 0.02, BOOST_FAVORITO: 1.25, NOVA_A_CADA: 3, // inalterados
+  RAZAO_MINIMA_REVISAO: 0.5, // NOVO - sem nova/aprendendo elegível, só serve revisão com pelo menos metade do intervalo vencido (revisão atrasada demais tem taxa de acerto muito pior - dado real: <200% do intervalo = 92%, acima disso = 78%, mas servir MUITO antes do prazo é ainda pior, tipo 1% do intervalo vencido, que não ensina nada)
+  LEECH_ERROS: 4,           // NOVO - questão com 4+ erros ganha marca visível (leech, termo do Anki)
+  AUTOAVANCO_ATRASO_MS: 600 // NOVO - espera antes de avançar sozinho no acerto (> 400ms da trava bloqueadoAteMs, senão proximoVF não faz nada)
+  // GAP_FAMILIA foi removido - substituído pelo enterro de irmãs até o dia seguinte (familiasEnterradasVF, registrado em responderVF), mais rígido que o antigo buffer de 15 respostas
 };
 
 function clampVF(v, min, max){ return Math.max(min, Math.min(max, v)); }
@@ -4693,7 +4722,7 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
   const tempo_s = clampVF(tempoSRaw, 0.3, 180);
   const nPalavras = estadoAnterior.n_palavras || 10;
   const v = tempo_s / esperadoSegundosVF(nPalavras);
-  const bonus = clampVF(1.2 - 0.3 * Math.log2(Math.max(v, 1e-6)), 0.6, 1.3);
+  const bonus = clampVF(1.2 - 0.3 * Math.log2(Math.max(v, 1e-6)), VF_ALGO.BONUS_MIN, VF_ALGO.BONUS_MAX);
 
   const q = {...estadoAnterior};
   if(!q.estado) q.estado = 'nova';
@@ -4705,8 +4734,12 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
       q.intervalo_horas = VF_ALGO.PRIMEIRO_ACERTO_H * bonus;
       if(v < 0.8) q.fator = Math.min(VF_ALGO.FATOR_MAX, q.fator + 0.1);
     }else{
-      q.estado = 'aprendendo'; q.degrau = 0; q.total_degraus = 2;
+      // um acerto gradua (total_degraus=1) - o segundo degrau da escada
+      // antiga (total_degraus=2) não trazia informação nenhuma: 91% de
+      // acerto voltando por ele, só memória de curtíssimo prazo
+      q.estado = 'aprendendo'; q.degrau = 0; q.total_degraus = 1;
       q.intervalo_pendente = VF_ALGO.GRADUA_NOVA_H;
+      q.origem_escada = 'nova'; // só em memória, sem coluna no banco - ver elegibilidadeAprendendoVF
       q.fator = Math.max(VF_ALGO.FATOR_MIN, q.fator - 0.2);
     }
   }else if(q.estado === 'aprendendo'){
@@ -4736,6 +4769,7 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
     }else{
       q.estado = 'aprendendo'; q.degrau = 0; q.total_degraus = 1;
       q.intervalo_pendente = clampVF(VF_ALGO.QUEDA_MANTEM * q.intervalo_horas, VF_ALGO.QUEDA_MIN_H, VF_ALGO.QUEDA_MAX_H);
+      q.origem_escada = 'queda'; // só em memória, sem coluna no banco - ver elegibilidadeAprendendoVF
       q.fator = Math.max(VF_ALGO.FATOR_MIN, q.fator - 0.2);
     }
   }
@@ -4748,12 +4782,18 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
 }
 
 function elegibilidadeAprendendoVF(q, agoraMs, contadorGlobal, tamanhoPool){
-  const degraus = q.total_degraus === 2 ? VF_ALGO.DEGRAUS_NOVA : VF_ALGO.DEGRAUS_QUEDA;
+  // origem_escada só existe em memória (sem coluna no banco) - se a
+  // questão acabou de vir de uma recarga de pool, usa o fallback: mesmo
+  // valor de GRADUA_NOVA_H (12h) só acontece nesse cenário específico de
+  // nova, já que queda usa clamp(30% do intervalo, 12h, 72h) e só bate
+  // 12h exato quando o intervalo era pequeno - caso raro, mas plausível
+  const origem = q.origem_escada || (q.intervalo_pendente === VF_ALGO.GRADUA_NOVA_H ? 'nova' : 'queda');
+  const degraus = origem === 'nova' ? VF_ALGO.DEGRAUS_NOVA : VF_ALGO.DEGRAUS_QUEDA;
   const K = degraus[q.degrau];
   const K_eff = Math.min(K, tamanhoPool - 1);
   const outras = contadorGlobal - (q.marca_contador || 0);
   const decH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
-  const i = Math.min(q.degrau, 1);
+  const i = Math.min(q.degrau, degraus.length - 1);
   return (outras >= K_eff && decH >= VF_ALGO.TMIN_DEGRAU_MIN[i] / 60) || decH >= VF_ALGO.ESCAPE_H[i];
 }
 
@@ -4805,8 +4845,9 @@ function vfCalcularFamiliasNoPoolVF(pool){
   pool.forEach(q => { q.familiaId = encontrar(q.id); });
 }
 
-// escolhe a próxima questão do pool
-function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendizado, sementeSessao, respostasDesdeUltimaNova, familiasRecentesVF){
+// escolhe a próxima questão do pool (modo normal - ver
+// vfEscolherProximaVarreduraVF pro modo varredura, que é bem diferente)
+function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendizado, sementeSessao, respostasDesdeUltimaNova){
   const aprendendo = pool.filter(q => q.estado === 'aprendendo' && elegibilidadeAprendendoVF(q, agoraMs, contadorGlobal, pool.length));
   aprendendo.sort((a,b) => (a.marca_contador||0) - (b.marca_contador||0));
 
@@ -4820,9 +4861,16 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
       // a competir de verdade, o jitter só embaralha um pouco por cima)
       const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
       const razao = (decorridoH / q.intervalo_horas) * boost;
+      // piso: revisão só entra na disputa com pelo menos metade do
+      // intervalo vencido - servir uma revisão a 1% do prazo (visto nos
+      // dados reais) não ensina nada, só rouba o lugar de uma nova
+      if(razao < VF_ALGO.RAZAO_MINIMA_REVISAO) return;
       const jitter = 1 + (pseudoAleatorioVF(sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
       rn.push({score: razao * jitter, item: q});
     }else if(!q.estado || q.estado === 'nova'){
+      // nova cuja família já foi respondida hoje fica de fora - enterrada
+      // até amanhã (substitui o antigo GAP_FAMILIA)
+      if(vfFamiliaEnterradaHojeVF(q.familiaId, agoraMs)) return;
       // favorita nova fica em 1.0 normal (na prática nem acontece, só dá
       // pra favoritar o que já foi visto) - sem boost aqui de propósito
       const jitter = 1 + (pseudoAleatorioVF(sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
@@ -4834,43 +4882,124 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
   rn.sort((a,b) => b.score - a.score);
   novas.sort((a,b) => b.score - a.score);
 
-  // Regra 2 (anti-irmãs): acha a melhor candidata pulando quem tem
-  // família presente no buffer das últimas GAP_FAMILIA respostas. Regra
-  // suave - se TODAS estiverem no buffer (pool esgotado/filtro estreito),
-  // devolve a melhor mesmo assim, nunca trava/devolve null por causa disso
-  function melhorForaDaFamiliaVF(candidatosOrdenados){
-    if(!candidatosOrdenados.length) return null;
-    for(const c of candidatosOrdenados){
-      if(!c.item.familiaId || !familiasRecentesVF.includes(c.item.familiaId)) return c;
-    }
-    return candidatosOrdenados[0];
-  }
-
   if(aprendendo.length && !(anteriorVeioDeAprendizado && rn.length)){
     // fila de aprendizado ignora a família DE PROPÓSITO - questão
     // voltando pelos degraus é o mesmo cartão se reforçando, isso é
-    // intencional e não pode ser bloqueado pela Regra 2
+    // intencional e não pode ser bloqueado pelo enterro de irmãs
     return {item: aprendendo[0], veioDeAprendizado: true};
   }
 
   // Regra 1 (fluxo garantido de novas): se já faz tempo sem servir uma
-  // nova e existe alguma disponível no pool, prioriza ela - ainda
-  // respeitando a Regra 2 dentro do grupo de novas
+  // nova e existe alguma disponível (não enterrada), prioriza ela
   if(respostasDesdeUltimaNova >= VF_ALGO.NOVA_A_CADA - 1 && novas.length){
-    const escolhida = melhorForaDaFamiliaVF(novas);
-    if(escolhida) return {item: escolhida.item, veioDeAprendizado: false};
+    return {item: novas[0].item, veioDeAprendizado: false};
   }
 
+  // rn já mistura revisões (com razão >= 0.5) e novas (não enterradas),
+  // ordenadas por score - pega a melhor das duas categorias juntas
   if(rn.length){
-    const escolhida = melhorForaDaFamiliaVF(rn);
-    return {item: escolhida.item, veioDeAprendizado: false};
+    return {item: rn[0].item, veioDeAprendizado: false};
   }
-  const todosAprendendo = pool.filter(q => q.estado === 'aprendendo');
-  if(todosAprendendo.length){
-    todosAprendendo.sort((a,b) => (a.marca_contador||0) - (b.marca_contador||0));
-    return {item: todosAprendendo[0], veioDeAprendizado: true};
+
+  // aprendendo NÃO elegível não entra mais como último recurso aqui -
+  // esse fallback (existia antes) era a origem do loop "repete tanto que
+  // não avança": servia uma questão que tinha acabado de voltar,
+  // minutos antes do previsto, só porque não tinha mais nada. Se
+  // realmente não há nada elegível, é esgotado de verdade
+  return {esgotado: true, motivo: vfMontarMotivoEsgotadoVF(pool, agoraMs, contadorGlobal)};
+}
+
+// monta as contagens pra explicar por que esgotou - usado na tela de
+// "filtro esgotado" (avancarParaProximaVF)
+function vfMontarMotivoEsgotadoVF(pool, agoraMs, contadorGlobal){
+  let novasEnterradas = 0;
+  pool.forEach(q => {
+    if((!q.estado || q.estado === 'nova') && vfFamiliaEnterradaHojeVF(q.familiaId, agoraMs)) novasEnterradas++;
+  });
+
+  let revisoesAguardando = 0;
+  let menorEsperaRevisaoH = null;
+  pool.forEach(q => {
+    if(q.estado !== 'revisao') return;
+    const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
+    const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
+    const razao = (decorridoH / q.intervalo_horas) * boost;
+    if(razao >= VF_ALGO.RAZAO_MINIMA_REVISAO) return; // essa já contaria, não é "aguardando"
+    revisoesAguardando++;
+    // quanto falta (em horas de relógio) pra essa revisão atingir razão 0.5
+    const decorridoHParaRazaoMinima = (VF_ALGO.RAZAO_MINIMA_REVISAO * q.intervalo_horas) / boost;
+    const faltamH = decorridoHParaRazaoMinima - decorridoH;
+    if(faltamH > 0 && (menorEsperaRevisaoH === null || faltamH < menorEsperaRevisaoH)) menorEsperaRevisaoH = faltamH;
+  });
+
+  let aprendendoAguardando = 0;
+  let menorEsperaAprendendoRespostas = null;
+  let menorEsperaAprendendoH = null;
+  pool.forEach(q => {
+    if(q.estado !== 'aprendendo') return;
+    aprendendoAguardando++;
+    const origem = q.origem_escada || (q.intervalo_pendente === VF_ALGO.GRADUA_NOVA_H ? 'nova' : 'queda');
+    const degraus = origem === 'nova' ? VF_ALGO.DEGRAUS_NOVA : VF_ALGO.DEGRAUS_QUEDA;
+    const K = degraus[q.degrau];
+    const K_eff = Math.min(K, pool.length - 1);
+    const outras = contadorGlobal - (q.marca_contador || 0);
+    const decH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
+    const i = Math.min(q.degrau, degraus.length - 1);
+    const faltamRespostas = Math.max(0, K_eff - outras);
+    const faltamHEscape = Math.max(0, VF_ALGO.ESCAPE_H[i] - decH);
+    if(menorEsperaAprendendoRespostas === null || faltamRespostas < menorEsperaAprendendoRespostas){
+      menorEsperaAprendendoRespostas = faltamRespostas;
+      menorEsperaAprendendoH = faltamHEscape;
+    }
+  });
+
+  return {
+    novasEnterradas,
+    revisoesAguardando, menorEsperaRevisaoH,
+    aprendendoAguardando, menorEsperaAprendendoRespostas, menorEsperaAprendendoH
+  };
+}
+
+// modo varredura (seção 5): cada questão do filtro aparece uma vez até
+// desligar. Candidata = nunca respondida OU respondida antes do início
+// dessa varredura (filtroVF.varreduraDesde). Ordem: revisões mais
+// atrasadas primeiro (SEM piso de razão - em varredura vale revisar
+// antes do prazo, é o usuário pedindo), depois aprendendo (por
+// marca_contador, mais antiga primeiro), depois novas (jitter de sessão
+// de sempre). Ignora de propósito: enterro de irmãs, escada de
+// elegibilidade, Regra 1 (nova a cada 3), regra anti-duas-aprendendo-seguidas
+function vfEscolherProximaVarreduraVF(pool, agoraMs, contadorGlobal, sementeSessao){
+  const desdeMs = new Date(filtroVF.varreduraDesde).getTime();
+  const candidatas = pool.filter(q => !q.ultima_resposta_em || new Date(q.ultima_resposta_em).getTime() < desdeMs);
+  if(!candidatas.length) return {esgotado: true}; // varredura concluída - sem motivo (tratado à parte em vfMostrarTelaEsgotadoVF)
+
+  const revisoes = candidatas.filter(q => q.estado === 'revisao' && q.intervalo_horas && q.ultima_resposta_em);
+  if(revisoes.length){
+    revisoes.sort((a,b) => {
+      const razaoA = (agoraMs - new Date(a.ultima_resposta_em).getTime()) / 3600000 / a.intervalo_horas;
+      const razaoB = (agoraMs - new Date(b.ultima_resposta_em).getTime()) / 3600000 / b.intervalo_horas;
+      return razaoB - razaoA;
+    });
+    return {item: revisoes[0], veioDeAprendizado: false};
   }
-  return null;
+
+  const aprendendo = candidatas.filter(q => q.estado === 'aprendendo');
+  if(aprendendo.length){
+    aprendendo.sort((a,b) => (a.marca_contador||0) - (b.marca_contador||0));
+    return {item: aprendendo[0], veioDeAprendizado: true};
+  }
+
+  const novas = candidatas.filter(q => !q.estado || q.estado === 'nova');
+  if(novas.length){
+    novas.sort((a,b) => {
+      const jitterA = 1 + (pseudoAleatorioVF(sementeSessao, a.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
+      const jitterB = 1 + (pseudoAleatorioVF(sementeSessao, b.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
+      return jitterB - jitterA;
+    });
+    return {item: novas[0], veioDeAprendizado: false};
+  }
+
+  return {esgotado: true}; // não deveria chegar aqui (candidatas.length>0 garantia um dos 3), proteção extra
 }
 
 // ============================================================
@@ -4916,6 +5045,31 @@ let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual
 // o upsert original ainda não confirmado - quem chegasse por último no
 // banco vencia, não necessariamente o mais recente
 let vfRespostasEmVooVF = new Map();
+
+// dia local (YYYY-MM-DD) no fuso America/Sao_Paulo, a partir de um
+// timestamp - usado pro enterro de irmãs se limpar sozinho na virada do
+// dia (mesmo dia local de quem estuda, não UTC)
+const vfFormatadorDiaLocalVF = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'});
+function vfDiaLocalDeVF(ms){ return vfFormatadorDiaLocalVF.format(new Date(ms)); }
+
+// familiaId -> dia (YYYY-MM-DD) em que foi respondida - substitui o
+// antigo GAP_FAMILIA/familiasRecentesVF (buffer de 15 respostas, regra
+// suave). Agora é rígido: nova da mesma família não aparece de novo no
+// mesmo dia local, só amanhã (estilo "bury siblings" do Anki) - sobrevive
+// a fechar o app, só se limpa na virada do dia
+let familiasEnterradasVF = (function(){
+  try{
+    const salvo = JSON.parse(localStorage.getItem('pscpp_vf_familias_enterradas') || '{}');
+    return salvo || {};
+  }catch(e){ return {}; }
+})();
+function vfSalvarFamiliasEnterradasVF(){
+  try{ localStorage.setItem('pscpp_vf_familias_enterradas', JSON.stringify(familiasEnterradasVF)); }catch(e){}
+}
+function vfFamiliaEnterradaHojeVF(familiaId, agoraMs){
+  if(!familiaId) return false;
+  return familiasEnterradasVF[familiaId] === vfDiaLocalDeVF(agoraMs);
+}
 
 // ---- desenho com a caneta (Apple Pencil) por cima da questão ----
 // Reescrito usando Touch Events nativos (não Pointer Events) — pesquisa
@@ -6369,6 +6523,7 @@ function vfAbrirAnotacaoSalvaVF(){
 async function vfAbrirFavoritosVF(){
   if(typeof vfForcarSalvamentoEdicaoPendenteVF === 'function') vfForcarSalvamentoEdicaoPendenteVF();
   pausarTimerVF(); // a pendente continua rodando em background senão - agora alcança ela certo, seja qual for a posição de visualização
+  vfCancelarAutoAvancoVF();
   const el = document.getElementById('vf-lista-favoritos');
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
   document.getElementById('pagina-favoritos-vf').classList.remove('hidden');
@@ -8312,12 +8467,11 @@ function vfPreBuscarProximasVF(){
   const agoraMs = agoraCorrigidoVF();
   const idAtual = estadoVF.historico[estadoVF.posicao]?.item?.id;
   const jaCarregadosOuAtual = new Set([idAtual]);
-  // mesmo filtro de família (Regra 2) que o algoritmo real usa em
-  // escolherProximaVF - sem isso, a pré-busca podia preparar o conteúdo
-  // de uma questão que o algoritmo de verdade nunca ia escolher por
-  // causa do intervalo mínimo entre irmãs, desperdiçando a viagem de rede
-  const familiasRecentesParaPreBuscaVF = estadoVF.familiasRecentesVF || [];
-  const foraDoGapFamiliaVF = (q) => !q.familiaId || !familiasRecentesParaPreBuscaVF.includes(q.familiaId);
+  // mesmo enterro de irmãs que o algoritmo real usa em escolherProximaVF -
+  // sem isso, a pré-busca podia preparar o conteúdo de uma questão que o
+  // algoritmo de verdade nunca ia escolher por estar enterrada,
+  // desperdiçando a viagem de rede
+  const foraDoGapFamiliaVF = (q) => !vfFamiliaEnterradaHojeVF(q.familiaId, agoraMs);
 
   // 'aprendendo' tem PRIORIDADE MÁXIMA no algoritmo real (escolherProximaVF
   // sempre pega dali primeiro, quando tem alguma elegível) - toda vez que
@@ -8332,13 +8486,15 @@ function vfPreBuscarProximasVF(){
   aprendendoElegiveis.forEach(q => jaCarregadosOuAtual.add(q.id));
 
   const revisaoPorScore = estadoVF.pool
-    .filter(q => !jaCarregadosOuAtual.has(q.id) && q.estado === 'revisao' && q.intervalo_horas && q.ultima_resposta_em && q.explicacao === undefined && foraDoGapFamiliaVF(q))
+    .filter(q => !jaCarregadosOuAtual.has(q.id) && q.estado === 'revisao' && q.intervalo_horas && q.ultima_resposta_em && q.explicacao === undefined)
     .map(q => {
       const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
       const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
+      const razao = (decorridoH / q.intervalo_horas) * boost;
       const jitter = 1 + (pseudoAleatorioVF(estadoVF.sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
-      return {q, score: (decorridoH / q.intervalo_horas) * boost * jitter};
+      return {q, score: razao * jitter, razao};
     })
+    .filter(c => c.razao >= VF_ALGO.RAZAO_MINIMA_REVISAO) // mesmo piso do algoritmo real
     .sort((a,b) => b.score - a.score)
     .slice(0, 5)
     .map(c => c.q);
@@ -8391,14 +8547,20 @@ function vfProcessarQuestoesCruasVF(questoesCruas, estadoPorId, idsExcluidos){
       // trata como segura em vez de propagar NaN pro cálculo e de volta pro banco
       let estado = e?.estado || 'nova';
       let totalDegraus = e?.total_degraus ?? null;
+      let degrau = e?.degrau ?? 0;
       if(estado === 'revisao' && !e?.intervalo_horas) estado = 'nova';
       if(estado === 'aprendendo' && !totalDegraus) totalDegraus = 1;
+      // compatibilidade com a escada antiga (total_degraus=2, nova
+      // errada) - normaliza em memória pro degrau único novo. O próximo
+      // upsert (responderVF) já grava o valor normalizado de volta,
+      // sem precisar de migração SQL nenhuma
+      if(totalDegraus > 1){ totalDegraus = 1; degrau = 0; }
       return {
         ...q, estado,
         intervalo_horas: e?.intervalo_horas ?? null,
         fator: e?.fator ?? VF_ALGO.FATOR_INI,
         ultima_resposta_em: e?.ultima_resposta_em ?? null,
-        degrau: e?.degrau ?? 0,
+        degrau,
         total_degraus: totalDegraus,
         intervalo_pendente: e?.intervalo_pendente ?? null,
         marca_contador: e?.marca_contador ?? null,
@@ -9075,6 +9237,7 @@ function vfMontarPlaceholderPanoramaVF(){
     <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor">—</span></div>
     <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaExcluidasVF()"><span>Excluídas nesse filtro ›</span><span class="vf-filtro-valor">—</span></div>
     <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaExcluidasVF()"><span>Excluídas sem nunca ter visto ›</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaLeechesVF()"><span>Leeches (4+ erros) ›</span><span class="vf-filtro-valor">—</span></div>
   `;
 }
 
@@ -9106,25 +9269,27 @@ async function vfCarregarPanoramaFiltroVF(){
   const jaVistas = panorama?.[0]?.ja_vistas || 0;
   const excluidas = panorama?.[0]?.excluidas || 0;
   const excluidasSemVer = panorama?.[0]?.excluidas_sem_ver || 0;
+  const leeches = panorama?.[0]?.leeches || 0;
   // se o painel já foi fechado enquanto essa busca rodava, não escreve nada
   const elAtual = document.getElementById('vf-painel-secao-filtro');
   if(!elAtual) return;
-  // só troca os 5 números - a estrutura (título/linhas de filtro) já foi
+  // só troca os 6 números - a estrutura (título/linhas de filtro) já foi
   // montada pelo placeholder síncrono (vfMontarPlaceholderPanoramaVF),
   // então a altura do painel não muda mais nesse momento, sem o pulo
   // visual de antes
   const valores = elAtual.querySelectorAll('.vf-filtro-valor');
   const nValores = valores.length;
-  if(nValores >= 5){
-    valores[nValores-5].textContent = totalFiltro||0;
-    valores[nValores-4].textContent = jaVistas;
+  if(nValores >= 6){
+    valores[nValores-6].textContent = totalFiltro||0;
+    valores[nValores-5].textContent = jaVistas;
     // nunca vistas = total - excluídas - vistas: excluídas nunca voltam
     // a aparecer na fila, então não contam como "ainda por ver" - achado
     // real: antes não descontava excluídas, contando-as como se
     // pudessem aparecer de novo
-    valores[nValores-3].textContent = Math.max(0,(totalFiltro||0)-excluidas-jaVistas);
-    valores[nValores-2].textContent = excluidas;
-    valores[nValores-1].textContent = excluidasSemVer;
+    valores[nValores-4].textContent = Math.max(0,(totalFiltro||0)-excluidas-jaVistas);
+    valores[nValores-3].textContent = excluidas;
+    valores[nValores-2].textContent = excluidasSemVer;
+    valores[nValores-1].textContent = leeches;
   }
   vfReajustarAlturaPainelSessaoVF(); // proteção extra - normalmente não muda nada agora, já que o placeholder já tinha a altura certa
 }
@@ -9224,6 +9389,7 @@ window.addEventListener('pagehide', () => {
 
 async function entrarNoModoVF(){
   popularFiltroModuloVF();
+  vfAtualizarVisualTogglesFiltroVF();
   inicializarCanvasDesenhoVF(); // mede o canvas agora que a aba ficou visível de verdade
   if(estadoVF && estadoVF.posicao >= 0){
     // não é mais só re-renderizar: pode ter ficado pausada tempo demais
@@ -9259,7 +9425,6 @@ function vfPersistirEstadoSessaoVF(){
   vfSessaoAtivaVF.respondidasSessao = estadoVF.respondidasSessao;
   vfSessaoAtivaVF.sementeSessao = estadoVF.sementeSessao;
   vfSessaoAtivaVF.respostasDesdeUltimaNova = estadoVF.respostasDesdeUltimaNova;
-  vfSessaoAtivaVF.familiasRecentesVF = estadoVF.familiasRecentesVF;
   vfSalvarSessaoNoStorageVF();
 }
 
@@ -9286,8 +9451,9 @@ async function vfReconstruirHistoricoDaSessaoVF(){
     acertosSessao: vfSessaoAtivaVF.acertosSessao || 0,
     respondidasSessao: vfSessaoAtivaVF.respondidasSessao || 0,
     sementeSessao: vfSessaoAtivaVF.sementeSessao,
-    respostasDesdeUltimaNova: vfSessaoAtivaVF.respostasDesdeUltimaNova || 0,
-    familiasRecentesVF: vfSessaoAtivaVF.familiasRecentesVF || []
+    respostasDesdeUltimaNova: vfSessaoAtivaVF.respostasDesdeUltimaNova || 0
+    // familiasRecentesVF (versão antiga) ignorado de propósito - substituído
+    // pelo enterro de família, que persiste sozinho em localStorage à parte
   };
 }
 
@@ -9305,8 +9471,7 @@ async function vfCarregarPoolInicialVF(){
     posicao: -1,
     acertosSessao: 0,
     respondidasSessao: 0,
-    respostasDesdeUltimaNova: 0, // Regra 1 (fluxo garantido de novas) - zera a cada SESSÃO de verdade agora, não mais a cada abertura de aba
-    familiasRecentesVF: [] // Regra 2 (anti-irmãs) - idem, zera por sessão de verdade
+    respostasDesdeUltimaNova: 0 // Regra 1 (fluxo garantido de novas) - zera a cada SESSÃO de verdade agora, não mais a cada abertura de aba
   };
   // contadores restaurados direto daqui, ANTES de tentar reconstruir o
   // histórico detalhado - achado real: vfReconstruirHistoricoDaSessaoVF
@@ -9439,9 +9604,11 @@ async function avancarParaProximaVF(){
   vfForcarSalvamentoEdicaoPendenteVF();
   dispararSincronizacaoEmSegundoPlanoVF(); // não bloqueia mais o avanço
   const agoraMs = agoraCorrigidoVF();
-  const pick = escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao, estadoVF.respostasDesdeUltimaNova, estadoVF.familiasRecentesVF);
-  if(!pick){
-    document.getElementById('vf-conteudo').innerHTML = `<p style="padding:24px 4px;color:#888">Nada disponível agora.</p>`;
+  const pick = filtroVF.varreduraDesde
+    ? vfEscolherProximaVarreduraVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.sementeSessao)
+    : escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao, estadoVF.respostasDesdeUltimaNova);
+  if(!pick || pick.esgotado){
+    vfMostrarTelaEsgotadoVF(pick?.motivo, !!filtroVF.varreduraDesde);
     document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
     return;
   }
@@ -9469,7 +9636,49 @@ async function avancarParaProximaVF(){
   limparCanvasDesenhoVF(); // questão nova = rascunho da anterior some
   renderizarItemVF();
   retomarTimerVF(); // só agora, com a questão já na tela, o cronômetro começa a contar
-  vfPreBuscarProximasVF(); // não espera - roda solta em segundo plano enquanto o usuário lê
+  vfPreBuscarProximasVF(); // não espera - roda solta em segundo plano enquanto o usuário lia
+}
+
+// tela explicativa quando não há nada disponível - substitui o antigo
+// "Nada disponível agora." genérico. motivo vem de
+// vfMontarMotivoEsgotadoVF (modo normal) ou pode ser null (varredura
+// concluída, tratado à parte com texto próprio)
+function vfMostrarTelaEsgotadoVF(motivo, ehVarredura){
+  const el = document.getElementById('vf-conteudo');
+  if(ehVarredura){
+    // varredura concluída - texto próprio (seção 5.1), sem as contagens
+    // de enterro/revisão/aprendendo que só fazem sentido no modo normal
+    const totalPool = estadoVF.pool.length;
+    const respondidasNaVarredura = estadoVF.pool.filter(q => q.ultima_resposta_em && new Date(q.ultima_resposta_em).getTime() >= new Date(filtroVF.varreduraDesde).getTime()).length;
+    const errandoNaEscada = estadoVF.pool.filter(q => q.estado === 'aprendendo').length;
+    el.innerHTML = `<div style="padding:24px 4px;color:#888;text-align:center">
+      <p>Varredura concluída: ${respondidasNaVarredura} de ${totalPool} questões, ${errandoNaEscada} erradas esperando na escada.</p>
+      <p>Desligar a varredura para revisá-las.</p>
+      <button class="btn-primario" style="margin-top:10px" onclick="vfDesligarVarreduraVF()">Desligar varredura</button>
+    </div>`;
+    return;
+  }
+  const partes = [`Esse filtro esgotou por agora.`];
+  if(motivo?.novasEnterradas > 0) partes.push(`${motivo.novasEnterradas} nova${motivo.novasEnterradas===1?'':'s'} ${motivo.novasEnterradas===1?'está':'estão'} enterrada${motivo.novasEnterradas===1?'':'s'} até amanhã (irmã${motivo.novasEnterradas===1?'':'s'} de questões que você já viu hoje).`);
+  if(motivo?.revisoesAguardando > 0){
+    const espera = motivo.menorEsperaRevisaoH != null ? ` — a próxima em ${vfFormatarHorasVF(motivo.menorEsperaRevisaoH)}` : '';
+    partes.push(`${motivo.revisoesAguardando} revis${motivo.revisoesAguardando===1?'ão':'ões'} ainda não venceu${motivo.revisoesAguardando===1?'':'ram'}${espera}.`);
+  }
+  if(motivo?.aprendendoAguardando > 0){
+    const respostas = motivo.menorEsperaAprendendoRespostas > 0 ? `mais ${motivo.menorEsperaAprendendoRespostas} resposta${motivo.menorEsperaAprendendoRespostas===1?'':'s'}` : null;
+    const horas = motivo.menorEsperaAprendendoH > 0 ? vfFormatarHorasVF(motivo.menorEsperaAprendendoH) : null;
+    const espera = respostas && horas ? `${respostas} ou em ${horas}` : (respostas || horas || 'a qualquer momento');
+    partes.push(`${motivo.aprendendoAguardando} errada${motivo.aprendendoAguardando===1?'':'s'} volta${motivo.aprendendoAguardando===1?'':'m'} depois de ${espera}.`);
+  }
+  partes.push('Amplie o filtro ou pare por aqui.');
+  el.innerHTML = `<div style="padding:24px 4px;color:#888;text-align:center">
+    <p>${partes.join(' ')}</p>
+    <button class="btn-secundario" style="margin-top:10px" onclick="alternarFiltrosVF()">Ampliar filtro</button>
+  </div>`;
+}
+function vfFormatarHorasVF(h){
+  if(h < 1) return `${Math.round(h*60)}min`;
+  return `${h.toFixed(1).replace('.0','')}h`;
 }
 
 async function mudarModuloFiltroVF(){
@@ -9535,6 +9744,24 @@ function vfRecarregarPoolComDebounceVF(){
   clearTimeout(vfTimerDebounceRecarregarPoolVF);
   vfTimerDebounceRecarregarPoolVF = setTimeout(() => {
     vfTimerDebounceRecarregarPoolVF = null;
+    if(filtroVF.varreduraDesde){
+      // trocou o filtro com a varredura ligada - pergunta se quer manter
+      // (default, só fecha) ou reiniciar a varredura pro novo filtro
+      document.getElementById('vf-confirmar-generico-btn-ok').textContent = 'Reiniciar';
+      vfAbrirConfirmacaoGenericaVF(
+        'Varredura ativa',
+        'Você mudou o filtro com a varredura ligada. Reiniciar a varredura pra esse filtro novo, ou manter de onde parou?',
+        () => {
+          filtroVF.varreduraDesde = new Date(agoraCorrigidoVF()).toISOString();
+          vfSalvarFiltroNoStorageVF();
+          recarregarPoolEContinuarVF();
+        }
+      );
+      // default (fechar sem confirmar) = manter varreduraDesde como já
+      // estava - ainda assim precisa recarregar o pool pro filtro novo
+      recarregarPoolEContinuarVF();
+      return;
+    }
     recarregarPoolEContinuarVF();
   }, 500);
 }
@@ -9553,6 +9780,70 @@ function toggleFiltroTagVF(tipo){
   btn.style.color = filtroVF[campo] ? '#fff' : '#888';
   btn.style.borderColor = filtroVF[campo] ? '#B23A34' : '#ddd';
   vfRecarregarPoolComDebounceVF();
+}
+
+// liga/desliga o modo varredura (seção 5) - ao ligar, marca o início
+// (varreduraDesde); ao desligar, avisa quantas erradas ficaram
+// esperando na escada de aprendizado
+async function vfToggleVarreduraVF(){
+  if(filtroVF.varreduraDesde){
+    await vfDesligarVarreduraVF();
+  }else{
+    filtroVF.varreduraDesde = new Date(agoraCorrigidoVF()).toISOString();
+    vfSalvarFiltroNoStorageVF();
+    vfAtualizarVisualTogglesFiltroVF();
+    await recarregarPoolEContinuarVF();
+  }
+}
+async function vfDesligarVarreduraVF(){
+  // conta ANTES de recarregar - o pool atual ainda reflete o filtro certo
+  const agoraMs = agoraCorrigidoVF();
+  const aprendendoNoFiltro = (estadoVF?.pool || []).filter(q => q.estado === 'aprendendo');
+  const elegiveisAgora = aprendendoNoFiltro.filter(q => elegibilidadeAprendendoVF(q, agoraMs, estadoVF.contadorGlobal, estadoVF.pool.length));
+  filtroVF.varreduraDesde = null;
+  vfSalvarFiltroNoStorageVF();
+  vfAtualizarVisualTogglesFiltroVF();
+  await recarregarPoolEContinuarVF();
+  vfMostrarAvisoVF(`Varredura desligada. Você tem ${aprendendoNoFiltro.length} questão${aprendendoNoFiltro.length===1?'':'ões'} na escada de aprendizado nesse filtro, ${elegiveisAgora.length} já elegível${elegiveisAgora.length===1?'':'eis'} agora.`);
+}
+
+// liga/desliga o avanço automático no acerto (seção 6) - persistido à
+// parte do filtro, padrão desligado
+function vfToggleAutoAvancoVF(){
+  const ligado = localStorage.getItem('pscpp_vf_autoavanco') === 'true';
+  try{ localStorage.setItem('pscpp_vf_autoavanco', String(!ligado)); }catch(e){}
+  vfAtualizarVisualTogglesFiltroVF();
+}
+function vfAutoAvancoLigadoVF(){
+  try{ return localStorage.getItem('pscpp_vf_autoavanco') === 'true'; }catch(e){ return false; }
+}
+// cancela o timer do avanço automático (seção 6) - chamada em qualquer
+// interação antes dele disparar: Anterior, abrir nota/favorito/editar,
+// responder de novo, avançar de qualquer outra forma
+function vfCancelarAutoAvancoVF(){
+  if(estadoVF?.autoAvancoTimer){
+    clearTimeout(estadoVF.autoAvancoTimer);
+    estadoVF.autoAvancoTimer = null;
+  }
+}
+
+// sincroniza o visual dos dois toggles novos com o estado atual - chamada
+// ao entrar no modo VF e depois de qualquer mudança neles
+function vfAtualizarVisualTogglesFiltroVF(){
+  const btnVarredura = document.getElementById('vf-toggle-varredura');
+  const bolinhaVarredura = document.getElementById('vf-toggle-varredura-bolinha');
+  if(btnVarredura && bolinhaVarredura){
+    const ligado = !!filtroVF.varreduraDesde;
+    btnVarredura.style.background = ligado ? '#B23A34' : '#ddd';
+    bolinhaVarredura.style.transform = ligado ? 'translateX(18px)' : 'translateX(0)';
+  }
+  const btnAuto = document.getElementById('vf-toggle-autoavanco');
+  const bolinhaAuto = document.getElementById('vf-toggle-autoavanco-bolinha');
+  if(btnAuto && bolinhaAuto){
+    const ligado = vfAutoAvancoLigadoVF();
+    btnAuto.style.background = ligado ? '#B23A34' : '#ddd';
+    bolinhaAuto.style.transform = ligado ? 'translateX(18px)' : 'translateX(0)';
+  }
 }
 
 // abre/fecha o bloco de filtros — começa fechado, pra não ocupar espaço
@@ -9733,7 +10024,8 @@ function renderizarItemVF(){
   const tagsPublicacao = [
     item.eh_numero ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center">NÚMERO</span>` : '',
     item.eh_lista ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center">LISTA</span>` : '',
-    item.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : ''
+    item.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : '',
+    (item.total_erros||0) >= VF_ALGO.LEECH_ERROS ? `<span style="background:#F5E6C8;color:#8A6D1D;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center" title="Errada muitas vezes - pode valer a pena reescrever, quebrar em partes menores, ou excluir">LEECH · ${item.total_erros} ERROS</span>` : ''
   ].filter(Boolean).join('');
 
   // tags customizadas (livres, criadas pelo usuário) - borda e texto na
@@ -9751,7 +10043,14 @@ function renderizarItemVF(){
     <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   </button>`;
 
+  const contadorVarreduraHtml = filtroVF.varreduraDesde ? (() => {
+    const desdeMs = new Date(filtroVF.varreduraDesde).getTime();
+    const respondidasNaVarredura = estadoVF.pool.filter(q => q.ultima_resposta_em && new Date(q.ultima_resposta_em).getTime() >= desdeMs).length;
+    return `<div style="text-align:center;font-size:var(--fs-b);font-weight:600;color:#B23A34;padding:4px 0">Varredura · ${respondidasNaVarredura} de ${estadoVF.pool.length}</div>`;
+  })() : '';
+
   el.innerHTML = `
+    ${contadorVarreduraHtml}
     <div style="display:flex;flex-direction:column;gap:2px;padding:2px 2px 14px;color:#888;font-size:var(--fs-c)">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="display:flex;align-items:center;gap:6px">${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao} certas nessa sessão <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
@@ -9885,6 +10184,7 @@ function vfIniciarEdicaoEnunciadoVF(){
   const div = document.getElementById('vf-enunciado-atual');
   if(!div || div.dataset.editando === '1') return; // já editando, não abre de novo
   div.dataset.editando = '1';
+  vfCancelarAutoAvancoVF();
   pausarTimerVF();
   const textoOriginal = item.texto;
   // padding:6px + margin:-6px se cancelam pra letra ficar exatamente onde
@@ -10495,6 +10795,7 @@ function vfIniciarEdicaoCorrecaoVF(){
   const div = document.getElementById('vf-correcao-atual');
   if(!div || div.dataset.editando === '1') return;
   div.dataset.editando = '1';
+  vfCancelarAutoAvancoVF();
   const textoOriginal = item.correcao || item.texto;
   div.innerHTML = `<textarea id="vf-textarea-correcao" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:inherit;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default">${escapeHtml(textoOriginal)}</textarea>`;
   const textarea = document.getElementById('vf-textarea-correcao');
@@ -10632,12 +10933,12 @@ async function responderVF(resposta){
   if(!estadoAntes || estadoAntes === 'nova') estadoVF.respostasDesdeUltimaNova = 0;
   else estadoVF.respostasDesdeUltimaNova = (estadoVF.respostasDesdeUltimaNova || 0) + 1;
 
-  // Regra 2 (anti-irmãs): registra a família dessa questão no buffer das
-  // últimas GAP_FAMILIA respondidas (fila - descarta a mais antiga)
-  if(item.familiaId){
-    if(!estadoVF.familiasRecentesVF) estadoVF.familiasRecentesVF = [];
-    estadoVF.familiasRecentesVF.push(item.familiaId);
-    if(estadoVF.familiasRecentesVF.length > VF_ALGO.GAP_FAMILIA) estadoVF.familiasRecentesVF.shift();
+  // enterro de irmãs até amanhã (substitui o antigo buffer GAP_FAMILIA) -
+  // não registra durante a varredura, senão ao desligar tudo estaria
+  // enterrado (a varredura ignora enterro de propósito, ver 5.1)
+  if(item.familiaId && !filtroVF.varreduraDesde){
+    familiasEnterradasVF[item.familiaId] = vfDiaLocalDeVF(agoraMs);
+    vfSalvarFamiliasEnterradasVF();
   }
 
   const contadorNoMomento = estadoVF.contadorGlobal;
@@ -10654,6 +10955,17 @@ async function responderVF(resposta){
 
   vfSalvarEClimparAnotacaoVF(entrada); // guarda o que foi desenhado como imagem e limpa o canvas, senão fica em cima do resultado
   renderizarItemVF(); // mostra o resultado na hora, sem esperar o banco
+
+  // avanço automático no acerto (seção 6) - nunca no erro (a explicação
+  // precisa ser lida). Atraso maior que a trava bloqueadoAteMs (400ms) de
+  // propósito, senão proximoVF() dispara e não faz nada por causa dela
+  vfCancelarAutoAvancoVF(); // qualquer timer de uma resposta anterior que ainda estivesse pendente
+  if(acertou && vfAutoAvancoLigadoVF() && !vfVisualizandoSalvoInfoVF){
+    estadoVF.autoAvancoTimer = setTimeout(() => {
+      estadoVF.autoAvancoTimer = null;
+      proximoVF();
+    }, VF_ALGO.AUTOAVANCO_ATRASO_MS);
+  }
 
   // registra a promise do upsert dessa questão, acessível de fora - se o
   // usuário favoritar ESSA MESMA questão rapidamente (antes do upsert
@@ -11396,6 +11708,12 @@ function vfAbrirComplementarVF(questaoVfId){
   document.getElementById('vf-complementar-btn-salvar-biblioteca').textContent = 'Salvar na biblioteca';
   vfMudarAbaComplementarVF('biblioteca');
   abrirModal('modal-complementar-vf');
+  // garante que o mapa de anexados está atualizado pro botão de fixar já
+  // aparecer certo na lista - se a lista já tiver renderizado antes
+  // dessa busca terminar, re-renderiza com os estados corretos
+  vfCarregarElementosAnexadosVF(questaoVfId).then(() => {
+    if(vfQuestaoIdComplementarAtualVF === questaoVfId) vfFiltrarBibliotecaComplementarVF();
+  });
 }
 function fecharModalComplementarVF(){
   fecharModal('modal-complementar-vf');
@@ -11639,15 +11957,67 @@ function vfMudarAbaComplementarVF(aba){
 async function vfCarregarBibliotecaComplementarVF(){
   const el = document.getElementById('vf-complementar-lista-biblioteca');
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px">Carregando...</p>';
-  const {data, error} = await sb.from('elementos_html_vf').select('id, titulo, latex_fonte').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false});
+  const [{data, error}, {data: dadosModulos}] = await Promise.all([
+    sb.from('elementos_html_vf').select('id, titulo, latex_fonte').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
+    sb.rpc('modulos_publicacoes_por_elemento_vf', {p_usuario_id: usuarioAtual.id})
+  ]);
   vfBibliotecaComplementarCacheVF = (!error && data) ? data : [];
+  // elementoId -> {modulos: Set, publicacoes: Set} - usado pro filtro de
+  // módulo/publicação. Elemento nunca anexado a nenhuma questão não
+  // aparece aqui (limitação conhecida e aceita: não dá pra inferir
+  // módulo/publicação de algo que nunca foi usado em lugar nenhum)
+  vfModulosPorElementoBibliotecaVF = new Map();
+  (dadosModulos || []).forEach(r => {
+    if(!vfModulosPorElementoBibliotecaVF.has(r.elemento_html_id)) vfModulosPorElementoBibliotecaVF.set(r.elemento_html_id, {modulos: new Set(), publicacoes: new Set()});
+    const entrada = vfModulosPorElementoBibliotecaVF.get(r.elemento_html_id);
+    if(r.modulo_pscpp) entrada.modulos.add(r.modulo_pscpp);
+    if(r.bibliografia_id) entrada.publicacoes.add(r.bibliografia_id);
+  });
   document.getElementById('vf-complementar-busca').value = '';
+  const elModulo = document.getElementById('vf-complementar-filtro-modulo');
+  const elPub = document.getElementById('vf-complementar-filtro-publicacao');
+  elModulo.value = '';
+  elPub.innerHTML = '<option value="">Todas as publicações</option>';
+  elPub.disabled = true;
+  // só módulos que realmente têm algum elemento - mostrar módulos vazios
+  // nesse filtro específico não ajudaria em nada
+  const modulosComElemento = new Set();
+  vfModulosPorElementoBibliotecaVF.forEach(entrada => entrada.modulos.forEach(m => modulosComElemento.add(m)));
+  const modulosOrdenados = Array.from(modulosComElemento).sort((a,b) => a.localeCompare(b,'pt'));
+  elModulo.innerHTML = '<option value="">Todos os módulos</option>' + modulosOrdenados.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
   vfRenderizarListaBibliotecaComplementarVF(vfBibliotecaComplementarCacheVF);
 }
 let vfBibliotecaComplementarCacheVF = []; // carregado uma vez, filtrado localmente pela busca (sem nova consulta a cada letra digitada)
+let vfModulosPorElementoBibliotecaVF = new Map();
+
+function vfMudarModuloFiltroBibliotecaVF(){
+  const modulo = document.getElementById('vf-complementar-filtro-modulo').value;
+  const elPub = document.getElementById('vf-complementar-filtro-publicacao');
+  if(!modulo){
+    elPub.innerHTML = '<option value="">Todas as publicações</option>';
+    elPub.disabled = true;
+  }else{
+    // só publicações desse módulo que realmente têm algum elemento
+    const pubsComElemento = new Set();
+    vfModulosPorElementoBibliotecaVF.forEach(entrada => { if(entrada.modulos.has(modulo)) entrada.publicacoes.forEach(p => pubsComElemento.add(p)); });
+    const pubs = bibliografiaCache.filter(b => pubsComElemento.has(b.id)).sort((a,b) => (a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+    elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p => `<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`).join('');
+    elPub.disabled = false;
+  }
+  vfFiltrarBibliotecaComplementarVF();
+}
+
 function vfFiltrarBibliotecaComplementarVF(){
   const termo = document.getElementById('vf-complementar-busca').value.trim().toLowerCase();
-  const filtrados = termo ? vfBibliotecaComplementarCacheVF.filter(item => item.titulo.toLowerCase().includes(termo)) : vfBibliotecaComplementarCacheVF;
+  const modulo = document.getElementById('vf-complementar-filtro-modulo').value;
+  const publicacao = document.getElementById('vf-complementar-filtro-publicacao').value;
+  const filtrados = vfBibliotecaComplementarCacheVF.filter(item => {
+    if(termo && !item.titulo.toLowerCase().includes(termo)) return false;
+    const entrada = vfModulosPorElementoBibliotecaVF.get(item.id);
+    if(modulo && !(entrada && entrada.modulos.has(modulo))) return false;
+    if(publicacao && !(entrada && entrada.publicacoes.has(publicacao))) return false;
+    return true;
+  });
   vfRenderizarListaBibliotecaComplementarVF(filtrados);
 }
 function vfRenderizarListaBibliotecaComplementarVF(lista){
@@ -11658,18 +12028,22 @@ function vfRenderizarListaBibliotecaComplementarVF(lista){
     return;
   }
   el.style.cssText = 'min-height:300px;max-height:50vh;overflow-y:auto';
-  el.innerHTML = lista.map(item => `
+  el.innerHTML = lista.map(item => {
+    const ligacaoId = vfLigacoesAnexadasVF.get(item.id);
+    const fixado = !!ligacaoId;
+    return `
     <div style="border:0.5px solid #eee;border-radius:10px;padding:12px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
         <span style="font-weight:600;font-size:var(--fs-d);cursor:pointer" onclick="vfTogglePreviewBibliotecaVF('${item.id}')">${escapeHtml(item.titulo)}</span>
         <div style="display:flex;gap:6px;flex-shrink:0">
-          <button class="btn-primario" style="width:auto;padding:6px 12px;font-size:var(--fs-c)" onclick="vfAnexarElementoExistenteVF('${item.id}')">Anexar</button>
+          <button style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${fixado?'#B23A34':'#ddd'};background:${fixado?'#B23A34':'#fff'};color:${fixado?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" onclick="vfToggleAnexarElementoVF('${item.id}', this)" title="${fixado?'Desafixar (deixa de aparecer na página)':'Fixar (aparece na página da questão)'}">${VF_ICONE_PIN_VF}</button>
           <button id="vf-btn-editar-biblioteca-${item.id}" class="hidden" style="width:auto;padding:6px 10px;font-size:var(--fs-c);border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;display:flex;align-items:center;justify-content:center" onclick="vfAbrirEdicaoElementoHtmlVF('${item.id}')" title="Editar"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
           <button style="width:auto;padding:6px 10px;font-size:var(--fs-c);border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#B23A34;cursor:pointer" onclick="vfExcluirElementoBibliotecaVF('${item.id}')" title="Excluir da biblioteca">✕</button>
         </div>
       </div>
       <div id="vf-preview-biblioteca-${item.id}" class="hidden" style="margin-top:10px">${formatarTextoItemVF(item.latex_fonte)}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 // modal de confirmação genérico e reutilizável - substitui confirm()
 // nativo em qualquer ação destrutiva relacionada a elementos HTML
@@ -11736,6 +12110,38 @@ function vfRenderizarListaExcluidasVF(itens){
   `).join('');
 }
 
+// lista de leeches (4+ erros) dentro do filtro atual - só visualização
+// por enquanto (sem atalho de notas/editar/excluir direto dali: o Flash
+// não tem hoje uma forma de "pular" pra uma questão específica fora do
+// fluxo normal do algoritmo, então esse atalho ficou fora do escopo)
+async function vfAbrirListaLeechesVF(){
+  const idsBibliografia = filtroVF.publicacao
+    ? [filtroVF.publicacao]
+    : (filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null);
+  const corpo = document.getElementById('vf-lista-leeches-corpo');
+  corpo.innerHTML = '<p style="text-align:center;color:#999;padding:20px 0">Carregando...</p>';
+  abrirModal('modal-lista-leeches-vf');
+  const {data, error} = await sb.rpc('listar_leeches_filtro_vf', {
+    p_usuario_id: usuarioAtual.id,
+    p_ids_bibliografia: idsBibliografia,
+    p_capitulo: filtroVF.capitulo || null,
+    p_numero: !!filtroVF.numero,
+    p_lista: !!filtroVF.lista
+  });
+  if(error){ corpo.innerHTML = `<p style="text-align:center;color:#A32D2D;padding:20px 0">Erro ao carregar: ${escapeHtml(error.message)}</p>`; return; }
+  vfRenderizarListaLeechesVF(data || []);
+}
+function vfRenderizarListaLeechesVF(itens){
+  const corpo = document.getElementById('vf-lista-leeches-corpo');
+  if(!itens.length){ corpo.innerHTML = '<p style="text-align:center;color:#999;padding:20px 0">Nenhum leech nesse filtro - nada com 4+ erros.</p>'; return; }
+  corpo.innerHTML = itens.map(item => `
+    <div style="padding:12px 0;border-bottom:0.5px solid #f0f0ee">
+      <div style="font-size:var(--fs-d)">${formatarTextoItemVF(item.texto)}</div>
+      <div style="font-size:var(--fs-a);color:#999;margin-top:4px">${item.total_erros} erro${item.total_erros===1?'':'s'} em ${item.total_respostas} tentativa${item.total_respostas===1?'':'s'}</div>
+    </div>
+  `).join('');
+}
+
 // remove o registro de exclusão - a questão volta a poder aparecer na
 // fila normalmente na próxima vez que o pool for carregado (abrir o
 // Flash de novo), não muda a sessão que já está em andamento agora
@@ -11783,16 +12189,34 @@ function vfTogglePreviewBibliotecaVF(elementoId){
   document.getElementById(`vf-preview-biblioteca-${elementoId}`).classList.toggle('hidden');
   document.getElementById(`vf-btn-editar-biblioteca-${elementoId}`)?.classList.toggle('hidden');
 }
-async function vfAnexarElementoExistenteVF(elementoHtmlId){
+// fixar/desafixar um elemento na questão atual (toggle) - mesmo padrão
+// do fixar de notas: não fecha o modal (permite fixar vários seguidos),
+// e desfixar não pede confirmação (reversível com um toque, o elemento
+// continua salvo na biblioteca de qualquer forma)
+async function vfToggleAnexarElementoVF(elementoHtmlId, botao){
   if(!vfQuestaoIdComplementarAtualVF) return;
-  const {error} = await sb.from('questao_elemento_html_vf').insert({
-    questao_vf_id: vfQuestaoIdComplementarAtualVF,
-    elemento_html_id: elementoHtmlId,
-    usuario_id: usuarioAtual.id
-  });
-  if(error && error.code !== '23505'){ vfMostrarAvisoVF('Erro ao anexar: '+error.message); return; } // 23505 = já estava anexado (unique constraint), inofensivo
-  fecharModalComplementarVF();
+  const ligacaoId = vfLigacoesAnexadasVF.get(elementoHtmlId);
+  if(ligacaoId){
+    const {error} = await sb.from('questao_elemento_html_vf').delete().eq('id', ligacaoId);
+    if(error){ vfMostrarAvisoVF('Erro ao desafixar: '+error.message); return; }
+    vfLigacoesAnexadasVF.delete(elementoHtmlId);
+  }else{
+    const {data, error} = await sb.from('questao_elemento_html_vf').insert({
+      questao_vf_id: vfQuestaoIdComplementarAtualVF,
+      elemento_html_id: elementoHtmlId,
+      usuario_id: usuarioAtual.id
+    }).select('id').single();
+    if(error && error.code !== '23505'){ vfMostrarAvisoVF('Erro ao fixar: '+error.message); return; } // 23505 = já estava anexado (unique constraint), inofensivo
+    if(data) vfLigacoesAnexadasVF.set(elementoHtmlId, data.id);
+  }
+  vfAtualizarBotaoFixarBibliotecaVF(botao, vfLigacoesAnexadasVF.has(elementoHtmlId));
   vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
+}
+function vfAtualizarBotaoFixarBibliotecaVF(botao, ativo){
+  botao.style.borderColor = ativo ? '#B23A34' : '#ddd';
+  botao.style.background = ativo ? '#B23A34' : '#fff';
+  botao.style.color = ativo ? '#fff' : '#888';
+  botao.title = ativo ? 'Desafixar (deixa de aparecer na página)' : 'Fixar (aparece na página da questão)';
 }
 // renderiza o conteúdo complementar local (se houver) - síncrono, o
 // conteúdo já vem junto no item, sem busca nenhuma. Cabeçalho "Editar"
@@ -11865,7 +12289,15 @@ async function vfCriarESalvarElementoHtmlVF(){
   }
   const {data, error} = await sb.from('elementos_html_vf').insert({usuario_id: usuarioAtual.id, titulo, latex_fonte: latexFonte}).select('id').single();
   if(error){ vfMostrarAvisoVF('Erro ao criar: '+error.message); return; }
-  await vfAnexarElementoExistenteVF(data.id);
+  const {data: ligacao, error: erroLigacao} = await sb.from('questao_elemento_html_vf').insert({
+    questao_vf_id: vfQuestaoIdComplementarAtualVF,
+    elemento_html_id: data.id,
+    usuario_id: usuarioAtual.id
+  }).select('id').single();
+  if(erroLigacao){ vfMostrarAvisoVF('Erro ao fixar: '+erroLigacao.message); return; }
+  vfLigacoesAnexadasVF.set(data.id, ligacao.id);
+  fecharModalComplementarVF();
+  vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
 }
 
 // aplica o conteúdo direto na questão atual, sem passar pela biblioteca
@@ -11897,12 +12329,18 @@ async function vfUsarComplementarLocalVF(){
 // aplicadas via pós-processamento do DOM (percorre os <td> já
 // renderizados, atribui um identificador de posição determinístico, e
 // se houver anotação salva pra aquele identificador, deixa clicável) ----
+// elementoId -> ligacaoId, dos elementos já anexados à questão atual -
+// usado pra saber, ao renderizar a lista da biblioteca, quais mostrar
+// como "já anexado" (botão de fixar ativo), e pra poder desanexar direto
+// dali sem precisar buscar de novo qual é o id da ligação
+let vfLigacoesAnexadasVF = new Map();
 async function vfCarregarElementosAnexadosVF(questaoVfId){
   const container = document.getElementById('vf-elementos-html-anexados');
   if(!container) return;
   const {data} = await sb.from('questao_elemento_html_vf')
     .select('id, elemento_html_id, elementos_html_vf(id, titulo, latex_fonte)')
     .eq('questao_vf_id', questaoVfId).eq('usuario_id', usuarioAtual.id).order('criado_em');
+  vfLigacoesAnexadasVF = new Map((data||[]).map(l => [l.elemento_html_id, l.id]));
   if(!data || !data.length){ container.innerHTML = ''; return; }
   const blocos = await Promise.all(data.map(async (ligacao) => {
     const elemento = ligacao.elementos_html_vf;
@@ -12018,6 +12456,7 @@ async function vfDesanexarElementoVF(ligacaoId, questaoVfId){
 
 async function abrirNotaVF(questaoVfId){
   pausarTimerVF(); // abrir Notas/Excluir com questão pendente conta como sair da tela — você está escrevendo, não lendo a afirmação
+  vfCancelarAutoAvancoVF();
   questaoNotaVfAtual = questaoVfId;
   document.getElementById('texto-nota-vf').value = '';
   document.getElementById('lista-notas-vf').innerHTML = '';
@@ -12034,11 +12473,10 @@ async function renderizarListaNotasVF(){
   const el = document.getElementById('lista-notas-vf');
   const {data} = await sb.from('notas_vf').select('id, texto, criado_em, fixada').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false});
   if(!data || !data.length){ el.innerHTML = ''; el.style.maxHeight = '0px'; return; }
-  const iconePin = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-7.5 8-13a8 8 0 0 0-16 0c0 5.5 8 13 8 13z"/><circle cx="12" cy="9" r="3"/></svg>';
   el.innerHTML = `<div style="margin-bottom:14px">` + data.map(n => `
     <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
       <div style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${formatarTextoItemVF(n.texto)}</div>
-      <button onclick="vfAlternarFixarNotaVF('${n.id}')" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.fixada?'#B23A34':'#ddd'};background:${n.fixada?'#B23A34':'#fff'};color:${n.fixada?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.fixada?'Desafixar (deixa de aparecer na página)':'Fixar (aparece na página da questão)'}">${iconePin}</button>
+      <button onclick="vfAlternarFixarNotaVF('${n.id}')" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.fixada?'#B23A34':'#ddd'};background:${n.fixada?'#B23A34':'#fff'};color:${n.fixada?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.fixada?'Desafixar (deixa de aparecer na página)':'Fixar (aparece na página da questão)'}">${VF_ICONE_PIN_VF}</button>
       <button onclick="excluirNotaVF('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
     </div>`).join('') + `</div>`;
   // altura grande o bastante pra caber qualquer lista realista de notas -
@@ -12070,6 +12508,7 @@ function vfFecharModalExplicacaoVF(){
 }
 
 function abrirExplicacaoVF(questaoVfId){
+  vfCancelarAutoAvancoVF();
   vfQuestaoIdExplicacaoAtual = questaoVfId;
   const entrada = estadoVF.historico.find(h => h.item.id === questaoVfId);
   const el = document.getElementById('conteudo-explicacao-vf');
@@ -12244,6 +12683,7 @@ async function vfAlternarFixarNotaVF(notaId){
 let questaoVfParaExcluir = null;
 function abrirConfirmacaoExclusaoVF(questaoVfId){
   pausarTimerVF();
+  vfCancelarAutoAvancoVF();
   questaoVfParaExcluir = questaoVfId;
   document.getElementById('motivo-exclusao-vf').value = '';
   abrirModal('modal-confirmar-exclusao-vf');
@@ -12286,6 +12726,7 @@ async function confirmarExclusaoVF(){
 async function proximoVF(){
   if(!estadoVF) return;
   if(agoraCorrigidoVF() < (estadoVF.bloqueadoAteMs||0)) return; // toque duplo acidental logo após responder — o botão mudou de Verdadeiro/Falso pra Próxima na mesma posição física
+  vfCancelarAutoAvancoVF();
   vfDespausarSeNecessarioVF(); // avançar é sinal claro de que está ativo, mesmo raciocínio de responderVF
   if(vfVisualizandoSalvoInfoVF){ vfSairDoModoVisualizacaoSalvoVF(); renderizarItemVF(); return; } // "Próxima" a partir de uma visualização de salvo só volta pra sessão real - não avança a partir da posição antiga
   if(estadoVF.posicao < estadoVF.historico.length - 1){
@@ -12310,6 +12751,7 @@ async function proximoVF(){
 function anteriorVF(){
   if(!estadoVF || estadoVF.posicao <= 0) return;
   if(agoraCorrigidoVF() < (estadoVF.bloqueadoAteMs||0)) return; // mesma trava de toque duplo acidental logo após responder
+  vfCancelarAutoAvancoVF();
   if(vfVisualizandoSalvoInfoVF){ vfSairDoModoVisualizacaoSalvoVF(); renderizarItemVF(); return; } // mesmo raciocínio de proximoVF - só volta pra sessão real
   // mesmo achado real de avancarParaProximaVF: força o salvamento de
   // qualquer edição pendente ANTES de mudar estadoVF.posicao, senão o
