@@ -76,7 +76,7 @@ scroll nativo em paralelo durante a pequena janela de movimento antes
 do sistema JS decidir se foi um toque ou um traço de desenho. Global
 em todo botão do app teria efeito colateral no scroll normal com o
 dedo fora desse contexto */
-#aba-vf button, #quests-resolucao button{touch-action:none}
+#aba-vf button, #quests-resolucao button{touch-action:pan-y}
 label{-webkit-tap-highlight-color:transparent}
 button, [onclick]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* elementos clicáveis que não são <button> (divs com onclick, cards,
@@ -1539,7 +1539,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       <datalist id="vf-tags-datalist"></datalist>
       <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfAdicionarTagVF()">+</button>
     </div>
-    <p id="vf-tags-status" style="font-size:var(--fs-c);margin-top:6px;min-height:2.8em;line-height:1.4"></p>
+    <p id="vf-tags-status" style="font-size:var(--fs-c);margin-top:6px;min-height:1.4em;line-height:1.4"></p>
     <button class="btn-secundario" style="width:100%;margin-top:14px" onclick="vfFecharPopupTagsVF()">Fechar</button>
   </div>
 </div>
@@ -1839,7 +1839,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-542';
+const VERSAO_APP = '2026-07-25-544';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
