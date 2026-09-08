@@ -1671,7 +1671,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="modal-lista-excluidas-vf" onclick="if(event.target===this) fecharModal('modal-lista-excluidas-vf')">
+<div class="modal-overlay hidden" id="modal-lista-excluidas-vf" style="z-index:410" onclick="if(event.target===this) fecharModal('modal-lista-excluidas-vf')">
   <div class="modal-conteudo" style="max-width:600px;max-height:80vh;display:flex;flex-direction:column">
     <h3 class="config-title">Excluídas nesse filtro</h3>
     <div id="vf-lista-excluidas-corpo" style="overflow-y:auto;flex:1;min-height:0"></div>
@@ -1679,7 +1679,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="modal-lista-leeches-vf" onclick="if(event.target===this) fecharModal('modal-lista-leeches-vf')">
+<div class="modal-overlay hidden" id="modal-lista-leeches-vf" style="z-index:410" onclick="if(event.target===this) fecharModal('modal-lista-leeches-vf')">
   <div class="modal-conteudo" style="max-width:600px;max-height:80vh;display:flex;flex-direction:column">
     <h3 class="config-title">Leeches (4+ erros)</h3>
     <p style="color:#888;font-size:var(--fs-c);margin:-8px 0 10px">Questões que você errou muitas vezes - pode valer a pena reescrever, quebrar em partes menores, ou excluir.</p>
@@ -1839,7 +1839,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-544';
+const VERSAO_APP = '2026-07-25-545';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
