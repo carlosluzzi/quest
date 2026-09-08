@@ -979,6 +979,14 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
           <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333">Varredura (sem repetir) <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-varredura-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
           <button id="vf-toggle-varredura" onclick="vfToggleVarreduraVF()" style="width:44px;height:26px;border-radius:13px;border:none;background:#ddd;position:relative;cursor:pointer;flex-shrink:0;transition:background 0.2s"><span id="vf-toggle-varredura-bolinha" style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:transform 0.2s"></span></button>
         </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
+          <div style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;margin-bottom:6px">Novas <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-nova-a-cada-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></div>
+          <div style="display:flex;gap:6px">
+            <button id="vf-nova-a-cada-3" onclick="vfTrocarNovaACadaVF(3)" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">1 a cada 3</button>
+            <button id="vf-nova-a-cada-2" onclick="vfTrocarNovaACadaVF(2)" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">1 a cada 2</button>
+            <button id="vf-nova-a-cada-1.5" onclick="vfTrocarNovaACadaVF(1.5)" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">2 a cada 3</button>
+          </div>
+        </div>
       </div>
     </div>
     <div id="vf-conteudo" style="padding-bottom:170px;position:relative">
@@ -1417,6 +1425,14 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-info-nova-a-cada-vf">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Novas</h3>
+    <p>Quantas das próximas respostas serão questões nunca vistas. Revisão vencida há mais de 3× o intervalo passa na frente mesmo assim.</p>
+    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-nova-a-cada-vf')">Fechar</button>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-info-filtro-termo">
   <div class="modal-conteudo">
     <h3 class="config-title">Palavra-chave (pt ou en)</h3>
@@ -1529,11 +1545,6 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
         <button class="btn-secundario" style="flex:1" onclick="naoEnviarTracker()">Não enviar</button>
         <button class="btn-primario" style="flex:1" id="btn-confirmar-envio-tracker" onclick="confirmarEnvioTracker()">Enviar</button>
       </div>
-    </div>
-    <div id="resultado-envio-tracker" class="hidden">
-      <h3 class="config-title">PSCPP Tracker</h3>
-      <p id="texto-resultado-envio-tracker"></p>
-      <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-envio-tracker')">Fechar</button>
     </div>
   </div>
 </div>
@@ -1721,6 +1732,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   <div class="modal-conteudo">
     <h3 class="config-title" id="vf-aviso-titulo">Aviso</h3>
     <p id="vf-aviso-texto" style="white-space:pre-line"></p>
+    <button class="btn-secundario hidden" style="width:100%;margin-bottom:8px" id="vf-aviso-botao-extra"></button>
     <button class="btn-primario" style="width:100%" onclick="vfFecharAvisoVF()">OK</button>
   </div>
 </div>
@@ -1893,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-08-566';
+const VERSAO_APP = '2026-09-08-573';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -1952,13 +1964,16 @@ function saudacaoHora(){
   return 'Boa noite';
 }
 
+// data prevista do PSCPP - compartilhada entre a contagem regressiva da
+// Início e a consciência de prova do algoritmo de repetição (VF_ALGO)
+const PSCPP_DATA_PROVA_MS = new Date(2027, 10, 6).getTime(); // mês é 0-indexado: 10 = novembro
+
 // contagem regressiva de dias até a data prevista do PSCPP — atualizada
 // junto com a saudação, toda vez que a aba Início carrega
 function diasAteOPscpp(){
   const hoje = new Date();
   hoje.setHours(0,0,0,0);
-  const dataPscpp = new Date(2027, 10, 6); // mês é 0-indexado: 10 = novembro
-  const diffMs = dataPscpp - hoje;
+  const diffMs = PSCPP_DATA_PROVA_MS - hoje.getTime();
   return Math.max(0, Math.ceil(diffMs / (1000*60*60*24)));
 }
 
@@ -4139,7 +4154,7 @@ const VF_FONTE_TABELA = `'Charter','Iowan Old Style',Georgia,'Times New Roman',s
 // nas notas quanto nos elementos complementares anexados: fixa = aparece
 // na página principal da questão
 const VF_ICONE_PIN_VF = '<svg viewBox="0 0 32 32" width="16" height="16" fill="none"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M28 11.333L20.667 4l-6.076 6.38a2 2 0 01-1.448.62H9.414c-.89 0-1.337 1.077-.707 1.707l10.586 10.586c.63.63 1.707.184 1.707-.707v-3.729a2 2 0 01.62-1.448L28 11.333zM14 18l-8 8"/></svg>';
-const VF_ICONE_MNEMONICO_VF = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" d="M5.00004 6.5C5.00004 5.67157 5.67161 5 6.50004 5H17.5C18.3285 5 19 5.67157 19 6.5V17.5C19 18.3284 18.3285 19 17.5 19H6.50004C5.67162 19 5.00004 18.3284 5.00004 17.5V6.5ZM6.50004 6.5H9.00004V8H6.50004V6.5ZM9.00004 9.66667H6.50004V11.1667H9.00004V9.66667ZM6.50004 12.8333H9.00004V14.3333H6.50004V12.8333ZM9.00004 16H6.50004V17.5H9.00004V16ZM10.7501 6.5H13.2501V8H10.7501V6.5ZM13.25 9.66667H10.75V11.1667H13.25V9.66667ZM10.75 12.8333H13.25V14.3333H10.75V12.8333ZM13.25 16H10.75V17.5H13.25V16ZM15 6.5H17.5V8H15V6.5ZM17.5 9.66667H15V11.1667H17.5V9.66667ZM15 12.8333H17.5V14.3333H15V12.8333ZM17.5 16H15V17.5H17.5V16Z"/></svg>';
+const VF_ICONE_MNEMONICO_VF = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.3" fill="currentColor"/><rect x="13" y="4" width="7" height="7" rx="1.3" fill="currentColor"/><rect x="4" y="13" width="7" height="7" rx="1.3" fill="currentColor"/><rect x="13" y="13" width="7" height="7" rx="1.3" fill="currentColor"/></svg>';
 
 // processa o conteúdo de uma célula de tabela: comandos específicos de
 // célula primeiro (\text{}, vírgula decimal {,}, espaço fino \,), depois
@@ -4400,7 +4415,7 @@ function vfProcessarSideBySideVF(texto){
     };
     const tabela1 = extrairArray(grupo1.conteudo);
     const tabela2 = extrairArray(grupo2.conteudo);
-    resultado += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-family:${VF_FONTE_TABELA};margin:10px 0">${tabela1}${tabela2}</div>`;
+    resultado += `<div style="display:grid;grid-template-columns:auto auto;justify-items:start;gap:16px;font-family:${VF_FONTE_TABELA};margin:10px 0">${tabela1}${tabela2}</div>`;
     pos = grupo2.fimPos + 1;
     regexInicio.lastIndex = pos;
   }
@@ -4540,8 +4555,13 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     // alguns símbolos matemáticos são desenhados pelas fontes com altura
     // visual bem menor que letras/números normais, mesmo com o mesmo
     // font-size (parecem "pequenos"/perdidos no meio do texto) - aumenta
-    // esses especificamente pra ficarem no mesmo porte visual do resto
-    .replace(/[∼≈∝∘≃≅]/g, (s) => `<span style="font-size:1.7em;line-height:0.75;display:inline-block;vertical-align:-0.15em">${s}</span>`);
+    // esses especificamente pra ficarem no mesmo porte visual do resto.
+    // Achado real: 1.7em (tentativa anterior) exagerava demais - o texto
+    // ao lado (ex: a fração de "∼ 1/3") parecia menor/deslocado só por
+    // comparação de tamanho, mesmo estando na mesma linha de base.
+    // 1.2em com vertical-align neutro (0) resolve isso, mantendo o
+    // símbolo visível sem desproporção
+    .replace(/[∼≈∝∘≃≅]/g, (s) => `<span style="font-size:1.2em;line-height:0.75;display:inline-block;vertical-align:0em">${s}</span>`);
 }
 
 // extrai \begin{array}...\end{array} do texto CRU (antes do escapeHtml),
@@ -4821,23 +4841,47 @@ let offsetRelogioVF = 0;
 function agoraCorrigidoVF(){ return Date.now() + offsetRelogioVF; }
 
 const VF_ALGO = {
-  FATOR_INI: 2.2, FATOR_MIN: 1.3, FATOR_MAX: 2.8, // inalterado
-  PRIMEIRO_ACERTO_H: 24,                          // inalterado
-  GRADUA_NOVA_H: 12,                              // inalterado
-  QUEDA_MANTEM: 0.30, QUEDA_MIN_H: 12, QUEDA_MAX_H: 72, // inalterado
-  BONUS_MIN: 0.6, BONUS_MAX: 1.5, // era 0.6-1.3 (hardcoded no clamp) - sobe o teto: acerto rápido em nova nasce com até 36h, já que velocidade prevê memória (100% de acerto na próxima aparição quando respondida em <80% do tempo esperado)
-  DEGRAUS_NOVA: [60],  // era [6, 20] - um só degrau: o segundo não trazia informação (91% de acerto voltando pela escada, sem ensinar nada)
-  DEGRAUS_QUEDA: [40], // era [6] - revisão errada volta depois de 40 respostas: a memória já existia antes, precisa de menos reforço que uma nova
-  TMIN_DEGRAU_MIN: [60], // era [2, 10] - mínimo de 60 min de relógio além das respostas, pra não repetir só porque poucas outras questões passaram rápido
-  ESCAPE_H: [12], // era [6, 12] - se parou de estudar, fica elegível 12h depois (próxima sessão), não importa o contador de respostas
-  TETO_H: 2160, FUZZ: 0.05, JITTER_FILA: 0.02, BOOST_FAVORITO: 1.25, NOVA_A_CADA: 3, // inalterados
-  RAZAO_MINIMA_REVISAO: 0.5, // NOVO - sem nova/aprendendo elegível, só serve revisão com pelo menos metade do intervalo vencido (revisão atrasada demais tem taxa de acerto muito pior - dado real: <200% do intervalo = 92%, acima disso = 78%, mas servir MUITO antes do prazo é ainda pior, tipo 1% do intervalo vencido, que não ensina nada)
-  LEECH_ERROS: 4           // NOVO - questão com 4+ erros ganha marca visível (leech, termo do Anki)
+  FATOR_INI: 2.5, FATOR_MIN: 1.3, FATOR_MAX: 3.2,   // era 2.2 / 1.3 / 2.8 - retenção medida a 3 dias = 90%, a curva do Carlos é mais lenta que a do SM-2
+  PRIMEIRO_ACERTO_H: 72,      // era 24 - acerto em nova vai pra 3 dias (com bônus 0.6-1.5: 43h a 108h)
+  GRADUA_NOVA_H: 36,          // era 12 - saiu da escada, volta em 1.5 dia
+  QUEDA_MANTEM: 0.30, QUEDA_MIN_H: 24, QUEDA_MAX_H: 120, // era 12/72 - queda em revisão volta entre 1 e 5 dias
+  BONUS_MIN: 0.6, BONUS_MAX: 1.5,
+  DEGRAUS_NOVA: [60], DEGRAUS_QUEDA: [40], TMIN_DEGRAU_MIN: [60], ESCAPE_H: [12], // inalterados
+  TETO_H: 4320,               // era 2160 - 180 dias; a prova é em 14 meses e cartão bem sabido não precisa voltar a cada 3 meses
+  FUZZ: 0.05, JITTER_FILA: 0.02, BOOST_FAVORITO: 1.25,
+  NOVA_A_CADA: 2,             // PADRÃO agora 2 (50%); configurável na UI entre 3, 2 e 1.5 (ver vfNovaACadaAtualVF)
+  RAZAO_MINIMA_REVISAO: 0.5,
+  RAZAO_FURA_NOVA: 3.0,       // NOVO - no turno da nova, só revisão com >= 300% do intervalo vencido passa na frente (dados: acerto cai de 88% pra 80% só acima disso)
+  LEECH_ERROS: 4,
+  // NOVO - multiplicador do PRIMEIRO intervalo (e do GRADUA_NOVA_H) por módulo, calibrado no acerto medido por módulo. Recalibrado mensalmente
+  MULT_MODULO: {'Legislação': 0.5, 'Arte Naval': 0.6, 'Navegação em Águas Restritas': 0.7, 'Manobrabilidade': 1.0, 'Meteorologia e Oceanografia': 1.0, 'Comunicações': 0.7, 'Conhecimentos Gerais': 0.7},
+  // NOVO - consciência da prova
+  DATA_PROVA_MS: PSCPP_DATA_PROVA_MS, // mesma constante que a contagem regressiva da Início usa - evita duplicar a data em dois lugares
+  RETA_FINAL_DIAS: 45,        // nos últimos 45 dias: teto de 15 dias e alvo de retenção mais alto
+  RETA_FINAL_TETO_H: 360,
+  RETA_FINAL_FATOR: 0.7
   // GAP_FAMILIA foi removido - substituído pelo enterro de irmãs até o dia seguinte (familiasEnterradasVF, registrado em responderVF), mais rígido que o antigo buffer de 15 respostas
 };
 
 function clampVF(v, min, max){ return Math.max(min, Math.min(max, v)); }
 function esperadoSegundosVF(nPalavras){ return 1.5 + 0.35 * (nPalavras || 10); }
+
+// consciência da prova: nunca agenda pra depois da data da prova, e nos
+// últimos 45 dias reduz o teto de intervalo e encolhe o fator (retenção
+// mais alta pra passada final) - aplicada a QUALQUER intervalo final de
+// acerto (nova virando revisão pela primeira vez, ou revisão continuando
+// revisão), sempre antes do fuzz. Função à parte porque os dois pontos
+// de chamada em registrarRespostaAlgoritmoVF precisam do mesmo cálculo
+function vfAplicarConscienciaDaProvaVF(intervaloHoras, agoraMs){
+  const horasAteProva = (VF_ALGO.DATA_PROVA_MS - agoraMs) / 3600000;
+  let teto = VF_ALGO.TETO_H;
+  let novo = intervaloHoras;
+  if(horasAteProva <= VF_ALGO.RETA_FINAL_DIAS * 24){
+    teto = Math.min(teto, VF_ALGO.RETA_FINAL_TETO_H);
+    novo *= VF_ALGO.RETA_FINAL_FATOR;
+  }
+  return Math.min(novo, teto, Math.max(24, horasAteProva - 24)); // nunca agenda depois da prova
+}
 
 // ao registrar uma resposta: recebe o estado ATUAL da questão pra esse
 // usuário e devolve o NOVO estado. Não mexe no banco — quem chama decide
@@ -4847,6 +4891,12 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
   const nPalavras = estadoAnterior.n_palavras || 10;
   const v = tempo_s / esperadoSegundosVF(nPalavras);
   const bonus = clampVF(1.2 - 0.3 * Math.log2(Math.max(v, 1e-6)), VF_ALGO.BONUS_MIN, VF_ALGO.BONUS_MAX);
+  // multiplicador de intervalo por módulo (Legislação/Arte Naval/Águas
+  // Restritas ficam mais curtos - retenção medida por módulo é pior
+  // neles). estadoAnterior é o item inteiro do pool, já carrega
+  // bibliografia_id
+  const modulo = vfBibliografiaCache.get(estadoAnterior.bibliografia_id)?.modulo_pscpp;
+  const mult = VF_ALGO.MULT_MODULO[modulo] ?? 1;
 
   const q = {...estadoAnterior};
   if(!q.estado) q.estado = 'nova';
@@ -4855,14 +4905,14 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
   if(q.estado === 'nova'){
     if(acertou){
       q.estado = 'revisao';
-      q.intervalo_horas = VF_ALGO.PRIMEIRO_ACERTO_H * bonus;
+      q.intervalo_horas = vfAplicarConscienciaDaProvaVF(VF_ALGO.PRIMEIRO_ACERTO_H * bonus * mult, agoraMs);
       if(v < 0.8) q.fator = Math.min(VF_ALGO.FATOR_MAX, q.fator + 0.1);
     }else{
       // um acerto gradua (total_degraus=1) - o segundo degrau da escada
       // antiga (total_degraus=2) não trazia informação nenhuma: 91% de
       // acerto voltando por ele, só memória de curtíssimo prazo
       q.estado = 'aprendendo'; q.degrau = 0; q.total_degraus = 1;
-      q.intervalo_pendente = VF_ALGO.GRADUA_NOVA_H;
+      q.intervalo_pendente = VF_ALGO.GRADUA_NOVA_H * mult;
       q.origem_escada = 'nova'; // só em memória, sem coluna no banco - ver elegibilidadeAprendendoVF
       q.fator = Math.max(VF_ALGO.FATOR_MIN, q.fator - 0.2);
     }
@@ -4882,14 +4932,23 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
     const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
     const r = decorridoH / q.intervalo_horas;
     if(acertou){
-      const base = r < 1 ? decorridoH : q.intervalo_horas + (decorridoH - q.intervalo_horas) / 2;
+      // crédito integral pelo atraso (FSRS): revisão vencida há 5 dias e
+      // acertada não é uma questão "de 1 dia" que atrasou, é uma questão
+      // de 5 dias - antes só dava metade do crédito (I + (t-I)/2)
+      const base = Math.max(decorridoH, q.intervalo_horas);
       let novo = Math.max(q.intervalo_horas, base * q.fator * bonus);
       if(r >= 0.5){
         const delta = v < 0.8 ? 0.1 : (v > 1.5 ? -0.05 : 0);
         q.fator = clampVF(q.fator + delta, VF_ALGO.FATOR_MIN, VF_ALGO.FATOR_MAX);
       }
       const fuzz = 1 + (Math.random()*2 - 1) * VF_ALGO.FUZZ;
-      q.intervalo_horas = Math.min(VF_ALGO.TETO_H, novo * fuzz);
+      // consciência da prova aplicada DEPOIS do fuzz (não antes, como o
+      // plano original descrevia) - achado real testando: com o fuzz
+      // (±5%) aplicado depois do teto/limite da prova, o resultado final
+      // podia ultrapassar esse limite em até 5%, violando "nunca agenda
+      // depois da prova" de forma absoluta. Aplicando por último, o
+      // limite é sempre respeitado, com ou sem fuzz por cima
+      q.intervalo_horas = vfAplicarConscienciaDaProvaVF(novo * fuzz, agoraMs);
     }else{
       q.estado = 'aprendendo'; q.degrau = 0; q.total_degraus = 1;
       q.intervalo_pendente = clampVF(VF_ALGO.QUEDA_MANTEM * q.intervalo_horas, VF_ALGO.QUEDA_MIN_H, VF_ALGO.QUEDA_MAX_H);
@@ -4907,11 +4966,14 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
 
 function elegibilidadeAprendendoVF(q, agoraMs, contadorGlobal, tamanhoPool){
   // origem_escada só existe em memória (sem coluna no banco) - se a
-  // questão acabou de vir de uma recarga de pool, usa o fallback: mesmo
-  // valor de GRADUA_NOVA_H (12h) só acontece nesse cenário específico de
-  // nova, já que queda usa clamp(30% do intervalo, 12h, 72h) e só bate
-  // 12h exato quando o intervalo era pequeno - caso raro, mas plausível
-  const origem = q.origem_escada || (q.intervalo_pendente === VF_ALGO.GRADUA_NOVA_H ? 'nova' : 'queda');
+  // questão acabou de vir de uma recarga de pool, usa o fallback:
+  // intervalo_pendente batendo com GRADUA_NOVA_H (multiplicado pelo mult
+  // de QUALQUER módulo - varia por módulo agora, não é mais um valor
+  // único) só acontece nesse cenário específico de nova, já que queda usa
+  // clamp(30% do intervalo, min, max) e só bateria por coincidência exata
+  const multiplicadoresPossiveis = [1, ...Object.values(VF_ALGO.MULT_MODULO)];
+  const pareceGraduaNovaVF = multiplicadoresPossiveis.some(m => Math.abs(q.intervalo_pendente - VF_ALGO.GRADUA_NOVA_H * m) < 0.01);
+  const origem = q.origem_escada || (pareceGraduaNovaVF ? 'nova' : 'queda');
   const degraus = origem === 'nova' ? VF_ALGO.DEGRAUS_NOVA : VF_ALGO.DEGRAUS_QUEDA;
   const K = degraus[q.degrau];
   const K_eff = Math.min(K, tamanhoPool - 1);
@@ -4971,12 +5033,13 @@ function vfCalcularFamiliasNoPoolVF(pool){
 
 // escolhe a próxima questão do pool (modo normal - ver
 // vfEscolherProximaVarreduraVF pro modo varredura, que é bem diferente)
-function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendizado, sementeSessao, respostasDesdeUltimaNova){
+function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendizado, sementeSessao, creditoNovaVF, respostasDesdeUltimaNova, ultimoTurnoNovaFuradoVF){
   const aprendendo = pool.filter(q => q.estado === 'aprendendo' && elegibilidadeAprendendoVF(q, agoraMs, contadorGlobal, pool.length));
   aprendendo.sort((a,b) => (a.marca_contador||0) - (b.marca_contador||0));
 
   const rn = [];
   const novas = [];
+  const novasEnterradas = [];
   pool.forEach(q => {
     if(q.estado === 'revisao'){
       const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
@@ -4990,11 +5053,17 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
       // dados reais) não ensina nada, só rouba o lugar de uma nova
       if(razao < VF_ALGO.RAZAO_MINIMA_REVISAO) return;
       const jitter = 1 + (pseudoAleatorioVF(sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
-      rn.push({score: razao * jitter, item: q});
+      rn.push({score: razao * jitter, razao, item: q});
     }else if(!q.estado || q.estado === 'nova'){
-      // nova cuja família já foi respondida hoje fica de fora - enterrada
-      // até amanhã (substitui o antigo GAP_FAMILIA)
-      if(vfFamiliaEnterradaHojeVF(q.familiaId, agoraMs)) return;
+      // nova cuja família já foi respondida hoje - o enterro é uma
+      // PREFERÊNCIA (evita que a irmã tome o lugar de uma nova de outra
+      // família), não um bloqueio: ela fica de fora da disputa normal,
+      // mas é guardada à parte (novasEnterradas) pra ser usada como
+      // último recurso mais abaixo, quando não sobra mais nada
+      if(vfFamiliaEnterradaHojeVF(q.familiaId, agoraMs)){
+        novasEnterradas.push({item: q, msEnterro: vfMomentoEnterroVF(q.familiaId)});
+        return;
+      }
       // favorita nova fica em 1.0 normal (na prática nem acontece, só dá
       // pra favoritar o que já foi visto) - sem boost aqui de propósito
       const jitter = 1 + (pseudoAleatorioVF(sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
@@ -5005,24 +5074,57 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
   });
   rn.sort((a,b) => b.score - a.score);
   novas.sort((a,b) => b.score - a.score);
+  // mais antiga enterrada primeiro (desempate útil: prioriza quem está
+  // "esperando" há mais tempo entre as irmãs represadas)
+  novasEnterradas.sort((a,b) => a.msEnterro - b.msEnterro);
 
   if(aprendendo.length && !(anteriorVeioDeAprendizado && rn.length)){
     // fila de aprendizado ignora a família DE PROPÓSITO - questão
     // voltando pelos degraus é o mesmo cartão se reforçando, isso é
     // intencional e não pode ser bloqueado pelo enterro de irmãs
-    return {item: aprendendo[0], veioDeAprendizado: true};
+    return {item: aprendendo[0], veioDeAprendizado: true, furou: ultimoTurnoNovaFuradoVF};
   }
 
-  // Regra 1 (fluxo garantido de novas): se já faz tempo sem servir uma
-  // nova e existe alguma disponível (não enterrada), prioriza ela
-  if(respostasDesdeUltimaNova >= VF_ALGO.NOVA_A_CADA - 1 && novas.length){
-    return {item: novas[0].item, veioDeAprendizado: false};
+  // Regra 1 (fluxo garantido de novas): crédito acumulado (v3) reproduz
+  // exatamente a proporção escolhida (33/50/67%), em vez de comparar
+  // "respostas desde a última nova" com um limiar fixo - substitui
+  // respostasDesdeUltimaNova na decisão (mantido como parâmetro só por
+  // compatibilidade do estado de sessão já salvo). Usa novasEnterradas
+  // como fallback quando não há nova livre - mantém o ritmo mesmo quando
+  // só sobraram irmãs represadas (o enterro é preferência, não bloqueio)
+  if(creditoNovaVF >= 1 && (novas.length || novasEnterradas.length)){
+    // exceção: revisão MUITO vencida (razão >= RAZAO_FURA_NOVA) passa na
+    // frente da nova garantida - é o que está prestes a ser esquecido de
+    // verdade. Mas fura no MÁXIMO 1 turno de nova a cada 2 (alternância
+    // estrita via furou/ultimoTurnoNovaFuradoVF) - sem esse limite, um
+    // backlog de centenas de "muito vencidas" (caso real depois de vários
+    // dias sem estudar) zerava as novas por um dia inteiro, o oposto do
+    // objetivo da v3. Com o backlog crítico esvaziando (cada uma
+    // acertada pula pra dias/semanas pelo crédito integral), a exceção
+    // some sozinha e o ritmo configurado volta a valer
+    const muitoVencida = rn.find(c => c.item.estado === 'revisao' && c.razao >= VF_ALGO.RAZAO_FURA_NOVA);
+    if(muitoVencida && !ultimoTurnoNovaFuradoVF){
+      return {item: muitoVencida.item, veioDeAprendizado: false, furou: true};
+    }
+    const proximaNova = novas.length ? novas[0].item : novasEnterradas[0].item;
+    return {item: proximaNova, veioDeAprendizado: false, furou: false};
   }
 
   // rn já mistura revisões (com razão >= 0.5) e novas (não enterradas),
   // ordenadas por score - pega a melhor das duas categorias juntas
   if(rn.length){
-    return {item: rn[0].item, veioDeAprendizado: false};
+    return {item: rn[0].item, veioDeAprendizado: false, furou: ultimoTurnoNovaFuradoVF};
+  }
+
+  // último recurso antes de esgotado: o enterro de irmãs é uma
+  // PREFERÊNCIA (evita que a irmã tome o lugar de uma nova de outra
+  // família enquanto há opção), não um bloqueio - se não sobrou mais
+  // nada além de irmãs represadas, elas vêm. É muito melhor que "pare
+  // por aqui" quando há dezenas de questões nunca vistas esperando só
+  // porque a família foi vista mais cedo hoje. Prioriza a enterrada há
+  // mais tempo (novasEnterradas já vem ordenada assim)
+  if(novasEnterradas.length){
+    return {item: novasEnterradas[0].item, veioDeAprendizado: false, furou: ultimoTurnoNovaFuradoVF};
   }
 
   // aprendendo NÃO elegível não entra mais como último recurso aqui -
@@ -5034,13 +5136,12 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendiz
 }
 
 // monta as contagens pra explicar por que esgotou - usado na tela de
-// "filtro esgotado" (avancarParaProximaVF)
+// "filtro esgotado" (avancarParaProximaVF). Não conta mais novas
+// enterradas: chegar até aqui significa que não sobrou nenhuma (livre ou
+// enterrada) - o enterro de irmãs é preferência, não bloqueio, e
+// escolherProximaVF já serve a enterrada como último recurso antes de
+// esgotar de verdade
 function vfMontarMotivoEsgotadoVF(pool, agoraMs, contadorGlobal){
-  let novasEnterradas = 0;
-  pool.forEach(q => {
-    if((!q.estado || q.estado === 'nova') && vfFamiliaEnterradaHojeVF(q.familiaId, agoraMs)) novasEnterradas++;
-  });
-
   let revisoesAguardando = 0;
   let menorEsperaRevisaoH = null;
   pool.forEach(q => {
@@ -5078,7 +5179,6 @@ function vfMontarMotivoEsgotadoVF(pool, agoraMs, contadorGlobal){
   });
 
   return {
-    novasEnterradas,
     revisoesAguardando, menorEsperaRevisaoH,
     aprendendoAguardando, menorEsperaAprendendoRespostas, menorEsperaAprendendoH
   };
@@ -5181,15 +5281,25 @@ let vfRespostasEmVooVF = new Map();
 const vfFormatadorDiaLocalVF = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'});
 function vfDiaLocalDeVF(ms){ return vfFormatadorDiaLocalVF.format(new Date(ms)); }
 
-// familiaId -> dia (YYYY-MM-DD) em que foi respondida - substitui o
-// antigo GAP_FAMILIA/familiasRecentesVF (buffer de 15 respostas, regra
-// suave). Agora é rígido: nova da mesma família não aparece de novo no
-// mesmo dia local, só amanhã (estilo "bury siblings" do Anki) - sobrevive
-// a fechar o app, só se limpa na virada do dia
+// familiaId -> {dia, ms} - dia (YYYY-MM-DD) em que foi respondida, e o
+// horário exato (ms) do enterro, usado só pra desempate (irmã enterrada
+// há mais tempo tem prioridade quando não sobra mais nada, ver
+// escolherProximaVF). Substitui o antigo GAP_FAMILIA/familiasRecentesVF
+// (buffer de 15 respostas, regra suave). Agora é rígido: nova da mesma
+// família não aparece de novo no mesmo dia local, só amanhã (estilo
+// "bury siblings" do Anki) - sobrevive a fechar o app, só se limpa na
+// virada do dia. Formato antigo (versões anteriores gravavam só a string
+// do dia, sem ms) é normalizado ao carregar, pra não quebrar o
+// localStorage já gravado
 let familiasEnterradasVF = (function(){
   try{
     const salvo = JSON.parse(localStorage.getItem('pscpp_vf_familias_enterradas') || '{}');
-    return salvo || {};
+    const normalizado = {};
+    Object.keys(salvo || {}).forEach(familiaId => {
+      const v = salvo[familiaId];
+      normalizado[familiaId] = (typeof v === 'string') ? {dia: v, ms: 0} : v;
+    });
+    return normalizado;
   }catch(e){ return {}; }
 })();
 function vfSalvarFamiliasEnterradasVF(){
@@ -5197,7 +5307,14 @@ function vfSalvarFamiliasEnterradasVF(){
 }
 function vfFamiliaEnterradaHojeVF(familiaId, agoraMs){
   if(!familiaId) return false;
-  return familiasEnterradasVF[familiaId] === vfDiaLocalDeVF(agoraMs);
+  return familiasEnterradasVF[familiaId]?.dia === vfDiaLocalDeVF(agoraMs);
+}
+// horário (ms) em que a família foi enterrada hoje - usado pra desempate
+// entre irmãs quando não sobra mais nada (a mais antiga vem primeiro).
+// null se não estiver enterrada hoje (nunca deveria ser chamado nesse
+// caso, mas devolve algo seguro)
+function vfMomentoEnterroVF(familiaId){
+  return familiasEnterradasVF[familiaId]?.ms ?? 0;
 }
 
 // ---- desenho com a caneta (Apple Pencil) por cima da questão ----
@@ -9671,6 +9788,8 @@ function vfPersistirEstadoSessaoVF(){
   vfSessaoAtivaVF.acertosSessao = estadoVF.acertosSessao;
   vfSessaoAtivaVF.respondidasSessao = estadoVF.respondidasSessao;
   vfSessaoAtivaVF.respostasDesdeUltimaNova = estadoVF.respostasDesdeUltimaNova;
+  vfSessaoAtivaVF.creditoNovaVF = estadoVF.creditoNovaVF;
+  vfSessaoAtivaVF.ultimoTurnoNovaFuradoVF = estadoVF.ultimoTurnoNovaFuradoVF;
   vfSalvarSessaoNoStorageVF();
 }
 
@@ -9704,7 +9823,14 @@ async function vfReconstruirHistoricoDaSessaoVF(){
     // consistentemente dentro do mesmo filtro, até ser respondida de
     // verdade - o que nunca acontecia se o usuário só abria e fechava o
     // filtro sem responder
-    respostasDesdeUltimaNova: vfSessaoAtivaVF.respostasDesdeUltimaNova || 0
+    respostasDesdeUltimaNova: vfSessaoAtivaVF.respostasDesdeUltimaNova || 0,
+    // crédito acumulado do ritmo de novas (v3) - restaurado junto, senão
+    // reabrir o app no meio de uma sessão pausada resetaria a proporção
+    creditoNovaVF: vfSessaoAtivaVF.creditoNovaVF || 0,
+    // flag da alternância "no máximo 1 turno de nova furado a cada 2" -
+    // restaurada junto, senão reabrir o app podia furar duas vezes
+    // seguidas (a flag "esqueceria" que o turno anterior já tinha furado)
+    ultimoTurnoNovaFuradoVF: vfSessaoAtivaVF.ultimoTurnoNovaFuradoVF || false
     // familiasRecentesVF (versão antiga) ignorado de propósito - substituído
     // pelo enterro de família, que persiste sozinho em localStorage à parte
   };
@@ -9724,7 +9850,9 @@ async function vfCarregarPoolInicialVF(){
     posicao: -1,
     acertosSessao: 0,
     respondidasSessao: 0,
-    respostasDesdeUltimaNova: 0 // Regra 1 (fluxo garantido de novas) - zera a cada SESSÃO de verdade agora, não mais a cada abertura de aba
+    respostasDesdeUltimaNova: 0, // Regra 1 (fluxo garantido de novas) - zera a cada SESSÃO de verdade agora, não mais a cada abertura de aba
+    creditoNovaVF: 0, // v3 - crédito acumulado do ritmo de novas, substitui respostasDesdeUltimaNova na decisão (mantida só por compatibilidade)
+    ultimoTurnoNovaFuradoVF: false // v3.1 - alternância: no máximo 1 turno de nova furado por "muito vencida" a cada 2
   };
   // contadores restaurados direto daqui, ANTES de tentar reconstruir o
   // histórico detalhado - achado real: vfReconstruirHistoricoDaSessaoVF
@@ -9872,13 +10000,17 @@ async function avancarParaProximaVF(){
   const agoraMs = agoraCorrigidoVF();
   const pick = filtroVF.varreduraDesde
     ? vfEscolherProximaVarreduraVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.sementeSessao)
-    : escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao, estadoVF.respostasDesdeUltimaNova);
+    : escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao, estadoVF.creditoNovaVF || 0, estadoVF.respostasDesdeUltimaNova, estadoVF.ultimoTurnoNovaFuradoVF || false);
   if(!pick || pick.esgotado){
     vfMostrarTelaEsgotadoVF(pick?.motivo, !!filtroVF.varreduraDesde);
     document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
     return;
   }
   estadoVF.anteriorVeioDeAprendizado = pick.veioDeAprendizado;
+  // v3.1 - alternância "no máximo 1 turno de nova furado a cada 2":
+  // grava de volta o novo valor da flag (função pura, não muta estadoVF
+  // por dentro - só o modo normal devolve furou, varredura não usa isso)
+  if(pick.furou !== undefined) estadoVF.ultimoTurnoNovaFuradoVF = pick.furou;
   // cronômetro por entrada — tempoAtivoMs/ativoDesdeMs em vez de um único
   // horaInicioMs global (bug real corrigido antes: variável compartilhada
   // ficava desatualizada se uma pendente antiga fosse respondida depois).
@@ -9930,10 +10062,9 @@ function vfMostrarTelaEsgotadoVF(motivo, ehVarredura){
     return;
   }
   const partes = [`Esse filtro esgotou por agora.`];
-  if(motivo?.novasEnterradas > 0) partes.push(`${motivo.novasEnterradas} nova${motivo.novasEnterradas===1?'':'s'} ${motivo.novasEnterradas===1?'está':'estão'} enterrada${motivo.novasEnterradas===1?'':'s'} até amanhã (irmã${motivo.novasEnterradas===1?'':'s'} de questões que você já viu hoje).`);
   if(motivo?.revisoesAguardando > 0){
     const espera = motivo.menorEsperaRevisaoH != null ? ` – a próxima em ${vfFormatarHorasVF(motivo.menorEsperaRevisaoH)}` : '';
-    partes.push(`${motivo.revisoesAguardando} revis${motivo.revisoesAguardando===1?'ão':'ões'} ainda não venceu${motivo.revisoesAguardando===1?'':'ram'}${espera}.`);
+    partes.push(`${motivo.revisoesAguardando} revis${motivo.revisoesAguardando===1?'ão':'ões'} ainda não ${motivo.revisoesAguardando===1?'venceu':'venceram'}${espera}.`);
   }
   if(motivo?.aprendendoAguardando > 0){
     const respostas = motivo.menorEsperaAprendendoRespostas > 0 ? `mais ${motivo.menorEsperaAprendendoRespostas} resposta${motivo.menorEsperaAprendendoRespostas===1?'':'s'}` : null;
@@ -9949,7 +10080,11 @@ function vfMostrarTelaEsgotadoVF(motivo, ehVarredura){
 }
 function vfFormatarHorasVF(h){
   if(h < 1) return `${Math.round(h*60)}min`;
-  return `${h.toFixed(1).replace('.0','')}h`;
+  let horasInteiras = Math.floor(h);
+  let minutos = Math.round((h - horasInteiras) * 60);
+  if(minutos === 60){ minutos = 0; horasInteiras += 1; } // arredondamento carregou pra próxima hora (ex: 9.999h não pode virar "9h60m")
+  if(minutos === 0) return `${horasInteiras}h`;
+  return `${horasInteiras}h${String(minutos).padStart(2,'0')}m`;
 }
 
 async function mudarModuloFiltroVF(){
@@ -10350,6 +10485,36 @@ function vfAtualizarVisualTogglesFiltroVF(){
     btnVarredura.style.background = ligado ? '#B23A34' : '#ddd';
     bolinhaVarredura.style.transform = ligado ? 'translateX(18px)' : 'translateX(0)';
   }
+  vfAtualizarVisualNovaACadaVF();
+}
+
+// ritmo de novas (v3, Parte B4): 3 (1 a cada 3, 33%), 2 (1 a cada 2, 50%,
+// padrão) ou 1.5 (2 a cada 3, 67%). Persistido à parte do resto do
+// filtro (não é um filtro de conteúdo - não recarrega o pool, só muda a
+// partir da próxima escolha)
+function vfNovaACadaAtualVF(){
+  try{
+    const salvo = localStorage.getItem('pscpp_vf_nova_a_cada');
+    const valor = salvo ? parseFloat(salvo) : VF_ALGO.NOVA_A_CADA;
+    return [3, 2, 1.5].includes(valor) ? valor : VF_ALGO.NOVA_A_CADA;
+  }catch(e){ return VF_ALGO.NOVA_A_CADA; }
+}
+function vfTrocarNovaACadaVF(valor){
+  try{ localStorage.setItem('pscpp_vf_nova_a_cada', String(valor)); }catch(e){}
+  vfAtualizarVisualNovaACadaVF();
+  // não recarrega o pool - só muda a partir da próxima escolha
+  // (escolherProximaVF lê vfNovaACadaAtualVF() na hora)
+}
+function vfAtualizarVisualNovaACadaVF(){
+  const atual = vfNovaACadaAtualVF();
+  [3, 2, 1.5].forEach(valor => {
+    const btn = document.getElementById(`vf-nova-a-cada-${valor}`);
+    if(!btn) return;
+    const ativo = valor === atual;
+    btn.style.background = ativo ? '#B23A34' : '#fff';
+    btn.style.color = ativo ? '#fff' : '#888';
+    btn.style.borderColor = ativo ? '#B23A34' : '#ddd';
+  });
 }
 
 // abre/fecha o bloco de filtros — começa fechado, pra não ocupar espaço
@@ -11457,11 +11622,19 @@ async function responderVF(resposta){
   if(!estadoAntes || estadoAntes === 'nova') estadoVF.respostasDesdeUltimaNova = 0;
   else estadoVF.respostasDesdeUltimaNova = (estadoVF.respostasDesdeUltimaNova || 0) + 1;
 
+  // v3 - crédito acumulado do ritmo de novas: se a servida era nova,
+  // consome 1 do crédito (ela "gastou" a folga que tinha acumulado).
+  // Sempre soma 1/cadaN depois, independente do tipo - é esse acúmulo
+  // constante que reproduz a proporção exata (33/50/67%) ao longo do
+  // tempo, testado isoladamente antes de aplicar aqui
+  if(!estadoAntes || estadoAntes === 'nova') estadoVF.creditoNovaVF = (estadoVF.creditoNovaVF || 0) - 1;
+  estadoVF.creditoNovaVF = (estadoVF.creditoNovaVF || 0) + 1 / vfNovaACadaAtualVF();
+
   // enterro de irmãs até amanhã (substitui o antigo buffer GAP_FAMILIA) -
   // não registra durante a varredura, senão ao desligar tudo estaria
   // enterrado (a varredura ignora enterro de propósito, ver 5.1)
   if(item.familiaId && !filtroVF.varreduraDesde){
-    familiasEnterradasVF[item.familiaId] = vfDiaLocalDeVF(agoraMs);
+    familiasEnterradasVF[item.familiaId] = {dia: vfDiaLocalDeVF(agoraMs), ms: agoraMs};
     vfSalvarFamiliasEnterradasVF();
   }
 
@@ -12577,7 +12750,24 @@ function vfConfirmarGenericoVF(){
 function vfMostrarAvisoVF(texto, titulo){
   document.getElementById('vf-aviso-titulo').textContent = titulo || 'Aviso';
   document.getElementById('vf-aviso-texto').textContent = texto;
+  document.getElementById('vf-aviso-botao-extra').classList.add('hidden'); // esconde por padrão - só o fluxo do Tracker usa
   abrirModal('modal-aviso-vf');
+}
+// atualiza o aviso já aberto (sem fechar/reabrir) - usado pra trocar
+// "Enviando..." pelo resultado quando a resposta chega. Se botaoExtra for
+// passado ({texto, onClick}), mostra um segundo botão (ex: "Tentar de
+// novo"); senão, o botão extra fica escondido
+function vfAtualizarAvisoVF(texto, titulo, botaoExtra){
+  if(titulo !== undefined) document.getElementById('vf-aviso-titulo').textContent = titulo;
+  document.getElementById('vf-aviso-texto').textContent = texto;
+  const btnExtra = document.getElementById('vf-aviso-botao-extra');
+  if(botaoExtra){
+    btnExtra.textContent = botaoExtra.texto;
+    btnExtra.onclick = botaoExtra.onClick;
+    btnExtra.classList.remove('hidden');
+  }else{
+    btnExtra.classList.add('hidden');
+  }
 }
 function vfFecharAvisoVF(){
   fecharModal('modal-aviso-vf');
@@ -14912,7 +15102,6 @@ let retratoTrackerAtual = null;
 
 function abrirConfirmacaoEnvioTracker(retrato){
   retratoTrackerAtual = retrato;
-  document.getElementById('resultado-envio-tracker').classList.add('hidden');
   document.getElementById('confirmacao-envio-tracker').classList.remove('hidden');
   document.getElementById('texto-confirmacao-envio-tracker').textContent = retrato.origemFlash
     ? 'Isso registra essa sessão do Flash (tempo, acertos e as questões) no PSCPP Tracker.'
@@ -14921,14 +15110,33 @@ function abrirConfirmacaoEnvioTracker(retrato){
   btn.disabled = false;
   btn.textContent = 'Enviar';
   abrirModal('modal-envio-tracker');
+  vfAquecerTrackerVF(); // dispara em paralelo, sem esperar - aquece as duas Edge Functions enquanto a pessoa lê a confirmação
+}
+
+// dispara um GET ?ping=1 pra intermediária (que repassa pro Tracker) só
+// pra "acordar" as duas Edge Functions antes do envio de verdade -
+// reduz o cold start que hoje soma ~1-2s no fluxo real. Fire-and-forget:
+// não bloqueia nada, erro de rede aqui não importa (o envio de verdade
+// segue seu próprio caminho, só um pouco mais lento se o ping falhar)
+async function vfAquecerTrackerVF(){
+  try{
+    const {data: {session}} = await sb.auth.getSession();
+    if(!session?.access_token) return;
+    fetch(`${TRACKER_INTERMEDIARIA_URL}?ping=1`, {
+      method: 'GET',
+      headers: {'Authorization': `Bearer ${session.access_token}`}
+    }).catch(() => {});
+  }catch(e){ /* silencioso - é só aquecimento, não afeta o envio real */ }
 }
 
 async function confirmarEnvioTracker(){
   if(!retratoTrackerAtual) return;
   const retrato = retratoTrackerAtual;
-  const btn = document.getElementById('btn-confirmar-envio-tracker');
-  btn.disabled = true;
-  btn.textContent = 'Enviando...';
+
+  // fecha o modal de confirmação na hora - não trava a tela esperando
+  // o servidor. O aviso "Enviando..." assume o feedback visual
+  fecharModal('modal-envio-tracker');
+  vfMostrarAvisoVF('Enviando pro Tracker…', 'PSCPP Tracker');
 
   const tempoMinutos = Math.max(1, Math.round((new Date(retrato.finalizadoEm) - new Date(retrato.criadoEm)) / 60000));
 
@@ -15021,7 +15229,6 @@ async function confirmarEnvioTracker(){
     };
   }
 
-  const elResultado = document.getElementById('texto-resultado-envio-tracker');
   try{
     const {data: {session}} = await sb.auth.getSession();
     const resp = await fetch(TRACKER_INTERMEDIARIA_URL, {
@@ -15031,26 +15238,21 @@ async function confirmarEnvioTracker(){
     });
     const resultado = await resp.json();
     if(resultado.ok){
-      elResultado.textContent = `Enviado como ${resultado.id_atividade} – ${resultado.questoes_gravadas} questões registradas no Tracker.`;
-      elResultado.style.color = '#27500A';
+      vfAtualizarAvisoVF(`Enviado como ${resultado.id_atividade} – ${resultado.questoes_gravadas} questões registradas no Tracker.`);
+      // fire-and-forget: não precisa esperar pra já mostrar o resultado
       if(retrato.cadernoId){
-        await sb.from('cadernos').update({enviado_tracker_em: new Date().toISOString(), id_atividade_tracker: resultado.id_atividade}).eq('id', retrato.cadernoId);
+        sb.from('cadernos').update({enviado_tracker_em: new Date().toISOString(), id_atividade_tracker: resultado.id_atividade}).eq('id', retrato.cadernoId);
       }
       if(retrato.sessaoVfId){
-        await sb.from('sessoes_vf').update({enviado_tracker_em: new Date().toISOString(), id_atividade_tracker: resultado.id_atividade}).eq('id', retrato.sessaoVfId);
+        sb.from('sessoes_vf').update({enviado_tracker_em: new Date().toISOString(), id_atividade_tracker: resultado.id_atividade}).eq('id', retrato.sessaoVfId);
       }
+      retratoTrackerAtual = null; // só zera depois de confirmado - "Tentar de novo" precisa dele em caso de erro
     }else{
-      elResultado.textContent = `Não consegui enviar: ${resultado.erro || 'erro desconhecido'}`;
-      elResultado.style.color = '#A32D2D';
+      vfAtualizarAvisoVF(`Não consegui enviar: ${resultado.erro || 'erro desconhecido'}`, undefined, {texto: 'Tentar de novo', onClick: () => { vfFecharAvisoVF(); confirmarEnvioTracker(); }});
     }
   }catch(e){
-    elResultado.textContent = 'Não consegui conectar ao Tracker agora. Pode tentar de novo mais tarde direto lá.';
-    elResultado.style.color = '#A32D2D';
+    vfAtualizarAvisoVF('Não consegui conectar ao Tracker agora.', undefined, {texto: 'Tentar de novo', onClick: () => { vfFecharAvisoVF(); confirmarEnvioTracker(); }});
   }
-
-  retratoTrackerAtual = null;
-  document.getElementById('confirmacao-envio-tracker').classList.add('hidden');
-  document.getElementById('resultado-envio-tracker').classList.remove('hidden');
 }
 
 function naoEnviarTracker(){
