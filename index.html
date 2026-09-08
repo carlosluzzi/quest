@@ -1893,7 +1893,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-08-564';
+const VERSAO_APP = '2026-09-08-566';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4443,6 +4443,12 @@ function vfProcessarArrayLatexVF(texto){
 // tamanho reduzido mas ainda na escala do app (--fs-b, não px fixo),
 // cinza refinado igual ao resto da paleta da tabela
 function vfProcessarTextoPequenoVF(texto){
+  // remove <br> logo antes de qualquer um desses comandos de bloco - eles
+  // já geram seu próprio <div> com margin-top configurável; sem essa
+  // limpeza, o <br> da quebra de linha genérica (que roda antes desse
+  // processamento) somava com o margin-top, afastando a legenda do bloco
+  // anterior mais do que o espaçamento pedido
+  texto = texto.replace(/(?:<br>\s*)+(?=\\(?:small|legenda|paragrafo|lista|alinhar)[\[{])/g, '');
   texto = texto.replace(/\\small\{([^}]*)\}/g, '<div style="font-size:var(--fs-b);color:#6B6B66;margin-top:2px;padding-left:10px">$1</div>');
   // \legenda[espaco]{texto} - igual \small, mas com o espaçamento acima
   // (margin-top, em px) configurável - usado pelo editor visual de
@@ -13408,7 +13414,14 @@ async function excluirNotaVF(notaId){
 // a tela muda na hora, o salvamento de verdade roda em paralelo depois
 async function vfAlternarFixarNotaVF(notaId, fixadaAtual){
   const vaiFixar = !fixadaAtual;
-  const textoDaNota = document.getElementById(`vf-nota-texto-${notaId}`)?.textContent || '';
+  // usa o texto BRUTO (com toda a marcação intacta: **negrito**, x^(4/5),
+  // etc) guardado no cache, em vez de ler .textContent do DOM já
+  // formatado - achado real: .textContent de um <sup> perde o "^" que
+  // gerou ele (a regex consome o caractere ao converter pra <sup>), então
+  // reformatar esse texto "limpo" de novo não detectava mais o expoente,
+  // mostrando ele como texto comum na página principal (mas certo dentro
+  // do pop-up, que sempre usa o texto bruto original)
+  const textoDaNota = vfNotasTextoBrutoCacheVF[notaId] ?? document.getElementById(`vf-nota-texto-${notaId}`)?.textContent ?? '';
 
   // atualiza a lista visualmente já - reseta todos os botões de fixar
   // pra "não fixado" primeiro (só uma nota fixada por vez), depois marca
