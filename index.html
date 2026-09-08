@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-08-574';
+const VERSAO_APP = '2026-09-08-575';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -12055,7 +12055,13 @@ function vfCliqueNotaClicavelVF(evento){
 function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   const balao = document.getElementById('vf-balao-explicacao');
   const span = document.getElementById('vf-balao-explicacao-texto');
-  span.textContent = texto;
+  // trim defensivo na exibição (não só no salvamento) - cobre anotações
+  // antigas que possam ter uma quebra de linha ou espaço sobrando no
+  // início/fim (salvas antes dessa proteção existir, ou editadas direto
+  // no banco), sem precisar corrigir cada uma manualmente. Achado real:
+  // um "\n" no início, combinado com o white-space:pre-line do balão,
+  // criava um espaço em branco grande antes do texto começar
+  span.textContent = (texto || '').trim();
   // o balão inteiro (a informação em si) fica clicável quando há edição
   // associada - sem nenhum link "editar" separado aparecendo dentro dele
   balao.style.cursor = aoEditar ? 'pointer' : 'default';
