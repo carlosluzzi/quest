@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-08-579';
+const VERSAO_APP = '2026-09-08-581';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4476,7 +4476,13 @@ function vfProcessarArrayLatexVF(texto){
       textoOriginalMatch: match,
       alinhamentoAtual: alinhamentoFinal,
       temCabecalhoAtual: temCabecalho,
-      largurasAtuais: largurasValidas
+      largurasAtuais: largurasValidas,
+      // snapshot de como a tabela estava ao carregar essa tela - nunca
+      // mutado depois (diferente de alinhamentoAtual/temCabecalhoAtual/
+      // largurasAtuais, que acompanham cada edição). É pra onde o botão
+      // "Desfazer" volta, se a pessoa se arrepender de um arrasto/ajuste
+      // feito nessa mesma visualização
+      estadoInicialVF: {alinhamento: alinhamentoFinal, temCabecalho, larguras: largurasValidas}
     });
     const margemAlinhamento = alinhamentoFinal === 'centro' ? 'margin-left:auto;margin-right:auto;'
       : alinhamentoFinal === 'direita' ? 'margin-left:auto;margin-right:0;'
@@ -11486,6 +11492,29 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
     vfSalvarCabecalhoTabelaVF(bloco.id, novoValor);
   };
   barra.appendChild(btnCabecalho);
+
+  // "Desfazer" - volta alinhamento, cabeçalho e largura de coluna pro
+  // estado de quando essa tela carregou (estadoInicialVF, nunca mutado
+  // pelas edições feitas depois). Cobre o caso de arrastar uma coluna
+  // sem querer, ou virar/desvirar cabeçalho por engano - sem precisar
+  // lembrar manualmente o que era antes
+  const origemParaDesfazer = vfTabelaOrigemVF.get(bloco.id);
+  if(origemParaDesfazer?.estadoInicialVF){
+    const separador2 = document.createElement('div');
+    separador2.style.cssText = 'width:1px;height:20px;background:#e0e0e0;margin:0 2px';
+    barra.appendChild(separador2);
+    const btnDesfazer = document.createElement('button');
+    btnDesfazer.style.cssText = 'width:28px;height:28px;border:none;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:transparent;color:#666';
+    btnDesfazer.title = 'Desfazer alterações nessa tabela';
+    btnDesfazer.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7"/></svg>`;
+    btnDesfazer.onclick = (e) => {
+      e.stopPropagation();
+      barra.remove();
+      vfDesfazerAlteracoesTabelaVF(bloco.id);
+    };
+    barra.appendChild(btnDesfazer);
+  }
+
   bloco.appendChild(barra);
   const esconderSeTocarFora = (e) => {
     if(e && e.target && e.target.closest('.vf-tabela-alinhamento')) return;
@@ -11497,6 +11526,49 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
     document.addEventListener('touchstart', esconderSeTocarFora, {passive: true});
     document.addEventListener('mousedown', esconderSeTocarFora);
   }, 50);
+}
+
+// volta uma tabela (alinhamento, cabeçalho, largura de coluna) pro
+// estado de quando essa tela carregou, e salva - usado pelo botão
+// "Desfazer" na barra que aparece ao segurar a tabela
+function vfDesfazerAlteracoesTabelaVF(blocoId){
+  const origem = vfTabelaOrigemVF.get(blocoId);
+  const bloco = document.getElementById(blocoId);
+  if(!origem?.estadoInicialVF || !bloco) return;
+  const {alinhamento, temCabecalho, larguras} = origem.estadoInicialVF;
+
+  // alinhamento
+  bloco.dataset.alinhamentoTabela = alinhamento;
+  bloco.style.marginLeft = alinhamento === 'centro' ? 'auto' : alinhamento === 'direita' ? 'auto' : '';
+  bloco.style.marginRight = alinhamento === 'centro' ? 'auto' : '0';
+
+  // cabeçalho
+  bloco.dataset.temCabecalho = temCabecalho;
+  const primeiraLinha = bloco.querySelector('table tr:first-child');
+  if(primeiraLinha){
+    primeiraLinha.style.background = temCabecalho ? '#EAECF1' : '';
+    primeiraLinha.querySelectorAll('td').forEach(td => { td.style.fontWeight = temCabecalho ? '600' : '400'; });
+  }
+
+  // largura de coluna - com larguras, restaura o width:% original de
+  // cada célula; sem larguras, volta pro comportamento antigo (ajusta
+  // ao conteúdo, sem table-layout:fixed)
+  const tabela = bloco.querySelector('table');
+  if(tabela && primeiraLinha){
+    const celulas = Array.from(primeiraLinha.children);
+    if(larguras){
+      const soma = larguras.reduce((a,b) => a+b, 0);
+      tabela.style.width = '100%';
+      tabela.style.tableLayout = 'fixed';
+      celulas.forEach((td, i) => { td.style.width = (larguras[i]/soma*100).toFixed(2) + '%'; });
+    }else{
+      tabela.style.width = 'auto';
+      tabela.style.tableLayout = '';
+      celulas.forEach(td => { td.style.width = ''; });
+    }
+  }
+
+  vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, larguras});
 }
 
 // localiza a ocorrência exata dessa tabela no texto-fonte e substitui só
@@ -13140,7 +13212,8 @@ async function vfCriarESalvarElementoHtmlVF(){
   // vfAbrirEdicaoElementoHtmlVF) - atualiza em vez de criar um novo, e
   // não anexa nada (ele já está onde precisa estar)
   if(vfElementoIdEmEdicaoVF){
-    const {error} = await sb.from('elementos_html_vf').update({titulo, latex_fonte: latexFonte, atualizado_em: new Date().toISOString()}).eq('id', vfElementoIdEmEdicaoVF);
+    const elementoIdEditado = vfElementoIdEmEdicaoVF; // guarda ANTES de zerar - achado real: a linha seguinte zerava a variável global antes dela ser usada pra invalidar o cache, então a invalidação sempre rodava com null e nunca invalidava nada de verdade (nem a própria questão atual sendo editada via este modal)
+    const {error} = await sb.from('elementos_html_vf').update({titulo, latex_fonte: latexFonte, atualizado_em: new Date().toISOString()}).eq('id', elementoIdEditado);
     if(error){ vfMostrarAvisoVF('Erro ao salvar: '+error.message); return; }
     vfElementoIdEmEdicaoVF = null;
     document.getElementById('vf-complementar-btn-usar-local').classList.remove('hidden');
@@ -13149,7 +13222,7 @@ async function vfCriarESalvarElementoHtmlVF(){
     vfCarregarBibliotecaComplementarVF();
     // atualiza a tela principal também, já que o elemento pode estar
     // anexado (e visível) na questão atual embaixo do modal
-    vfInvalidarCacheElementosPorElementoIdVF(vfElementoIdEmEdicaoVF); // o conteúdo mudou - afeta todas as questões onde esse elemento está anexado, não só a atual
+    vfInvalidarCacheElementosPorElementoIdVF(elementoIdEditado); // o conteúdo mudou - afeta todas as questões onde esse elemento está anexado, não só a atual
     if(vfQuestaoIdComplementarAtualVF){
       vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
     }
