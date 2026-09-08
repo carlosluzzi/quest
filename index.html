@@ -1839,7 +1839,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-545';
+const VERSAO_APP = '2026-07-25-549';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3117,6 +3117,11 @@ function trocarAba(nome, pularContadorQuest){
   // não é mais filho de #aba-vf, então precisa ser mostrado/escondido
   // manualmente aqui, não herda mais do .hidden da aba automaticamente
   vfAtualizarVisibilidadeCanvasVF();
+  // #vf-barra-fixa também vive fora de #aba-vf (mesmo motivo do canvas
+  // logo acima) - sem esconder manualmente aqui, ela ficava vazando por
+  // cima de outras abas (Quest, etc) sempre que já estava visível antes
+  // da troca, já que não herda o .hidden da aba automaticamente
+  if(nome !== 'vf') document.getElementById('vf-barra-fixa')?.classList.add('hidden');
   // só limpa se a aba mudou de verdade - achado real: tocar no balão do
   // Flash pra "reabrir" chama trocarAba('vf') mesmo já estando nele
   // (toque simples sem arrastar), e limpar incondicionalmente apagava
@@ -9455,7 +9460,6 @@ function vfPersistirEstadoSessaoVF(){
     .map(h => ({id: h.item.id, resposta: h.resposta, acertou: h.acertou, estadoAntesDeResponder: h.estadoAntesDeResponder, tempoAtivoMs: h.tempoAtivoMs}));
   vfSessaoAtivaVF.acertosSessao = estadoVF.acertosSessao;
   vfSessaoAtivaVF.respondidasSessao = estadoVF.respondidasSessao;
-  vfSessaoAtivaVF.sementeSessao = estadoVF.sementeSessao;
   vfSessaoAtivaVF.respostasDesdeUltimaNova = estadoVF.respostasDesdeUltimaNova;
   vfSalvarSessaoNoStorageVF();
 }
@@ -9482,7 +9486,14 @@ async function vfReconstruirHistoricoDaSessaoVF(){
     posicao: historico.length - 1,
     acertosSessao: vfSessaoAtivaVF.acertosSessao || 0,
     respondidasSessao: vfSessaoAtivaVF.respondidasSessao || 0,
-    sementeSessao: vfSessaoAtivaVF.sementeSessao,
+    // sementeSessao NÃO é restaurada de propósito - fica com a nova gerada
+    // em vfCarregarPoolInicialVF. Era a causa real de "sempre a mesma
+    // questão": com a mesma semente pra sempre (restaurada aqui antes),
+    // o jitter da fila é determinístico pra cada combinação semente+id,
+    // então a questão com o jitter mais alto ganhava a disputa
+    // consistentemente dentro do mesmo filtro, até ser respondida de
+    // verdade - o que nunca acontecia se o usuário só abria e fechava o
+    // filtro sem responder
     respostasDesdeUltimaNova: vfSessaoAtivaVF.respostasDesdeUltimaNova || 0
     // familiasRecentesVF (versão antiga) ignorado de propósito - substituído
     // pelo enterro de família, que persiste sozinho em localStorage à parte
@@ -9753,7 +9764,7 @@ async function mudarFiltroPublicacaoVF(){
     elCap.disabled = true;
   }else{
     const bib = bibliografiaCache.find(b => b.id === publicacao);
-    const rotulo = bib?.capitulo_unico ? '' : rotuloCapituloDoLivro(bib?.titulo) + ' ';
+    const rotulo = rotuloCapituloDoLivro(bib?.titulo) + ' ';
     const {data} = await sb.from('questoes_vf').select('capitulo').eq('bibliografia_id', publicacao).eq('anulada', false);
     const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
       .sort((a,b) => (parseFloat(a)||0) - (parseFloat(b)||0) || a.localeCompare(b,'pt'));
@@ -9969,7 +9980,7 @@ async function vfRestaurarUIFiltroVF(){
     document.getElementById('vf-filtro-publicacao').value = publicacao;
     const elCap = document.getElementById('vf-filtro-capitulo');
     const bib = bibliografiaCache.find(b => b.id === publicacao);
-    const rotulo = bib?.capitulo_unico ? '' : rotuloCapituloDoLivro(bib?.titulo) + ' ';
+    const rotulo = rotuloCapituloDoLivro(bib?.titulo) + ' ';
     const {data} = await sb.from('questoes_vf').select('capitulo').eq('bibliografia_id', publicacao).eq('anulada', false);
     const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
       .sort((a,b) => (parseFloat(a)||0) - (parseFloat(b)||0) || a.localeCompare(b,'pt'));
@@ -16719,14 +16730,16 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     const bibEncontrada = identificarBibliografia(textoParaIdentificar, textoParaIdentificar);
     let bibliografiaId = null;
     let bibCapituloUnico = false;
+    let bibValorCapituloFixo = null;
     if(bibEncontrada){
       const {data: bibRow} = await sb.from('bibliografia')
-        .select('id, capitulo_unico')
+        .select('id, capitulo_unico, valor_capitulo_fixo')
         .eq('modulo_pscpp', bibEncontrada.modulo)
         .eq('titulo', bibEncontrada.titulo)
         .maybeSingle();
       bibliografiaId = bibRow?.id || null;
       bibCapituloUnico = bibRow?.capitulo_unico === true;
+      bibValorCapituloFixo = bibRow?.valor_capitulo_fixo || null;
     }
 
     // checagem de duplicata — mesmo texto já cadastrado, pula sem inserir.
@@ -16768,14 +16781,18 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     // publicação marcada como capítulo único (bibliografia.capitulo_unico) -
     // NUNCA usa o que foi extraído do cabeçalho do arquivo, mesmo que o
     // cabeçalho mencione capítulos específicos (ex: "Capítulos I, IV e
-    // VIII") - o capítulo sempre é 'Único' nesse caso. Tentar extrair um
-    // capítulo real do texto pra essas publicações foi a causa de um bug
-    // sistemático que gerou lixo (fragmentos de palavra, números soltos)
-    // em milhares de afirmações - ver regra fixa no histórico do projeto
+    // VIII"). Tentar extrair um capítulo real do texto pra essas
+    // publicações foi a causa de um bug sistemático que gerou lixo
+    // (fragmentos de palavra, números soltos) em milhares de afirmações -
+    // ver regra fixa no histórico do projeto. O valor gravado é sempre
+    // fixo (nunca varia por questão), mas não precisa ser literalmente
+    // "Único" - publicações que são um capítulo específico de um livro
+    // maior (ex: Navegação cap.45) usam valor_capitulo_fixo pra mostrar
+    // o número certo, sem reabrir a porta pra extração por questão
     const {data: inserida, error} = await sb.from('questoes_vf').insert({
       ...camposComuns,
       bibliografia_id: bibliografiaId,
-      capitulo: bibCapituloUnico ? 'Único' : capituloDoArquivo
+      capitulo: bibCapituloUnico ? (bibValorCapituloFixo || 'Único') : capituloDoArquivo
     }).select('id').single();
 
     // segunda camada — se duas rotinas checaram ao mesmo tempo e as duas
