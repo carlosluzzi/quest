@@ -61,6 +61,12 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .config-title-menor{font-size:var(--fs-e)}
 .modal-conteudo p{margin:0 0 20px 0;line-height:1.5}
 .textarea-padrao{width:100%;min-height:100px;font-size:16px;padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;font-family:inherit;color:#111;resize:vertical;line-height:1.5;margin-bottom:14px}
+/* foco em caixa de texto dentro de um container com overflow:hidden (ex:
+lista de notas, que precisa do overflow pra animar expandir/colapsar) -
+o outline/focus-ring padrão do navegador se estende pra FORA das bordas
+do elemento e fica cortado nesses casos. box-shadow inset é desenhado
+DENTRO das próprias bordas, nunca é cortado pelo overflow do pai */
+.vf-foco-interno-vf:focus{outline:none;box-shadow:inset 0 0 0 1.5px #B23A34}
 #vf-editor-rich-caixa table{border-collapse:collapse;margin:4px 0}
 #vf-editor-rich-caixa table td{border:1px solid #ccc;padding:6px 10px;min-width:32px}
 #vf-editor-rich-caixa table tr:first-child.vf-editor-tr-cabecalho td{background:#EAECF1;font-weight:600}
@@ -1887,7 +1893,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-08-560';
+const VERSAO_APP = '2026-09-08-564';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4133,6 +4139,7 @@ const VF_FONTE_TABELA = `'Charter','Iowan Old Style',Georgia,'Times New Roman',s
 // nas notas quanto nos elementos complementares anexados: fixa = aparece
 // na página principal da questão
 const VF_ICONE_PIN_VF = '<svg viewBox="0 0 32 32" width="16" height="16" fill="none"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M28 11.333L20.667 4l-6.076 6.38a2 2 0 01-1.448.62H9.414c-.89 0-1.337 1.077-.707 1.707l10.586 10.586c.63.63 1.707.184 1.707-.707v-3.729a2 2 0 01.62-1.448L28 11.333zM14 18l-8 8"/></svg>';
+const VF_ICONE_MNEMONICO_VF = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" d="M5.00004 6.5C5.00004 5.67157 5.67161 5 6.50004 5H17.5C18.3285 5 19 5.67157 19 6.5V17.5C19 18.3284 18.3285 19 17.5 19H6.50004C5.67162 19 5.00004 18.3284 5.00004 17.5V6.5ZM6.50004 6.5H9.00004V8H6.50004V6.5ZM9.00004 9.66667H6.50004V11.1667H9.00004V9.66667ZM6.50004 12.8333H9.00004V14.3333H6.50004V12.8333ZM9.00004 16H6.50004V17.5H9.00004V16ZM10.7501 6.5H13.2501V8H10.7501V6.5ZM13.25 9.66667H10.75V11.1667H13.25V9.66667ZM10.75 12.8333H13.25V14.3333H10.75V12.8333ZM13.25 16H10.75V17.5H13.25V16ZM15 6.5H17.5V8H15V6.5ZM17.5 9.66667H15V11.1667H17.5V9.66667ZM15 12.8333H17.5V14.3333H15V12.8333ZM17.5 16H15V17.5H17.5V16Z"/></svg>';
 
 // processa o conteúdo de uma célula de tabela: comandos específicos de
 // célula primeiro (\text{}, vírgula decimal {,}, espaço fino \,), depois
@@ -8527,6 +8534,16 @@ let notasVF = new Set();
 // visível na página - subconjunto de notasVF, só quem foi explicitamente
 // fixada pelo usuário, não qualquer nota salva
 let notasFixadasVF = new Set();
+// questões que têm pelo menos um elemento HTML (tabela, SVG, etc) anexado
+// - preenchido em carregarPoolVF, mantido em dia em anexar/desanexar/criar.
+// Serve pra saber ANTES de responder se vale a pena pré-buscar os
+// elementos dessa questão (evita ida ao servidor pras ~99% das questões
+// que não têm nada anexado)
+let questoesComElementoVF = new Set();
+// cache dos blocos HTML já montados (prontos pra inserir no DOM) por
+// questão - preenchido pela pré-busca, consumido de forma síncrona ao
+// responder. Invalidado em qualquer mudança nos elementos dessa questão
+let vfElementosCacheVF = new Map();
 
 // busca todas as questões do pool atual (respeitando filtro), já com o
 // estado de repetição de cada uma (ou 'nova' implícito se nunca respondida)
@@ -8563,14 +8580,27 @@ const vfNotaPreviewCacheVF = new Map();
 // busca em lote a nota FIXADA de cada questão de uma vez só - uma query
 // com .in() + fixada=true, então cada questão tem no máximo 1 resultado
 // (a fixada), sem precisar de uma query por questão
+// cache da lista COMPLETA de notas de cada questão (questaoId -> array),
+// separado do vfNotaPreviewCacheVF (que guarda só o texto da fixada, pro
+// preview na página) - usado pra abrir o modal de Notas já com a lista
+// pronta, sem esperar o banco
+let vfListaNotasCacheVF = new Map();
 async function vfBuscarNotasEmLoteVF(questaoIds){
-  const pendentes = questaoIds.filter(id => notasFixadasVF.has(id) && !vfNotaPreviewCacheVF.has(id));
+  // busca pra quem tem QUALQUER nota (não só fixada) e ainda não está no
+  // cache da lista completa - uma query só resolve tanto o preview da
+  // fixada (usado na página) quanto a lista inteira (usada no modal),
+  // já que os dados vêm juntos de qualquer forma
+  const pendentes = questaoIds.filter(id => notasVF.has(id) && !vfListaNotasCacheVF.has(id));
   if(!pendentes.length) return;
-  const {data, error} = await sb.from('notas_vf').select('questao_vf_id, texto')
-    .eq('usuario_id', usuarioAtual.id).eq('fixada', true).in('questao_vf_id', pendentes);
+  const {data, error} = await sb.from('notas_vf').select('id, questao_vf_id, texto, criado_em, fixada, eh_mnemonico')
+    .eq('usuario_id', usuarioAtual.id).in('questao_vf_id', pendentes).order('criado_em', {ascending:false});
   if(error) return;
-  pendentes.forEach(id => vfNotaPreviewCacheVF.set(id, null)); // marca como "já buscou" mesmo se não achar nada, evita rebuscar
-  (data || []).forEach(n => vfNotaPreviewCacheVF.set(n.questao_vf_id, n.texto));
+  pendentes.forEach(id => { vfListaNotasCacheVF.set(id, []); vfNotaPreviewCacheVF.set(id, null); }); // marca como "já buscou" mesmo se não achar nada, evita rebuscar
+  (data || []).forEach(n => {
+    if(!vfListaNotasCacheVF.get(n.questao_vf_id)) vfListaNotasCacheVF.set(n.questao_vf_id, []);
+    vfListaNotasCacheVF.get(n.questao_vf_id).push(n);
+    if(n.fixada) vfNotaPreviewCacheVF.set(n.questao_vf_id, n.texto);
+  });
 }
 
 // mesma coisa, mas em LOTE - uma única query com .in('id', [...]) pra
@@ -8661,6 +8691,10 @@ function vfPreBuscarProximasVF(){
   // isso, a nota só era buscada depois que o card já tinha virado,
   // aparecendo "atrasada" em relação ao resto da resposta
   vfBuscarNotasEmLoteVF(candidatasVF.map(q => q.id)).catch(() => {});
+  // idem pros elementos HTML anexados (tabelas, SVGs) - P1: sem isso, a
+  // tabela só entrava no DOM depois que o resultado já tinha aparecido,
+  // dando a sensação de "virou, e a tabela chega depois"
+  vfBuscarElementosEmLoteVF(candidatasVF.map(q => q.id)).catch(() => {});
 }
 
 // token de geração - incrementa toda vez que uma carga de pool começa.
@@ -8812,7 +8846,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     ? sb.rpc('buscar_questoes_por_termo_vf', {p_termo: filtroVF.termo})
     : Promise.resolve({data: null, error: null});
 
-  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, {data: todasTagsData}, {data: questoesTagsData}, , {data: idsTermoData, error: erroTermoVF}, ...resultadosEntradaVF] = await Promise.all([
+  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, {data: todasTagsData}, {data: questoesTagsData}, , {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, ...resultadosEntradaVF] = await Promise.all([
     buscarTudoPaginadoVF(montarQueryQuestoesVF, aoCarregarRestanteQuestoesVF),
     buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
@@ -8823,6 +8857,10 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     sb.from('questoes_vf_tags').select('questao_vf_id, tags_vf(id, nome)'),
     vfCarregarBibliografiaCacheVF(), // idempotente - só busca de verdade na primeira vez da sessão
     promiseTermoVF,
+    // leve: só os ids das questões que têm elemento anexado, pra saber
+    // ANTES de responder se vale a pena pré-buscar o conteúdo completo
+    // (P1 - evita ida ao servidor pras questões sem nada anexado)
+    sb.from('questao_elemento_html_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
     ...consultasEntradaVF
   ]);
   // se a busca do progresso (estado de cada questão) falhar, NUNCA degrada
@@ -8841,6 +8879,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   // padrão do "anexar" do Complementar) - antes, QUALQUER nota salva
   // fazia a lâmpada aparecer sozinha na tela, mesmo sem o usuário pedir
   notasFixadasVF = new Set((notaData||[]).filter(n=>n.fixada).map(n=>n.questao_vf_id));
+  questoesComElementoVF = new Set((elementosLigData||[]).map(e=>e.questao_vf_id));
   flashsSalvosVF = new Map((salvosData||[]).map(s=>[s.questao_vf_id, s.motivo]));
   vfTodasTagsCacheVF = todasTagsData || [];
   vfTagsPorQuestaoVF = new Map();
@@ -9850,6 +9889,11 @@ async function avancarParaProximaVF(){
   // está em vfConteudoCompletoCache). Se não, é uma busca rápida de uma
   // linha só (~50ms), não o pool inteiro como era antes
   await vfGarantirConteudoCompletoVF(pick.item);
+  // cobre o caso da primeira questão da sessão (ela nunca foi "próxima"
+  // antes, então vfPreBuscarProximasVF nunca rodou pra ela) - dispara sem
+  // esperar, chega enquanto a pessoa lê a afirmação. Nas demais questões
+  // isso é um no-op (já teria sido pré-buscada como "próxima" da anterior)
+  vfBuscarElementosEmLoteVF([pick.item.id]).catch(() => {});
   // só limpa o rascunho AGORA, junto com a troca de tela - achado real:
   // limpar antes do await de cima deixava um intervalo visível (às vezes
   // perceptível) onde o rascunho já tinha sumido mas a questão nova ainda
@@ -10560,9 +10604,24 @@ function renderizarItemVF(){
   // de travamento/pisca-pisca ao entrar numa questão já respondida
   if(jaRespondida){
     vfRenderizarComplementarLocalVF(item); // síncrono - o conteúdo já está no item, sem busca nenhuma
+    // elementos HTML anexados: só mexe nisso se a questão está em
+    // questoesComElementoVF (sabemos de antemão que tem algo anexado) -
+    // pra maioria das questões, que não têm nada, isso evita qualquer
+    // requisição. Se já está no cache (pré-buscado enquanto essa questão
+    // ainda era "próxima"), monta AGORA, síncrono, no mesmo tick da
+    // renderização do resultado - a tabela aparece junto, sem reflow
+    // visível depois (P1). Só cai no caminho ao vivo (buscar + montar
+    // depois) quando a resposta veio rápido demais pra pré-busca terminar
+    const temAlgumElementoAnexado = questoesComElementoVF.has(item.id);
+    if(temAlgumElementoAnexado && vfElementosCacheVF.has(item.id)){
+      vfMontarElementosAnexadosVF(document.getElementById('vf-elementos-html-anexados'), item.id, vfElementosCacheVF.get(item.id));
+    }else if(!temAlgumElementoAnexado){
+      const containerVazio = document.getElementById('vf-elementos-html-anexados');
+      if(containerVazio) containerVazio.innerHTML = ''; // garante que não sobrou conteúdo de uma questão anterior
+    }
     Promise.all([
       notasFixadasVF.has(item.id) ? vfCarregarPreviewNotaVF(item.id) : Promise.resolve(),
-      vfCarregarElementosAnexadosVF(item.id)
+      (temAlgumElementoAnexado && !vfElementosCacheVF.has(item.id)) ? vfCarregarElementosAnexadosVF(item.id) : Promise.resolve()
     ]).then(() => {
       if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF();
     });
@@ -12653,6 +12712,11 @@ async function vfToggleAnexarElementoVF(elementoHtmlId, botao){
     if(data) vfLigacoesAnexadasVF.set(elementoHtmlId, data.id);
   }
   vfAtualizarBotaoFixarBibliotecaVF(botao, vfLigacoesAnexadasVF.has(elementoHtmlId));
+  // invalida o cache dessa questão - o conjunto de elementos anexados
+  // mudou, a próxima montagem precisa vir com dado novo
+  vfElementosCacheVF.delete(vfQuestaoIdComplementarAtualVF);
+  if(vfLigacoesAnexadasVF.size) questoesComElementoVF.add(vfQuestaoIdComplementarAtualVF);
+  else questoesComElementoVF.delete(vfQuestaoIdComplementarAtualVF); // desanexou o último - a questão não tem mais nada anexado
   vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
 }
 function vfAtualizarBotaoFixarBibliotecaVF(botao, ativo){
@@ -12727,7 +12791,10 @@ async function vfCriarESalvarElementoHtmlVF(){
     vfCarregarBibliotecaComplementarVF();
     // atualiza a tela principal também, já que o elemento pode estar
     // anexado (e visível) na questão atual embaixo do modal
-    if(vfQuestaoIdComplementarAtualVF) vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
+    vfInvalidarCacheElementosPorElementoIdVF(vfElementoIdEmEdicaoVF); // o conteúdo mudou - afeta todas as questões onde esse elemento está anexado, não só a atual
+    if(vfQuestaoIdComplementarAtualVF){
+      vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
+    }
     return;
   }
   const {data, error} = await sb.from('elementos_html_vf').insert({usuario_id: usuarioAtual.id, titulo, latex_fonte: latexFonte}).select('id').single();
@@ -12739,8 +12806,16 @@ async function vfCriarESalvarElementoHtmlVF(){
   }).select('id').single();
   if(erroLigacao){ vfMostrarAvisoVF('Erro ao fixar: '+erroLigacao.message); return; }
   vfLigacoesAnexadasVF.set(data.id, ligacao.id);
+  questoesComElementoVF.add(vfQuestaoIdComplementarAtualVF);
   fecharModalComplementarVF();
-  vfCarregarElementosAnexadosVF(vfQuestaoIdComplementarAtualVF).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
+  // monta o bloco localmente com os dados que já estão em mãos (não
+  // precisa de mais nenhuma ida ao banco pra isso) - mesmo formato que a
+  // query com join aninhado devolveria, pra entrar no cache do mesmo jeito
+  const novaLigacao = {id: ligacao.id, questao_vf_id: vfQuestaoIdComplementarAtualVF, elemento_html_id: data.id, elementos_html_vf: {id: data.id, titulo, latex_fonte: latexFonte, anotacoes_elemento_html_vf: []}};
+  const ligacoesExistentes = vfElementosCacheVF.get(vfQuestaoIdComplementarAtualVF) || [];
+  vfElementosCacheVF.set(vfQuestaoIdComplementarAtualVF, [...ligacoesExistentes, novaLigacao]);
+  vfMontarElementosAnexadosVF(document.getElementById('vf-elementos-html-anexados'), vfQuestaoIdComplementarAtualVF, vfElementosCacheVF.get(vfQuestaoIdComplementarAtualVF));
+  if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF();
 }
 
 // aplica o conteúdo direto na questão atual, sem passar pela biblioteca
@@ -12777,19 +12852,18 @@ async function vfUsarComplementarLocalVF(){
 // como "já anexado" (botão de fixar ativo), e pra poder desanexar direto
 // dali sem precisar buscar de novo qual é o id da ligação
 let vfLigacoesAnexadasVF = new Map();
-async function vfCarregarElementosAnexadosVF(questaoVfId){
-  const container = document.getElementById('vf-elementos-html-anexados');
+// monta o HTML dos elementos anexados a partir de dados JÁ EM MÃOS -
+// síncrona, sem nenhuma consulta. ligacoes vem no formato da query com
+// join aninhado: [{id, elemento_html_id, elementos_html_vf: {id, titulo,
+// latex_fonte, anotacoes_elemento_html_vf: [{identificador, texto_explicacao}]}}]
+function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
   if(!container) return;
-  const {data} = await sb.from('questao_elemento_html_vf')
-    .select('id, elemento_html_id, elementos_html_vf(id, titulo, latex_fonte)')
-    .eq('questao_vf_id', questaoVfId).eq('usuario_id', usuarioAtual.id).order('criado_em');
-  vfLigacoesAnexadasVF = new Map((data||[]).map(l => [l.elemento_html_id, l.id]));
-  if(!data || !data.length){ container.innerHTML = ''; return; }
-  const blocos = await Promise.all(data.map(async (ligacao) => {
+  vfLigacoesAnexadasVF = new Map((ligacoes||[]).map(l => [l.elemento_html_id, l.id]));
+  if(!ligacoes || !ligacoes.length){ container.innerHTML = ''; return; }
+  const blocos = ligacoes.map(ligacao => {
     const elemento = ligacao.elementos_html_vf;
     if(!elemento) return '';
-    const {data: anotacoes} = await sb.from('anotacoes_elemento_html_vf').select('identificador, texto_explicacao').eq('elemento_html_id', elemento.id);
-    const mapaAnotacoes = new Map((anotacoes||[]).map(a => [a.identificador, a.texto_explicacao]));
+    const mapaAnotacoes = new Map((elemento.anotacoes_elemento_html_vf||[]).map(a => [a.identificador, a.texto_explicacao]));
     const idBloco = `vf-elemento-html-${ligacao.id}`;
     const cabecalho = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px">
       <button style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="vfDesanexarElementoVF('${ligacao.id}', '${questaoVfId}')">Desanexar</button>
@@ -12798,7 +12872,7 @@ async function vfCarregarElementosAnexadosVF(questaoVfId){
     const conteudoFormatado = formatarTextoItemVF(elemento.latex_fonte);
     vfContextoRenderizacaoSvgVF = null;
     return `<div style="margin-top:14px">${cabecalho}<div id="${idBloco}" class="vf-elemento-html-bloco" data-elemento-id="${elemento.id}" data-mapa-anotacoes='${escapeHtml(JSON.stringify([...mapaAnotacoes]))}'>${conteudoFormatado}</div></div>`;
-  }));
+  });
   container.innerHTML = blocos.join('');
   // aplica as anotações já salvas em cada bloco recém-inserido - depois
   // do innerHTML já estar no DOM, senão querySelectorAll não acha nada
@@ -12806,6 +12880,41 @@ async function vfCarregarElementosAnexadosVF(questaoVfId){
     const mapa = new Map(JSON.parse(bloco.dataset.mapaAnotacoes || '[]'));
     vfAplicarIdentificadoresECliquesVF(bloco, mapa, bloco.dataset.elementoId);
   });
+}
+// query com join aninhado de dois níveis - traz elemento + anotações
+// numa única consulta (P1), em vez da rodada antiga (1 ida pra ligações +
+// 1 ida POR elemento pras anotações). Reaproveitada tanto pela pré-busca
+// em lote quanto pelo caminho ao vivo (cache frio)
+function vfMontarQueryElementosAnexadosVF(){
+  return sb.from('questao_elemento_html_vf')
+    .select('id, questao_vf_id, elemento_html_id, elementos_html_vf(id, titulo, latex_fonte, anotacoes_elemento_html_vf(identificador, texto_explicacao))')
+    .eq('usuario_id', usuarioAtual.id);
+}
+// pré-busca em lote - só pras questões que estão em questoesComElementoVF
+// (sabemos de antemão que têm algo anexado) e ainda não estão no cache
+async function vfBuscarElementosEmLoteVF(questaoIds){
+  const pendentes = questaoIds.filter(id => questoesComElementoVF.has(id) && !vfElementosCacheVF.has(id));
+  if(!pendentes.length) return;
+  const {data, error} = await vfMontarQueryElementosAnexadosVF().in('questao_vf_id', pendentes).order('criado_em');
+  if(error) return;
+  pendentes.forEach(id => vfElementosCacheVF.set(id, [])); // marca como "já buscou" mesmo se não achar nada, evita rebuscar
+  (data || []).forEach(l => {
+    if(!vfElementosCacheVF.get(l.questao_vf_id)) vfElementosCacheVF.set(l.questao_vf_id, []);
+    vfElementosCacheVF.get(l.questao_vf_id).push(l);
+  });
+}
+// se está no cache (pré-buscado), monta na hora, síncrono - senão busca
+// com a query de join aninhado (uma ida só) e monta
+async function vfCarregarElementosAnexadosVF(questaoVfId){
+  const container = document.getElementById('vf-elementos-html-anexados');
+  if(!container) return;
+  if(vfElementosCacheVF.has(questaoVfId)){
+    vfMontarElementosAnexadosVF(container, questaoVfId, vfElementosCacheVF.get(questaoVfId));
+    return;
+  }
+  const {data} = await vfMontarQueryElementosAnexadosVF().eq('questao_vf_id', questaoVfId).order('criado_em');
+  vfElementosCacheVF.set(questaoVfId, data || []);
+  vfMontarElementosAnexadosVF(container, questaoVfId, data);
 }
 // percorre as células (<td>) de um bloco renderizado, dando um
 // identificador de posição determinístico a cada uma (tabela-linha-col,
@@ -12861,6 +12970,15 @@ function vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, textoAtual, celul
   document.getElementById('vf-anotacao-elemento-btn-excluir').classList.toggle('hidden', !textoAtual);
   abrirModal('modal-anotacao-elemento-vf');
 }
+// um mesmo elemento (tabela/SVG) pode estar anexado em várias questões
+// diferentes (é uma biblioteca reutilizável) - mudar o conteúdo ou uma
+// anotação dele invalida o cache de TODAS as questões que o têm anexado,
+// não só a questão atual sendo vista no momento
+function vfInvalidarCacheElementosPorElementoIdVF(elementoHtmlId){
+  for(const [questaoId, ligacoes] of vfElementosCacheVF){
+    if((ligacoes||[]).some(l => l.elemento_html_id === elementoHtmlId)) vfElementosCacheVF.delete(questaoId);
+  }
+}
 async function vfExcluirAnotacaoElementoVF(){
   if(!vfAnotacaoContextoAtualVF) return;
   const {elementoHtmlId, identificador, celulaEl} = vfAnotacaoContextoAtualVF;
@@ -12868,6 +12986,7 @@ async function vfExcluirAnotacaoElementoVF(){
   vfAbrirConfirmacaoGenericaVF('Excluir anotação', 'Excluir essa anotação?', async () => {
     const {error} = await sb.from('anotacoes_elemento_html_vf').delete().eq('elemento_html_id', elementoHtmlId).eq('identificador', identificador);
     if(error){ vfMostrarAvisoVF('Erro ao excluir: '+error.message); return; }
+    vfInvalidarCacheElementosPorElementoIdVF(elementoHtmlId);
     celulaEl.style.textDecoration = '';
     celulaEl.onclick = (e) => { e.stopPropagation(); vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, '', celulaEl); };
     celulaEl.onmouseenter = null;
@@ -12880,6 +12999,7 @@ async function vfConfirmarAnotacaoElementoVF(){
   if(!texto) return;
   const {error} = await sb.from('anotacoes_elemento_html_vf').upsert({elemento_html_id: elementoHtmlId, identificador, texto_explicacao: texto}, {onConflict: 'elemento_html_id,identificador'});
   if(error){ vfMostrarAvisoVF('Erro ao salvar anotação: '+error.message); return; }
+  vfInvalidarCacheElementosPorElementoIdVF(elementoHtmlId);
   fecharModal('modal-anotacao-elemento-vf');
   celulaEl.style.textDecoration = 'underline dotted';
   celulaEl.style.textDecorationColor = '#888';
@@ -12893,7 +13013,13 @@ async function vfDesanexarElementoVF(ligacaoId, questaoVfId){
   vfAbrirConfirmacaoGenericaVF('Desanexar elemento', 'Desanexar esse elemento dessa questão? Ele continua salvo na sua biblioteca.', async () => {
     const {error} = await sb.from('questao_elemento_html_vf').delete().eq('id', ligacaoId);
     if(error){ vfMostrarAvisoVF('Erro ao desanexar: '+error.message); return; }
-    vfCarregarElementosAnexadosVF(questaoVfId).then(() => { if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF(); });
+    vfElementosCacheVF.delete(questaoVfId); // invalida - o conjunto de elementos anexados mudou
+    vfCarregarElementosAnexadosVF(questaoVfId).then(() => {
+      if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF();
+      // vfLigacoesAnexadasVF já foi atualizado por dentro da montagem acima -
+      // se não sobrou nenhuma ligação, a questão não tem mais nada anexado
+      if(!vfLigacoesAnexadasVF.size) questoesComElementoVF.delete(questaoVfId);
+    });
   });
 }
 
@@ -12901,14 +13027,26 @@ async function abrirNotaVF(questaoVfId){
   pausarTimerVF(); // abrir Notas/Excluir com questão pendente conta como sair da tela — você está escrevendo, não lendo a afirmação
   questaoNotaVfAtual = questaoVfId;
   document.getElementById('texto-nota-vf').value = '';
-  document.getElementById('lista-notas-vf').innerHTML = '';
-  document.getElementById('lista-notas-vf').style.maxHeight = '0px';
-  // abre o modal JÁ, sem esperar a busca no banco (mesmo padrão de
-  // Excluir/Favoritar/Salvar) - a lista de notas carrega em paralelo,
-  // logo em seguida, e expande com uma transição suave (CSS) quando
-  // chegar, em vez de segurar a abertura inteira até a resposta do banco
   abrirModal('modal-nota-vf');
-  renderizarListaNotasVF();
+  // se já tem a lista completa em cache (pré-buscada junto com o resto do
+  // conteúdo da questão), renderiza na hora, sem esperar o banco - só
+  // busca ao vivo se a pré-busca ainda não tinha terminado a tempo
+  if(vfListaNotasCacheVF.has(questaoVfId)){
+    vfRenderizarListaNotasDoCacheVF(vfListaNotasCacheVF.get(questaoVfId));
+  }else{
+    document.getElementById('lista-notas-vf').innerHTML = '';
+    document.getElementById('lista-notas-vf').style.maxHeight = '0px';
+    renderizarListaNotasVF();
+  }
+}
+// monta a lista de notas a partir de dados já em mãos (cache) - síncrono,
+// sem nenhuma consulta. Reaproveitado tanto pelo caminho com cache quanto
+// depois de qualquer operação que precise atualizar o cache e re-renderizar
+function vfRenderizarListaNotasDoCacheVF(lista){
+  const el = document.getElementById('lista-notas-vf');
+  if(!lista || !lista.length){ el.innerHTML = ''; el.style.maxHeight = '0px'; return; }
+  el.innerHTML = `<div id="vf-lista-notas-itens" style="margin-bottom:14px">` + lista.map(vfHtmlItemNotaVF).join('') + `</div>`;
+  el.style.maxHeight = '2000px';
 }
 
 // HTML de um único item da lista de notas - extraído numa função própria
@@ -12930,7 +13068,7 @@ function vfHtmlItemNotaVF(n){
     <div id="vf-nota-item-${n.id}" style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
       <div id="vf-nota-texto-${n.id}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111;cursor:pointer" ontouchstart="vfIniciarPressionarNotaVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(n.texto)}</div>
       <button id="vf-nota-btn-fixar-${n.id}" onclick="vfAlternarFixarNotaVF('${n.id}', ${!!n.fixada})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.fixada?'#B23A34':'#ddd'};background:${n.fixada?'#B23A34':'#fff'};color:${n.fixada?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.fixada?'Desafixar (deixa de aparecer na página)':'Fixar (aparece na página da questão)'}">${VF_ICONE_PIN_VF}</button>
-      <button id="vf-nota-btn-mnemonico-${n.id}" onclick="vfAlternarMnemonicoNotaVF('${n.id}', ${!!n.eh_mnemonico})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.eh_mnemonico?'#B23A34':'#ddd'};background:${n.eh_mnemonico?'#B23A34':'#fff'};color:${n.eh_mnemonico?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:var(--fs-e)" title="${n.eh_mnemonico?'Marcada como mnemônico':'Marcar como mnemônico'}">🧠</button>
+      <button id="vf-nota-btn-mnemonico-${n.id}" onclick="vfAlternarMnemonicoNotaVF('${n.id}', ${!!n.eh_mnemonico})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.eh_mnemonico?'#B23A34':'#ddd'};background:${n.eh_mnemonico?'#B23A34':'#fff'};color:${n.eh_mnemonico?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.eh_mnemonico?'Marcada como mnemônico':'Marcar como mnemônico'}">${VF_ICONE_MNEMONICO_VF}</button>
       <button onclick="excluirNotaVF('${n.id}')" style="width:30px;height:30px;flex-shrink:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);display:flex;align-items:center;justify-content:center" title="Excluir nota">✕</button>
     </div>`;
 }
@@ -12979,7 +13117,7 @@ function vfEditarNotaVF(notaId){
   if(!container) return;
   vfNotaTextoOriginalAntesEditarVF[notaId] = vfNotasTextoBrutoCacheVF[notaId] ?? container.textContent;
   container.outerHTML = `<div id="vf-nota-texto-${notaId}" style="flex:1">
-    <textarea id="vf-nota-textarea-${notaId}" class="textarea-padrao" style="margin-bottom:6px">${escapeHtml(vfNotaTextoOriginalAntesEditarVF[notaId])}</textarea>
+    <textarea id="vf-nota-textarea-${notaId}" class="textarea-padrao vf-foco-interno-vf" style="margin-bottom:6px">${escapeHtml(vfNotaTextoOriginalAntesEditarVF[notaId])}</textarea>
     <div style="display:flex;gap:8px">
       <button class="btn-secundario" style="flex:1;padding:6px" onclick="vfCancelarEdicaoNotaVF('${notaId}')">Cancelar</button>
       <button class="btn-primario" style="flex:1;padding:6px" onclick="vfSalvarEdicaoNotaVF('${notaId}')">Salvar</button>
@@ -12994,11 +13132,29 @@ async function vfSalvarEdicaoNotaVF(notaId){
   const textarea = document.getElementById(`vf-nota-textarea-${notaId}`);
   const textoNovo = textarea?.value.trim();
   if(!textoNovo) return; // nota vazia não é válida - mesma regra de adicionarNotaVF
-  await sb.from('notas_vf').update({texto: textoNovo}).eq('id', notaId);
-  vfNotasTextoBrutoCacheVF[notaId] = textoNovo; // mantém o cache do texto bruto em dia
+  const textoAntigo = vfNotaTextoOriginalAntesEditarVF[notaId];
+  const textoAntesDeEditar = vfNotaPreviewCacheVF.get(questaoNotaVfAtual);
+
+  // aplica o texto novo e fecha a edição JÁ, sem esperar o banco
+  vfNotasTextoBrutoCacheVF[notaId] = textoNovo;
+  const container = document.getElementById(`vf-nota-texto-${notaId}`);
+  if(container) container.outerHTML = `<div id="vf-nota-texto-${notaId}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111;cursor:pointer" ontouchstart="vfIniciarPressionarNotaVF(event,'${notaId}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${notaId}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(textoNovo)}</div>`;
   vfNotaPreviewCacheVF.delete(questaoNotaVfAtual); // invalida - texto pode ter mudado se essa nota é a mais recente/fixada
-  await renderizarListaNotasVF();
+  vfListaNotasCacheVF.delete(questaoNotaVfAtual); // idem - a lista completa também precisa ser buscada de novo na próxima abertura
   renderizarItemVF(); // atualiza o preview na página, se essa nota estiver fixada
+
+  const {error} = await sb.from('notas_vf').update({texto: textoNovo}).eq('id', notaId);
+  if(error){
+    // reverte pro texto antigo
+    vfNotasTextoBrutoCacheVF[notaId] = textoAntigo;
+    const containerNovo = document.getElementById(`vf-nota-texto-${notaId}`);
+    if(containerNovo) containerNovo.innerHTML = formatarTextoItemVF(textoAntigo);
+    if(textoAntesDeEditar !== undefined) vfNotaPreviewCacheVF.set(questaoNotaVfAtual, textoAntesDeEditar);
+    else vfNotaPreviewCacheVF.delete(questaoNotaVfAtual);
+    vfListaNotasCacheVF.delete(questaoNotaVfAtual); // idem - a lista completa também precisa ser buscada de novo na próxima abertura
+    renderizarItemVF();
+    vfMostrarAvisoVF('Não consegui salvar a edição. Tenta de novo.');
+  }
 }
 
 // mesma lógica do abrirExplicacaoQuestao (Quest normal) — a explicação já
@@ -13154,17 +13310,13 @@ async function adicionarNotaVF(){
   const texto = campo.value.trim();
   if(!texto) return;
   campo.value = ''; // limpa já, sensação instantânea
-  const {data, error} = await sb.from('notas_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoNotaVfAtual, texto}).select('id, texto, criado_em, fixada, eh_mnemonico').single();
-  if(error || !data){
-    vfMostrarAvisoVF('Não consegui salvar a nota. Tenta de novo.');
-    campo.value = texto; // devolve o texto pro campo, pra não perder o que foi escrito
-    return;
-  }
+
+  // insere na lista JÁ, com um id temporário - não espera o insert voltar
+  // pra pessoa ver a nota que acabou de escrever
+  const idTemp = `tmp-${Date.now()}`;
   notasVF.add(questaoNotaVfAtual);
   vfNotaPreviewCacheVF.delete(questaoNotaVfAtual); // invalida - a próxima vez que essa questão for vista, busca de novo (agora tem nota nova)
-  // insere direto no topo da lista já renderizada - mais recente primeiro,
-  // mesma ordem de sempre (criado_em desc) - sem precisar buscar tudo de
-  // novo no banco só pra mostrar essa nota que a gente já tem em mãos
+  vfListaNotasCacheVF.delete(questaoNotaVfAtual); // idem - a lista completa também precisa ser buscada de novo na próxima abertura
   const listaEl = document.getElementById('lista-notas-vf');
   let itensEl = document.getElementById('vf-lista-notas-itens');
   if(!itensEl){
@@ -13173,20 +13325,78 @@ async function adicionarNotaVF(){
     itensEl = document.getElementById('vf-lista-notas-itens');
     listaEl.style.maxHeight = '2000px';
   }
-  itensEl.insertAdjacentHTML('afterbegin', vfHtmlItemNotaVF(data));
+  itensEl.insertAdjacentHTML('afterbegin', vfHtmlItemNotaVF({id: idTemp, texto, fixada: false, eh_mnemonico: false}));
   renderizarItemVF();
+
+  const {data, error} = await sb.from('notas_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoNotaVfAtual, texto}).select('id, texto, criado_em, fixada, eh_mnemonico').single();
+  const itemTempEl = document.getElementById(`vf-nota-item-${idTemp}`);
+  if(error || !data){
+    itemTempEl?.remove(); // some o item temporário - a tentativa falhou de verdade
+    delete vfNotasTextoBrutoCacheVF[idTemp];
+    if(!document.querySelector('#vf-lista-notas-itens > div')){
+      notasVF.delete(questaoNotaVfAtual);
+      listaEl.innerHTML = ''; listaEl.style.maxHeight = '0px';
+    }
+    renderizarItemVF();
+    vfMostrarAvisoVF('Não consegui salvar a nota. Tenta de novo.');
+    campo.value = texto; // devolve o texto pro campo, pra não perder o que foi escrito
+    return;
+  }
+  // troca o id temporário pelo real - reconstrói o item inteiro (o
+  // onclick dos botões usa o id, tem que ser regravado com o valor certo)
+  delete vfNotasTextoBrutoCacheVF[idTemp];
+  if(itemTempEl) itemTempEl.outerHTML = vfHtmlItemNotaVF(data);
 }
 
 async function excluirNotaVF(notaId){
-  await sb.from('notas_vf').delete().eq('id', notaId);
-  await renderizarListaNotasVF();
-  const {count} = await sb.from('notas_vf').select('id', {count:'exact', head:true}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual);
-  if(!count){
+  const itemEl = document.getElementById(`vf-nota-item-${notaId}`);
+  if(!itemEl) return;
+  // guarda tudo que precisa pra reverter em caso de erro - o HTML do
+  // item (com a posição exata que ocupava na lista) e se essa nota era
+  // a fixada, pra restaurar notasFixadasVF corretamente se o delete falhar
+  const htmlOriginal = itemEl.outerHTML;
+  const proximoIrmao = itemEl.nextElementSibling;
+  const eraFixada = document.getElementById(`vf-nota-btn-fixar-${notaId}`)?.style.background === 'rgb(178, 58, 52)';
+  const textoAntesDeExcluir = vfNotaPreviewCacheVF.get(questaoNotaVfAtual);
+
+  itemEl.remove(); // some da tela já
+
+  // decide os Sets pelo que sobrou na lista local - sem precisar de count()
+  // no banco, já que a lista na tela é a fonte da verdade nesse momento
+  const itensRestantes = document.querySelectorAll('#vf-lista-notas-itens > div');
+  if(!itensRestantes.length){
     notasVF.delete(questaoNotaVfAtual);
     notasFixadasVF.delete(questaoNotaVfAtual); // se não sobrou nenhuma nota, também não tem mais nenhuma fixada
+    const listaEl = document.getElementById('lista-notas-vf');
+    if(listaEl){ listaEl.innerHTML = ''; listaEl.style.maxHeight = '0px'; }
+  }else if(eraFixada){
+    notasFixadasVF.delete(questaoNotaVfAtual); // a fixada foi excluída - nenhuma outra assume o posto sozinha
   }
   vfNotaPreviewCacheVF.delete(questaoNotaVfAtual); // invalida - texto pode ter mudado (outra nota virou a mais recente) ou sumido de vez
+  vfListaNotasCacheVF.delete(questaoNotaVfAtual); // idem - a lista completa também precisa ser buscada de novo na próxima abertura
   renderizarItemVF();
+
+  const {error} = await sb.from('notas_vf').delete().eq('id', notaId);
+  if(error){
+    // reverte tudo: devolve o item pro lugar exato onde estava
+    const itensEl = document.getElementById('vf-lista-notas-itens');
+    if(itensEl){
+      if(proximoIrmao && itensEl.contains(proximoIrmao)) proximoIrmao.insertAdjacentHTML('beforebegin', htmlOriginal);
+      else itensEl.insertAdjacentHTML('beforeend', htmlOriginal);
+    }else{
+      // a lista tinha sido esvaziada (era a última nota) - reconstrói o container
+      const listaEl = document.getElementById('lista-notas-vf');
+      listaEl.innerHTML = `<div id="vf-lista-notas-itens" style="margin-bottom:14px">${htmlOriginal}</div>`;
+      listaEl.style.maxHeight = '2000px';
+    }
+    notasVF.add(questaoNotaVfAtual);
+    if(eraFixada) notasFixadasVF.add(questaoNotaVfAtual);
+    if(textoAntesDeExcluir !== undefined) vfNotaPreviewCacheVF.set(questaoNotaVfAtual, textoAntesDeExcluir);
+    else vfNotaPreviewCacheVF.delete(questaoNotaVfAtual);
+    vfListaNotasCacheVF.delete(questaoNotaVfAtual); // idem - a lista completa também precisa ser buscada de novo na próxima abertura
+    renderizarItemVF();
+    vfMostrarAvisoVF('Não consegui excluir a nota. Tenta de novo.');
+  }
 }
 
 // fixa uma nota específica (mostra ela na página da questão, mesmo
@@ -13220,6 +13430,7 @@ async function vfAlternarFixarNotaVF(notaId, fixadaAtual){
     notasFixadasVF.delete(questaoNotaVfAtual);
     vfNotaPreviewCacheVF.set(questaoNotaVfAtual, null);
   }
+  vfListaNotasCacheVF.delete(questaoNotaVfAtual); // invalida - o campo "fixada" mudou dentro da lista completa também
   renderizarItemVF(); // preview na página atualiza na hora, sem esperar o banco
 
   // salva de verdade em segundo plano - desfixar outras e fixar esta são
@@ -13248,6 +13459,7 @@ async function vfAlternarMnemonicoNotaVF(notaId, mnemonicoAtual){
     btn.title = novoValor ? 'Marcada como mnemônico' : 'Marcar como mnemônico';
     btn.setAttribute('onclick', `vfAlternarMnemonicoNotaVF('${notaId}', ${novoValor})`);
   }
+  vfListaNotasCacheVF.delete(questaoNotaVfAtual); // invalida - o campo "eh_mnemonico" mudou dentro da lista completa também
   await sb.from('notas_vf').update({eh_mnemonico: novoValor}).eq('id', notaId);
 }
 
@@ -13263,7 +13475,11 @@ async function confirmarExclusaoVF(){
   if(!questaoVfParaExcluir) return;
   const idExcluido = questaoVfParaExcluir;
   const motivo = document.getElementById('motivo-exclusao-vf').value.trim() || null;
-  await sb.from('exclusoes_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: idExcluido, motivo});
+
+  // otimista: a tela muda JÁ (pool filtrado, modal fecha, avança pra
+  // próxima), o insert acontece em segundo plano - mesmo espírito de
+  // toggleFavoritoVF
+  const questaoRemovida = estadoVF.pool.find(i => i.id === idExcluido);
   estadoVF.pool = estadoVF.pool.filter(i => i.id !== idExcluido);
   questaoVfParaExcluir = null;
   fecharModal('modal-confirmar-exclusao-vf');
@@ -13290,6 +13506,16 @@ async function confirmarExclusaoVF(){
     // não era a pendente atual — ela continua lá, só retoma o cronômetro
     // dela (estava pausado desde que o modal abriu)
     await retomarOuDescartarPendenteVF();
+  }
+
+  // salva de verdade em segundo plano - se falhar, devolve a questão pro
+  // pool (sem tentar desfazer a navegação que já aconteceu, a pessoa já
+  // está vendo a próxima questão) e avisa que ela pode voltar a aparecer
+  const {error} = await sb.from('exclusoes_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: idExcluido, motivo});
+  if(error){
+    if(questaoRemovida && !estadoVF.pool.some(i => i.id === idExcluido)) estadoVF.pool.push(questaoRemovida);
+    vfMostrarAvisoVF('Não consegui salvar a exclusão. A questão pode reaparecer nessa sessão.');
+    console.error('erro ao excluir questão:', error);
   }
 }
 
