@@ -776,14 +776,14 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       </div>
 
       <div id="card-cadernos-existentes" style="margin-top:28px">
-        <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0;cursor:pointer" onclick="toggleCadernosLista('andamento')" ontouchend="event.preventDefault();toggleCadernosLista('andamento')">
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-top:0;cursor:pointer" onclick="toggleCadernosLista('andamento')">
           <span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg></span>
           <span id="titulo-cadernos-andamento">Cadernos em andamento (0)</span>
           <span class="chev" id="chev-andamento" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
         </div>
         <div id="lista-cadernos-andamento" class="conteudo-colapsavel" style="padding-left:10px"><span style="color:#888;font-size:var(--fs-d)">Nenhum caderno em andamento.</span></div>
 
-        <div class="section-title" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:16px" onclick="toggleCadernosLista('concluidos')" ontouchend="event.preventDefault();toggleCadernosLista('concluidos')">
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:16px" onclick="toggleCadernosLista('concluidos')">
           <span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M20 6 9 17l-5-5"/></svg></span>
           <span id="titulo-cadernos-concluidos">Cadernos concluídos (0)</span>
           <span class="chev" id="chev-concluidos" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
@@ -793,7 +793,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     </div>
 
     <div id="quests-resolucao" class="hidden">
-      <div style="color:#444;cursor:pointer;margin-bottom:16px;font-size:var(--fs-d)" onclick="fecharCadernoResolucao()" ontouchend="event.preventDefault();fecharCadernoResolucao()">← Quest</div>
+      <div style="color:#444;cursor:pointer;margin-bottom:16px;font-size:var(--fs-d)" onclick="fecharCadernoResolucao()">← Quest</div>
       <div id="pills-nav-caderno" class="pills-nav"></div>
       <div id="questao-atual"></div>
     </div>
@@ -851,7 +851,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       </div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:20px;margin-bottom:8px" onclick="toggleFiltroMateria()" ontouchend="event.preventDefault();toggleFiltroMateria()">
+    <div style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:20px;margin-bottom:8px" onclick="toggleFiltroMateria()">
       <span style="width:22px;height:22px;border-radius:7px;background:#F2DAD8;color:#B23A34;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
       <span style="font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em">Publicações</span>
       <span class="chev" id="chev-filtro-materia" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
@@ -889,7 +889,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       <span style="color:#888;font-size:var(--fs-d)">até</span>
       <input type="date" id="metricas-data-fim" class="filter-select" style="margin-bottom:0" onchange="aplicarFiltroDatasCustomizadas()">
     </div>
-    <div id="metricas-redefinir-datas" class="hidden" style="font-size:var(--fs-c);color:#888;text-align:right;margin-top:12px;margin-bottom:14px;cursor:pointer;text-decoration:underline" onclick="redefinirFiltroDatas()" ontouchend="event.preventDefault();redefinirFiltroDatas()">Redefinir</div>
+    <div id="metricas-redefinir-datas" class="hidden" style="font-size:var(--fs-c);color:#888;text-align:right;margin-top:12px;margin-bottom:14px;cursor:pointer;text-decoration:underline" onclick="redefinirFiltroDatas()">Redefinir</div>
 
     <div style="border-top:1px solid #eee;margin:24px 0"></div>
 
@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-08-576';
+const VERSAO_APP = '2026-09-08-579';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4347,12 +4347,16 @@ function vfFormatarCelulaArrayVF(celula){
 // espaço) usa um padding horizontal menor - com o padding largo normal,
 // colunas estreitas cortavam palavras tipo "curva"/"quase reta" em duas
 // linhas ruins
-function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho){
+function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, larguras, idEscopo){
   if(temCabecalho === undefined) temCabecalho = true; // padrão: mantém compatibilidade com chamadas existentes (sidebyside, preview da biblioteca, etc)
   const alinhamentos = colunasStr.split('').map(c => c === 'l' ? 'left' : c === 'r' ? 'right' : 'center');
   const paddingH = compacta ? '8px' : '14px';
   const semEspacamentos = conteudo.replace(/\[\d+pt\]/g, '');
   const linhas = semEspacamentos.split('\\\\').map(l => l.trim()).filter(Boolean);
+  // com larguras definidas, table-layout:fixed faz o width:% da PRIMEIRA
+  // linha valer pra coluna inteira - sem isso (comportamento padrão), a
+  // tabela continua se ajustando ao conteúdo (width:auto)
+  const somaLarguras = larguras ? larguras.reduce((a,b) => a+b, 0) : 0;
   const linhasHtml = linhas.map((linha, indiceLinha) => {
     const ehCabecalho = temCabecalho && indiceLinha === 0;
     const celulas = linha.split('&').map(c => c.trim());
@@ -4365,12 +4369,24 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho){
       // automaticamente, sem precisar de nenhum comando manual pra isso
       const ehSoTraco = /^[-–—]$/.test(conteudoCelula.trim());
       const corTraco = ehSoTraco ? 'color:#7A7A74;' : '';
-      return `<td style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${bordaSuperior}${corTraco}">${conteudoCelula}</td>`;
+      // largura só é aplicada na PRIMEIRA linha (table-layout:fixed
+      // propaga pra coluna inteira) - nas demais linhas seria redundante
+      const estiloLargura = (indiceLinha === 0 && larguras) ? `width:${(larguras[i]/somaLarguras*100).toFixed(2)}%;` : '';
+      // alça de arrasto: só na primeira linha, só entre colunas (não na
+      // última - não tem o que "roubar" espaço dela), só quando idEscopo
+      // existe (sem ele não haveria como saber pra onde salvar depois).
+      // position:relative na célula é necessário pra alça (absolute)
+      // se posicionar relativa a ELA, não à tabela inteira
+      const temAlca = indiceLinha === 0 && idEscopo && i < celulas.length - 1;
+      const alca = temAlca ? `<span class="vf-tabela-alca-largura" data-bloco-id="${idEscopo}" data-indice-coluna="${i}" ontouchstart="vfIniciarArrastoColunaVF(event)" onmousedown="vfIniciarArrastoColunaVF(event)" style="position:absolute;top:0;right:-4px;bottom:0;width:9px;cursor:col-resize;z-index:3;touch-action:none"></span>` : '';
+      const posicaoRelativa = temAlca ? 'position:relative;' : '';
+      return `<td style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${bordaSuperior}${corTraco}${estiloLargura}${posicaoRelativa}">${conteudoCelula}${alca}</td>`;
     }).join('');
     const estiloLinha = ehCabecalho ? 'background:#EAECF1' : '';
     return `<tr style="${estiloLinha}">${celulasHtml}</tr>`;
   }).join('');
-  return `<table style="width:auto;max-width:100%;border-collapse:collapse">${linhasHtml}</table>`;
+  const estiloTabela = larguras ? 'width:100%;table-layout:fixed;border-collapse:collapse' : 'width:auto;max-width:100%;border-collapse:collapse';
+  return `<table style="${estiloTabela}">${linhasHtml}</table>`;
 }
 // envolve uma tabela interna no cartão padrão (borda, cantos, sombra)
 function vfEnvolverEmCartaoVF(tabelaHtml){
@@ -4437,19 +4453,35 @@ function vfProcessarArrayLatexVF(texto){
   let contadorTabela = 0;
   return texto.replace(/\\begin\{array\}(?:\[([^\]]*)\])?\{([lcr]+)\}([\s\S]*?)\\end\{array\}/g, (match, opcoesStr, colunas, conteudo) => {
     const idEscopo = `vf-tabela-${++vfContadorTabelaVF}`;
-    const opcoes = (opcoesStr || '').split(',').map(o => o.trim()).filter(Boolean);
+    // larguras:N,N,N tem vírgulas DENTRO do próprio valor - precisa ser
+    // extraído com regex antes do split geral por vírgula (que separa
+    // as opções entre si), senão "larguras:15,42,43" vira 3 opções
+    // quebradas ("larguras:15", "42", "43") em vez de uma só
+    let opcoesSemLarguras = opcoesStr || '';
+    let larguras = null;
+    const matchLarguras = opcoesSemLarguras.match(/larguras:([\d,]+)/);
+    if(matchLarguras){
+      larguras = matchLarguras[1].split(',').map(Number).filter(n => n > 0);
+      opcoesSemLarguras = opcoesSemLarguras.replace(matchLarguras[0], '');
+    }
+    const opcoes = opcoesSemLarguras.split(',').map(o => o.trim()).filter(Boolean);
     const alinhamentoFinal = opcoes.includes('centro') ? 'centro' : opcoes.includes('direita') ? 'direita' : 'esquerda';
     const temCabecalho = !opcoes.includes('semcabecalho');
+    // proporções relativas de cada coluna (não precisam somar 100, são
+    // só pesos). Sem essa opção, a tabela continua se ajustando ao
+    // conteúdo como sempre (comportamento antigo, width:auto)
+    const largurasValidas = larguras && larguras.length === colunas.length ? larguras : null;
     vfTabelaOrigemVF.set(idEscopo, {
       contexto: vfContextoRenderizacaoSvgVF,
       textoOriginalMatch: match,
       alinhamentoAtual: alinhamentoFinal,
-      temCabecalhoAtual: temCabecalho
+      temCabecalhoAtual: temCabecalho,
+      largurasAtuais: largurasValidas
     });
     const margemAlinhamento = alinhamentoFinal === 'centro' ? 'margin-left:auto;margin-right:auto;'
       : alinhamentoFinal === 'direita' ? 'margin-left:auto;margin-right:0;'
       : '';
-    return `<div id="${idEscopo}" class="vf-tabela-bloco" data-alinhamento-tabela="${alinhamentoFinal}" data-tem-cabecalho="${temCabecalho}" style="font-family:${VF_FONTE_TABELA};margin:10px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}">${vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(colunas, conteudo, false, temCabecalho))}</div>`;
+    return `<div id="${idEscopo}" class="vf-tabela-bloco" data-alinhamento-tabela="${alinhamentoFinal}" data-tem-cabecalho="${temCabecalho}" style="font-family:${VF_FONTE_TABELA};margin:10px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}">${vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(colunas, conteudo, false, temCabecalho, largurasValidas, idEscopo))}</div>`;
   });
 }
 
@@ -6817,7 +6849,7 @@ async function vfAbrirFavoritosVF(){
     const publicacao = f.questoes_vf?.bibliografia?.nome_exibicao || f.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
     const dataFormatada = new Date(f.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
     return `
-      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${f.questao_vf_id}')" ontouchend="event.preventDefault();vfIrParaQuestaoSalvaVF('${f.questao_vf_id}')">
+      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${f.questao_vf_id}')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div>
             <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
@@ -6875,7 +6907,7 @@ async function vfAbrirFlashSalvosVF(){
     const publicacao = s.questoes_vf?.bibliografia?.nome_exibicao || s.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
     const dataFormatada = new Date(s.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
     return `
-      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${s.questao_vf_id}')" ontouchend="event.preventDefault();vfIrParaQuestaoSalvaVF('${s.questao_vf_id}')">
+      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${s.questao_vf_id}')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div>
             <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
@@ -7044,9 +7076,35 @@ function vfCancelarPressionarSalvar(evento, id){
 
 function vfAbrirEscolhaMotivoSalvarVF(questaoId){
   if(vfFoiToqueLongoSalvar) return; // já virou toque longo (abriu a lista) - não também salva
+  // já está salva - toque normal "des-salva" direto, sem passar pelo
+  // modal de motivo de novo (era o bug: clicar numa já salva sempre
+  // reabria a escolha de motivo, nunca desmarcava)
+  if(flashsSalvosVF.has(questaoId)){
+    vfDessalvarFlashDiretoVF(questaoId);
+    return;
+  }
   pausarTimerVF(); // a pendente continua rodando escondida atrás do modal senão
   document.getElementById('vf-escolha-motivo-questao-id').value = questaoId;
   abrirModal('modal-escolha-motivo-salvar-vf');
+}
+
+// des-salva direto (sem modal, sem precisar abrir a lista) - otimista,
+// mesmo padrão de vfSalvarFlashComMotivoVF: o ícone muda já, a exclusão
+// no banco acontece em segundo plano. Deleta por usuario_id+questao_vf_id
+// (chave única, mesma usada no onConflict do upsert) em vez de precisar
+// do id da linha, que flashsSalvosVF não guarda
+function vfDessalvarFlashDiretoVF(questaoId){
+  const motivoAnterior = flashsSalvosVF.get(questaoId);
+  flashsSalvosVF.delete(questaoId);
+  renderizarItemVF();
+  sb.from('flashs_salvos_vf').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoId).then(({error}) => {
+    if(error){
+      // exclusão falhou de verdade - desfaz o otimismo
+      flashsSalvosVF.set(questaoId, motivoAnterior);
+      renderizarItemVF();
+      alert('Erro ao remover dos salvos: '+error.message);
+    }
+  });
 }
 
 function vfFecharModalMotivoSalvarVF(){
@@ -11278,6 +11336,7 @@ function vfIniciarPressionarTabelaVF(evento){
   const bloco = evento.target.closest?.('.vf-tabela-bloco');
   if(!bloco) return;
   if(evento.target.closest('.vf-tabela-alinhamento')) return; // já tocando no próprio controle, não rearma
+  if(evento.target.closest('.vf-tabela-alca-largura')) return; // arrastando a alça de largura, não é long-press
   clearTimeout(vfTimerPressionarTabelaVF);
   vfTimerPressionarTabelaVF = setTimeout(() => vfMostrarBotoesAlinhamentoTabelaVF(bloco), 500);
   const cancelarSeMoveu = () => { clearTimeout(vfTimerPressionarTabelaVF); limpar(); };
@@ -11290,6 +11349,89 @@ function vfIniciarPressionarTabelaVF(evento){
   document.addEventListener('touchmove', cancelarSeMoveu, {passive: true, once: true});
   document.addEventListener('touchend', limpar, {once: true});
   document.addEventListener('mouseup', limpar, {once: true});
+}
+
+// arrasto de coluna: puxa a borda entre duas colunas pra redimensionar.
+// Com table-layout:fixed, só precisa mudar o width da PRIMEIRA linha -
+// as demais linhas da mesma coluna seguem automaticamente
+function vfIniciarArrastoColunaVF(evento){
+  evento.stopPropagation(); // não deixa o long-press da tabela disparar junto
+  if(evento.cancelable) evento.preventDefault();
+  const alca = evento.currentTarget;
+  const blocoId = alca.dataset.blocoId;
+  const indiceColuna = Number(alca.dataset.indiceColuna);
+  const bloco = document.getElementById(blocoId);
+  if(!bloco) return;
+  const primeiraLinha = bloco.querySelector('table tr:first-child');
+  if(!primeiraLinha) return;
+  const celulas = Array.from(primeiraLinha.children);
+  const celEsq = celulas[indiceColuna];
+  const celDir = celulas[indiceColuna + 1];
+  if(!celEsq || !celDir) return;
+
+  const ponto = evento.touches ? evento.touches[0] : evento;
+  const tabela = bloco.querySelector('table');
+  // força table-layout:fixed mesmo se a tabela ainda não tinha larguras
+  // definidas (nascia com width:auto) - sem isso, mudar o width de uma
+  // célula individual não redimensiona a coluna de forma confiável
+  tabela.style.width = '100%';
+  tabela.style.tableLayout = 'fixed';
+  const larguraTabela = tabela.getBoundingClientRect().width;
+  const larguraIniEsq = celEsq.getBoundingClientRect().width;
+  const larguraIniDir = celDir.getBoundingClientRect().width;
+  const xInicial = ponto.clientX;
+  const MIN_PX = 40; // não deixa a coluna sumir de tão estreita
+
+  alca.style.background = 'rgba(178,58,52,0.15)'; // leve destaque na própria alça enquanto arrasta
+
+  // linha guia + rótulo de percentual - criados na hora, removidos ao soltar
+  const linhaGuia = document.createElement('div');
+  linhaGuia.style.cssText = 'position:fixed;top:0;bottom:0;width:1px;background:#B23A34;opacity:0.5;pointer-events:none;z-index:999';
+  const rotulo = document.createElement('div');
+  rotulo.style.cssText = 'position:fixed;background:#111;color:#fff;font-family:-apple-system,sans-serif;font-size:11px;font-weight:600;padding:3px 7px;border-radius:5px;pointer-events:none;z-index:999;transform:translate(-50%,-130%)';
+  document.body.appendChild(linhaGuia);
+  document.body.appendChild(rotulo);
+
+  function mover(pontoAtual){
+    const delta = pontoAtual.clientX - xInicial;
+    let novaEsq = larguraIniEsq + delta;
+    let novaDir = larguraIniDir - delta;
+    if(novaEsq < MIN_PX){ novaEsq = MIN_PX; novaDir = larguraIniEsq + larguraIniDir - MIN_PX; }
+    if(novaDir < MIN_PX){ novaDir = MIN_PX; novaEsq = larguraIniEsq + larguraIniDir - MIN_PX; }
+    celEsq.style.width = (novaEsq / larguraTabela * 100) + '%';
+    celDir.style.width = (novaDir / larguraTabela * 100) + '%';
+
+    const rect = alca.getBoundingClientRect();
+    const x = rect.left + rect.width/2;
+    linhaGuia.style.left = x + 'px';
+    rotulo.style.left = x + 'px';
+    rotulo.style.top = rect.top + 'px';
+    rotulo.textContent = Math.round(novaEsq/larguraTabela*100) + '% / ' + Math.round(novaDir/larguraTabela*100) + '%';
+  }
+  mover(ponto);
+
+  function onMove(e){ mover(e.touches ? e.touches[0] : e); }
+  function finalizar(){
+    alca.style.background = '';
+    linhaGuia.remove();
+    rotulo.remove();
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', finalizar);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', finalizar);
+
+    // lê a largura final de CADA coluna (não só as duas que mudaram) e
+    // converte pra proporções inteiras simples, pra salvar o conjunto
+    // completo (\begin{array}[larguras:N,N,N]{...})
+    const largurasFinaisPx = celulas.map(c => c.getBoundingClientRect().width);
+    const somaPx = largurasFinaisPx.reduce((a,b) => a+b, 0);
+    const largurasFinais = largurasFinaisPx.map(px => Math.max(1, Math.round(px / somaPx * 100)));
+    vfSalvarLargurasTabelaVF(blocoId, largurasFinais);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', finalizar);
+  document.addEventListener('touchmove', onMove, {passive: false});
+  document.addEventListener('touchend', finalizar);
 }
 
 function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
@@ -11362,7 +11504,7 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
 // semcabecalho) - mesma lógica de vfSalvarAtributosSvgVF, mas pro
 // \begin{array}. Aceita mudança parcial: passa só o que mudou, preserva
 // o resto do que já estava lá
-async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho} = {}){
+async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, larguras} = {}){
   const origem = vfTabelaOrigemVF.get(blocoId);
   if(!origem || !origem.contexto){
     vfMostrarAvisoVF('Não consegui salvar essa mudança (não achei de onde essa tabela veio). A mudança visual continua nessa tela, mas não fica salva.');
@@ -11370,9 +11512,11 @@ async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho} = {})
   }
   const alinhamentoFinal = alinhamento !== undefined ? alinhamento : (origem.alinhamentoAtual || 'esquerda');
   const temCabecalhoFinal = temCabecalho !== undefined ? temCabecalho : (origem.temCabecalhoAtual !== false);
+  const largurasFinal = larguras !== undefined ? larguras : origem.largurasAtuais;
   const tokens = [];
   if(alinhamentoFinal !== 'esquerda') tokens.push(alinhamentoFinal);
   if(!temCabecalhoFinal) tokens.push('semcabecalho');
+  if(largurasFinal) tokens.push(`larguras:${largurasFinal.join(',')}`);
   const colchetes = tokens.length ? `[${tokens.join(',')}]` : '';
 
   const {contexto, textoOriginalMatch} = origem;
@@ -11403,6 +11547,13 @@ async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho} = {})
     const textoNovo = data.latex_fonte.replace(textoOriginalMatch, novoTrecho);
     const itemCache = vfBibliotecaComplementarCacheVF?.find(e => e.id === contexto.elementoId);
     if(itemCache) itemCache.latex_fonte = textoNovo;
+    // elemento reutilizável: pode estar anexado em várias questões
+    // diferentes, cada uma com seu próprio cache local (vfElementosCacheVF)
+    // já carregado. Sem invalidar aqui, a mudança salvava certo no banco
+    // mas só aparecia na questão atual - outra questão com essa mesma
+    // tabela anexada continuava mostrando a versão antiga até recarregar
+    // por algum outro motivo
+    vfInvalidarCacheElementosPorElementoIdVF(contexto.elementoId);
     await vfSalvarComRetryVF(
       () => sb.from('elementos_html_vf').update({latex_fonte: textoNovo}).eq('id', contexto.elementoId),
       'a mudança na tabela',
@@ -11412,12 +11563,16 @@ async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho} = {})
   origem.textoOriginalMatch = novoTrecho;
   origem.alinhamentoAtual = alinhamentoFinal;
   origem.temCabecalhoAtual = temCabecalhoFinal;
+  origem.largurasAtuais = largurasFinal;
 }
 function vfSalvarAlinhamentoTabelaVF(blocoId, alinhamento){
   return vfSalvarOpcoesTabelaVF(blocoId, {alinhamento});
 }
 function vfSalvarCabecalhoTabelaVF(blocoId, temCabecalho){
   return vfSalvarOpcoesTabelaVF(blocoId, {temCabecalho});
+}
+function vfSalvarLargurasTabelaVF(blocoId, larguras){
+  return vfSalvarOpcoesTabelaVF(blocoId, {larguras});
 }
 
 function vfMostrarSelinhoCopiadoVF(elemento){
@@ -13933,10 +14088,10 @@ async function carregarCadernosExistentes(){
     const stats = respostasPorCaderno[c.id] || {total:0, acertos:0};
     const progresso = totalQuestoes ? `${stats.total} de ${totalQuestoes} respondidas` : `${stats.total} respondidas`;
     return `
-    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;cursor:pointer" onclick="modoRevisaoCaderno=false;retomarCadernoEspecifico('${c.id}')" ontouchend="event.preventDefault();modoRevisaoCaderno=false;retomarCadernoEspecifico('${c.id}')">
+    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;cursor:pointer" onclick="modoRevisaoCaderno=false;retomarCadernoEspecifico('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
-        <span class="tx" style="font-size:var(--fs-e);padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)" ontouchend="event.preventDefault();event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+        <span class="tx" style="font-size:var(--fs-e);padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="em_andamento" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
       </div>
       <span style="color:#888;font-size:var(--fs-b)">${progresso}</span>
     </div>`;
@@ -13948,10 +14103,10 @@ async function carregarCadernosExistentes(){
     const stats = respostasPorCaderno[c.id] || {total:0, acertos:0};
     const pct = stats.total ? Math.round((stats.acertos/stats.total)*100) : 0;
     return `
-    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;opacity:0.85;cursor:pointer" onclick="abrirDetalheCadernoConcluido('${c.id}')" ontouchend="event.preventDefault();abrirDetalheCadernoConcluido('${c.id}')">
+    <div class="prox-item" style="display:flex;flex-direction:column;padding:10px 0;border-bottom:0.5px solid #eee;opacity:0.85;cursor:pointer" onclick="abrirDetalheCadernoConcluido('${c.id}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:var(--fs-d);color:#111">${escapeHtml(c.nome||'Caderno sem nome')}</span>
-        <span class="tx" style="font-size:var(--fs-e);padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="finalizado" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)" ontouchend="event.preventDefault();event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
+        <span class="tx" style="font-size:var(--fs-e);padding:4px;cursor:pointer;color:#888" data-id="${c.id}" data-nome="${escapeHtml(c.nome||'Caderno sem nome')}" data-status="finalizado" onclick="event.stopPropagation();abrirConfirmacaoExclusaoCaderno(this)">✕</span>
       </div>
       <span style="color:#888;font-size:var(--fs-d)">${stats.total} questões · ${pct}% de acerto</span>
     </div>`;
@@ -15374,7 +15529,7 @@ function renderizarListaForum(){
     if(q?.bibliografia_id && mapaBibliografiaTitulo[q.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[q.bibliografia_id]));
     if(q?.capitulo) partes.push(rotuloCapituloDoLivro(q?.bibliografia_id ? mapaBibliografiaTitulo[q.bibliografia_id] : null) + ' ' + escapeHtml(String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
     return `
-    <div class="card-questao" style="cursor:pointer" onclick="abrirTopicoDoForum('${f.id}')" ontouchend="event.preventDefault();abrirTopicoDoForum('${f.id}')">
+    <div class="card-questao" style="cursor:pointer" onclick="abrirTopicoDoForum('${f.id}')">
       <div style="margin-bottom:6px">
         ${badgeTipoTopico(f.tipo)}
       </div>
@@ -15495,7 +15650,7 @@ async function renderizarDetalheQuestao(questaoId){
     <div class="section-title">Discussões dessa questão</div>
     ${(topicosDaQuestao||[]).length ? (topicosDaQuestao||[]).map(t=>{
       const resolvidoPraMim = t.status==='resolvido' && idsVotados.has(t.id);
-      return `<div class="card-questao" style="cursor:pointer${resolvidoPraMim?';opacity:0.6':''}" onclick="abrirTopico('${t.id}')" ontouchend="event.preventDefault();abrirTopico('${t.id}')">
+      return `<div class="card-questao" style="cursor:pointer${resolvidoPraMim?';opacity:0.6':''}" onclick="abrirTopico('${t.id}')">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
           ${badgeTipoTopico(t.tipo)}
           <span style="color:#888;font-size:var(--fs-b)">${t.status==='resolvido'?'Resolvido':'Aberto'}</span>
@@ -16155,7 +16310,7 @@ function linhaComparativaModulo(nome, pctAcerto, pctRecuperacao, pctRetencao, ac
   linhasInfo.push(retencaoTotal ? `% de retenção: ${retencaoSucesso} de ${retencaoTotal}` : '% de retenção: sem dado suficiente ainda');
   const textoInfo = linhasInfo.map(l=>`<div>${escapeHtml(l)}</div>`).join('');
   return `
-    <div style="padding:12px 0;cursor:pointer;border-bottom:0.5px solid #f0f0ee" onclick="mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)" ontouchend="event.preventDefault();mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)">
+    <div style="padding:12px 0;cursor:pointer;border-bottom:0.5px solid #f0f0ee" onclick="mostrarInfoModulo(event, '${escapeHtml(nome).replace(/'/g,"\\'")}', \`${textoInfo}\`)">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
         <span style="font-size:var(--fs-d);font-weight:600;color:#111">${escapeHtml(nome)}</span>
         <span style="font-size:var(--fs-b);color:#888;flex-shrink:0;margin-left:10px">${acertos}/${total} acertos</span>
@@ -17269,7 +17424,7 @@ function renderizarMetricasPessoais(){
     if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
     if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
     if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
-    return `<div style="cursor:pointer;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${p.questaoId}')" ontouchend="event.preventDefault();abrirDetalheQuestao('${p.questaoId}')">
+    return `<div style="cursor:pointer;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${p.questaoId}')">
       <div style="font-size:var(--fs-d);color:#888">${partes.length ? partes.join(' · ') : 'Questão'}</div>
       <div style="color:#888;font-size:var(--fs-b);margin-top:6px">${p.erros} ${p.erros===1?'erro':'erros'} em ${p.tentativas} ${p.tentativas===1?'tentativa':'tentativas'}</div>
     </div>`;
@@ -17301,7 +17456,7 @@ function renderizarFavoritosMetricas(elFavoritos, infoPorQuestao){
       if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
       if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
       if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
-      return `<div style="cursor:pointer;position:relative;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${f.questao_id}')" ontouchend="event.preventDefault();abrirDetalheQuestao('${f.questao_id}')">
+      return `<div style="cursor:pointer;position:relative;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${f.questao_id}')">
         <button onclick="event.stopPropagation();desfavoritarDaListaMetricas('${f.id}','${f.questao_id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px" title="Desfavoritar">✕</button>
         <div style="font-size:var(--fs-d);color:#888;margin-right:24px">${partes.length ? partes.join(' · ') : 'Questão'}</div>
         <div style="color:#888;font-size:var(--fs-b);margin-top:6px">Favoritada em ${new Date(f.criado_em).toLocaleDateString('pt-BR')}</div>
@@ -17331,7 +17486,7 @@ function renderizarNotasMetricas(elNotas, infoPorQuestao){
       if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
       if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
       partes.push(new Date(n.criado_em).toLocaleDateString('pt-BR'));
-      return `<div style="cursor:pointer;position:relative;padding:12px 0;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${n.questao_id}')" ontouchend="event.preventDefault();abrirDetalheQuestao('${n.questao_id}')">
+      return `<div style="cursor:pointer;position:relative;padding:12px 0;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${n.questao_id}')">
         <button onclick="event.stopPropagation();excluirNotaDaListaMetricas('${n.id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px" title="Excluir nota">✕</button>
         <div style="font-size:var(--fs-d);color:#111;margin:0 24px 8px 0">${formatarEnunciado(n.texto)}</div>
         <div style="font-size:var(--fs-b);color:#888">${partes.join(' · ')}</div>
