@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-08-573';
+const VERSAO_APP = '2026-09-08-574';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4561,7 +4561,13 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     // comparação de tamanho, mesmo estando na mesma linha de base.
     // 1.2em com vertical-align neutro (0) resolve isso, mantendo o
     // símbolo visível sem desproporção
-    .replace(/[∼≈∝∘≃≅]/g, (s) => `<span style="font-size:1.2em;line-height:0.75;display:inline-block;vertical-align:0em">${s}</span>`);
+    .replace(/[∼≈∝∘≃≅]/g, (s) => `<span style="font-size:1.2em;line-height:0.75;display:inline-block;vertical-align:0em">${s}</span>`)
+    // "= f(" - notação de função matemática (ex: N_V = f(N_P, ...)) - o
+    // "f" aqui não é uma variável qualquer, é o símbolo convencional de
+    // função, que na tipografia matemática de verdade sempre vem em
+    // itálico próprio (𝑓, U+1D453), não itálico genérico de ênfase.
+    // Preserva o espaçamento original entre "=" e "f" (com ou sem espaço)
+    .replace(/=(\s*)f\(/g, (m, espaco) => `=${espaco}𝑓(`);
 }
 
 // extrai \begin{array}...\end{array} do texto CRU (antes do escapeHtml),
