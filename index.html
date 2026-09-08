@@ -959,7 +959,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         </select>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
           <div style="position:relative;flex:1">
-            <input id="vf-filtro-termo" type="search" placeholder="Palavra-chave (pt ou en)…" autocomplete="off" autocapitalize="off" spellcheck="false" class="filter-select" style="width:100%;margin-bottom:0;padding-right:30px" oninput="vfOnInputFiltroTermoVF()">
+            <input id="vf-filtro-termo" type="search" placeholder="Palavra-chave…" autocomplete="off" autocapitalize="off" spellcheck="false" class="filter-select" style="width:100%;margin-bottom:0;padding-right:30px" oninput="vfOnInputFiltroTermoVF()">
             <button id="vf-filtro-termo-limpar" class="hidden" onclick="vfLimparFiltroTermoVF()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:#888;cursor:pointer;padding:4px;display:flex" title="Limpar"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           </div>
           <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-filtro-termo')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
@@ -1406,7 +1406,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-info-varredura-vf">
   <div class="modal-conteudo">
     <h3 class="config-title">Varredura (sem repetir)</h3>
-    <p>Com a varredura ligada, cada questão desse filtro aparece uma única vez, sem repetir, até você desligar de novo — mesmo fechando e abrindo o app nesse meio tempo. A ordem muda: primeiro as revisões mais atrasadas (mesmo que ainda não tenham vencido de todo), depois as que você está aprendendo, depois as novas. Se você errar alguma, ela entra na escada de aprendizado normalmente, mas só volta a aparecer depois que você desligar a varredura. É útil pra passar rápido por um caderno inteiro, por exemplo perto da prova.</p>
+    <p>Com a varredura ligada, cada questão desse filtro aparece uma única vez, sem repetir, até você desligar de novo – mesmo fechando e abrindo o app nesse meio tempo. A ordem muda: primeiro as revisões mais atrasadas (mesmo que ainda não tenham vencido de todo), depois as que você está aprendendo, depois as novas. Se você errar alguma, ela entra na escada de aprendizado normalmente, mas só volta a aparecer depois que você desligar a varredura. É útil pra passar rápido por um caderno inteiro, por exemplo perto da prova.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-varredura-vf')">Fechar</button>
   </div>
 </div>
@@ -1414,7 +1414,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-info-filtro-termo">
   <div class="modal-conteudo">
     <h3 class="config-title">Palavra-chave (pt ou en)</h3>
-    <p>Digite um termo em português ou inglês e o filtro passa a mostrar só as questões cujo enunciado fala daquele conceito, nas duas línguas — "cavitação" e "cavitation" trazem o mesmo conjunto. Isso funciona porque o app tem um glossário de conceitos do PSCPP com as variantes de cada um (sinônimos, siglas, termos técnicos equivalentes em pt/en), então digitar "razão de guinada" também encontra questões que usam "yaw rate". A explicação da questão não entra nessa busca — só o enunciado.</p>
+    <p>Digite um termo em português ou inglês e o filtro passa a mostrar só as questões cujo enunciado fala daquele conceito, nas duas línguas – "cavitação" e "cavitation" trazem o mesmo conjunto. Isso funciona porque o app tem um glossário de conceitos do PSCPP com as variantes de cada um (sinônimos, siglas, termos técnicos equivalentes em pt/en), então digitar "razão de guinada" também encontra questões que usam "yaw rate". A explicação da questão não entra nessa busca – só o enunciado.</p>
     <button class="btn-secundario" style="width:100%;margin-bottom:8px" onclick="fecharModal('modal-info-filtro-termo');vfAbrirGlossarioVF()">Ver/editar glossário</button>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-filtro-termo')">Fechar</button>
   </div>
@@ -1887,7 +1887,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-07-25-557';
+const VERSAO_APP = '2026-09-08-560';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4660,6 +4660,31 @@ function vfReinserirTabelasVF(texto, tabelas){
   return texto.replace(/\u0000TABELA(\d+)\u0000/g, (m, i) => tabelas[Number(i)] || '');
 }
 
+// listas com marcador (* ou - no início da linha, seguido de espaço)
+// viram <ul><li> de verdade, em vez de ficarem como texto solto com
+// asterisco/traço literal. Roda ANTES do negrito/itálico (senão "* item"
+// vira confundido com a marcação de itálico *texto*) e o bloco inteiro
+// fica numa única linha (sem \n entre as tags), pra não sobrar <br>
+// indevido dentro da lista quando a conversão de quebra de linha rodar
+// depois. Aceita tanto * quanto - como marcador (o teclado do iPad às
+// vezes autocorrige um pro outro, então tratar os dois cobre esse caso)
+function vfProcessarListasNotaVF(texto){
+  const linhas = texto.split('\n');
+  const blocos = [];
+  let itensListaAtual = null;
+  for(const linha of linhas){
+    const m = linha.match(/^[*\-]\s+(.+)$/);
+    if(m){
+      if(!itensListaAtual) itensListaAtual = [];
+      itensListaAtual.push(`<li>${m[1]}</li>`);
+    }else{
+      if(itensListaAtual){ blocos.push(`<ul style="margin:6px 0;padding-left:22px">${itensListaAtual.join('')}</ul>`); itensListaAtual = null; }
+      blocos.push(linha);
+    }
+  }
+  if(itensListaAtual) blocos.push(`<ul style="margin:6px 0;padding-left:22px">${itensListaAtual.join('')}</ul>`);
+  return blocos.join('\n');
+}
 function formatarTextoItemVF(texto){
   if(!texto) return '';
   texto = vfLimparApostrofoUnderscoreVF(texto);
@@ -4669,7 +4694,9 @@ function formatarTextoItemVF(texto){
     // ainda manda o longo por engano, mesmo pedindo o curto; corrigir
     // aqui na exibição resolve de vez, sem precisar reeditar o PDF nem
     // reenviar o pedido toda vez que acontecer
-    .replace(/—/g, '–')
+    .replace(/—/g, '–');
+  resultado = vfProcessarListasNotaVF(resultado);
+  resultado = resultado
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     // quebras de linha reais (\n\n entre parágrafos, por exemplo) viram
@@ -8741,7 +8768,24 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   // mesma técnica de closure - null significa "sem termo ativo" (não
   // filtra nada), preenchido depois que o Promise.all principal resolver
   let vfIdsTermoParaCallbackVF = null;
-  const aoCarregarRestanteQuestoesVF = incluirDadosEntradaVF ? (questoesCruasExtras) => {
+  // sinal "interseção por termo já decidida" - resolvido logo depois do
+  // bloco que preenche vfIdsTermoParaCallbackVF (ou em qualquer saída por
+  // erro, pra nunca deixar o callback pendurado)
+  let resolverTermoProntoVF;
+  const termoProntoVF = new Promise(r => { resolverTermoProntoVF = r; });
+  const aoCarregarRestanteQuestoesVF = incluirDadosEntradaVF ? async (questoesCruasExtras) => {
+    // CORRIDA: as páginas 2+ chegam em paralelo com a RPC da palavra-chave.
+    // Se uma página chegasse ANTES da interseção ser decidida,
+    // vfIdsTermoParaCallbackVF ainda era null e a página entrava no pool
+    // sem o filtro do termo. Espera o sinal "interseção pronta" - sem termo
+    // ativo ele resolve na hora e não custa nada
+    await termoProntoVF;
+    // e mais um giro do event loop (macrotask): o sinal dispara DENTRO de
+    // carregarPoolVF, antes de quem chamou receber o pool e gravar em
+    // estadoVF.pool. Sem esse giro, o callback continuaria num microtask
+    // anterior à gravação e anexaria as páginas ao pool VELHO, que é jogado
+    // fora logo em seguida - perdendo as questões
+    await new Promise(r => setTimeout(r, 0));
     if(tokenDestaCargaVF !== vfTokenGeracaoPoolVF) return; // filtro mudou no meio - descarta, é de uma carga velha
     if(!estadoVF || !estadoVF.pool) return;
     const idsJaNoPool = new Set(estadoVF.pool.map(q => q.id));
@@ -8788,6 +8832,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   // relatório da Fable). Aborta com aviso claro em vez disso
   if(erroEstados){
     document.getElementById('vf-conteudo').innerHTML = `<p style="padding:24px 4px;color:#A32D2D">Não consegui carregar seu progresso no Flash agora (${escapeHtml(erroEstados.message||'erro de rede')}). Tenta de novo – responder assim, sem isso, arriscaria apagar seu progresso real.</p>`;
+    resolverTermoProntoVF(); // libera o callback das páginas seguintes - senão ficaria pendurado esperando pra sempre, já que o fluxo normal nunca chega no bloco que dispara esse sinal
     throw new Error('Falha ao buscar repeticao_vf: ' + erroEstados.message);
   }
   favoritosVF = new Set((favData||[]).map(f=>f.questao_vf_id));
@@ -8837,6 +8882,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   }else{
     vfIdsTermoParaCallbackVF = null;
   }
+  resolverTermoProntoVF(); // libera as páginas seguintes que ficaram esperando a interseção
   vfCalcularFamiliasNoPoolVF(poolPronto);
   // anexa os dados de entrada como propriedades extras no próprio array
   // (arrays são objetos em JS) - preserva a assinatura de retorno pra
@@ -9836,7 +9882,7 @@ function vfMostrarTelaEsgotadoVF(motivo, ehVarredura){
   const partes = [`Esse filtro esgotou por agora.`];
   if(motivo?.novasEnterradas > 0) partes.push(`${motivo.novasEnterradas} nova${motivo.novasEnterradas===1?'':'s'} ${motivo.novasEnterradas===1?'está':'estão'} enterrada${motivo.novasEnterradas===1?'':'s'} até amanhã (irmã${motivo.novasEnterradas===1?'':'s'} de questões que você já viu hoje).`);
   if(motivo?.revisoesAguardando > 0){
-    const espera = motivo.menorEsperaRevisaoH != null ? ` — a próxima em ${vfFormatarHorasVF(motivo.menorEsperaRevisaoH)}` : '';
+    const espera = motivo.menorEsperaRevisaoH != null ? ` – a próxima em ${vfFormatarHorasVF(motivo.menorEsperaRevisaoH)}` : '';
     partes.push(`${motivo.revisoesAguardando} revis${motivo.revisoesAguardando===1?'ão':'ões'} ainda não venceu${motivo.revisoesAguardando===1?'':'ram'}${espera}.`);
   }
   if(motivo?.aprendendoAguardando > 0){
@@ -9996,7 +10042,7 @@ async function vfCarregarExpansaoTermoVF(){
   // a nenhum conceito do glossário, só uma busca direta por substring)
   const termosPt = [...new Set(data.map(r => r.termo_pt).filter(Boolean))];
   if(!termosPt.length){
-    el.innerHTML = `Só o termo digitado — <a href="#" onclick="event.preventDefault();vfAbrirGlossarioVF('${escapeHtml(termoNoInicio)}')" style="color:#B23A34">adicionar ao glossário?</a>`;
+    el.innerHTML = `Só o termo digitado – <a href="#" onclick="event.preventDefault();vfAbrirGlossarioVF('${escapeHtml(termoNoInicio)}')" style="color:#B23A34">adicionar ao glossário?</a>`;
     return;
   }
   const primeiros5 = termosPt.slice(0, 5);
@@ -10061,7 +10107,7 @@ function vfRenderizarListaGlossarioVF(lista){
     return `<div style="padding:10px 0;border-bottom:0.5px solid #eee">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;cursor:pointer" onclick="vfAlternarDetalheGlossarioVF('${item.id}')">
         <div style="flex:1;min-width:0">
-          <div style="font-size:var(--fs-d);color:#111">${escapeHtml(item.termo_pt)}${item.termo_en ? ' — ' + escapeHtml(item.termo_en) : ''}</div>
+          <div style="font-size:var(--fs-d);color:#111">${escapeHtml(item.termo_pt)}${item.termo_en ? ' – ' + escapeHtml(item.termo_en) : ''}</div>
           <div style="font-size:var(--fs-a);color:#999">${escapeHtml(item.modulo||'Geral')}</div>
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0">
@@ -10189,7 +10235,7 @@ function vfAbrirExcluirGlossarioVF(id){
   const item = vfGlossarioCacheVF?.find(i => i.id === id);
   if(!item) return;
   vfGlossarioIdParaExcluirVF = id;
-  document.getElementById('vf-glossario-excluir-texto').textContent = `"${item.termo_pt}"${item.termo_en ? ' — ' + item.termo_en : ''} será removido do glossário.`;
+  document.getElementById('vf-glossario-excluir-texto').textContent = `"${item.termo_pt}"${item.termo_en ? ' – ' + item.termo_en : ''} será removido do glossário.`;
   abrirModal('modal-glossario-excluir-vf');
 }
 async function vfConfirmarExcluirGlossarioVF(){
@@ -12869,18 +12915,53 @@ async function abrirNotaVF(questaoVfId){
 // pra ser reaproveitado tanto na renderização completa quanto nas
 // atualizações otimistas (adicionar/fixar), que não precisam mais
 // buscar a lista inteira de novo no banco só pra mostrar 1 mudança
+// guarda o texto BRUTO de cada nota (com a marcação **negrito** intacta,
+// antes de formatarTextoItemVF converter pra HTML) - achado real: editar
+// lendo container.textContent pegava o texto já formatado (sem os
+// asteriscos, só o texto visível), perdendo a marcação de negrito toda
+// vez que a pessoa editava uma nota que tinha negrito
+let vfNotasTextoBrutoCacheVF = {};
+const VF_DURACAO_PRESSIONAR_NOTA_MS = 500; // mesmo padrão do enunciado/explicação
+let vfTimerPressionarNotaVF = null;
+let vfPosicaoInicialPressionarNotaVF = null;
 function vfHtmlItemNotaVF(n){
+  vfNotasTextoBrutoCacheVF[n.id] = n.texto;
   return `
     <div id="vf-nota-item-${n.id}" style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
-      <div id="vf-nota-texto-${n.id}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111">${formatarTextoItemVF(n.texto)}</div>
-      <button onclick="vfEditarNotaVF('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;padding:2px;flex-shrink:0;display:flex" title="Editar nota"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+      <div id="vf-nota-texto-${n.id}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111;cursor:pointer" ontouchstart="vfIniciarPressionarNotaVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(n.texto)}</div>
       <button id="vf-nota-btn-fixar-${n.id}" onclick="vfAlternarFixarNotaVF('${n.id}', ${!!n.fixada})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.fixada?'#B23A34':'#ddd'};background:${n.fixada?'#B23A34':'#fff'};color:${n.fixada?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.fixada?'Desafixar (deixa de aparecer na página)':'Fixar (aparece na página da questão)'}">${VF_ICONE_PIN_VF}</button>
-      <button onclick="excluirNotaVF('${n.id}')" style="background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:2px;flex-shrink:0" title="Excluir nota">✕</button>
+      <button id="vf-nota-btn-mnemonico-${n.id}" onclick="vfAlternarMnemonicoNotaVF('${n.id}', ${!!n.eh_mnemonico})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.eh_mnemonico?'#B23A34':'#ddd'};background:${n.eh_mnemonico?'#B23A34':'#fff'};color:${n.eh_mnemonico?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:var(--fs-e)" title="${n.eh_mnemonico?'Marcada como mnemônico':'Marcar como mnemônico'}">🧠</button>
+      <button onclick="excluirNotaVF('${n.id}')" style="width:30px;height:30px;flex-shrink:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);display:flex;align-items:center;justify-content:center" title="Excluir nota">✕</button>
     </div>`;
+}
+// segurar no texto da nota edita, igual já funciona no enunciado/explicação
+// das questões - toque rápido não faz nada especial aqui (o texto já é
+// selecionável/copiável normalmente como texto comum)
+function vfIniciarPressionarNotaVF(evento, notaId){
+  clearTimeout(vfTimerPressionarNotaVF);
+  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
+  vfPosicaoInicialPressionarNotaVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
+  vfTimerPressionarNotaVF = setTimeout(() => {
+    vfTimerPressionarNotaVF = null;
+    vfEditarNotaVF(notaId);
+  }, VF_DURACAO_PRESSIONAR_NOTA_MS);
+}
+// usado no touchmove/touchend/mouseleave - moveu ou soltou cedo demais
+// cancela a espera de edição, mesma tolerância ao tremor do enunciado
+function vfCancelarPressionarNotaSilenciosoVF(evento){
+  if(evento && vfPosicaoInicialPressionarNotaVF){
+    const ponto = evento.touches ? evento.touches[0] : evento;
+    if(ponto){
+      const dx = ponto.clientX - vfPosicaoInicialPressionarNotaVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarNotaVF.y;
+      if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
+    }
+  }
+  clearTimeout(vfTimerPressionarNotaVF);
+  vfTimerPressionarNotaVF = null;
 }
 async function renderizarListaNotasVF(){
   const el = document.getElementById('lista-notas-vf');
-  const {data} = await sb.from('notas_vf').select('id, texto, criado_em, fixada').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false});
+  const {data} = await sb.from('notas_vf').select('id, texto, criado_em, fixada, eh_mnemonico').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false});
   if(!data || !data.length){ el.innerHTML = ''; el.style.maxHeight = '0px'; return; }
   el.innerHTML = `<div id="vf-lista-notas-itens" style="margin-bottom:14px">` + data.map(vfHtmlItemNotaVF).join('') + `</div>`;
   // altura grande o bastante pra caber qualquer lista realista de notas -
@@ -12896,7 +12977,7 @@ let vfNotaTextoOriginalAntesEditarVF = {};
 function vfEditarNotaVF(notaId){
   const container = document.getElementById(`vf-nota-texto-${notaId}`);
   if(!container) return;
-  vfNotaTextoOriginalAntesEditarVF[notaId] = container.textContent;
+  vfNotaTextoOriginalAntesEditarVF[notaId] = vfNotasTextoBrutoCacheVF[notaId] ?? container.textContent;
   container.outerHTML = `<div id="vf-nota-texto-${notaId}" style="flex:1">
     <textarea id="vf-nota-textarea-${notaId}" class="textarea-padrao" style="margin-bottom:6px">${escapeHtml(vfNotaTextoOriginalAntesEditarVF[notaId])}</textarea>
     <div style="display:flex;gap:8px">
@@ -12914,6 +12995,7 @@ async function vfSalvarEdicaoNotaVF(notaId){
   const textoNovo = textarea?.value.trim();
   if(!textoNovo) return; // nota vazia não é válida - mesma regra de adicionarNotaVF
   await sb.from('notas_vf').update({texto: textoNovo}).eq('id', notaId);
+  vfNotasTextoBrutoCacheVF[notaId] = textoNovo; // mantém o cache do texto bruto em dia
   vfNotaPreviewCacheVF.delete(questaoNotaVfAtual); // invalida - texto pode ter mudado se essa nota é a mais recente/fixada
   await renderizarListaNotasVF();
   renderizarItemVF(); // atualiza o preview na página, se essa nota estiver fixada
@@ -13072,7 +13154,7 @@ async function adicionarNotaVF(){
   const texto = campo.value.trim();
   if(!texto) return;
   campo.value = ''; // limpa já, sensação instantânea
-  const {data, error} = await sb.from('notas_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoNotaVfAtual, texto}).select('id, texto, criado_em, fixada').single();
+  const {data, error} = await sb.from('notas_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoNotaVfAtual, texto}).select('id, texto, criado_em, fixada, eh_mnemonico').single();
   if(error || !data){
     vfMostrarAvisoVF('Não consegui salvar a nota. Tenta de novo.');
     campo.value = texto; // devolve o texto pro campo, pra não perder o que foi escrito
@@ -13150,6 +13232,23 @@ async function vfAlternarFixarNotaVF(notaId, fixadaAtual){
   }else{
     await sb.from('notas_vf').update({fixada: false}).eq('id', notaId);
   }
+}
+
+// marca/desmarca uma nota como mnemônico - independente do fixar, pode
+// ter várias notas marcadas ao mesmo tempo (não é exclusivo por questão).
+// Serve pra, no futuro, filtrar/listar todas as questões que têm algum
+// mnemônico salvo, ou ver todos os mnemônicos numa lista só
+async function vfAlternarMnemonicoNotaVF(notaId, mnemonicoAtual){
+  const novoValor = !mnemonicoAtual;
+  const btn = document.getElementById(`vf-nota-btn-mnemonico-${notaId}`);
+  if(btn){
+    btn.style.borderColor = novoValor ? '#B23A34' : '#ddd';
+    btn.style.background = novoValor ? '#B23A34' : '#fff';
+    btn.style.color = novoValor ? '#fff' : '#888';
+    btn.title = novoValor ? 'Marcada como mnemônico' : 'Marcar como mnemônico';
+    btn.setAttribute('onclick', `vfAlternarMnemonicoNotaVF('${notaId}', ${novoValor})`);
+  }
+  await sb.from('notas_vf').update({eh_mnemonico: novoValor}).eq('id', notaId);
 }
 
 let questaoVfParaExcluir = null;
