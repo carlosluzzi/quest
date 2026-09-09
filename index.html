@@ -1598,7 +1598,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-tags-vf" onclick="if(event.target===this) vfFecharPopupTagsVF()">
   <div class="modal-conteudo">
     <h3 class="config-title">Tags dessa afirmação</h3>
-    <div id="vf-tags-lista-atual" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+    <div id="vf-tags-lista-atual" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;min-height:25px"></div>
     <div style="display:flex;gap:8px;align-items:stretch">
       <input type="text" id="vf-tags-input-novo" class="filter-select" placeholder="Digite ou escolhe uma tag" list="vf-tags-datalist" style="flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfAdicionarTagVF();}">
       <datalist id="vf-tags-datalist"></datalist>
@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-08-586';
+const VERSAO_APP = '2026-09-09-002';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4558,11 +4558,13 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     // \frac{a}{b} - usa o caractere Unicode pronto quando a fração é uma
     // das comuns (½, ⅓, ¾, etc - existem prontos no teclado/fonte,
     // ficam mais limpos que qualquer HTML). Quando não existe um pronto
-    // pra aquela combinação exata, cai num fallback tipográfico:
-    // numerador sobrescrito + barra de fração (⁄, caractere próprio pra
-    // isso, diferente da barra normal /) + denominador subscrito -
-    // sem isso, \frac{}{} aparecia cru, com a palavra "frac" e as
-    // chaves visíveis na tela
+    // pra aquela combinação exata, cai numa fração empilhada de verdade:
+    // numerador em cima, linha horizontal, denominador embaixo,
+    // centralizados - o formato matemático padrão. Achado real: a
+    // versão anterior desse fallback usava sup/sub com barra inclinada
+    // (⁄), que parecia o denominador "flutuando" pequeno do lado, não
+    // uma fração de verdade - sem isso, \frac{}{} aparecia cru, com a
+    // palavra "frac" e as chaves visíveis na tela
     .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, (m, num, den) => {
       const fracoesUnicode = {
         '1/2':'½', '1/3':'⅓', '2/3':'⅔', '1/4':'¼', '3/4':'¾',
@@ -4572,7 +4574,7 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
       };
       const chave = `${num}/${den}`;
       if(fracoesUnicode[chave]) return fracoesUnicode[chave];
-      return `<sup>${num}</sup>⁄<sub>${den}</sub>`;
+      return `<span style="display:inline-block;text-align:center;vertical-align:middle;line-height:1.15;margin:0 2px"><span style="display:block;border-bottom:1.3px solid currentColor;padding:0 3px">${num}</span><span style="display:block;padding:0 3px">${den}</span></span>`;
     })
     // \nome{conteudo} - letra grega/operador seguido de chaves SEM
     // expoente (ex: \delta{V_P}) - converte o símbolo e remove as
