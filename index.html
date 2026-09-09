@@ -1632,9 +1632,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <!-- balãozinho de explicação - aparece perto do que foi tocado (\nota{}{}
      no LaTeX ou uma anotação clicada depois numa célula), fecha ao tocar
      fora ou no X -->
-<div id="vf-balao-explicacao" class="hidden" style="position:fixed;z-index:400;max-width:280px;background:#F0F0ED;color:#111;border:0.5px solid #D8D8D3;border-radius:10px;padding:10px 14px;font-size:var(--fs-c);line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,0.18);white-space:pre-line">
-  <span id="vf-balao-explicacao-texto"></span>
-</div>
+<div id="vf-balao-explicacao" class="hidden" style="position:fixed;z-index:400;max-width:280px;background:#F0F0ED;color:#111;border:0.5px solid #D8D8D3;border-radius:10px;padding:10px 14px;font-size:var(--fs-c);line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,0.18);white-space:pre-line"><span id="vf-balao-explicacao-texto"></span></div>
 
 <div class="modal-overlay hidden" id="modal-complementar-vf" onclick="if(event.target===this) fecharModalComplementarVF()">
   <div class="modal-conteudo popup-formulario" style="max-width:600px;max-height:85vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
@@ -1671,9 +1669,11 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
           <button type="button" title="Alinhar à direita" onmousedown="event.preventDefault()" onclick="vfEditorRichAlinharVF('direita')" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="7" x2="19" y2="7"/><line x1="9" y1="12" x2="19" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/></svg></button>
           <div style="width:1px;background:#ddd;margin:4px 2px"></div>
           <button type="button" title="Inserir tabela" onmousedown="event.preventDefault()" onclick="vfEditorRichInserirTabelaVF()" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg></button>
+          <div style="width:1px;background:#ddd;margin:4px 2px"></div>
+          <button type="button" id="vf-editor-btn-modo-codigo" title="Ver/editar o código-fonte" onmousedown="event.preventDefault()" onclick="vfAlternarModoCodigoEditorVF()" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>
         </div>
         <div id="vf-editor-rich-caixa" contenteditable="true" class="textarea-padrao" style="min-height:180px;overflow-y:auto"></div>
-        <textarea id="vf-complementar-latex-novo" class="hidden"></textarea>
+        <textarea id="vf-complementar-latex-novo" class="hidden textarea-padrao" style="min-height:180px;font-family:monospace;font-size:var(--fs-c)"></textarea>
         <div style="display:flex;gap:8px;margin-top:10px">
           <button id="vf-complementar-btn-usar-local" class="btn-secundario" style="flex:1" onclick="vfUsarComplementarLocalVF()">Usar só aqui</button>
           <button id="vf-complementar-btn-salvar-biblioteca" class="btn-primario" style="flex:1" onclick="vfCriarESalvarElementoHtmlVF()">Salvar na biblioteca</button>
@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-08-581';
+const VERSAO_APP = '2026-09-08-584';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -12291,8 +12291,14 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   balao.classList.remove('hidden');
   // posiciona logo abaixo do ponto tocado, mas sem estourar a tela (nem
   // embaixo nem nas laterais) - mede DEPOIS de já estar visível, senão
-  // getBoundingClientRect() do próprio balão viria zerado
-  const ponto = evento.touches ? evento.touches[0] : evento;
+  // getBoundingClientRect() do próprio balão viria zerado.
+  // Achado real: com caneta (Apple Pencil), o evento pode chegar com
+  // "touches" como array VAZIO (não undefined) - "evento.touches ? ..."
+  // então caía errado em touches[0] (undefined), quebrando o cálculo em
+  // silêncio dentro do requestAnimationFrame e deixando o balão preso na
+  // posição padrão do CSS (sem left/top definidos - canto superior
+  // esquerdo). Checar o comprimento, não só a existência, resolve
+  const ponto = (evento.touches && evento.touches.length > 0) ? evento.touches[0] : evento;
   const margem = 10;
   requestAnimationFrame(() => {
     const rect = balao.getBoundingClientRect();
@@ -12533,11 +12539,11 @@ function vfEditorRichParaLatexVF(){
         alinhamentos.push(align === 'center' ? 'c' : align === 'right' ? 'r' : 'l');
       }
       const linhasTexto = linhas.map(tr =>
-        Array.from(tr.children).map(td => converterInline(td).trim()).join('&')
+        Array.from(tr.children).map(td => converterInline(td).trim()).join(' & ')
       );
       const temCabecalho = linhas[0].classList.contains('vf-editor-tr-cabecalho');
       const colchetes = temCabecalho ? '' : '[semcabecalho]';
-      partes.push(`\\begin{array}${colchetes}{${alinhamentos.join('')}}${linhasTexto.join('\\\\')}\\end{array}`);
+      partes.push(`\\begin{array}${colchetes}{${alinhamentos.join('')}}\n${linhasTexto.join('\\\\\n')}\n\\end{array}`);
     }else if(no.tagName === 'DIV' || no.tagName === 'P'){
       fecharBufferSolto();
       const align = no.style.textAlign;
@@ -12606,9 +12612,54 @@ function vfEditorRichDeLatexVF(texto){
 
 // roda logo antes de qualquer salvamento (Usar só aqui / Salvar na
 // biblioteca) - converte o conteúdo atual da caixa pro campo escondido
-// que as funções de salvar já existentes leem, sem precisar mudar elas
+// que as funções de salvar já existentes leem, sem precisar mudar elas.
+// Só sincroniza a partir do editor visual se ele for o modo ativo no
+// momento - se a pessoa estiver no modo código (viu/editou o texto cru
+// direto), a textarea já tem o valor certo digitado por ela, e
+// reconverter do editor visual por cima destruiria essa edição
 function vfEditorRichSincronizarAntesDeSalvarVF(){
-  document.getElementById('vf-complementar-latex-novo').value = vfEditorRichParaLatexVF();
+  const emModoCodigo = !document.getElementById('vf-complementar-latex-novo').classList.contains('hidden');
+  if(!emModoCodigo){
+    document.getElementById('vf-complementar-latex-novo').value = vfEditorRichParaLatexVF();
+  }
+}
+
+// alterna entre a visão rica (visual, contenteditable) e o código-fonte
+// cru (a mesma sintaxe do LaTeX simplificado que o Pilotquest reconhece)
+// - pensado pra tabelas complexas onde o editor visual atrapalha mais do
+// que ajuda (ex: valores numéricos longos, ou tabelas com \sidebyside,
+// que o editor visual ainda não sabe representar) e a pessoa só quer
+// colar/editar o texto direto
+function vfAlternarModoCodigoEditorVF(){
+  const caixaRica = document.getElementById('vf-editor-rich-caixa');
+  const textarea = document.getElementById('vf-complementar-latex-novo');
+  const btn = document.getElementById('vf-editor-btn-modo-codigo');
+  const indoParaCodigo = caixaRica.classList.contains('hidden') === false;
+  if(indoParaCodigo){
+    // rico -> código: sincroniza o que estava no editor visual pro texto cru
+    textarea.value = vfEditorRichParaLatexVF();
+    caixaRica.classList.add('hidden');
+    textarea.classList.remove('hidden');
+    btn.style.background = '#B23A34';
+    btn.style.color = '#fff';
+  }else{
+    // código -> rico: reconverte o texto cru (como a pessoa deixou) pro editor visual
+    caixaRica.innerHTML = vfEditorRichDeLatexVF(textarea.value);
+    textarea.classList.add('hidden');
+    caixaRica.classList.remove('hidden');
+    btn.style.background = 'transparent';
+    btn.style.color = '#333';
+  }
+}
+// garante que todo modal novo (criar do zero, editar existente) sempre
+// abre no modo rico - sem isso, o modo ficaria "grudado" de uma edição
+// anterior, confundindo qual caixa está de fato ativa
+function vfResetarModoCodigoEditorVF(){
+  document.getElementById('vf-editor-rich-caixa').classList.remove('hidden');
+  document.getElementById('vf-complementar-latex-novo').classList.add('hidden');
+  const btn = document.getElementById('vf-editor-btn-modo-codigo');
+  btn.style.background = 'transparent';
+  btn.style.color = '#333';
 }
 
 function vfAbrirComplementarVF(questaoVfId){
@@ -12617,6 +12668,7 @@ function vfAbrirComplementarVF(questaoVfId){
   document.getElementById('vf-complementar-titulo-novo').value = '';
   document.getElementById('vf-complementar-latex-novo').value = '';
   document.getElementById('vf-editor-rich-caixa').innerHTML = '';
+  vfResetarModoCodigoEditorVF();
   document.getElementById('vf-complementar-btn-remover-local').classList.add('hidden');
   document.getElementById('vf-complementar-btn-usar-local').classList.remove('hidden');
   document.getElementById('vf-complementar-btn-salvar-biblioteca').textContent = 'Salvar na biblioteca';
@@ -13107,6 +13159,7 @@ function vfAbrirEdicaoElementoHtmlVF(elementoHtmlId){
   document.getElementById('vf-complementar-titulo-novo').value = item.titulo;
   document.getElementById('vf-complementar-latex-novo').value = item.latex_fonte;
   document.getElementById('vf-editor-rich-caixa').innerHTML = vfEditorRichDeLatexVF(item.latex_fonte);
+  vfResetarModoCodigoEditorVF();
   document.getElementById('vf-complementar-btn-remover-local').classList.add('hidden');
   // editando um elemento já existente da biblioteca - "Usar só aqui" não
   // faz sentido aqui (esse elemento já está na biblioteca, não é local),
@@ -13184,6 +13237,7 @@ function vfEditarComplementarLocalVF(questaoId){
   document.getElementById('vf-complementar-titulo-novo').value = '';
   document.getElementById('vf-complementar-latex-novo').value = conteudoAtual;
   document.getElementById('vf-editor-rich-caixa').innerHTML = vfEditorRichDeLatexVF(conteudoAtual);
+  vfResetarModoCodigoEditorVF();
   document.getElementById('vf-complementar-btn-remover-local').classList.remove('hidden');
   document.getElementById('vf-complementar-btn-usar-local').classList.remove('hidden');
   document.getElementById('vf-complementar-btn-salvar-biblioteca').textContent = 'Salvar na biblioteca';
