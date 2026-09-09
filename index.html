@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-09-004';
+const VERSAO_APP = '2026-09-09-005';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -12364,7 +12364,6 @@ function vfIniciarArrastoNotaPreviewVF(evento, notaId){
   const yInicial = ponto.clientY;
   card.style.transition = 'none';
   card.style.zIndex = '10';
-  card.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)';
 
   function mover(pontoAtual){
     const novoTop = topInicial + (pontoAtual.clientY - yInicial);
@@ -12391,7 +12390,6 @@ function vfIniciarArrastoNotaPreviewVF(evento, notaId){
   function onTouch(e){ e.preventDefault(); mover(e.touches[0]); }
   function finalizar(){
     card.style.zIndex = '';
-    card.style.boxShadow = '';
     card.style.transition = 'top 0.22s cubic-bezier(.2,.8,.2,1)';
     vfAcabouDeArrastarNotaPreviewVF = true; // evita que o click sintético (mousedown+mouseup no mesmo elemento) abra o modal de notas por engano
     document.removeEventListener('mousemove', onMove);
