@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-09-003';
+const VERSAO_APP = '2026-09-09-004';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4161,6 +4161,8 @@ const VF_FONTE_TABELA = `'Charter','Iowan Old Style',Georgia,'Times New Roman',s
 // nas notas quanto nos elementos complementares anexados: fixa = aparece
 // na página principal da questão
 const VF_ICONE_PIN_VF = '<svg viewBox="0 0 32 32" width="16" height="16" fill="none"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M28 11.333L20.667 4l-6.076 6.38a2 2 0 01-1.448.62H9.414c-.89 0-1.337 1.077-.707 1.707l10.586 10.586c.63.63 1.707.184 1.707-.707v-3.729a2 2 0 01.62-1.448L28 11.333zM14 18l-8 8"/></svg>';
+// alça de arrastar (⠿) pra reordenar notas fixadas na página principal
+const VF_ICONE_ALCA_ARRASTO_VF = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
 const VF_ICONE_MNEMONICO_VF = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.3" fill="currentColor"/><rect x="13" y="4" width="7" height="7" rx="1.3" fill="currentColor"/><rect x="4" y="13" width="7" height="7" rx="1.3" fill="currentColor"/><rect x="13" y="13" width="7" height="7" rx="1.3" fill="currentColor"/></svg>';
 
 // processa o conteúdo de uma célula de tabela: comandos específicos de
@@ -8790,33 +8792,38 @@ async function vfGarantirConteudoCompletoVF(item){
 
 // cache de preview de nota (texto da nota mais recente de cada questão) -
 // mesmo padrão de vfConteudoCompletoCache. Chave: questaoId, valor: texto
-// da nota (string) ou null (já buscou, confirmado que não tem nenhuma)
+// cache: questaoId -> array de notas FIXADAS dessa questão (pode ter
+// mais de uma agora), já ordenadas por ordem_fixacao. Array vazio
+// significa "já buscou, confirmado que não tem nenhuma fixada"
 const vfNotaPreviewCacheVF = new Map();
 
-// busca em lote a nota FIXADA de cada questão de uma vez só - uma query
-// com .in() + fixada=true, então cada questão tem no máximo 1 resultado
-// (a fixada), sem precisar de uma query por questão
+// busca em lote a(s) nota(s) FIXADA(s) de cada questão de uma vez só -
+// uma query com .in(), sem limite de 1 por questão (várias notas podem
+// estar fixadas na mesma questão agora)
 // cache da lista COMPLETA de notas de cada questão (questaoId -> array),
-// separado do vfNotaPreviewCacheVF (que guarda só o texto da fixada, pro
+// separado do vfNotaPreviewCacheVF (que guarda só as fixadas, pro
 // preview na página) - usado pra abrir o modal de Notas já com a lista
 // pronta, sem esperar o banco
 let vfListaNotasCacheVF = new Map();
 async function vfBuscarNotasEmLoteVF(questaoIds){
   // busca pra quem tem QUALQUER nota (não só fixada) e ainda não está no
-  // cache da lista completa - uma query só resolve tanto o preview da
-  // fixada (usado na página) quanto a lista inteira (usada no modal),
+  // cache da lista completa - uma query só resolve tanto o preview das
+  // fixadas (usado na página) quanto a lista inteira (usada no modal),
   // já que os dados vêm juntos de qualquer forma
   const pendentes = questaoIds.filter(id => notasVF.has(id) && !vfListaNotasCacheVF.has(id));
   if(!pendentes.length) return;
-  const {data, error} = await sb.from('notas_vf').select('id, questao_vf_id, texto, criado_em, fixada, eh_mnemonico')
+  const {data, error} = await sb.from('notas_vf').select('id, questao_vf_id, texto, criado_em, fixada, eh_mnemonico, ordem_fixacao')
     .eq('usuario_id', usuarioAtual.id).in('questao_vf_id', pendentes).order('criado_em', {ascending:false});
   if(error) return;
-  pendentes.forEach(id => { vfListaNotasCacheVF.set(id, []); vfNotaPreviewCacheVF.set(id, null); }); // marca como "já buscou" mesmo se não achar nada, evita rebuscar
+  pendentes.forEach(id => { vfListaNotasCacheVF.set(id, []); vfNotaPreviewCacheVF.set(id, []); }); // marca como "já buscou" mesmo se não achar nada, evita rebuscar
   (data || []).forEach(n => {
-    if(!vfListaNotasCacheVF.get(n.questao_vf_id)) vfListaNotasCacheVF.set(n.questao_vf_id, []);
     vfListaNotasCacheVF.get(n.questao_vf_id).push(n);
-    if(n.fixada) vfNotaPreviewCacheVF.set(n.questao_vf_id, n.texto);
+    if(n.fixada) vfNotaPreviewCacheVF.get(n.questao_vf_id).push(n);
   });
+  // ordena cada lista de fixadas pela ordem escolhida (arrasto na página) -
+  // ordem_fixacao pode ser null em notas fixadas antes dessa coluna
+  // existir; tratadas como 0, ficam no início
+  vfNotaPreviewCacheVF.forEach(lista => lista.sort((a,b) => (a.ordem_fixacao||0) - (b.ordem_fixacao||0)));
 }
 
 // mesma coisa, mas em LOTE - uma única query com .in('id', [...]) pra
@@ -10775,13 +10782,15 @@ function renderizarItemVF(){
     `;
   }
 
-  // preview da nota FIXADA - card próprio, separado do card da resposta.
-  // Achado real: antes, QUALQUER nota salva fazia esse card aparecer
-  // sozinho (com um convite pontilhado quando ainda não tinha nota) -
-  // agora só aparece se o usuário fixou uma nota explicitamente (mesmo
-  // padrão do "anexar" do Complementar). Sem nota fixada, fica sem nada
+  // preview das notas FIXADAS - pode ter mais de uma agora, empilhadas
+  // dentro de um container (position:relative), cada nota vira um bloco
+  // com position:absolute dentro dele pro efeito de arrastar/reordenar
+  // funcionar. Achado real: antes, QUALQUER nota salva fazia esse card
+  // aparecer sozinho (com um convite pontilhado quando ainda não tinha
+  // nota) - agora só aparece alguma coisa se o usuário fixou pelo menos
+  // uma nota explicitamente (mesmo padrão do "anexar" do Complementar)
   const cardNotaHtml = (jaRespondida && notasFixadasVF.has(item.id))
-    ? `<div class="card-questao" id="vf-preview-nota" style="margin-top:14px"></div>`
+    ? `<div id="vf-preview-notas-container" style="position:relative;margin-top:14px"></div>`
     : '';
 
 
@@ -12238,49 +12247,176 @@ function fecharModalExclusaoVF(){
 // essa questão específica tem pelo menos uma nota, evitando uma consulta
 // desnecessária pra maioria das questões, que não têm nenhuma
 async function vfCarregarPreviewNotaVF(questaoVfId){
-  const el = document.getElementById('vf-preview-nota');
-  if(!el) return; // a tela já pode ter mudado de questão antes da resposta chegar
+  const container = document.getElementById('vf-preview-notas-container');
+  if(!container) return; // a tela já pode ter mudado de questão antes da resposta chegar
   // checa o cache primeiro (pré-buscado junto com o resto do conteúdo em
   // vfPreBuscarProximasVF) - se já tem, monta na hora, sem esperar rede
   // nenhuma, junto com o resto da resposta. Só busca ao vivo se não veio
   // pré-carregado (por exemplo, resposta rápida demais pra pré-busca ter
   // terminado a tempo)
   if(vfNotaPreviewCacheVF.has(questaoVfId)){
-    vfMontarPreviewNotaVF(el, vfNotaPreviewCacheVF.get(questaoVfId), questaoVfId);
+    vfMontarPreviewNotasVF(container, vfNotaPreviewCacheVF.get(questaoVfId), questaoVfId);
     return;
   }
-  const {data} = await sb.from('notas_vf').select('id, texto').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).eq('fixada', true).limit(1);
-  const texto = (data && data.length) ? data[0].texto : null;
-  vfNotaPreviewCacheVF.set(questaoVfId, texto);
+  const {data} = await sb.from('notas_vf').select('id, texto, ordem_fixacao').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).eq('fixada', true).order('ordem_fixacao', {ascending: true});
+  const notas = data || [];
+  vfNotaPreviewCacheVF.set(questaoVfId, notas);
   // reconfere o elemento depois do await - se a pessoa já avançou pra
   // outra questão enquanto isso, não pisa no preview da questão nova
-  const elAtual = document.getElementById('vf-preview-nota');
-  if(!elAtual) return;
-  vfMontarPreviewNotaVF(elAtual, texto, questaoVfId);
+  const containerAtual = document.getElementById('vf-preview-notas-container');
+  if(!containerAtual) return;
+  vfMontarPreviewNotasVF(containerAtual, notas, questaoVfId);
 }
 
-// monta o card/lâmpada do preview de nota a partir do texto já em mãos -
-// síncrono, sem nenhuma consulta - reusado tanto pelo caminho com cache
-// quanto pelo fallback que buscou ao vivo
-function vfMontarPreviewNotaVF(elAtual, texto, questaoVfId){
-  if(!texto) return;
-  elAtual.onclick = () => abrirNotaVF(questaoVfId);
-  // nota com tabela (\begin{array}, sozinha ou dentro de \sidebyside) não
-  // ganha lâmpada nem fica dentro de outro card - a tabela já tem seu
-  // próprio card/borda embutido, "card dentro de card" fica estranho.
-  // Lâmpada+card continua só pra nota puramente escrita, sem tabela
-  const temTabela = /\\begin\{array\}/.test(texto);
-  if(temTabela){
-    elAtual.classList.remove('card-questao');
-    elAtual.style.cssText = 'margin-top:20px;cursor:pointer';
-    elAtual.innerHTML = formatarTextoItemVF(texto);
-  }else{
-    // mantém a classe card-questao (já traz padding/borda/sombra corretos
-    // pro card próprio)
-    elAtual.classList.add('card-questao');
-    elAtual.style.cssText = 'margin-top:14px;cursor:pointer';
-    elAtual.innerHTML = `<div style="color:#333;line-height:1.4">${formatarTextoItemVF(texto)}</div>`;
+const VF_GAP_PREVIEW_NOTAS = 14; // mesmo espaçamento vertical que os cards já usavam entre si (margin-top:14px)
+
+// monta as notas fixadas (pode ser mais de uma) dentro do container -
+// cada uma vira um bloco próprio, empilhado com position:absolute (pro
+// efeito de arrastar/reordenar funcionar), com uma alcinha (⠿) separada
+// só pra isso - segurar o TEXTO da nota continua sem fazer nada especial
+// aqui (diferente do modal de lista, aqui o clique abre o modal de notas
+// da questão, não edita direto)
+function vfMontarPreviewNotasVF(container, notas, questaoVfId){
+  container.innerHTML = '';
+  container.dataset.questaoId = questaoVfId;
+  if(!notas || !notas.length) return;
+
+  notas.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'vf-nota-preview-item';
+    el.dataset.notaId = n.id;
+    el.style.cssText = 'position:absolute;left:0;right:0;transition:top 0.22s cubic-bezier(.2,.8,.2,1);box-sizing:border-box';
+    // nota com tabela (\begin{array}, sozinha ou dentro de \sidebyside)
+    // não ganha o card com borda/sombra - a tabela já tem seu próprio
+    // card embutido, "card dentro de card" fica estranho
+    const temTabela = /\\begin\{array\}/.test(n.texto);
+    const classeCard = temTabela ? '' : 'card-questao';
+    const conteudoInterno = temTabela
+      ? formatarTextoItemVF(n.texto)
+      : `<div style="color:#333;line-height:1.4;padding-right:32px">${formatarTextoItemVF(n.texto)}</div>`;
+    el.innerHTML = `<div class="${classeCard}" style="position:relative;cursor:pointer" onclick="vfCliqueNotaPreviewVF(event,'${questaoVfId}')">${conteudoInterno}
+      <div class="vf-alca-nota-preview" data-nota-id="${n.id}" ontouchstart="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" onmousedown="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#bbb;cursor:grab;touch-action:none">${VF_ICONE_ALCA_ARRASTO_VF}</div>
+    </div>`;
+    container.appendChild(el);
+  });
+  vfReposicionarNotasPreviewVF(container);
+}
+
+// clique em qualquer parte da nota (fora da alcinha) abre o modal de
+// notas dessa questão - a alcinha já para propagação antes disso rodar.
+// Ignora se acabou de soltar um arrasto: mousedown+mouseup no mesmo
+// elemento (a alça, que é onde o clique solto cai, já que o card
+// "segue" ela) gera um evento click sintético do navegador, que sem essa
+// proteção abria o modal de notas logo depois de só reordenar
+let vfAcabouDeArrastarNotaPreviewVF = false;
+function vfCliqueNotaPreviewVF(evento, questaoVfId){
+  if(vfAcabouDeArrastarNotaPreviewVF){ vfAcabouDeArrastarNotaPreviewVF = false; return; }
+  abrirNotaVF(questaoVfId);
+}
+
+// posição de repouso de cada nota, na ordem atual do array em cache -
+// INCLUI a nota sendo arrastada (se idIgnorado for passado, só não
+// aplica o "top" calculado A ELA, que nesse momento está seguindo o
+// dedo/mouse livremente) - isso é o que garante o "buraco" do tamanho
+// dela no meio da lista, em vez das outras colapsarem como se ela não
+// existisse
+function vfLayoutNotasPreviewVF(container){
+  const notas = vfNotaPreviewCacheVF.get(container.dataset.questaoId) || [];
+  const pos = {};
+  let y = 0;
+  notas.forEach(n => {
+    const el = container.querySelector(`.vf-nota-preview-item[data-nota-id="${n.id}"]`);
+    if(!el) return;
+    const h = el.offsetHeight;
+    pos[n.id] = {top: y, h};
+    y += h + VF_GAP_PREVIEW_NOTAS;
+  });
+  container.style.height = Math.max(0, y - VF_GAP_PREVIEW_NOTAS) + 'px';
+  return pos;
+}
+function vfReposicionarNotasPreviewVF(container, idIgnorado){
+  const pos = vfLayoutNotasPreviewVF(container);
+  const notas = vfNotaPreviewCacheVF.get(container.dataset.questaoId) || [];
+  notas.forEach(n => {
+    if(n.id === idIgnorado) return;
+    const el = container.querySelector(`.vf-nota-preview-item[data-nota-id="${n.id}"]`);
+    if(el && pos[n.id]) el.style.top = pos[n.id].top + 'px';
+  });
+}
+
+// arrastar a alcinha (⠿) pra reordenar as notas fixadas - mesmo
+// algoritmo testado no protótipo v3: a nota segurada segue o dedo/mouse
+// livremente (sem transição), as outras deslizam com animação suave
+// assim que o centro da segurada passa do centro de repouso da vizinha
+// imediata (acima ou abaixo), em loop pra aguentar arrasto rápido
+function vfIniciarArrastoNotaPreviewVF(evento, notaId){
+  evento.stopPropagation(); // não deixa o clique do card (abrir o modal) disparar junto
+  if(evento.cancelable) evento.preventDefault();
+  const container = document.getElementById('vf-preview-notas-container');
+  if(!container) return;
+  const questaoVfId = container.dataset.questaoId;
+  const card = container.querySelector(`.vf-nota-preview-item[data-nota-id="${notaId}"]`);
+  if(!card) return;
+
+  const ponto = evento.touches ? evento.touches[0] : evento;
+  const topInicial = parseFloat(card.style.top || 0);
+  const alturaArrastada = card.offsetHeight;
+  const yInicial = ponto.clientY;
+  card.style.transition = 'none';
+  card.style.zIndex = '10';
+  card.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)';
+
+  function mover(pontoAtual){
+    const novoTop = topInicial + (pontoAtual.clientY - yInicial);
+    card.style.top = novoTop + 'px';
+    const centro = novoTop + alturaArrastada / 2;
+
+    let mudou = false;
+    for(;;){
+      const notas = vfNotaPreviewCacheVF.get(questaoVfId);
+      const pos = vfLayoutNotasPreviewVF(container);
+      const i = notas.findIndex(n => n.id === notaId);
+      const abaixo = notas[i+1], acima = notas[i-1];
+      if(abaixo && centro > pos[abaixo.id].top + pos[abaixo.id].h / 2){
+        const [item] = notas.splice(i, 1); notas.splice(i+1, 0, item); mudou = true; continue;
+      }
+      if(acima && centro < pos[acima.id].top + pos[acima.id].h / 2){
+        const [item] = notas.splice(i, 1); notas.splice(i-1, 0, item); mudou = true; continue;
+      }
+      break;
+    }
+    if(mudou) vfReposicionarNotasPreviewVF(container, notaId);
   }
+  function onMove(e){ mover(e); }
+  function onTouch(e){ e.preventDefault(); mover(e.touches[0]); }
+  function finalizar(){
+    card.style.zIndex = '';
+    card.style.boxShadow = '';
+    card.style.transition = 'top 0.22s cubic-bezier(.2,.8,.2,1)';
+    vfAcabouDeArrastarNotaPreviewVF = true; // evita que o click sintético (mousedown+mouseup no mesmo elemento) abra o modal de notas por engano
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', finalizar);
+    document.removeEventListener('touchmove', onTouch);
+    document.removeEventListener('touchend', finalizar);
+    vfReposicionarNotasPreviewVF(container); // a segurada encaixa no buraco, com a mesma animação
+    vfSalvarOrdemNotasFixadasVF(questaoVfId);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', finalizar);
+  document.addEventListener('touchmove', onTouch, {passive: false});
+  document.addEventListener('touchend', finalizar);
+}
+
+// grava a nova ordem (posição no array em cache) de volta no banco -
+// dispara em paralelo pra todas as notas fixadas dessa questão, uma
+// única vez ao soltar (não a cada troca durante o arrasto)
+async function vfSalvarOrdemNotasFixadasVF(questaoVfId){
+  const notas = vfNotaPreviewCacheVF.get(questaoVfId) || [];
+  await Promise.all(notas.map((n, i) => {
+    n.ordem_fixacao = i; // reflete no cache também, sem esperar o banco confirmar
+    return sb.from('notas_vf').update({ordem_fixacao: i}).eq('id', n.id);
+  }));
+  vfListaNotasCacheVF.delete(questaoVfId); // invalida - a ordem mudou, o modal de lista deve refletir também
 }
 
 // ---- balãozinho de explicação (\nota{}{} e anotações clicadas depois) ----
@@ -13860,12 +13996,13 @@ async function excluirNotaVF(notaId){
   const itemEl = document.getElementById(`vf-nota-item-${notaId}`);
   if(!itemEl) return;
   // guarda tudo que precisa pra reverter em caso de erro - o HTML do
-  // item (com a posição exata que ocupava na lista) e se essa nota era
-  // a fixada, pra restaurar notasFixadasVF corretamente se o delete falhar
+  // item (com a posição exata que ocupava na lista) e a lista de
+  // fixadas de antes, pra restaurar notasFixadasVF/vfNotaPreviewCacheVF
+  // corretamente se o delete falhar
   const htmlOriginal = itemEl.outerHTML;
   const proximoIrmao = itemEl.nextElementSibling;
   const eraFixada = document.getElementById(`vf-nota-btn-fixar-${notaId}`)?.style.background === 'rgb(178, 58, 52)';
-  const textoAntesDeExcluir = vfNotaPreviewCacheVF.get(questaoNotaVfAtual);
+  const listaFixadasAntesDeExcluir = vfNotaPreviewCacheVF.get(questaoNotaVfAtual);
 
   itemEl.remove(); // some da tela já
 
@@ -13875,12 +14012,16 @@ async function excluirNotaVF(notaId){
   if(!itensRestantes.length){
     notasVF.delete(questaoNotaVfAtual);
     notasFixadasVF.delete(questaoNotaVfAtual); // se não sobrou nenhuma nota, também não tem mais nenhuma fixada
+    vfNotaPreviewCacheVF.set(questaoNotaVfAtual, []);
     const listaEl = document.getElementById('lista-notas-vf');
     if(listaEl){ listaEl.innerHTML = ''; listaEl.style.maxHeight = '0px'; }
   }else if(eraFixada){
-    notasFixadasVF.delete(questaoNotaVfAtual); // a fixada foi excluída - nenhuma outra assume o posto sozinha
+    // várias notas podem estar fixadas ao mesmo tempo - remove só ESTA
+    // do array, as outras continuam fixadas normalmente
+    const novaLista = (listaFixadasAntesDeExcluir || []).filter(n => n.id !== notaId);
+    vfNotaPreviewCacheVF.set(questaoNotaVfAtual, novaLista);
+    if(!novaLista.length) notasFixadasVF.delete(questaoNotaVfAtual); // só remove se essa era a ÚLTIMA fixada
   }
-  vfNotaPreviewCacheVF.delete(questaoNotaVfAtual); // invalida - texto pode ter mudado (outra nota virou a mais recente) ou sumido de vez
   vfListaNotasCacheVF.delete(questaoNotaVfAtual); // idem - a lista completa também precisa ser buscada de novo na próxima abertura
   renderizarItemVF();
 
@@ -13899,7 +14040,7 @@ async function excluirNotaVF(notaId){
     }
     notasVF.add(questaoNotaVfAtual);
     if(eraFixada) notasFixadasVF.add(questaoNotaVfAtual);
-    if(textoAntesDeExcluir !== undefined) vfNotaPreviewCacheVF.set(questaoNotaVfAtual, textoAntesDeExcluir);
+    if(listaFixadasAntesDeExcluir !== undefined) vfNotaPreviewCacheVF.set(questaoNotaVfAtual, listaFixadasAntesDeExcluir);
     else vfNotaPreviewCacheVF.delete(questaoNotaVfAtual);
     vfListaNotasCacheVF.delete(questaoNotaVfAtual); // idem - a lista completa também precisa ser buscada de novo na próxima abertura
     renderizarItemVF();
@@ -13925,36 +14066,36 @@ async function vfAlternarFixarNotaVF(notaId, fixadaAtual){
   // do pop-up, que sempre usa o texto bruto original)
   const textoDaNota = vfNotasTextoBrutoCacheVF[notaId] ?? document.getElementById(`vf-nota-texto-${notaId}`)?.textContent ?? '';
 
-  // atualiza a lista visualmente já - reseta todos os botões de fixar
-  // pra "não fixado" primeiro (só uma nota fixada por vez), depois marca
-  // o certo se for o caso
-  document.querySelectorAll('[id^="vf-nota-btn-fixar-"]').forEach(btn => {
-    const idDoBotao = btn.id.replace('vf-nota-btn-fixar-', '');
-    const ficaFixado = vaiFixar && idDoBotao === notaId;
-    btn.style.borderColor = ficaFixado ? '#B23A34' : '#ddd';
-    btn.style.background = ficaFixado ? '#B23A34' : '#fff';
-    btn.style.color = ficaFixado ? '#fff' : '#888';
-    btn.title = ficaFixado ? 'Desafixar (deixa de aparecer na página)' : 'Fixar (aparece na página da questão)';
-    btn.setAttribute('onclick', `vfAlternarFixarNotaVF('${idDoBotao}', ${ficaFixado})`);
-  });
+  // atualiza só o botão desta nota - várias notas podem estar fixadas ao
+  // mesmo tempo agora, não reseta mais os outros botões
+  const btn = document.getElementById(`vf-nota-btn-fixar-${notaId}`);
+  if(btn){
+    btn.style.borderColor = vaiFixar ? '#B23A34' : '#ddd';
+    btn.style.background = vaiFixar ? '#B23A34' : '#fff';
+    btn.style.color = vaiFixar ? '#fff' : '#888';
+    btn.title = vaiFixar ? 'Desafixar (deixa de aparecer na página)' : 'Fixar (aparece na página da questão)';
+    btn.setAttribute('onclick', `vfAlternarFixarNotaVF('${notaId}', ${vaiFixar})`);
+  }
 
+  const listaAtual = vfNotaPreviewCacheVF.get(questaoNotaVfAtual) || [];
+  let ordemFixacao;
   if(vaiFixar){
+    // vai pro final da lista (maior ordem_fixacao + 1 entre as já
+    // fixadas dessa questão) - some no cache já com esse valor, sem
+    // precisar buscar de volta do banco
+    ordemFixacao = listaAtual.length ? Math.max(...listaAtual.map(n => n.ordem_fixacao || 0)) + 1 : 0;
+    vfNotaPreviewCacheVF.set(questaoNotaVfAtual, [...listaAtual, {id: notaId, texto: textoDaNota, ordem_fixacao: ordemFixacao}]);
     notasFixadasVF.add(questaoNotaVfAtual);
-    vfNotaPreviewCacheVF.set(questaoNotaVfAtual, textoDaNota); // já sabemos o texto, sem precisar buscar
   }else{
-    notasFixadasVF.delete(questaoNotaVfAtual);
-    vfNotaPreviewCacheVF.set(questaoNotaVfAtual, null);
+    const novaLista = listaAtual.filter(n => n.id !== notaId);
+    vfNotaPreviewCacheVF.set(questaoNotaVfAtual, novaLista);
+    if(!novaLista.length) notasFixadasVF.delete(questaoNotaVfAtual); // só remove da lista de "tem alguma fixada" se não sobrou nenhuma
   }
   vfListaNotasCacheVF.delete(questaoNotaVfAtual); // invalida - o campo "fixada" mudou dentro da lista completa também
   renderizarItemVF(); // preview na página atualiza na hora, sem esperar o banco
 
-  // salva de verdade em segundo plano - desfixar outras e fixar esta são
-  // independentes entre si, rodam em paralelo em vez de sequencial
   if(vaiFixar){
-    await Promise.all([
-      sb.from('notas_vf').update({fixada: false}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).eq('fixada', true).neq('id', notaId),
-      sb.from('notas_vf').update({fixada: true}).eq('id', notaId)
-    ]);
+    await sb.from('notas_vf').update({fixada: true, ordem_fixacao: ordemFixacao}).eq('id', notaId);
   }else{
     await sb.from('notas_vf').update({fixada: false}).eq('id', notaId);
   }
