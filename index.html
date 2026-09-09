@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-08-584';
+const VERSAO_APP = '2026-09-08-585';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3218,6 +3218,13 @@ function abrirModal(id){
   // anterior antes), os dois ficavam sobrepostos na mesma camada (mesmo
   // z-index), misturando as duas telas visualmente
   document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => { if(m.id !== id) m.classList.add('hidden'); });
+  // o balão de explicação (\nota{}{}, anotação de célula) tem z-index
+  // 400, maior que .modal-overlay (300) - de propósito, pra ficar acima
+  // do conteúdo normal da tela. Mas isso significa que, se ele estiver
+  // aberto quando um modal abre (ex: tocar "Finalizar" com o balão ainda
+  // na tela), o modal nascia visualmente ATRÁS do balão. Fechar aqui
+  // cobre todo modal genérico de uma vez, não só o de finalizar
+  vfEsconderBalaoExplicacaoVF();
   document.getElementById(id).classList.remove('hidden');
 }
 function fecharModal(id){ document.getElementById(id).classList.add('hidden'); }
