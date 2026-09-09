@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-08-585';
+const VERSAO_APP = '2026-09-08-586';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -12004,7 +12004,7 @@ function vfRenderizarListaTagsAtualVF(){
   ).join('');
   const htmlCustomizadas = tags.map(t => `<span style="color:#B23A34;font-weight:600;font-size:var(--fs-b);border:1.5px solid #B23A34;border-radius:8px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px">${escapeHtml(t.nome)}<span onclick="vfRemoverTagVF('${t.id}')" style="cursor:pointer;color:#999;font-weight:700">✕</span></span>`).join('');
   const html = htmlAutomaticas + htmlCustomizadas;
-  container.innerHTML = html || '<p style="color:#999;font-size:var(--fs-c)">Nenhuma tag ainda.</p>';
+  container.innerHTML = html || '<span style="display:inline-block;color:#999;font-size:var(--fs-c)">Nenhuma tag ainda.</span>';
 }
 
 // desmarca eh_numero/eh_lista direto pelo popup de tags - espelha a
