@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-09-005';
+const VERSAO_APP = '2026-09-09-006';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -12294,7 +12294,7 @@ function vfMontarPreviewNotasVF(container, notas, questaoVfId){
     const conteudoInterno = temTabela
       ? formatarTextoItemVF(n.texto)
       : `<div style="color:#333;line-height:1.4;padding-right:32px">${formatarTextoItemVF(n.texto)}</div>`;
-    el.innerHTML = `<div class="${classeCard}" style="position:relative;cursor:pointer" onclick="vfCliqueNotaPreviewVF(event,'${questaoVfId}')">${conteudoInterno}
+    el.innerHTML = `<div class="${classeCard}" style="position:relative;cursor:pointer;margin-bottom:0" onclick="vfCliqueNotaPreviewVF(event,'${questaoVfId}')">${conteudoInterno}
       <div class="vf-alca-nota-preview" data-nota-id="${n.id}" ontouchstart="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" onmousedown="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#bbb;cursor:grab;touch-action:none">${VF_ICONE_ALCA_ARRASTO_VF}</div>
     </div>`;
     container.appendChild(el);
