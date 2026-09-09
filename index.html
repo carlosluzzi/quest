@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-09-002';
+const VERSAO_APP = '2026-09-09-003';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4268,6 +4268,20 @@ function vfProcessarSvgBrutoVF(texto){
 // variáveis CSS (var(--nome)) são resolvidas usando os valores de :root
 // do próprio SVG, e qualquer bloco de modo escuro (data-mode,
 // prefers-color-scheme) é descartado, já que o app não distingue isso
+// <g><title>texto</title>...</g> dentro de SVG colado - <title> é tooltip
+// NATIVO do navegador, só aparece com hover do mouse parado em cima, o
+// que não existe em touch/iPad (não tem "mouse parado", só toque
+// direto). Sem isso, quem usa touch nunca via a explicação. Transforma
+// no mesmo balão clicável do \nota{}{} (reaproveita vfCliqueNotaClicavelVF)
+// - remove a tag <title> nativa (evita duplicar com o tooltip do
+// navegador em quem usa mouse) e move o texto pro <g> como data-explicacao
+function vfProcessarTitlesSvgComoNotasVF(svgHtml){
+  return svgHtml.replace(/<g([^>]*)>\s*<title>([\s\S]*?)<\/title>/g, (m, atributosG, textoTitle) => {
+    if(/onclick=/.test(atributosG)) return m; // já tem comportamento customizado, não mexe
+    const textoLimpo = textoTitle.trim().replace(/\s+/g, ' ');
+    return `<g${atributosG} data-explicacao="${escapeHtml(textoLimpo)}" onclick="vfCliqueNotaClicavelVF(event)" style="cursor:pointer">`;
+  });
+}
 function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo, larguraPx, alinhamento){
   // remove a declaração XML (<?xml version="1.0" ...?>) do início, se
   // vier - comum em SVGs exportados de ferramentas tipo Illustrator/
@@ -4290,7 +4304,7 @@ function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo, larguraPx, alinhame
   });
   const matchStyle = conteudoBruto.match(/<style[^>]*>([\s\S]*?)<\/style>/);
   let css = matchStyle ? matchStyle[1] : '';
-  const svgSemStyle = conteudoBruto.replace(/<style[^>]*>[\s\S]*?<\/style>/, '');
+  const svgSemStyle = vfProcessarTitlesSvgComoNotasVF(conteudoBruto.replace(/<style[^>]*>[\s\S]*?<\/style>/, ''));
   const matchRoot = css.match(/:root\s*\{([^}]*)\}/);
   const variaveisRoot = {};
   if(matchRoot){
