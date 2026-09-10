@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-10-005';
+const VERSAO_APP = '2026-09-10-008';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2058,6 +2058,7 @@ function formatarEnunciadoInterno(texto){
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, '$1<sub>$2</sub>') // subscrito com chaves explícitas (ex: "N_{v(Munk)}", "Y'_{v(L)}") — permite parênteses/letras/números dentro, sem limite de 6 caracteres da regra de baixo
+    .replace(/([)\]])_\{([^{}]+)\}/g, '$1<sub>$2</sub>') // subscrito logo depois de um grupo fechando - ex: (Yv·v)_{popa}, aplica ao grupo inteiro, não a uma letra isolada
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // isola a seção "TRECHOS DA FONTE" ANTES de qualquer divisão em
@@ -2261,6 +2262,7 @@ function extrairAlternativas(alternativasTexto){
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, '$1<sub>$2</sub>')
+    .replace(/([)\]])_\{([^{}]+)\}/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
@@ -4135,7 +4137,19 @@ const VF_OPERADORES_MATEMATICOS = {
   'perp':'⊥','parallel':'∥','angle':'∠','circ':'∘','degree':'°',
   // outros símbolos comuns em textos técnicos
   'otimes':'⊗','oplus':'⊕','prime':'′','hbar':'ℏ','ell':'ℓ',
-  'aleph':'ℵ','top':'⊤','bot':'⊥','dagger':'†'
+  'aleph':'ℵ','top':'⊤','bot':'⊥','dagger':'†',
+  // funções matemáticas - em LaTeX de verdade \sin só tira o nome do
+  // itálico (nomes de função não são itálicos, variáveis soltas são);
+  // aqui não tem itálico automático em variável nenhuma, então vira só o
+  // nome mesmo, sem estilo especial
+  'sin':'sin','cos':'cos','tan':'tan','cot':'cot','sec':'sec','csc':'csc',
+  'arcsin':'arcsin','arccos':'arccos','arctan':'arctan',
+  'sinh':'sinh','cosh':'cosh','tanh':'tanh',
+  'log':'log','ln':'ln','exp':'exp',
+  'max':'max','min':'min','lim':'lim','det':'det','gcd':'gcd','mod':'mod',
+  // espaçamento horizontal - \quad = 1em, \qquad = 2em (o dobro)
+  'qquad':'<span style="display:inline-block;width:2em"></span>',
+  'quad':'<span style="display:inline-block;width:1em"></span>'
 };
 // nomes conhecidos (gregas + operadores), do mais longo pro mais curto -
 // evita que um nome mais curto "roube" o início de um mais longo (ex:
@@ -4152,8 +4166,8 @@ const VF_NOMES_MATEMATICOS_REGEX = Object.keys({...VF_LETRAS_GREGAS, ...VF_OPERA
 // do escape é seguro, sem conflito nenhum
 // regex construídas a partir da lista fechada de nomes conhecidos (não
 // "qualquer sequência de letras") - ver VF_NOMES_MATEMATICOS_REGEX acima
-const VF_REGEX_NOME_COM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')\\{([^}]*)\\}', 'g');
-const VF_REGEX_NOME_SEM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')', 'g');
+const VF_REGEX_NOME_COM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')(?![A-Za-z])\\{([^}]*)\\}', 'g');
+const VF_REGEX_NOME_SEM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')(?![A-Za-z])', 'g');
 // fonte serifada, exceção deliberada só pras tabelas (\begin{array}) -
 // o resto do app continua na fonte padrão sem serifa, intocada
 const VF_FONTE_TABELA = `'Charter','Iowan Old Style',Georgia,'Times New Roman',serif`;
@@ -4542,6 +4556,31 @@ function vfProcessarArrayLatexVF(texto){
 
 // tamanho reduzido mas ainda na escala do app (--fs-b, não px fixo),
 // cinza refinado igual ao resto da paleta da tabela
+// processa "\comando[opcao]{conteudo}" com chaves balanceadas (suporta
+// qualquer aninhamento dentro do conteúdo - uma fração, \underbrace,
+// etc) - reutilizada pelos 5 comandos de texto/bloco abaixo. Sem isso
+// (regex simples tipo /\{([^}]*)\}/), o processamento parava no
+// primeiro "}" interno (ex: o fechamento de \frac{numerador}), cortando
+// o comando pela metade e deixando o resto do conteúdo cru na tela,
+// com uma tag HTML solta no meio (a "tag inconsistente")
+function vfProcessarComandoComOpcaoVF(texto, nomeComando, callback){
+  let resultado = '';
+  let pos = 0;
+  const regexInicio = new RegExp('\\\\' + nomeComando + '(?:\\[([^\\]]*)\\])?\\{', 'g');
+  let match;
+  while((match = regexInicio.exec(texto))){
+    const opcao = match[1];
+    const grupo = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+    if(!grupo){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    resultado += texto.slice(pos, match.index);
+    resultado += callback(opcao, grupo.conteudo);
+    pos = grupo.fimPos + 1;
+    regexInicio.lastIndex = pos;
+  }
+  resultado += texto.slice(pos);
+  return resultado;
+}
+
 function vfProcessarTextoPequenoVF(texto){
   // remove <br> logo antes de qualquer um desses comandos de bloco - eles
   // já geram seu próprio <div> com margin-top configurável; sem essa
@@ -4549,22 +4588,23 @@ function vfProcessarTextoPequenoVF(texto){
   // processamento) somava com o margin-top, afastando a legenda do bloco
   // anterior mais do que o espaçamento pedido
   texto = texto.replace(/(?:<br>\s*)+(?=\\(?:small|legenda|paragrafo|lista|alinhar)[\[{])/g, '');
-  texto = texto.replace(/\\small\{([^}]*)\}/g, '<div style="font-size:var(--fs-b);color:#6B6B66;margin-top:2px;padding-left:10px">$1</div>');
+  texto = vfProcessarComandoComOpcaoVF(texto, 'small', (opcao, conteudo) =>
+    `<div style="font-size:var(--fs-b);color:#6B6B66;margin-top:2px;padding-left:10px">${conteudo}</div>`);
   // \legenda[espaco]{texto} - igual \small, mas com o espaçamento acima
   // (margin-top, em px) configurável - usado pelo editor visual de
   // blocos, onde cada bloco de texto pode ter seu próprio respiro em
   // relação ao bloco anterior. [espaco] é opcional, usa 2px se omitido
   // (igual o valor fixo que \small sempre teve)
-  texto = texto.replace(/\\legenda(?:\[(\d+)px\])?\{([^}]*)\}/g, (m, espaco, conteudo) => {
-    const espacoPx = espaco !== undefined ? espaco : '2';
+  texto = vfProcessarComandoComOpcaoVF(texto, 'legenda', (espaco, conteudo) => {
+    const espacoPx = espaco !== undefined ? espaco.replace('px','') : '2';
     return `<div style="font-size:var(--fs-b);color:#6B6B66;margin-top:${espacoPx}px;padding-left:10px">${conteudo}</div>`;
   });
   // \paragrafo[espaco]{texto} - texto no tamanho normal (mesmo da
   // explicação/enunciado), com espaçamento acima configurável - pro
   // caso de querer um parágrafo solto (não legenda pequena) com um
   // respiro próprio em relação ao bloco anterior
-  texto = texto.replace(/\\paragrafo(?:\[(\d+)px\])?\{([^}]*)\}/g, (m, espaco, conteudo) => {
-    const espacoPx = espaco !== undefined ? espaco : '8';
+  texto = vfProcessarComandoComOpcaoVF(texto, 'paragrafo', (espaco, conteudo) => {
+    const espacoPx = espaco !== undefined ? espaco.replace('px','') : '8';
     return `<div style="margin-top:${espacoPx}px">${conteudo}</div>`;
   });
   // \lista[espaco]{item1\\item2\\item3} - lista com marcadores (•),
@@ -4572,8 +4612,8 @@ function vfProcessarTextoPequenoVF(texto){
   // exceto o último) - separador de item é \\, igual separador de linha
   // de tabela, pelo mesmo motivo (já é o padrão usado em todo o resto
   // do sistema pra "próximo item/linha")
-  texto = texto.replace(/\\lista(?:\[(\d+)px\])?\{([^}]*)\}/g, (m, espaco, conteudo) => {
-    const espacoPx = espaco !== undefined ? espaco : '4';
+  texto = vfProcessarComandoComOpcaoVF(texto, 'lista', (espaco, conteudo) => {
+    const espacoPx = espaco !== undefined ? espaco.replace('px','') : '4';
     const itens = conteudo.split('\\\\').map(i => i.trim()).filter(Boolean);
     const itensHtml = itens.map((item, i) => {
       const margemBaixo = i < itens.length - 1 ? `margin-bottom:${espacoPx}px;` : '';
@@ -4585,7 +4625,8 @@ function vfProcessarTextoPequenoVF(texto){
   // (esquerda é o padrão do fluxo normal, não precisa de comando) - usado
   // pelo editor de conteúdo (toolbar de alinhamento), mesma ferramenta
   // pra texto normal e texto dentro de tabela
-  texto = texto.replace(/\\alinhar\[(centro|direita)\]\{([^}]*)\}/g, (m, alinhamento, conteudo) => {
+  texto = vfProcessarComandoComOpcaoVF(texto, 'alinhar', (alinhamento, conteudo) => {
+    if(alinhamento !== 'centro' && alinhamento !== 'direita') return conteudo; // opção obrigatória pra esse comando específico - sem uma válida, não tem o que alinhar
     return `<div style="text-align:${alinhamento === 'centro' ? 'center' : 'right'}">${conteudo}</div>`;
   });
   return texto;
@@ -4678,7 +4719,9 @@ function vfProcessarUnderbraceVF(texto){
 function vfAplicarMarcacaoMatematicaVF(textoEscapado){
   let c = vfProcessarTextoPequenoVF(textoEscapado)
     .replace(/\\,/g, '') // espaço fino do LaTeX - aqui vira SEM espaço nenhum (5,0x, não 5,0 x)
-    .replace(/\\ /g, ' '); // \  (barra + espaço) força espaço em LaTeX de verdade - mesma ideia, espaço normal já resolve
+    .replace(/\\ /g, ' ') // \  (barra + espaço) força espaço em LaTeX de verdade - mesma ideia, espaço normal já resolve
+    .replace(/\\left|\\right/g, '') // só ajustam o tamanho do delimitador em LaTeX de verdade - o delimitador em si (colchete, parêntese, etc) já vem logo depois e aparece normalmente sem eles
+    .replace(/\\text\{([^{}]*)\}/g, '$1'); // \text{...} fora de tabela - achado real: só era processado dentro de célula (vfFormatarCelulaArrayVF), "\text{ com }" solto no meio de uma fórmula ficava cru
   c = vfProcessarFracoesVF(c);
   c = vfProcessarUnderbraceVF(c);
   return c
@@ -4700,6 +4743,17 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     // esses símbolos resolvidos poderem participar deles depois (ex:
     // \Delta^{2} precisa que \Delta já tenha virado Δ antes do ^ agir)
     .replace(VF_REGEX_NOME_SEM_CHAVES, (match, nome) => (VF_LETRAS_GREGAS[nome] || VF_OPERADORES_MATEMATICOS[nome] || match))
+    // acentos matemáticos - \dot{} (derivada no tempo, comum em
+    // engenharia/física: ψ̇), \ddot{}, \hat{}, \bar{}, \vec{}, \tilde{}.
+    // Usa caractere Unicode de combinação (gruda no caractere anterior,
+    // funciona com letra grega já convertida ou latina) em vez de
+    // qualquer posicionamento manual via CSS - roda DEPOIS da conversão
+    // de gregas acima de propósito, senão \dot{\psi} teria "\psi" cru
+    // ainda dentro na hora de aplicar o acento
+    .replace(/\\(dot|ddot|hat|bar|vec|tilde)\{([^{}]+)\}/g, (m, nome, conteudo) => {
+      const combinacao = {dot:'\u0307', ddot:'\u0308', hat:'\u0302', bar:'\u0304', vec:'\u20d7', tilde:'\u0303'}[nome];
+      return conteudo + combinacao;
+    })
     // \sqrt{...} depois das gregas (pode ter grega dentro, tipo \sqrt{\Delta})
     .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
     // sobrescrito com chaves: X^{Y...} - qualquer conteúdo dentro,
@@ -4913,6 +4967,7 @@ function formatarTextoItemVF(texto){
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, '$1<sub>$2</sub>')
+    .replace(/([)\]])_\{([^{}]+)\}/g, '$1<sub>$2</sub>')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
   return vfReinserirTabelasVF(resultado, tabelas);
 }
@@ -9836,37 +9891,11 @@ async function vfRenderizarConteudoPainelSessaoVF(){
         <span><span class="vf-dot" style="background:#B23A34"></span>${novas} novas</span>
         <span><span class="vf-dot" style="background:#E8B4B0"></span>${repeticoes} repetições</span>
       </div>` : ''}
-      ${vfMontarSecaoProximasVF()}
       <div id="vf-painel-secao-filtro">${vfMontarPlaceholderPanoramaVF()}</div>
     </div>
   `;
 
   vfCarregarPanoramaFiltroVF(); // sempre carrega - sem filtro nenhum, mostra o panorama do banco inteiro
-}
-
-// v3.2 - "esgotar não pode parar a sessão": a mensagem que antes
-// bloqueava a tela (revisões/aprendendo ainda não vencidos) agora é só
-// informativa, aqui no painel - calculada do pool já em memória, sem
-// busca nenhuma
-function vfMontarSecaoProximasVF(){
-  if(!estadoVF?.pool?.length) return '';
-  const motivo = vfMontarMotivoEsgotadoVF(estadoVF.pool, agoraCorrigidoVF(), estadoVF.contadorGlobal);
-  const linhas = [];
-  if(motivo.revisoesAguardando > 0){
-    const espera = motivo.menorEsperaRevisaoH != null ? ` – a próxima em ${vfFormatarHorasVF(motivo.menorEsperaRevisaoH)}` : '';
-    linhas.push(`<div class="vf-filtro-linha"><span>Revisões ainda não venceram</span><span class="vf-filtro-valor">${motivo.revisoesAguardando}${espera}</span></div>`);
-  }
-  if(motivo.aprendendoAguardando > 0){
-    const horas = motivo.menorEsperaAprendendoH > 0 ? vfFormatarHorasVF(motivo.menorEsperaAprendendoH) : null;
-    const espera = horas ? ` ou em ${horas}` : '';
-    linhas.push(`<div class="vf-filtro-linha"><span>Erradas voltando</span><span class="vf-filtro-valor">${motivo.aprendendoAguardando}, depois de mais ${motivo.menorEsperaAprendendoRespostas} respostas${espera}</span></div>`);
-  }
-  if(!linhas.length) return '';
-  return `
-    <div style="height:1px;background:#eee;margin:14px 0"></div>
-    <div class="vf-secao-titulo">Ainda por vencer</div>
-    ${linhas.join('')}
-  `;
 }
 
 // monta a seção de panorama já com a estrutura/altura final desde o
