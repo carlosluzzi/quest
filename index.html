@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-10-009';
+const VERSAO_APP = '2026-09-10-010';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -14257,17 +14257,21 @@ async function vfSalvarEdicaoNotaVF(notaId){
   const textarea = document.getElementById(`vf-nota-textarea-${notaId}`);
   const textoOriginal = vfNotaTextoOriginalAntesEditarVF[notaId];
   const textoNovo = textarea?.value.trim();
+  const htmlVisualizacao = (texto) => `<div id="vf-nota-texto-${notaId}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111;cursor:pointer" ontouchstart="vfIniciarPressionarNotaVF(event,'${notaId}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${notaId}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(texto)}</div>`;
   if(!textoNovo || textoNovo === textoOriginal){
     // vazio (nota sem texto não é válida) ou sem mudança nenhuma - só
-    // volta pra visualização normal, sem tocar no banco
-    renderizarListaNotasVF();
+    // volta pra visualização normal, sem tocar no banco. Substitui o
+    // TEXTAREA (é ele quem está no DOM agora, não "vf-nota-texto-...",
+    // que já não existe mais nesse momento)
+    if(textarea) textarea.outerHTML = htmlVisualizacao(textoOriginal ?? textoNovo ?? '');
     return;
   }
 
-  // aplica o texto novo e fecha a edição JÁ, sem esperar o banco
+  // aplica o texto novo e fecha a edição JÁ, sem esperar o banco -
+  // mesma correção: substitui o textarea, que é quem realmente está no
+  // DOM nesse momento
   vfNotasTextoBrutoCacheVF[notaId] = textoNovo;
-  const container = document.getElementById(`vf-nota-texto-${notaId}`);
-  if(container) container.outerHTML = `<div id="vf-nota-texto-${notaId}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111;cursor:pointer" ontouchstart="vfIniciarPressionarNotaVF(event,'${notaId}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${notaId}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(textoNovo)}</div>`;
+  if(textarea) textarea.outerHTML = htmlVisualizacao(textoNovo);
 
   // atualiza o texto DIRETO no cache (se essa nota estiver fixada), em
   // vez de invalidar e deixar recarregar do banco - achado real e crítico:
