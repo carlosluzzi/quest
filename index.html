@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-10-003';
+const VERSAO_APP = '2026-09-10-004';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4632,11 +4632,55 @@ function vfProcessarFracoesVF(texto){
   return resultado;
 }
 
+// \underbrace{conteudo}_{rotulo} - mesma ideia visual da fração (linha
+// horizontal via border-bottom, já estabelecida no resto do app), com o
+// rótulo pequeno embaixo dela. Não desenha a chave curva real (⏟) -
+// tentar esticar esse caractere Unicode pra largura variável via CSS
+// distorce visualmente; uma linha simples já transmite a mesma ideia
+// ("essa parte tem esse rótulo") de forma limpa e consistente com o
+// resto do app. Roda DEPOIS de vfProcessarFracoesVF na cadeia, porque o
+// conteúdo aqui dentro pode ter uma fração (como no caso real que
+// motivou isso) - nesse ponto ela já virou HTML pronto, só precisa
+// envolver
+function vfProcessarUnderbraceVF(texto){
+  let resultado = '';
+  let pos = 0;
+  const regexInicio = /\\underbrace\{/g;
+  let match;
+  while((match = regexInicio.exec(texto))){
+    const grupoConteudo = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+    if(!grupoConteudo){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    let pos2 = grupoConteudo.fimPos + 1;
+    // _{rotulo} logo depois (opcional - sem rótulo, vira só a linha, sem texto embaixo)
+    let rotulo = '';
+    if(texto[pos2] === '_' && texto[pos2+1] === '{'){
+      const grupoRotulo = vfExtrairGrupoBalanceadoVF(texto, pos2+1);
+      if(grupoRotulo){
+        // \text{} dentro do rótulo não é processado automaticamente fora
+        // de tabela (só vfFormatarCelulaArrayVF faz isso pra células) -
+        // remove aqui manualmente, senão "\text{braço estabilizador}"
+        // apareceria cru
+        rotulo = grupoRotulo.conteudo.replace(/\\text\{([^}]*)\}/g, '$1');
+        pos2 = grupoRotulo.fimPos + 1;
+      }
+    }
+
+    resultado += texto.slice(pos, match.index);
+    const rotuloHtml = rotulo ? `<span style="display:block;font-size:0.62em;color:#6B6B66;margin-top:2px;white-space:nowrap">${rotulo}</span>` : '';
+    resultado += `<span style="display:inline-block;text-align:center;vertical-align:middle;margin:0 4px"><span style="display:block;border-bottom:1.3px solid currentColor;padding:0 4px 1px">${grupoConteudo.conteudo}</span>${rotuloHtml}</span>`;
+    pos = pos2;
+    regexInicio.lastIndex = pos;
+  }
+  resultado += texto.slice(pos);
+  return resultado;
+}
+
 function vfAplicarMarcacaoMatematicaVF(textoEscapado){
   let c = vfProcessarTextoPequenoVF(textoEscapado)
     .replace(/\\,/g, '') // espaço fino do LaTeX - aqui vira SEM espaço nenhum (5,0x, não 5,0 x)
     .replace(/\\ /g, ' '); // \  (barra + espaço) força espaço em LaTeX de verdade - mesma ideia, espaço normal já resolve
   c = vfProcessarFracoesVF(c);
+  c = vfProcessarUnderbraceVF(c);
   return c
     // \nome{conteudo} - letra grega/operador seguido de chaves SEM
     // expoente (ex: \delta{V_P}) - converte o símbolo e remove as
