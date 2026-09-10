@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-10-008';
+const VERSAO_APP = '2026-09-10-009';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2055,11 +2055,14 @@ function formatarEnunciadoInterno(texto){
   let escapedCompleto = escapeHtml(texto).replace(/\s+/g, ' ').trim();
   escapedCompleto = vfAplicarMarcacaoMatematicaVF(escapedCompleto); // gregas, operadores, sqrt, sobrescrito com chaves - mesmo padrão do V/F
   escapedCompleto = escapedCompleto
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>') // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>') // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, '$1<sub>$2</sub>') // subscrito com chaves explícitas (ex: "N_{v(Munk)}", "Y'_{v(L)}") — permite parênteses/letras/números dentro, sem limite de 6 caracteres da regra de baixo
-    .replace(/([)\]])_\{([^{}]+)\}/g, '$1<sub>$2</sub>') // subscrito logo depois de um grupo fechando - ex: (Yv·v)_{popa}, aplica ao grupo inteiro, não a uma letra isolada
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>'); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
+      if(!abreNegrito && !fechaNegrito) return base + vfSobrescritoOuTagVF(exp); // sem negrito envolvendo - pode tentar Unicode puro
+      return base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>'; // com negrito - Unicode perderia o negrito, mantém <sup> de sempre
+    }) // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // subscrito com chaves explícitas (ex: "N_{v(Munk)}", "Y'_{v(L)}") — permite parênteses/letras/números dentro, sem limite de 6 caracteres da regra de baixo
+    .replace(/([)\]])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // subscrito logo depois de um grupo fechando - ex: (Yv·v)_{popa}, aplica ao grupo inteiro, não a uma letra isolada
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // isola a seção "TRECHOS DA FONTE" ANTES de qualquer divisão em
   // alternativas (a, b, c...) — sem isso, menções tipo "Alternativas a) e
@@ -2259,11 +2262,14 @@ function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   alternativasTexto = vfLimparApostrofoUnderscoreVF(alternativasTexto);
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, '$1<sub>$2</sub>')
-    .replace(/([)\]])_\{([^{}]+)\}/g, '$1<sub>$2</sub>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
+      if(!abreNegrito && !fechaNegrito) return base + vfSobrescritoOuTagVF(exp);
+      return base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>';
+    })
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/([)\]])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
     const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
@@ -4106,6 +4112,41 @@ function atualizarContadorDisponiveis(){
 // dessa corrupção, e a UNIQUE(texto) engoliu uma em silêncio. Com
 // marcação ASCII isso nunca acontece - esses caracteres existem em
 // qualquer fonte, em qualquer etapa da extração
+// caracteres Unicode de sub/sobrescrito de verdade (não são <sub>/<sup>
+// HTML, são glifos próprios - T₁ em vez de T<sub>1</sub>). Cobertura é
+// LIMITADA por natureza do próprio Unicode: dígitos e alguns símbolos
+// têm os dois; letras minúsculas quase todas têm sobrescrito, mas só um
+// punhado tem subscrito (a,e,h,i,k,l,m,n,o,p,r,s,t,u,v,x - faltam
+// b,c,d,f,g,j,q,w,y,z); maiúsculas não têm quase nenhuma em nenhum dos
+// dois. Por isso as funções abaixo SÓ usam Unicode quando TODOS os
+// caracteres do conteúdo têm equivalente - um único caractere sem
+// mapeamento (ex: "D" em "C_D0") já faz cair no <sub>/<sup> de sempre,
+// sem mudar nada do que já funcionava
+const VF_MAPA_SUBSCRITO_UNICODE = {
+  '0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉',
+  '+':'₊','-':'₋','−':'₋','=':'₌','(':'₍',')':'₎',
+  'a':'ₐ','e':'ₑ','h':'ₕ','i':'ᵢ','k':'ₖ','l':'ₗ','m':'ₘ','n':'ₙ','o':'ₒ',
+  'p':'ₚ','r':'ᵣ','s':'ₛ','t':'ₜ','u':'ᵤ','v':'ᵥ','x':'ₓ'
+};
+const VF_MAPA_SOBRESCRITO_UNICODE = {
+  '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹',
+  '+':'⁺','-':'⁻','−':'⁻','=':'⁼','(':'⁽',')':'⁾',
+  'a':'ᵃ','b':'ᵇ','c':'ᶜ','d':'ᵈ','e':'ᵉ','f':'ᶠ','g':'ᵍ','h':'ʰ','i':'ⁱ','j':'ʲ',
+  'k':'ᵏ','l':'ˡ','m':'ᵐ','n':'ⁿ','o':'ᵒ','p':'ᵖ','r':'ʳ','s':'ˢ','t':'ᵗ','u':'ᵘ',
+  'v':'ᵛ','w':'ʷ','x':'ˣ','y':'ʸ','z':'ᶻ'
+};
+// tenta converter o conteúdo inteiro pra Unicode puro (só se TODOS os
+// caracteres tiverem equivalente) - senão, cai no <sub>/<sup> normal
+function vfSubscritoOuTagVF(conteudo){
+  const chars = Array.from(conteudo);
+  if(chars.every(ch => VF_MAPA_SUBSCRITO_UNICODE[ch])) return chars.map(ch => VF_MAPA_SUBSCRITO_UNICODE[ch]).join('');
+  return `<sub>${conteudo}</sub>`;
+}
+function vfSobrescritoOuTagVF(conteudo){
+  const chars = Array.from(conteudo);
+  if(chars.every(ch => VF_MAPA_SOBRESCRITO_UNICODE[ch])) return chars.map(ch => VF_MAPA_SOBRESCRITO_UNICODE[ch]).join('');
+  return `<sup>${conteudo}</sup>`;
+}
 const VF_LETRAS_GREGAS = {
   'Delta':'Δ','delta':'δ','Phi':'Φ','phi':'φ','Alpha':'Α','alpha':'α',
   'Beta':'Β','beta':'β','Gamma':'Γ','gamma':'γ','Theta':'Θ','theta':'θ',
@@ -4372,9 +4413,9 @@ function vfFormatarCelulaArrayVF(celula){
   c = c.replace(/\\,/g, ''); // espaço fino do LaTeX - aqui vira SEM espaço nenhum (5,0x, não 5,0 x - notação científica normal não separa coeficiente de variável)
   c = c.replace(/\\ /g, ' '); // \  (barra + espaço) força espaço em LaTeX de verdade, mas aqui um espaço normal já resolve - sem isso, aparecia a barra literal na tela
   c = vfAplicarMarcacaoMatematicaVF(c);
-  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, '$1<sup>$2</sup>');
-  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_\{([^{}]+)\}/g, '$1<sub>$2</sub>');
-  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9]{1,6}))/g, '$1<sub>$2</sub>');
+  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp));
+  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
+  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   return c;
 }
 
@@ -4758,7 +4799,7 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
     // sobrescrito com chaves: X^{Y...} - qualquer conteúdo dentro,
     // inclusive sinal de menos e múltiplos caracteres (ex: 10^{-1})
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9)\]])\^\{([^}]+)\}/g, '$1<sup>$2</sup>')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9)\]])\^\{([^}]+)\}/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
     // alguns símbolos matemáticos são desenhados pelas fontes com altura
     // visual bem menor que letras/números normais, mesmo com o mesmo
     // font-size (parecem "pequenos"/perdidos no meio do texto) - aumenta
@@ -4964,11 +5005,14 @@ function formatarTextoItemVF(texto){
     .replace(/\n/g, '<br>');
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
   resultado = resultado
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, '$1<sub>$2</sub>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, '$1<sub>$2</sub>')
-    .replace(/([)\]])_\{([^{}]+)\}/g, '$1<sub>$2</sub>')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1<sub>$2</sub>');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
+      if(!abreNegrito && !fechaNegrito) return base + vfSobrescritoOuTagVF(exp);
+      return base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>';
+    })
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/([)\]])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   return vfReinserirTabelasVF(resultado, tabelas);
 }
 
