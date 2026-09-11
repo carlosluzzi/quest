@@ -1584,6 +1584,31 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-confirmar-exclusao-familia-vf" onclick="if(event.target===this) vfFecharDialogoExclusaoFamiliaVF()">
+  <div class="modal-conteudo popup-formulario">
+    <h3 class="config-title" id="vf-titulo-exclusao-familia"></h3>
+    <div id="vf-lista-irmas-exclusao" style="max-height:180px;overflow-y:auto;margin-bottom:10px"></div>
+    <textarea id="motivo-exclusao-familia-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:70px;margin-bottom:14px"></textarea>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-primario" style="width:100%" onclick="confirmarExclusaoSoEstaVF()">Só esta</button>
+      <button class="btn-primario" style="width:100%" id="vf-btn-exclusao-com-irmas"></button>
+      <button class="btn-secundario" style="width:100%" onclick="vfFecharDialogoExclusaoFamiliaVF()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-desfazer-exclusao-familia-vf" onclick="if(event.target===this) fecharModal('modal-desfazer-exclusao-familia-vf')">
+  <div class="modal-conteudo popup-formulario">
+    <h3 class="config-title">Desfazer exclusão</h3>
+    <p id="vf-texto-desfazer-familia"></p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-primario" style="width:100%" id="vf-btn-desfazer-so-esta"></button>
+      <button class="btn-primario" style="width:100%" id="vf-btn-desfazer-grupo"></button>
+      <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-desfazer-exclusao-familia-vf')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-confirmar-finalizar-vf">
   <div class="modal-conteudo">
     <h3 class="config-title">Finalizar sessão?</h3>
@@ -1905,7 +1930,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-10-011';
+const VERSAO_APP = '2026-09-11-001';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -13764,15 +13789,45 @@ async function vfAbrirListaExcluidasVF(){
 function vfRenderizarListaExcluidasVF(itens){
   const corpo = document.getElementById('vf-lista-excluidas-corpo');
   if(!itens.length){ corpo.innerHTML = '<p style="text-align:center;color:#999;padding:20px 0">Nenhuma excluída nesse filtro.</p>'; return; }
-  corpo.innerHTML = itens.map(item => `
-    <div id="vf-excluida-item-${item.questao_id}" style="padding:12px 0;border-bottom:0.5px solid #f0f0ee;display:flex;align-items:flex-start;gap:10px">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:var(--fs-d)">${formatarTextoItemVF(item.texto)}</div>
-        ${item.motivo ? `<div style="font-size:var(--fs-a);color:#999;margin-top:4px">Motivo: ${escapeHtml(item.motivo)}</div>` : ''}
+
+  // agrupa por família (mesma bibliografia_id + texto_ref) - não depende
+  // do texto exato do motivo, então funciona tanto pras novas exclusões
+  // (motivo:'família') quanto pra qualquer formato de motivo que já
+  // existisse no banco antes. Dentro de cada grupo, a "principal" é a
+  // que não tem motivo 'família' (ou a mais antiga, se por algum motivo
+  // nenhuma bater - ex: as duas foram excluídas "só esta" em momentos
+  // diferentes, sem nunca passar pelo diálogo de família)
+  const grupos = new Map();
+  itens.forEach(item => {
+    const chave = `${item.bibliografia_id}\u0000${item.texto_ref}`;
+    if(!grupos.has(chave)) grupos.set(chave, []);
+    grupos.get(chave).push(item);
+  });
+
+  corpo.innerHTML = Array.from(grupos.values()).map(grupo => {
+    grupo.sort((a,b) => (a.motivo === 'família' ? 1 : 0) - (b.motivo === 'família' ? 1 : 0) || new Date(a.excluida_em) - new Date(b.excluida_em));
+    const principal = grupo[0];
+    const irmas = grupo.slice(1);
+    const idsGrupo = grupo.map(g => g.questao_id).join(',');
+    const irmasHtml = irmas.length ? `
+      <div style="margin-top:8px;padding-left:14px;border-left:2px solid #eee">
+        ${irmas.map(irma => `<div style="font-size:var(--fs-b);color:#888;padding:4px 0">${formatarTextoItemVF(irma.texto)}</div>`).join('')}
       </div>
-      <button class="btn-secundario" style="flex-shrink:0;width:auto;padding:6px 12px;font-size:var(--fs-c)" onclick="vfDesfazerExclusaoVF('${item.questao_id}')">Desfazer</button>
-    </div>
-  `).join('');
+    ` : '';
+    return `
+      <div id="vf-excluida-item-${principal.questao_id}" style="padding:12px 0;border-bottom:0.5px solid #f0f0ee">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:var(--fs-d)">${formatarTextoItemVF(principal.texto)}</div>
+            ${principal.motivo && principal.motivo !== 'família' ? `<div style="font-size:var(--fs-a);color:#999;margin-top:4px">Motivo: ${escapeHtml(principal.motivo)}</div>` : ''}
+            ${irmas.length ? `<div style="font-size:var(--fs-a);color:#999;margin-top:4px">+ ${irmas.length} irmã${irmas.length>1?'s':''} da mesma família</div>` : ''}
+          </div>
+          <button class="btn-secundario" style="flex-shrink:0;width:auto;padding:6px 12px;font-size:var(--fs-c)" onclick="vfDesfazerExclusaoVF('${idsGrupo}')">Desfazer</button>
+        </div>
+        ${irmasHtml}
+      </div>
+    `;
+  }).join('');
 }
 
 // lista de leeches (4+ erros) dentro do filtro atual - só visualização
@@ -13809,11 +13864,30 @@ function vfRenderizarListaLeechesVF(itens){
 
 // remove o registro de exclusão - a questão volta a poder aparecer na
 // fila normalmente na próxima vez que o pool for carregado (abrir o
-// Flash de novo), não muda a sessão que já está em andamento agora
-async function vfDesfazerExclusaoVF(questaoId){
-  const {error} = await sb.from('exclusoes_vf').delete().eq('questao_vf_id', questaoId).eq('usuario_id', usuarioAtual.id);
+// Flash de novo), não muda a sessão que já está em andamento agora.
+// questaoIdOuGrupo pode ser um único id, ou vários separados por vírgula
+// (quando a exclusão veio com irmãs) - só pergunta o que fazer quando
+// há mais de um, igual o diálogo de excluir
+let vfIdsDesfazerFamiliaVF = [];
+async function vfDesfazerExclusaoVF(questaoIdOuGrupo){
+  const ids = questaoIdOuGrupo.split(',');
+  if(ids.length === 1){
+    await vfExecutarDesfazerExclusaoVF(ids, ids[0]);
+    return;
+  }
+  vfIdsDesfazerFamiliaVF = ids;
+  const n = ids.length;
+  document.getElementById('vf-texto-desfazer-familia').textContent = `Essa exclusão tem ${n-1} irmã${n-1>1?'s':''} junto. O que desfazer?`;
+  document.getElementById('vf-btn-desfazer-so-esta').textContent = 'Só esta';
+  document.getElementById('vf-btn-desfazer-so-esta').onclick = () => { fecharModal('modal-desfazer-exclusao-familia-vf'); vfExecutarDesfazerExclusaoVF([ids[0]], ids[0]); };
+  document.getElementById('vf-btn-desfazer-grupo').textContent = `Todas (${n})`;
+  document.getElementById('vf-btn-desfazer-grupo').onclick = () => { fecharModal('modal-desfazer-exclusao-familia-vf'); vfExecutarDesfazerExclusaoVF(ids, ids[0]); };
+  abrirModal('modal-desfazer-exclusao-familia-vf');
+}
+async function vfExecutarDesfazerExclusaoVF(idsParaRemover, idItemDom){
+  const {error} = await sb.from('exclusoes_vf').delete().in('questao_vf_id', idsParaRemover).eq('usuario_id', usuarioAtual.id);
   if(error){ vfMostrarAvisoVF('Erro ao desfazer: '+error.message); return; }
-  document.getElementById(`vf-excluida-item-${questaoId}`)?.remove();
+  document.getElementById(`vf-excluida-item-${idItemDom}`)?.remove();
   const corpo = document.getElementById('vf-lista-excluidas-corpo');
   if(corpo && !corpo.querySelector('[id^="vf-excluida-item-"]')){
     corpo.innerHTML = '<p style="text-align:center;color:#999;padding:20px 0">Nenhuma excluída nesse filtro.</p>';
@@ -14657,32 +14731,74 @@ async function vfAlternarMnemonicoNotaVF(notaId, mnemonicoAtual){
 }
 
 let questaoVfParaExcluir = null;
-function abrirConfirmacaoExclusaoVF(questaoVfId){
+let vfIrmasParaExcluirVF = [];
+
+// Esc cancela o diálogo de exclusão com família, igual clicar fora dele
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape' && !document.getElementById('modal-confirmar-exclusao-familia-vf')?.classList.contains('hidden')){
+    vfFecharDialogoExclusaoFamiliaVF();
+  }
+});
+
+async function abrirConfirmacaoExclusaoVF(questaoVfId){
   pausarTimerVF();
   questaoVfParaExcluir = questaoVfId;
   document.getElementById('motivo-exclusao-vf').value = '';
-  abrirModal('modal-confirmar-exclusao-vf');
+  document.getElementById('motivo-exclusao-familia-vf').value = '';
+
+  // procura irmãs ANTES de decidir qual diálogo mostrar. Regra de
+  // família é textual (mesma bibliografia_id + mesmo "texto de
+  // referência", calculado a partir de texto/correção dependendo de
+  // resposta) - NUNCA chave_familia_texto, que agrupa por cenário e
+  // junta famílias diferentes demais pra esse propósito
+  const {data: irmas} = await sb.rpc('achar_irmas_vf', {p_questao_id: questaoVfId, p_usuario_id: usuarioAtual.id});
+  vfIrmasParaExcluirVF = irmas || [];
+
+  if(vfIrmasParaExcluirVF.length === 0){
+    // sem irmã (ou todas já excluídas antes) - exclui direto como sempre foi, sem perguntar
+    abrirModal('modal-confirmar-exclusao-vf');
+  }else{
+    vfMostrarDialogoExclusaoFamiliaVF();
+  }
 }
 
-async function confirmarExclusaoVF(){
-  if(!questaoVfParaExcluir) return;
-  const idExcluido = questaoVfParaExcluir;
-  const motivo = document.getElementById('motivo-exclusao-vf').value.trim() || null;
+function vfMostrarDialogoExclusaoFamiliaVF(){
+  const n = vfIrmasParaExcluirVF.length;
+  document.getElementById('vf-titulo-exclusao-familia').textContent = `Esta afirmação tem ${n} irmã${n>1?'s':''} da mesma família. O que excluir?`;
+  document.getElementById('vf-lista-irmas-exclusao').innerHTML = vfIrmasParaExcluirVF.map(irma => `
+    <div style="padding:8px 0;border-bottom:0.5px solid #f0f0ee;font-size:var(--fs-c);color:#555">
+      <span style="font-weight:600;color:${irma.resposta ? '#2E7D32' : '#A32D2D'}">${irma.resposta ? 'V' : 'F'}</span> ${escapeHtml(irma.texto_resumido)}${irma.texto_resumido.length >= 120 ? '…' : ''}
+    </div>
+  `).join('');
+  document.getElementById('vf-btn-exclusao-com-irmas').textContent = `Esta e as irmãs (${n+1})`;
+  abrirModal('modal-confirmar-exclusao-familia-vf');
+}
 
-  // otimista: a tela muda JÁ (pool filtrado, modal fecha, avança pra
-  // próxima), o insert acontece em segundo plano - mesmo espírito de
-  // toggleFavoritoVF
-  const questaoRemovida = estadoVF.pool.find(i => i.id === idExcluido);
-  estadoVF.pool = estadoVF.pool.filter(i => i.id !== idExcluido);
+function vfFecharDialogoExclusaoFamiliaVF(){
+  fecharModal('modal-confirmar-exclusao-familia-vf');
   questaoVfParaExcluir = null;
-  fecharModal('modal-confirmar-exclusao-vf');
+  vfIrmasParaExcluirVF = [];
+  retomarOuDescartarPendenteVF();
+}
+
+// executa a exclusão otimista (pool/histórico) pra TODOS os ids de uma
+// vez (a principal e, se for o caso, as irmãs), depois grava no banco -
+// mesma função por trás dos 3 caminhos (simples, "só esta", "com
+// irmãs"), só muda a lista de ids e as linhas a inserir
+async function vfExecutarExclusaoVF(idsExcluir, linhasInsert, nomeModal){
+  // otimista: tira todos JÁ do pool (o modal fecha, avança pra próxima),
+  // o insert acontece em segundo plano - mesmo espírito de toggleFavoritoVF
+  const questoesRemovidas = idsExcluir.map(id => estadoVF.pool.find(i => i.id === id)).filter(Boolean);
+  estadoVF.pool = estadoVF.pool.filter(i => !idsExcluir.includes(i.id));
+  questaoVfParaExcluir = null;
+  vfIrmasParaExcluirVF = [];
+  fecharModal(nomeModal);
 
   const entradaAtual = estadoVF.historico[estadoVF.posicao];
-  if(entradaAtual && entradaAtual.item.id === idExcluido){
+  if(entradaAtual && idsExcluir.includes(entradaAtual.item.id)){
     if(entradaAtual.resposta === null){
       // ainda não respondida - essa é a "pendente" de verdade, sem
-      // estatística nenhuma pra preservar (nunca foi contabilizada em
-      // acertosSessao/respondidasSessao), pode sair do histórico mesmo
+      // estatística nenhuma pra preservar, pode sair do histórico mesmo
       estadoVF.historico.splice(estadoVF.posicao, 1);
       estadoVF.posicao--;
     }
@@ -14701,15 +14817,42 @@ async function confirmarExclusaoVF(){
     await retomarOuDescartarPendenteVF();
   }
 
-  // salva de verdade em segundo plano - se falhar, devolve a questão pro
-  // pool (sem tentar desfazer a navegação que já aconteceu, a pessoa já
-  // está vendo a próxima questão) e avisa que ela pode voltar a aparecer
-  const {error} = await sb.from('exclusoes_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: idExcluido, motivo});
+  // upsert com ignoreDuplicates (não insert puro) - a chave primária é
+  // (usuario_id, questao_vf_id); se uma irmã já tivesse sido excluída
+  // entre a busca e a confirmação (raríssimo, mas possível), essa linha
+  // é ignorada silenciosamente em vez de derrubar o insert inteiro
+  const {error} = await sb.from('exclusoes_vf').upsert(linhasInsert, {onConflict: 'usuario_id,questao_vf_id', ignoreDuplicates: true});
   if(error){
-    if(questaoRemovida && !estadoVF.pool.some(i => i.id === idExcluido)) estadoVF.pool.push(questaoRemovida);
-    vfMostrarAvisoVF('Não consegui salvar a exclusão. A questão pode reaparecer nessa sessão.');
-    console.error('erro ao excluir questão:', error);
+    questoesRemovidas.forEach(q => { if(!estadoVF.pool.some(i => i.id === q.id)) estadoVF.pool.push(q); });
+    vfMostrarAvisoVF(idsExcluir.length > 1 ? 'Não consegui salvar as exclusões. As questões podem reaparecer nessa sessão.' : 'Não consegui salvar a exclusão. A questão pode reaparecer nessa sessão.');
+    console.error('erro ao excluir questão(ões):', error);
   }
+}
+
+async function confirmarExclusaoVF(){
+  if(!questaoVfParaExcluir) return;
+  const id = questaoVfParaExcluir;
+  const motivo = document.getElementById('motivo-exclusao-vf').value.trim() || null;
+  await vfExecutarExclusaoVF([id], [{usuario_id: usuarioAtual.id, questao_vf_id: id, motivo}], 'modal-confirmar-exclusao-vf');
+}
+
+async function confirmarExclusaoSoEstaVF(){
+  if(!questaoVfParaExcluir) return;
+  const id = questaoVfParaExcluir;
+  const motivo = document.getElementById('motivo-exclusao-familia-vf').value.trim() || null;
+  await vfExecutarExclusaoVF([id], [{usuario_id: usuarioAtual.id, questao_vf_id: id, motivo}], 'modal-confirmar-exclusao-familia-vf');
+}
+
+async function confirmarExclusaoComIrmasVF(){
+  if(!questaoVfParaExcluir) return;
+  const idPrincipal = questaoVfParaExcluir;
+  const motivo = document.getElementById('motivo-exclusao-familia-vf').value.trim() || null;
+  const idsIrmas = vfIrmasParaExcluirVF.map(i => i.id);
+  const linhas = [
+    {usuario_id: usuarioAtual.id, questao_vf_id: idPrincipal, motivo},
+    ...idsIrmas.map(id => ({usuario_id: usuarioAtual.id, questao_vf_id: id, motivo: 'família'}))
+  ];
+  await vfExecutarExclusaoVF([idPrincipal, ...idsIrmas], linhas, 'modal-confirmar-exclusao-familia-vf');
 }
 
 async function proximoVF(){
