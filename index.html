@@ -2861,15 +2861,46 @@ async function mostrarAppShell(){
   try{ if(souCarlos()) vfRestaurarSessaoFlashVF(); }catch(e){ console.error('Erro ao restaurar sessão do Flash:', e); } // só depois do login confirmado - nunca antes
 }
 
+// o ponto de quebra dos 1100px é lido pelo MESMO mecanismo que o CSS usa
+// (matchMedia), nunca por window.innerWidth. Achado real: ao voltar de
+// outro app no iPad, innerWidth pode reportar por um instante a largura
+// antiga, e nesse instante o JS achava que o menu ainda era a barra de
+// baixo enquanto o CSS já tinha virado a barra LATERAL. A "altura do
+// menu" medida virava a tela inteira, --nav-height ia pra ~1300px, e
+// tudo que se apoia nela (a barra de Verdadeiro/Falso, o balão da sessão,
+// o padding do conteúdo) era empurrado pro topo da tela. matchMedia
+// avalia exatamente a mesma condição da media query, então JS e CSS não
+// têm como discordar
+const MQ_MENU_LATERAL = window.matchMedia('(min-width:1100px)');
+function menuEhBarraLateral(){ return MQ_MENU_LATERAL.matches; }
 function medirAlturaNav(){
   const nav = document.getElementById('bottom-nav');
   if(!nav) return;
   // a partir de 1100px o menu vira barra lateral (ocupa a tela toda de
   // cima a baixo) – nesse caso não existe barra embaixo pra reservar
   // espaço, senão a altura medida seria a tela inteira por engano
-  const alturaReal = window.innerWidth >= 1100 ? 0 : nav.offsetHeight;
+  let alturaReal = menuEhBarraLateral() ? 0 : nav.offsetHeight;
+  // trava de segurança: uma barra de RODAPÉ nunca ocupa mais de 40% da
+  // tela. Se a medição vier maior que isso, ela só pode ser a barra
+  // lateral (ou uma leitura feita no meio de um relayout) - descarta em
+  // vez de empurrar a interface inteira pra cima
+  if(alturaReal > window.innerHeight * 0.4) alturaReal = 0;
   document.documentElement.style.setProperty('--nav-height', alturaReal + 'px');
 }
+// remede a geometria toda quando o app volta do segundo plano. Trocar de
+// app, girar o iPad ou abrir o Split View enquanto ele está escondido
+// muda a largura da janela SEM disparar resize aqui - sem essa remedição
+// o app volta desenhado com a geometria antiga
+function remedirGeometriaDaTela(){
+  medirAlturaNav();
+  medirAlturaTopbar();
+  medirAlturaBarraFixaVF();
+}
+document.addEventListener('visibilitychange', () => { if(!document.hidden) remedirGeometriaDaTela(); });
+window.addEventListener('pageshow', remedirGeometriaDaTela);
+// cruzar o ponto de quebra sempre remede, mesmo que o resize tenha sido
+// engolido pela trava de "largura não mudou"
+if(MQ_MENU_LATERAL.addEventListener) MQ_MENU_LATERAL.addEventListener('change', remedirGeometriaDaTela);
 
 // ---- zoom de fonte (Configurações > Seu perfil) ----
 // zoom (não transform:scale) aplicado só na área de conteúdo - não estica
@@ -10250,7 +10281,7 @@ function vfPersistirEstadoSessaoVF(){
   if(!vfSessaoAtivaVF || !estadoVF) return;
   vfSessaoAtivaVF.historicoResumido = estadoVF.historico
     .filter(h => h.resposta !== null) // só as já respondidas - a pendente atual não precisa, o fluxo normal cria uma nova ao restaurar
-    .map(h => ({id: h.item.id, resposta: h.resposta, acertou: h.acertou, estadoAntesDeResponder: h.estadoAntesDeResponder, tempoAtivoMs: h.tempoAtivoMs}));
+    .map(h => ({id: h.item.id, resposta: h.resposta, acertou: h.acertou, estadoAntesDeResponder: h.estadoAntesDeResponder, tempoAtivoMs: h.tempoAtivoMs, excluidaVF: !!h.excluidaVF}));
   vfSessaoAtivaVF.acertosSessao = estadoVF.acertosSessao;
   vfSessaoAtivaVF.respondidasSessao = estadoVF.respondidasSessao;
   vfSessaoAtivaVF.respostasDesdeUltimaNova = estadoVF.respostasDesdeUltimaNova;
@@ -10273,7 +10304,7 @@ async function vfReconstruirHistoricoDaSessaoVF(){
   const historico = resumo.map(r => {
     const item = porId.get(r.id);
     if(!item) return null; // questão pode ter sido excluída/anulada entre uma sessão e outra - pula sem quebrar o resto
-    return {item, resposta: r.resposta, acertou: r.acertou, estadoAntesDeResponder: r.estadoAntesDeResponder, tempoAtivoMs: r.tempoAtivoMs||0, ativoDesdeMs: null, apareceuEmMs: Date.now()};
+    return {item, resposta: r.resposta, acertou: r.acertou, estadoAntesDeResponder: r.estadoAntesDeResponder, tempoAtivoMs: r.tempoAtivoMs||0, ativoDesdeMs: null, apareceuEmMs: Date.now(), excluidaVF: !!r.excluidaVF};
   }).filter(Boolean);
   if(!historico.length) return null;
   return {
@@ -11183,7 +11214,7 @@ function renderizarItemVF(){
   // Clicar em qualquer uma abre o popup de gerenciar
   const tagsDaQuestao = vfTagsPorQuestaoVF.get(item.id) || [];
   const tagsCustomizadasHtml = tagsDaQuestao.map(t =>
-    `<span onclick="vfAbrirPopupTagsVF('${item.id}')" style="color:#B23A34;font-weight:600;font-size:var(--fs-b);border:1.5px solid #B23A34;border-radius:8px;padding:3px 8px;white-space:nowrap;cursor:pointer">${escapeHtml(t.nome)}</span>`
+    `<span onclick="vfAbrirPopupTagsVF('${item.id}')" style="color:#B23A34;font-weight:600;font-size:var(--fs-a);border:1.5px solid #B23A34;border-radius:8px;padding:1.5px 7.5px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center">${escapeHtml(t.nome)}</span>`
   ).join('');
   // ícone de tag + "+" combinados - botão só de adicionar quando ainda
   // não tem nenhuma tag customizada nessa questão
@@ -12177,7 +12208,7 @@ async function vfSalvarEdicaoCorrecaoVF(questaoId, textoOriginal){
 function renderizarBarraFixaVF(item, jaRespondida){
   const barraFixa = document.getElementById('vf-barra-fixa');
   barraFixa.className = 'vf-barra-fixa';
-  const podeVoltar = estadoVF.posicao > 0;
+  const podeVoltar = vfIndiceAnteriorVisivelVF(estadoVF.posicao) >= 0; // desabilita quando só sobraram excluídas atrás
   const linhaPrincipal = jaRespondida
     ? `<button class="btn-secundario" style="flex:1" ${podeVoltar?'':'disabled'} onclick="anteriorVF()">← Anterior</button>
        <button class="btn-primario" style="flex:1" onclick="proximoVF()">Próxima →</button>`
@@ -12229,7 +12260,7 @@ function medirAlturaBarraFixaVF(){
   // horizontal onde o balão fica (à esquerda), então somar essa altura
   // ali só empurrava o balão pra cima sem necessidade nenhuma. Só abaixo
   // de 1100px (retrato) a barra ocupa a largura toda e pode sobrepor
-  const larguraEstreita = window.innerWidth < 1100;
+  const larguraEstreita = !menuEhBarraLateral(); // mesmo motivo de medirAlturaNav: matchMedia, nunca innerWidth
   const alturaConsiderada = (larguraEstreita && !barraFixa.classList.contains('hidden')) ? altura : 0;
   document.documentElement.style.setProperty('--vf-barra-fixa-altura', alturaConsiderada + 'px');
 }
@@ -12435,7 +12466,7 @@ function vfRenderizarListaTagsAtualVF(){
   const htmlAutomaticas = tagsAutomaticas.map(t =>
     `<span style="background:#B23A34;color:#fff;font-weight:700;font-size:var(--fs-b);border-radius:8px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px;letter-spacing:.03em">${t.nome}<span onclick="vfDesmarcarTagAutomaticaVF('${t.campo}')" style="cursor:pointer;color:#F0C9C5;font-weight:700">✕</span></span>`
   ).join('');
-  const htmlCustomizadas = tags.map(t => `<span style="color:#B23A34;font-weight:600;font-size:var(--fs-b);border:1.5px solid #B23A34;border-radius:8px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px">${escapeHtml(t.nome)}<span onclick="vfRemoverTagVF('${t.id}')" style="cursor:pointer;color:#999;font-weight:700">✕</span></span>`).join('');
+  const htmlCustomizadas = tags.map(t => `<span style="color:#B23A34;font-weight:600;font-size:var(--fs-b);border:1.5px solid #B23A34;border-radius:8px;padding:3.5px 6.5px;display:inline-flex;align-items:center;gap:6px">${escapeHtml(t.nome)}<span onclick="vfRemoverTagVF('${t.id}')" style="cursor:pointer;color:#999;font-weight:700">✕</span></span>`).join('');
   const html = htmlAutomaticas + htmlCustomizadas;
   container.innerHTML = html || '<span style="display:inline-block;color:#999;font-size:var(--fs-c)">Nenhuma tag ainda.</span>';
 }
@@ -14863,6 +14894,14 @@ async function vfExecutarExclusaoVF(idsExcluir, linhasInsert, nomeModal){
   vfIrmasParaExcluirVF = [];
   fecharModal(nomeModal);
 
+  // marca no histórico TODAS as entradas dessas questões (a atual e
+  // qualquer irmã que já tenha passado antes). Elas continuam no
+  // histórico de propósito - as estatísticas da sessão são calculadas a
+  // partir dele e a resposta dada foi real - mas ficam marcadas como
+  // excluídas, e Anterior/Próxima passam a pular por cima: questão
+  // excluída não volta a aparecer, nem pra frente nem pra trás
+  estadoVF.historico.forEach(h => { if(idsExcluir.includes(h.item.id)) h.excluidaVF = true; });
+
   const entradaAtual = estadoVF.historico[estadoVF.posicao];
   if(entradaAtual && idsExcluir.includes(entradaAtual.item.id)){
     if(entradaAtual.resposta === null){
@@ -14925,13 +14964,25 @@ async function confirmarExclusaoComIrmasVF(){
   await vfExecutarExclusaoVF([idPrincipal, ...idsIrmas], linhas, 'modal-confirmar-exclusao-familia-vf');
 }
 
+// próxima/anterior entrada do histórico que ainda EXISTE (não foi
+// excluída). Devolve -1 quando não há nenhuma naquela direção
+function vfIndiceAnteriorVisivelVF(desde){
+  for(let i = desde - 1; i >= 0; i--) if(!estadoVF.historico[i].excluidaVF) return i;
+  return -1;
+}
+function vfIndiceProximoVisivelVF(desde){
+  for(let i = desde + 1; i < estadoVF.historico.length; i++) if(!estadoVF.historico[i].excluidaVF) return i;
+  return -1;
+}
+
 async function proximoVF(){
   if(!estadoVF) return;
   if(agoraCorrigidoVF() < (estadoVF.bloqueadoAteMs||0)) return; // toque duplo acidental logo após responder — o botão mudou de Verdadeiro/Falso pra Próxima na mesma posição física
   vfDespausarSeNecessarioVF(); // avançar é sinal claro de que está ativo, mesmo raciocínio de responderVF
   if(vfVisualizandoSalvoInfoVF){ vfSairDoModoVisualizacaoSalvoVF(); renderizarItemVF(); return; } // "Próxima" a partir de uma visualização de salvo só volta pra sessão real - não avança a partir da posição antiga
-  if(estadoVF.posicao < estadoVF.historico.length - 1){
-    estadoVF.posicao++;
+  const alvoProximo = vfIndiceProximoVisivelVF(estadoVF.posicao); // pula as excluídas
+  if(alvoProximo >= 0){
+    estadoVF.posicao = alvoProximo;
     // se aterrissou numa entrada ainda não respondida (só pode ser a
     // última — nunca há duas pendentes ao mesmo tempo, garantido pela
     // correção do bug da órfã), rearma a trava de toque duplo. Antes só
@@ -14950,14 +15001,16 @@ async function proximoVF(){
 }
 
 function anteriorVF(){
-  if(!estadoVF || estadoVF.posicao <= 0) return;
+  if(!estadoVF) return;
+  const alvoAnterior = vfIndiceAnteriorVisivelVF(estadoVF.posicao); // pula as excluídas
+  if(alvoAnterior < 0) return; // não sobrou nenhuma questão anterior que ainda exista
   if(agoraCorrigidoVF() < (estadoVF.bloqueadoAteMs||0)) return; // mesma trava de toque duplo acidental logo após responder
   if(vfVisualizandoSalvoInfoVF){ vfSairDoModoVisualizacaoSalvoVF(); renderizarItemVF(); return; } // mesmo raciocínio de proximoVF - só volta pra sessão real
   // mesmo achado real de avancarParaProximaVF: força o salvamento de
   // qualquer edição pendente ANTES de mudar estadoVF.posicao, senão o
   // salvamento (disparado pelo blur) lê a entrada errada do histórico
   vfForcarSalvamentoEdicaoPendenteVF();
-  estadoVF.posicao--;
+  estadoVF.posicao = alvoAnterior;
   limparCanvasDesenhoVF();
   renderizarItemVF();
 }
