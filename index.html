@@ -1590,7 +1590,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     <div id="vf-lista-irmas-exclusao" style="max-height:180px;overflow-y:auto;margin-bottom:10px"></div>
     <textarea id="motivo-exclusao-familia-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:70px;margin-bottom:14px"></textarea>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <button class="btn-primario" style="width:100%" onclick="confirmarExclusaoSoEstaVF()">Só esta</button>
+      <button class="btn-primario" style="width:100%" id="vf-btn-exclusao-so-esta" onclick="confirmarExclusaoSoEstaVF()">Só esta</button>
       <button class="btn-primario" style="width:100%" id="vf-btn-exclusao-com-irmas" onclick="confirmarExclusaoComIrmasVF()"></button>
       <button class="btn-secundario" style="width:100%" onclick="vfFecharDialogoExclusaoFamiliaVF()">Cancelar</button>
     </div>
@@ -1930,7 +1930,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-11-001';
+const VERSAO_APP = '2026-09-11-002';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -11122,6 +11122,7 @@ function renderizarItemVF(){
     return;
   }
   const jaRespondida = entrada.resposta !== null;
+  vfPreBuscarIrmasVF(item.id); // em segundo plano - deixa o pop-up de excluir pronto pra abrir sem espera
   const publicacao = vfBibliografiaCache.get(item.bibliografia_id)?.titulo || 'Publicação não identificada';
   // se a questão mudar (ex: clicou em Próxima) enquanto ainda estava
   // editando algum dos três campos (afirmação/correção/explicação), força
@@ -14744,6 +14745,32 @@ async function vfAlternarMnemonicoNotaVF(notaId, mnemonicoAtual){
 let questaoVfParaExcluir = null;
 let vfIrmasParaExcluirVF = [];
 
+// ---- pré-busca das irmãs ----
+// o pop-up de excluir precisa saber, na hora do clique, se a afirmação
+// tem irmãs (e quais) - buscar isso só quando o dedo aperta o botão
+// deixava o pop-up esperando uma viagem inteira ao banco antes de
+// aparecer. A busca é disparada assim que a questão aparece na tela, em
+// segundo plano, e o resultado fica em cache: quando o botão é apertado,
+// a resposta já está aqui e o pop-up abre instantâneo, já com a lista
+let vfIrmasCacheVF = new Map();   // questao_vf_id -> lista de irmãs (já resolvida)
+let vfIrmasEmVooVF = new Map();   // questao_vf_id -> promessa em andamento (evita duas buscas iguais)
+function vfPreBuscarIrmasVF(questaoVfId){
+  if(!questaoVfId || !usuarioAtual) return Promise.resolve([]);
+  if(vfIrmasCacheVF.has(questaoVfId)) return Promise.resolve(vfIrmasCacheVF.get(questaoVfId));
+  if(vfIrmasEmVooVF.has(questaoVfId)) return vfIrmasEmVooVF.get(questaoVfId);
+  const promessa = sb.rpc('achar_irmas_vf', {p_questao_id: questaoVfId, p_usuario_id: usuarioAtual.id})
+    .then(({data, error}) => {
+      vfIrmasEmVooVF.delete(questaoVfId);
+      if(error){ console.error('erro ao procurar irmãs:', error); return null; } // não cacheia erro - tenta de novo na próxima
+      const lista = data || [];
+      vfIrmasCacheVF.set(questaoVfId, lista);
+      return lista;
+    })
+    .catch(e => { vfIrmasEmVooVF.delete(questaoVfId); console.error('erro ao procurar irmãs:', e); return null; });
+  vfIrmasEmVooVF.set(questaoVfId, promessa);
+  return promessa;
+}
+
 // Esc cancela o diálogo de exclusão com família, igual clicar fora dele
 document.addEventListener('keydown', (e) => {
   if(e.key === 'Escape' && !document.getElementById('modal-confirmar-exclusao-familia-vf')?.classList.contains('hidden')){
@@ -14751,37 +14778,68 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-async function abrirConfirmacaoExclusaoVF(questaoVfId){
+// abre SEMPRE na hora, sem esperar o banco. A regra de família é textual
+// (mesma bibliografia_id + mesmo "texto de referência", calculado a
+// partir de texto/correção dependendo da resposta) - NUNCA
+// chave_familia_texto, que agrupa por cenário e junta famílias diferentes
+// demais pra esse propósito. Quem faz a consulta é vfPreBuscarIrmasVF,
+// disparada lá atrás, quando a questão apareceu na tela
+function abrirConfirmacaoExclusaoVF(questaoVfId){
   pausarTimerVF();
   questaoVfParaExcluir = questaoVfId;
   document.getElementById('motivo-exclusao-vf').value = '';
   document.getElementById('motivo-exclusao-familia-vf').value = '';
 
-  // procura irmãs ANTES de decidir qual diálogo mostrar. Regra de
-  // família é textual (mesma bibliografia_id + mesmo "texto de
-  // referência", calculado a partir de texto/correção dependendo de
-  // resposta) - NUNCA chave_familia_texto, que agrupa por cenário e
-  // junta famílias diferentes demais pra esse propósito
-  const {data: irmas} = await sb.rpc('achar_irmas_vf', {p_questao_id: questaoVfId, p_usuario_id: usuarioAtual.id});
-  vfIrmasParaExcluirVF = irmas || [];
-
-  if(vfIrmasParaExcluirVF.length === 0){
-    // sem irmã (ou todas já excluídas antes) - exclui direto como sempre foi, sem perguntar
-    abrirModal('modal-confirmar-exclusao-vf');
-  }else{
+  const cacheado = vfIrmasCacheVF.get(questaoVfId);
+  if(cacheado !== undefined){
+    // caminho normal: a pré-busca já respondeu, abre completo e imediato
+    vfIrmasParaExcluirVF = cacheado;
     vfMostrarDialogoExclusaoFamiliaVF();
+    return;
   }
+  // a resposta ainda não voltou (rede lenta, ou o clique veio logo depois
+  // da questão aparecer) - abre JÁ assim mesmo, com a lista em
+  // "procurando...", e completa sozinho quando chegar. O pop-up nunca
+  // fica esperando de tela fechada
+  vfIrmasParaExcluirVF = [];
+  vfMostrarDialogoExclusaoFamiliaVF(true);
+  vfPreBuscarIrmasVF(questaoVfId).then(lista => {
+    if(questaoVfParaExcluir !== questaoVfId) return; // cancelou ou trocou de questão no meio
+    vfIrmasParaExcluirVF = lista || [];
+    vfMostrarDialogoExclusaoFamiliaVF(); // repinta o mesmo pop-up, que já está aberto
+  });
 }
 
-function vfMostrarDialogoExclusaoFamiliaVF(){
+// um pop-up só, três estados: procurando (raro), sem irmã, e com irmãs.
+// Usar sempre o mesmo evita a tela trocar embaixo do dedo quando a
+// resposta da pré-busca chega com o pop-up já aberto
+function vfMostrarDialogoExclusaoFamiliaVF(procurando){
   const n = vfIrmasParaExcluirVF.length;
-  document.getElementById('vf-titulo-exclusao-familia').textContent = `Esta afirmação tem ${n} irmã${n>1?'s':''} da mesma família. O que excluir?`;
-  document.getElementById('vf-lista-irmas-exclusao').innerHTML = vfIrmasParaExcluirVF.map(irma => `
-    <div style="padding:8px 0;border-bottom:0.5px solid #f0f0ee;font-size:var(--fs-c);color:#555">
-      <span style="font-weight:600;color:${irma.resposta ? '#2E7D32' : '#A32D2D'}">${irma.resposta ? 'V' : 'F'}</span> ${escapeHtml(irma.texto_resumido)}${irma.texto_resumido.length >= 120 ? '…' : ''}
-    </div>
-  `).join('');
-  document.getElementById('vf-btn-exclusao-com-irmas').textContent = `Esta e as irmãs (${n+1})`;
+  const titulo = document.getElementById('vf-titulo-exclusao-familia');
+  const lista = document.getElementById('vf-lista-irmas-exclusao');
+  const btnSoEsta = document.getElementById('vf-btn-exclusao-so-esta');
+  const btnComIrmas = document.getElementById('vf-btn-exclusao-com-irmas');
+  if(procurando){
+    titulo.textContent = 'Excluir afirmação';
+    lista.innerHTML = '<div style="padding:8px 0;font-size:var(--fs-c);color:#999">procurando irmãs…</div>';
+    btnSoEsta.textContent = 'Excluir esta';
+    btnComIrmas.classList.add('hidden');
+  }else if(n === 0){
+    titulo.textContent = 'Excluir afirmação';
+    lista.innerHTML = '<div style="padding:8px 0;font-size:var(--fs-c);color:#999">Sem irmãs da mesma família.</div>';
+    btnSoEsta.textContent = 'Excluir esta';
+    btnComIrmas.classList.add('hidden');
+  }else{
+    titulo.textContent = `Esta afirmação tem ${n} irmã${n>1?'s':''} da mesma família. O que excluir?`;
+    lista.innerHTML = vfIrmasParaExcluirVF.map(irma => `
+      <div style="padding:8px 0;border-bottom:0.5px solid #f0f0ee;font-size:var(--fs-c);color:#555">
+        <span style="font-weight:600;color:${irma.resposta ? '#2E7D32' : '#A32D2D'}">${irma.resposta ? 'V' : 'F'}</span> ${escapeHtml(irma.texto_resumido)}${irma.texto_resumido.length >= 120 ? '…' : ''}
+      </div>
+    `).join('');
+    btnSoEsta.textContent = 'Só esta';
+    btnComIrmas.textContent = `Esta e as irmãs (${n+1})`;
+    btnComIrmas.classList.remove('hidden');
+  }
   abrirModal('modal-confirmar-exclusao-familia-vf');
 }
 
@@ -14832,6 +14890,7 @@ async function vfExecutarExclusaoVF(idsExcluir, linhasInsert, nomeModal){
   // (usuario_id, questao_vf_id); se uma irmã já tivesse sido excluída
   // entre a busca e a confirmação (raríssimo, mas possível), essa linha
   // é ignorada silenciosamente em vez de derrubar o insert inteiro
+  idsExcluir.forEach(id => { vfIrmasCacheVF.delete(id); vfIrmasEmVooVF.delete(id); }); // a família mudou - a próxima pergunta ao banco tem que ser de verdade
   const {error} = await sb.from('exclusoes_vf').upsert(linhasInsert, {onConflict: 'usuario_id,questao_vf_id', ignoreDuplicates: true});
   if(error){
     questoesRemovidas.forEach(q => { if(!estadoVF.pool.some(i => i.id === q.id)) estadoVF.pool.push(q); });
