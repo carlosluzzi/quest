@@ -1905,7 +1905,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-10-010';
+const VERSAO_APP = '2026-09-10-011';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9613,17 +9613,53 @@ async function vfFinalizarSessaoFlashVF(e){
   // abaixo), o histórico contado aqui É de fato só dessa sessão, nunca
   // mistura com uma sessão anterior que tenha rodado na mesma aba
   const totalRespondidas = historicoParaContagem?.filter(h => h.resposta !== null).length || 0;
-  // espera o insert completar (antes só disparava sem esperar) - precisa
-  // do id da sessão criada pra poder marcar enviado_tracker_em/
-  // id_atividade_tracker nela depois do envio ao Tracker, mesmo padrão
-  // que já existe pra cadernos
-  const {data: sessaoInserida, error: erroInsertSessao} = await sb.from('sessoes_vf').insert({
-    usuario_id: usuarioAtual.id,
-    iniciado_em: new Date(iniciadoEmMs).toISOString(),
-    finalizado_em: new Date(finalizadoEmMs).toISOString(),
-    tempo_efetivo_ms: tempoTotalMs,
-    total_questoes_respondidas: totalRespondidas
-  }).select('id').single();
+  // v3.2 - evita duplicar a sessão quando o mesmo "iniciado_em" já foi
+  // finalizado em outro dispositivo/aba (cada um só sabe do seu próprio
+  // estado local, sem sincronizar entre si) - achado real: aconteceu 4
+  // vezes no histórico, sempre com o mesmo iniciado_em e
+  // total_questoes_respondidas idêntico ou incompleto (cada aparelho só
+  // via as respostas dadas nele mesmo). Busca se já existe um registro
+  // pra esse par usuario+início antes de decidir inserir ou mesclar
+  const {data: sessaoExistente} = await sb.from('sessoes_vf')
+    .select('id, finalizado_em, tempo_efetivo_ms')
+    .eq('usuario_id', usuarioAtual.id).eq('iniciado_em', new Date(iniciadoEmMs).toISOString())
+    .maybeSingle();
+
+  let sessaoInserida, erroInsertSessao;
+  if(sessaoExistente){
+    // mescla em vez de duplicar: finalizado_em fica com o mais tarde dos
+    // dois, tempo_efetivo_ms com o maior (aproximação razoável - cada
+    // aparelho só mede o próprio tempo ativo, não dá pra somar sem risco
+    // de contar tempo simultâneo em dobro). total_questoes_respondidas é
+    // RECALCULADO contando de verdade em log_respostas_vf no intervalo
+    // completo (não usa o valor local desse aparelho nem do outro
+    // separadamente) - é a única forma de captar corretamente quando as
+    // respostas foram divididas entre os dois, como já aconteceu antes
+    const finalizadoEmFinalMs = Math.max(new Date(sessaoExistente.finalizado_em).getTime(), finalizadoEmMs);
+    const {count: totalRealContado} = await sb.from('log_respostas_vf')
+      .select('id', {count: 'exact', head: true}).eq('usuario_id', usuarioAtual.id)
+      .gte('respondida_em', new Date(iniciadoEmMs).toISOString())
+      .lte('respondida_em', new Date(finalizadoEmFinalMs).toISOString());
+    const resultado = await sb.from('sessoes_vf').update({
+      finalizado_em: new Date(finalizadoEmFinalMs).toISOString(),
+      tempo_efetivo_ms: Math.max(sessaoExistente.tempo_efetivo_ms || 0, tempoTotalMs),
+      total_questoes_respondidas: totalRealContado ?? totalRespondidas
+    }).eq('id', sessaoExistente.id).select('id').single();
+    sessaoInserida = resultado.data; erroInsertSessao = resultado.error;
+  }else{
+    // espera o insert completar (antes só disparava sem esperar) - precisa
+    // do id da sessão criada pra poder marcar enviado_tracker_em/
+    // id_atividade_tracker nela depois do envio ao Tracker, mesmo padrão
+    // que já existe pra cadernos
+    const resultado = await sb.from('sessoes_vf').insert({
+      usuario_id: usuarioAtual.id,
+      iniciado_em: new Date(iniciadoEmMs).toISOString(),
+      finalizado_em: new Date(finalizadoEmMs).toISOString(),
+      tempo_efetivo_ms: tempoTotalMs,
+      total_questoes_respondidas: totalRespondidas
+    }).select('id').single();
+    sessaoInserida = resultado.data; erroInsertSessao = resultado.error;
+  }
   if(erroInsertSessao) console.error('[Flash] Erro ao salvar sessão:', erroInsertSessao);
   // retrato pro Tracker montado ANTES de zerar a sessão - precisa do
   // início real dela (vfSessaoAtivaVF.iniciadoEm), que se perde depois
