@@ -1591,7 +1591,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     <textarea id="motivo-exclusao-familia-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:70px;margin-bottom:14px"></textarea>
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn-primario" style="width:100%" onclick="confirmarExclusaoSoEstaVF()">Só esta</button>
-      <button class="btn-primario" style="width:100%" id="vf-btn-exclusao-com-irmas"></button>
+      <button class="btn-primario" style="width:100%" id="vf-btn-exclusao-com-irmas" onclick="confirmarExclusaoComIrmasVF()"></button>
       <button class="btn-secundario" style="width:100%" onclick="vfFecharDialogoExclusaoFamiliaVF()">Cancelar</button>
     </div>
   </div>
@@ -3308,7 +3308,7 @@ function fecharTopicoAtual(){
    INÍCIO – caderno em andamento
    ============================================================ */
 async function verificarCadernoEmAndamento(){
-  const {data} = await sb.from('cadernos').select('id').eq('usuario_id', usuarioAtual.id).eq('status','em_andamento');
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('cadernos').select('id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('status','em_andamento').order('id'));
   const total = (data||[]).length;
   const cardEl = document.getElementById('caderno-em-andamento');
   if(total > 0){
@@ -3359,7 +3359,7 @@ async function atualizarNotificacoesOrdenadas(){
 /* 1. Anulação te afetou – respostas suas que foram tocadas por uma anulação
    e que você ainda não "viu" */
 async function coletarNotificacaoAnulacao(){
-  const {data} = await sb.from('respostas').select('id, questoes(atualizado_em)').eq('usuario_id', usuarioAtual.id).eq('foi_anulada', true).eq('anulacao_vista', false);
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('respostas').select('id, questoes(atualizado_em)', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('foi_anulada', true).eq('anulacao_vista', false).order('id'));
   const total = (data||[]).length;
   if(!total) return [];
   const timestamp = data.reduce((max,r)=>{
@@ -3392,11 +3392,11 @@ function formatarListaNomes(nomes){
   return `${nomes.slice(0,-1).join(', ')} e ${nomes[nomes.length-1]}`;
 }
 async function coletarNotificacaoRespostaDiscussao(){
-  const {data: meusTopicos} = await sb.from('topicos').select('id, titulo, criado_em, criador_visto_em').eq('criado_por', usuarioAtual.id);
+  const {data: meusTopicos} = await buscarTudoPaginadoVF(() => sb.from('topicos').select('id, titulo, criado_em, criador_visto_em', {count: 'exact'}).eq('criado_por', usuarioAtual.id).order('id'));
   if(!meusTopicos || !meusTopicos.length) return [];
 
   const idsMeusTopicos = meusTopicos.map(t=>t.id);
-  const {data: comentariosNovos} = await sb.from('comentarios').select('topico_id, usuario_id, criado_em, usuarios(nome)').in('topico_id', idsMeusTopicos).neq('usuario_id', usuarioAtual.id);
+  const {data: comentariosNovos} = await buscarTudoPaginadoVF(() => sb.from('comentarios').select('topico_id, usuario_id, criado_em, usuarios(nome)', {count: 'exact'}).in('topico_id', idsMeusTopicos).neq('usuario_id', usuarioAtual.id).order('id'));
 
   const mapaTopico = {};
   meusTopicos.forEach(t=>{ mapaTopico[t.id] = t; });
@@ -3437,7 +3437,7 @@ function abrirTopicoNotificado(topicoId){
 /* 3. Questão do seu caderno em andamento foi corrigida antes de você
    responder ela */
 async function coletarNotificacaoQuestaoCorrigida(){
-  const {data: cadernosAndamento} = await sb.from('cadernos').select('id, criado_em, filtros_aplicados').eq('usuario_id', usuarioAtual.id).eq('status','em_andamento');
+  const {data: cadernosAndamento} = await buscarTudoPaginadoVF(() => sb.from('cadernos').select('id, criado_em, filtros_aplicados', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('status','em_andamento').order('id'));
   if(!cadernosAndamento || !cadernosAndamento.length){ questoesCorrigidasPorCaderno = {}; return []; }
 
   const pendentesPorCaderno = {}; // cadernoId -> [questaoId, ...]
@@ -3447,10 +3447,10 @@ async function coletarNotificacaoQuestaoCorrigida(){
   await Promise.all(cadernosAndamento.map(async (c) => {
     const ids = (c.filtros_aplicados && c.filtros_aplicados.questao_ids) || [];
     if(!ids.length) return;
-    const {data: questoesEditadas} = await sb.from('questoes').select('id, atualizado_em').in('id', ids).gt('atualizado_em', c.criado_em);
+    const {data: questoesEditadas} = await buscarTudoPaginadoVF(() => sb.from('questoes').select('id, atualizado_em', {count: 'exact'}).in('id', ids).gt('atualizado_em', c.criado_em).order('id'));
     if(!questoesEditadas || !questoesEditadas.length) return;
     const idsEditadas = questoesEditadas.map(q=>q.id);
-    const {data: jaRespondidas} = await sb.from('respostas').select('questao_id').eq('caderno_id', c.id).in('questao_id', idsEditadas);
+    const {data: jaRespondidas} = await buscarTudoPaginadoVF(() => sb.from('respostas').select('questao_id', {count: 'exact'}).eq('caderno_id', c.id).in('questao_id', idsEditadas).order('id'));
     const idsRespondidas = new Set((jaRespondidas||[]).map(r=>r.questao_id));
     const pendentesDesseCaderno = questoesEditadas.filter(q=>
       !idsRespondidas.has(q.id) && localStorage.getItem(chaveCorrigidaVista(c.id, q.id)) !== 'true'
@@ -3499,9 +3499,9 @@ function marcarCorrigidasVistas(cadernoId){
    ainda não votou/concordou) */
 async function coletarNotificacaoForum(){
   const [{data: todosTopicos}, {data: meusVotos}, {data: minhasVisualizacoes}] = await Promise.all([
-    sb.from('topicos').select('id, status, criado_em'),
-    sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id),
-    sb.from('topicos_vistos').select('topico_id, visto_em').eq('usuario_id', usuarioAtual.id)
+    buscarTudoPaginadoVF(() => sb.from('topicos').select('id, status, criado_em', {count: 'exact'}).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('votos_resolucao').select('topico_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('topicos_vistos').select('topico_id, visto_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('topico_id'))
   ]);
   const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
   const mapaVisto = {};
@@ -3518,7 +3518,7 @@ async function coletarNotificacaoForum(){
   }
 
   const idsAtivos = ativos.map(t=>t.id);
-  const {data: comentariosAtivos} = await sb.from('comentarios').select('topico_id, criado_em').in('topico_id', idsAtivos);
+  const {data: comentariosAtivos} = await buscarTudoPaginadoVF(() => sb.from('comentarios').select('topico_id, criado_em', {count: 'exact'}).in('topico_id', idsAtivos).order('id'));
   const ultimaAtividadePorTopico = {};
   ativos.forEach(t=>{ ultimaAtividadePorTopico[t.id] = t.criado_em; });
   (comentariosAtivos||[]).forEach(c=>{
@@ -3589,8 +3589,8 @@ async function coletarNotificacaoPdfNovo(){
   // consulta fique pesada só porque o total de questões novas cresceu
   const idsAutores = [...new Set(data.map(q=>q.autor_id).filter(Boolean))];
   const [{data: autoresInfo}, {data: vistosPorModulo}] = await Promise.all([
-    idsAutores.length ? sb.from('usuarios').select('id, nome').in('id', idsAutores) : Promise.resolve({data: []}),
-    sb.from('modulos_novidade_vista').select('modulo, visto_em').eq('usuario_id', usuarioAtual.id)
+    idsAutores.length ? buscarTudoPaginadoVF(() => sb.from('usuarios').select('id, nome', {count: 'exact'}).in('id', idsAutores).order('id')) : Promise.resolve({data: []}),
+    buscarTudoPaginadoVF(() => sb.from('modulos_novidade_vista').select('modulo, visto_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('modulo'))
   ]);
   const mapaNomes = {};
   (autoresInfo||[]).forEach(a => { mapaNomes[a.id] = a.nome; });
@@ -3675,10 +3675,10 @@ async function coletarNotificacaoPdfNovo(){
 /* 8. Proposta nova (edição ou anulação) que alguém abriu numa discussão –
    some quando você vota (mesma lógica de "resolve por engajamento" do Fórum) */
 async function coletarNotificacaoPropostaNova(){
-  const {data} = await sb.from('propostas_edicao').select('*, topicos(titulo), usuarios(nome), questoes(modulo_pscpp)').eq('status','pendente').neq('criado_por', usuarioAtual.id);
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('propostas_edicao').select('*, topicos(titulo), usuarios(nome), questoes(modulo_pscpp)', {count: 'exact'}).eq('status','pendente').neq('criado_por', usuarioAtual.id).order('id'));
   if(!data || !data.length) return [];
 
-  const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id);
+  const {data: meusVotos} = await buscarTudoPaginadoVF(() => sb.from('votos_resolucao').select('topico_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id'));
   const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
 
   const pendentes = data.filter(p => !idsVotados.has(p.topico_id));
@@ -3710,10 +3710,16 @@ async function marcarModuloNovidadeVisto(modulo, btnEl){
    upload de PDF) — admin vê de todo mundo, os outros só veem os próprios,
    já que só o autor ou o admin pode resolver */
 async function coletarNotificacaoRascunhoPendente(){
-  let query = sb.from('questoes_rascunho').select('id, criado_em, nome_arquivo_origem, usuarios(nome)');
-  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
-  const {data} = await query;
-  const total = (data||[]).length;
+  // paginado + contagem exata: o Supabase corta em 1000 linhas sem avisar,
+  // entao contar o que chegou fazia o card travar em "1000" mesmo tendo
+  // mais rascunho parado que isso
+  const montarQueryRascunhoNotif = () => {
+    let q = sb.from('questoes_rascunho').select('id, criado_em, nome_arquivo_origem', {count: 'exact'}).order('id');
+    if(!usuarioAtual.is_admin) q = q.eq('autor_id', usuarioAtual.id);
+    return q;
+  };
+  const {data, count} = await buscarTudoPaginadoVF(montarQueryRascunhoNotif);
+  const total = (typeof count === 'number') ? count : (data||[]).length;
   if(!total) return [];
   const timestamp = data.reduce((max,r)=> r.criado_em > max ? r.criado_em : max, data[0].criado_em);
   const arquivos = [...new Set(data.map(r=>r.nome_arquivo_origem).filter(Boolean))];
@@ -3732,10 +3738,15 @@ async function coletarNotificacaoRascunhoPendente(){
 // separado, já que os dois fluxos são independentes e podem ter
 // pendências ao mesmo tempo
 async function coletarNotificacaoRascunhoPendenteVF(){
-  let query = sb.from('questoes_vf_rascunho').select('id, criado_em, nome_arquivo_origem, usuarios(nome)');
-  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
-  const {data} = await query;
-  const total = (data||[]).length;
+  // mesmo motivo do card do Quest: sem paginar, o card mostrava "1000"
+  // com 1714 afirmacoes de verdade paradas no rascunho
+  const montarQueryRascunhoVFNotif = () => {
+    let q = sb.from('questoes_vf_rascunho').select('id, criado_em, nome_arquivo_origem', {count: 'exact'}).order('id');
+    if(!usuarioAtual.is_admin) q = q.eq('autor_id', usuarioAtual.id);
+    return q;
+  };
+  const {data, count} = await buscarTudoPaginadoVF(montarQueryRascunhoVFNotif);
+  const total = (typeof count === 'number') ? count : (data||[]).length;
   if(!total) return [];
   const timestamp = data.reduce((max,r)=> r.criado_em > max ? r.criado_em : max, data[0].criado_em);
   const arquivos = [...new Set(data.map(r=>r.nome_arquivo_origem).filter(Boolean))];
@@ -3743,7 +3754,7 @@ async function coletarNotificacaoRascunhoPendenteVF(){
   const html = `
     <div>
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="abrirRevisaoRascunhoVF()">
-        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B8860B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg> ${total} ${total>1?'afirmação(ões) V/F':'afirmação V/F'} esperando revisão</div>
+        <div style="font-weight:600;font-size:var(--fs-e);display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#B8860B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg> ${total} ${total>1?'afirmações V/F':'afirmação V/F'} esperando revisão</div>
         <div style="color:#888;font-size:var(--fs-d);padding-left:22px;margin-top:4px">Bibliografia não identificada automaticamente${textoArquivos}</div>
       </button>
     </div>`;
@@ -3754,7 +3765,7 @@ async function coletarNotificacaoRascunhoPendenteVF(){
    um card, mesmo que várias pessoas tenham reportado a mesma */
 async function coletarNotificacaoRelatoFormatacao(){
   if(!usuarioAtual?.is_admin) return [];
-  const {data} = await sb.from('relatos_formatacao').select('id, questao_id, criado_em, usuarios(nome), questoes(enunciado)').eq('visto', false);
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('relatos_formatacao').select('id, questao_id, criado_em, usuarios(nome), questoes(enunciado)', {count: 'exact'}).eq('visto', false).order('id'));
   if(!data || !data.length) return [];
 
   const porQuestao = {};
@@ -3810,9 +3821,9 @@ let temasCache = [];
 
 async function carregarBibliografia(){
   const [{data}, {data: dadosQuestoes}, {data: dadosTemas}] = await Promise.all([
-    sb.from('bibliografia').select('*'),
+    buscarTudoPaginadoVF(() => sb.from('bibliografia').select('*', {count: 'exact'}).order('id')),
     buscarTudoPaginadoVF(() => sb.from('questoes').select('modulo_pscpp, bibliografia_id, tipo_questao', {count: 'exact'}).eq('anulada', false).order('id')),
-    sb.from('temas').select('*, tema_bibliografia(bibliografia_id)')
+    buscarTudoPaginadoVF(() => sb.from('temas').select('*, tema_bibliografia(bibliografia_id)', {count: 'exact'}).order('id'))
   ]);
   bibliografiaCache = data || [];
   temasCache = (dadosTemas || []).map(t => ({...t, bibliografiaIds: (t.tema_bibliografia||[]).map(tb=>tb.bibliografia_id)}));
@@ -4087,12 +4098,12 @@ async function buscarQuestoesFiltradas(apenasContagem = false){
   const {data: todasQuestoes, error} = await buscarTudoPaginadoVF(montarQuery);
   if(error){ console.error(error); return []; }
 
-  const {data: exclusoes} = await sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).is('resolvido_em', null);
+  const {data: exclusoes} = await buscarTudoPaginadoVF(() => sb.from('exclusoes').select('questao_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('resolvido_em', null).order('id'));
   const idsExcluidos = new Set((exclusoes||[]).map(e=>e.questao_id));
   let questoesFiltradas = (todasQuestoes||[]).filter(q=>!idsExcluidos.has(q.id));
 
   if(document.getElementById('toggle-ineditas').checked){
-    const {data: respondidas} = await sb.from('respostas').select('questao_id').eq('usuario_id', usuarioAtual.id);
+    const {data: respondidas} = await buscarTudoPaginadoVF(() => sb.from('respostas').select('questao_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id'));
     const idsRespondidos = new Set((respondidas||[]).map(r=>r.questao_id));
     questoesFiltradas = questoesFiltradas.filter(q=>!idsRespondidos.has(q.id));
   }
@@ -7163,10 +7174,10 @@ async function vfAbrirFavoritosVF(){
   // a tabela favoritos_vf não tem coluna 'id' própria - a chave é o par
   // (usuario_id, questao_vf_id). Pedir 'id' no select quebrava a página
   // inteira (erro de coluna inexistente) - achado testando direto no banco
-  const {data, error} = await sb.from('favoritos_vf')
-    .select('criado_em, questao_vf_id, questoes_vf(texto, bibliografia(titulo, nome_exibicao))')
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('favoritos_vf')
+    .select('criado_em, questao_vf_id, questoes_vf(texto, bibliografia(titulo, nome_exibicao))', {count: 'exact'})
     .eq('usuario_id', usuarioAtual.id)
-    .order('criado_em', {ascending: false});
+    .order('criado_em', {ascending: false}).order('questao_vf_id'));
   if(error){ el.innerHTML = '<p style="color:#A32D2D;text-align:center;padding:20px 0">Erro ao carregar.</p>'; return; }
   if(!data || !data.length){ el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Nenhuma questão favoritada ainda.</p>'; return; }
   el.innerHTML = data.map(f => {
@@ -7217,10 +7228,10 @@ async function vfAbrirFlashSalvosVF(){
   const el = document.getElementById('vf-lista-flash-salvos');
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
   document.getElementById('pagina-flash-salvos-vf').classList.remove('hidden');
-  const {data, error} = await sb.from('flashs_salvos_vf')
-    .select('id, motivo, criado_em, imagem_anotacao, questao_vf_id, questoes_vf(texto, bibliografia(titulo, nome_exibicao))')
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('flashs_salvos_vf')
+    .select('id, motivo, criado_em, imagem_anotacao, questao_vf_id, questoes_vf(texto, bibliografia(titulo, nome_exibicao))', {count: 'exact'})
     .eq('usuario_id', usuarioAtual.id)
-    .order('criado_em', {ascending: false});
+    .order('criado_em', {ascending: false}).order('id'));
   if(error){ el.innerHTML = '<p style="color:#A32D2D;text-align:center;padding:20px 0">Erro ao carregar.</p>'; return; }
   if(!data || !data.length){ el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Nenhum Flash salvo ainda. Toque o botão "Salvar" numa questão pra guardar ela aqui.</p>'; return; }
 
@@ -8227,7 +8238,7 @@ function vfExtrairMarcacoesAtuaisVF(container, nomeContainer){
 async function vfCarregarCacheMarcacoesDoEscopoVF(origem, escopoId){
   const chaveCache = `${origem}:${escopoId}`;
   if(!usuarioAtual || !escopoId) return;
-  const {data, error} = await sb.from('marcacoes_texto_vf').select('*').eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId);
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('marcacoes_texto_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId).order('id'));
   const porQuestao = new Map();
   if(!error && data){
     data.forEach(m => {
@@ -8301,7 +8312,7 @@ async function vfCarregarMarcacoesTextoVF(origem, escopoId, questaoId){
     vfAplicarMarcacoesDoCacheVF(origem, escopoId, questaoId);
     return;
   }
-  const {data, error} = await sb.from('marcacoes_texto_vf').select('*').eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId).eq('questao_id', questaoId);
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('marcacoes_texto_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId).eq('questao_id', questaoId).order('id'));
   if(error || !data || !data.length) return;
   const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
   const correcao = document.getElementById('vf-correcao-atual');
@@ -8980,7 +8991,7 @@ async function sincronizarPoolVFReal(){
   // paralelo, cortando o tempo total pro tempo da mais lenta das 3
   const [{data: horarioServidorMs}, {data: estadosNovos}, {data: userRow}] = await Promise.all([
     sb.rpc('now_ms'),
-    sb.from('repeticao_vf').select('*').eq('usuario_id', usuarioAtual.id).gt('atualizado_em', marcaAnterior),
+    buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).gt('atualizado_em', marcaAnterior).order('questao_vf_id')),
     sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single()
   ]);
   const novaMarca = typeof horarioServidorMs === 'number' ? new Date(horarioServidorMs).toISOString() : null;
@@ -9063,7 +9074,7 @@ let vfElementosCacheVF = new Map();
 // de join nenhum na query pesada das 7.700+ questões
 async function vfCarregarBibliografiaCacheVF(){
   if(vfBibliografiaCache.size > 0) return; // já carregado nessa sessão
-  const {data, error} = await sb.from('bibliografia').select('id, titulo, nome_exibicao, modulo_pscpp, rotulo_capitulo');
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('bibliografia').select('id, titulo, nome_exibicao, modulo_pscpp, rotulo_capitulo', {count: 'exact'}).order('id'));
   if(error || !data) return;
   vfBibliografiaCache = new Map(data.map(b => [b.id, {titulo: b.nome_exibicao || b.titulo, modulo_pscpp: b.modulo_pscpp, rotulo_capitulo: b.rotulo_capitulo}]));
 }
@@ -9105,8 +9116,8 @@ async function vfBuscarNotasEmLoteVF(questaoIds){
   // já que os dados vêm juntos de qualquer forma
   const pendentes = questaoIds.filter(id => notasVF.has(id) && !vfListaNotasCacheVF.has(id));
   if(!pendentes.length) return;
-  const {data, error} = await sb.from('notas_vf').select('id, questao_vf_id, texto, criado_em, fixada, eh_mnemonico, ordem_fixacao, alinhamento')
-    .eq('usuario_id', usuarioAtual.id).in('questao_vf_id', pendentes).order('criado_em', {ascending:false});
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, questao_vf_id, texto, criado_em, fixada, eh_mnemonico, ordem_fixacao, alinhamento', {count: 'exact'})
+    .eq('usuario_id', usuarioAtual.id).in('questao_vf_id', pendentes).order('criado_em', {ascending:false}).order('id'));
   if(error) return;
   pendentes.forEach(id => { vfListaNotasCacheVF.set(id, []); vfNotaPreviewCacheVF.set(id, []); }); // marca como "já buscou" mesmo se não achar nada, evita rebuscar
   (data || []).forEach(n => {
@@ -9128,7 +9139,7 @@ async function vfBuscarConteudoEmLoteVF(itens){
   const pendentes = itens.filter(item => item.explicacao === undefined && !vfConteudoCompletoCache.has(item.id));
   if(!pendentes.length) return;
   const ids = pendentes.map(item => item.id);
-  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local').in('id', ids);
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local', {count: 'exact'}).in('id', ids).order('id'));
   if(error || !data) return;
   const porId = new Map(data.map(d => [d.id, d]));
   pendentes.forEach(item => {
@@ -9365,18 +9376,18 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, {data: todasTagsData}, {data: questoesTagsData}, , {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, ...resultadosEntradaVF] = await Promise.all([
     buscarTudoPaginadoVF(montarQueryQuestoesVF, aoCarregarRestanteQuestoesVF),
     buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
-    sb.from('exclusoes_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
-    sb.from('favoritos_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
-    sb.from('notas_vf').select('questao_vf_id, fixada').eq('usuario_id', usuarioAtual.id),
-    sb.from('flashs_salvos_vf').select('questao_vf_id, motivo').eq('usuario_id', usuarioAtual.id),
-    sb.from('tags_vf').select('id, nome').order('nome'),
-    sb.from('questoes_vf_tags').select('questao_vf_id, tags_vf(id, nome)'),
+    buscarTudoPaginadoVF(() => sb.from('exclusoes_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
+    buscarTudoPaginadoVF(() => sb.from('favoritos_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
+    buscarTudoPaginadoVF(() => sb.from('notas_vf').select('questao_vf_id, fixada', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('flashs_salvos_vf').select('questao_vf_id, motivo', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('tags_vf').select('id, nome', {count: 'exact'}).order('nome').order('id')),
+    buscarTudoPaginadoVF(() => sb.from('questoes_vf_tags').select('questao_vf_id, tags_vf(id, nome)', {count: 'exact'}).order('questao_vf_id').order('tag_id')),
     vfCarregarBibliografiaCacheVF(), // idempotente - só busca de verdade na primeira vez da sessão
     promiseTermoVF,
     // leve: só os ids das questões que têm elemento anexado, pra saber
     // ANTES de responder se vale a pena pré-buscar o conteúdo completo
     // (P1 - evita ida ao servidor pras questões sem nada anexado)
-    sb.from('questao_elemento_html_vf').select('questao_vf_id').eq('usuario_id', usuarioAtual.id),
+    buscarTudoPaginadoVF(() => sb.from('questao_elemento_html_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
     ...consultasEntradaVF
   ]);
   // se a busca do progresso (estado de cada questão) falhar, NUNCA degrada
@@ -9605,11 +9616,11 @@ function vfConfirmarFinalizarSessaoFlashVF(e){
 // dada (só se acertou), então infere: acertou = resposta igual ao
 // gabarito, errou = resposta oposta (sistema binário V/F)
 async function vfReconstruirHistoricoDeSessaoPerdidaVF(iniciadoEmMs){
-  const {data, error} = await sb.from('log_respostas_vf')
-    .select('acertou, questao_vf_id, questoes_vf(id, texto, correcao, resposta, capitulo, bibliografia_id, anulada)')
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('log_respostas_vf')
+    .select('acertou, questao_vf_id, questoes_vf(id, texto, correcao, resposta, capitulo, bibliografia_id, anulada)', {count: 'exact'})
     .eq('usuario_id', usuarioAtual.id)
     .gte('respondida_em', new Date(iniciadoEmMs).toISOString())
-    .order('respondida_em');
+    .order('respondida_em').order('id'));
   if(error || !data) return [];
   return data.filter(r => r.questoes_vf).map(r => {
     const item = r.questoes_vf;
@@ -10256,7 +10267,7 @@ async function vfReconstruirHistoricoDaSessaoVF(){
   const resumo = vfSessaoAtivaVF?.historicoResumido;
   if(!resumo || !resumo.length) return null;
   const ids = resumo.map(r => r.id);
-  const {data, error} = await sb.from('questoes_vf').select('*').in('id', ids);
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('*', {count: 'exact'}).in('id', ids).order('id'));
   if(error || !data) return null;
   const porId = new Map(data.map(d => [d.id, d]));
   const historico = resumo.map(r => {
@@ -10727,7 +10738,7 @@ async function vfAbrirGlossarioVF(termoPrefill){
 async function vfCarregarListaGlossarioVF(){
   const el = document.getElementById('vf-glossario-lista');
   el.innerHTML = '<p style="text-align:center;color:#999;padding:20px 0">Carregando...</p>';
-  const {data, error} = await sb.from('glossario_vf').select('*').order('modulo').order('ordem').order('termo_pt');
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('glossario_vf').select('*', {count: 'exact'}).order('modulo').order('ordem').order('termo_pt').order('id'));
   if(error){ el.innerHTML = `<p style="text-align:center;color:#A32D2D;padding:20px 0">Erro ao carregar: ${escapeHtml(error.message)}</p>`; return; }
   vfGlossarioCacheVF = data || [];
   vfRenderizarListaGlossarioVF(vfGlossarioCacheVF);
@@ -12654,7 +12665,7 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
     vfMontarPreviewNotasVF(container, vfNotaPreviewCacheVF.get(questaoVfId), questaoVfId);
     return;
   }
-  const {data} = await sb.from('notas_vf').select('id, texto, ordem_fixacao, alinhamento').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).eq('fixada', true).order('ordem_fixacao', {ascending: true});
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, texto, ordem_fixacao, alinhamento', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).eq('fixada', true).order('ordem_fixacao', {ascending: true}).order('id'));
   const notas = data || [];
   vfNotaPreviewCacheVF.set(questaoVfId, notas);
   // reconfere o elemento depois do await - se a pessoa já avançou pra
@@ -13615,7 +13626,7 @@ async function vfCarregarBibliotecaComplementarVF(){
   const el = document.getElementById('vf-complementar-lista-biblioteca');
   el.innerHTML = '<p style="color:#888;text-align:center;padding:20px">Carregando...</p>';
   const [{data, error}, {data: dadosModulos}] = await Promise.all([
-    sb.from('elementos_html_vf').select('id, titulo, latex_fonte').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
+    buscarTudoPaginadoVF(() => sb.from('elementos_html_vf').select('id, titulo, latex_fonte', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}).order('id')),
     sb.rpc('modulos_publicacoes_por_elemento_vf', {p_usuario_id: usuarioAtual.id})
   ]);
   vfBibliotecaComplementarCacheVF = (!error && data) ? data : [];
@@ -14127,7 +14138,7 @@ function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
 // em lote quanto pelo caminho ao vivo (cache frio)
 function vfMontarQueryElementosAnexadosVF(){
   return sb.from('questao_elemento_html_vf')
-    .select('id, questao_vf_id, elemento_html_id, elementos_html_vf(id, titulo, latex_fonte, anotacoes_elemento_html_vf(identificador, texto_explicacao))')
+    .select('id, questao_vf_id, elemento_html_id, elementos_html_vf(id, titulo, latex_fonte, anotacoes_elemento_html_vf(identificador, texto_explicacao))', {count: 'exact'})
     .eq('usuario_id', usuarioAtual.id);
 }
 // pré-busca em lote - só pras questões que estão em questoesComElementoVF
@@ -14135,7 +14146,7 @@ function vfMontarQueryElementosAnexadosVF(){
 async function vfBuscarElementosEmLoteVF(questaoIds){
   const pendentes = questaoIds.filter(id => questoesComElementoVF.has(id) && !vfElementosCacheVF.has(id));
   if(!pendentes.length) return;
-  const {data, error} = await vfMontarQueryElementosAnexadosVF().in('questao_vf_id', pendentes).order('criado_em');
+  const {data, error} = await buscarTudoPaginadoVF(() => vfMontarQueryElementosAnexadosVF().in('questao_vf_id', pendentes).order('criado_em').order('id'));
   if(error) return;
   pendentes.forEach(id => vfElementosCacheVF.set(id, [])); // marca como "já buscou" mesmo se não achar nada, evita rebuscar
   (data || []).forEach(l => {
@@ -14152,7 +14163,7 @@ async function vfCarregarElementosAnexadosVF(questaoVfId){
     vfMontarElementosAnexadosVF(container, questaoVfId, vfElementosCacheVF.get(questaoVfId));
     return;
   }
-  const {data} = await vfMontarQueryElementosAnexadosVF().eq('questao_vf_id', questaoVfId).order('criado_em');
+  const {data} = await buscarTudoPaginadoVF(() => vfMontarQueryElementosAnexadosVF().eq('questao_vf_id', questaoVfId).order('criado_em').order('id'));
   vfElementosCacheVF.set(questaoVfId, data || []);
   vfMontarElementosAnexadosVF(container, questaoVfId, data);
 }
@@ -14339,7 +14350,7 @@ function vfCancelarPressionarNotaSilenciosoVF(evento){
 }
 async function renderizarListaNotasVF(){
   const el = document.getElementById('lista-notas-vf');
-  const {data} = await sb.from('notas_vf').select('id, texto, criado_em, fixada, eh_mnemonico').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false});
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, texto, criado_em, fixada, eh_mnemonico', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false}).order('id'));
   if(!data || !data.length){ el.innerHTML = ''; el.style.maxHeight = '0px'; return; }
   el.innerHTML = `<div id="vf-lista-notas-itens" style="margin-bottom:14px">` + data.map(vfHtmlItemNotaVF).join('') + `</div>`;
   // altura grande o bastante pra caber qualquer lista realista de notas -
@@ -14900,7 +14911,7 @@ const QUANTIDADE_SUPERQUEST = 70;
 async function gerarSuperQuest(){
   const [{data: todasQuestoes, error}, {data: exclusoes}] = await Promise.all([
     buscarTudoPaginadoVF(() => sb.from('questoes').select('*', {count: 'exact'}).eq('anulada', false).order('id')),
-    sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).is('resolvido_em', null)
+    buscarTudoPaginadoVF(() => sb.from('exclusoes').select('questao_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('resolvido_em', null).order('id'))
   ]);
   if(error){ alert('Erro ao buscar questões: '+error.message); return; }
 
@@ -14951,7 +14962,7 @@ async function montarCaderno(){
   }
 
   if(document.getElementById('toggle-priorizar-erro').checked){
-    const {data: minhasRespostas} = await sb.from('respostas_finalizadas').select('questao_id, correta').eq('usuario_id', usuarioAtual.id);
+    const {data: minhasRespostas} = await buscarTudoPaginadoVF(() => sb.from('respostas_finalizadas').select('questao_id, correta', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id'));
     const stats = {};
     (minhasRespostas||[]).forEach(r=>{
       if(!stats[r.questao_id]) stats[r.questao_id] = {k:0,n:0};
@@ -15017,7 +15028,7 @@ async function montarCaderno(){
    CADERNOS EXISTENTES – em andamento / concluídos
    ============================================================ */
 async function carregarCadernosExistentes(){
-  const {data} = await sb.from('cadernos').select('*').eq('usuario_id', usuarioAtual.id).order('criado_em',{ascending:false});
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('cadernos').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('criado_em',{ascending:false}).order('id'));
   const todos = data || [];
   const andamento = todos.filter(c=>c.status==='em_andamento');
   const concluidos = todos.filter(c=>c.status==='finalizado');
@@ -15046,7 +15057,7 @@ async function carregarCadernosExistentes(){
   const idsRelevantes = todos.map(c=>c.id);
   const respostasPorCaderno = {};
   if(idsRelevantes.length){
-    const {data: todasRespostas} = await sb.from('respostas').select('caderno_id, correta').in('caderno_id', idsRelevantes);
+    const {data: todasRespostas} = await buscarTudoPaginadoVF(() => sb.from('respostas').select('caderno_id, correta', {count: 'exact'}).in('caderno_id', idsRelevantes).order('id'));
     (todasRespostas||[]).forEach(r=>{
       if(!respostasPorCaderno[r.caderno_id]) respostasPorCaderno[r.caderno_id] = {total:0, acertos:0};
       respostasPorCaderno[r.caderno_id].total++;
@@ -15145,7 +15156,7 @@ async function retomarCadernoEspecifico(cadernoId){
   // uma vez só, pra navegar entre questões depois não ter nenhum atraso de rede
   const [{data}, {data: respostasDoCaderno}] = await Promise.all([
     sb.from('cadernos').select('*').eq('id', cadernoId).single(),
-    sb.from('respostas').select('*').eq('caderno_id', cadernoId),
+    buscarTudoPaginadoVF(() => sb.from('respostas').select('*', {count: 'exact'}).eq('caderno_id', cadernoId).order('id')),
     vfCarregarCacheMarcacoesDoEscopoVF('quest', cadernoId)
   ]);
   if(!data){ alert('Caderno não encontrado.'); return; }
@@ -15170,8 +15181,8 @@ async function retomarCadernoEspecifico(cadernoId){
     // (o mais comum, cadernos criados depois dessa correção)
     const idsSalvos = filtros.questao_ids;
     const [{data: qs}, {data: exclusoes}] = await Promise.all([
-      sb.from('questoes').select('*').in('id', idsSalvos),
-      sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsSalvos).is('resolvido_em', null),
+      buscarTudoPaginadoVF(() => sb.from('questoes').select('*', {count: 'exact'}).in('id', idsSalvos).order('id')),
+      buscarTudoPaginadoVF(() => sb.from('exclusoes').select('questao_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).in('questao_id', idsSalvos).is('resolvido_em', null).order('id')),
       carregarFavoritosENotas(idsSalvos)
     ]);
     // .in() não garante devolver na ordem da lista passada – reordena manualmente
@@ -15195,7 +15206,7 @@ async function retomarCadernoEspecifico(cadernoId){
     const idsQuestoesCaderno = (questoes||[]).map(q=>q.id);
     const [{data: exclusoes}] = await Promise.all([
       idsQuestoesCaderno.length
-        ? sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoesCaderno).is('resolvido_em', null)
+        ? buscarTudoPaginadoVF(() => sb.from('exclusoes').select('questao_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoesCaderno).is('resolvido_em', null).order('id'))
         : Promise.resolve({data: []}),
       carregarFavoritosENotas(idsQuestoesCaderno)
     ]);
@@ -15367,11 +15378,11 @@ let modoRevisaoCaderno = false; // true quando visualizando um caderno JÁ concl
 async function carregarFavoritosENotas(idsQuestoes){
   if(!idsQuestoes.length){ favoritosDoUsuario = new Set(); notasDoUsuario = new Set(); topicosPendentesDoUsuario = new Set(); relatosFormatacaoDoUsuario = new Set(); alternativasSalvasAtual = new Set(); return; }
   const [{data: favs}, {data: nts}, {data: topicosDasQuestoes}, {data: relatos}, {data: altsSalvas}] = await Promise.all([
-    sb.from('favoritos').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
-    sb.from('notas').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
-    sb.from('topicos').select('id, questao_id, status').in('questao_id', idsQuestoes),
-    sb.from('relatos_formatacao').select('questao_id').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes),
-    souCarlos() ? sb.from('alternativas_salvas').select('questao_id, letra').eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes) : Promise.resolve({data: []})
+    buscarTudoPaginadoVF(() => sb.from('favoritos').select('questao_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('notas').select('questao_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('topicos').select('id, questao_id, status', {count: 'exact'}).in('questao_id', idsQuestoes).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('relatos_formatacao').select('questao_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes).order('id')),
+    souCarlos() ? buscarTudoPaginadoVF(() => sb.from('alternativas_salvas').select('questao_id, letra', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).in('questao_id', idsQuestoes).order('questao_id').order('letra')) : Promise.resolve({data: []})
   ]);
   favoritosDoUsuario = new Set((favs||[]).map(f=>f.questao_id));
   notasDoUsuario = new Set((nts||[]).map(n=>n.questao_id));
@@ -15385,7 +15396,7 @@ async function carregarFavoritosENotas(idsQuestoes){
   const idsTopicos = (topicosDasQuestoes||[]).map(t=>t.id);
   let idsVotados = new Set();
   if(idsTopicos.length){
-    const {data: meusVotos} = await sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id).in('topico_id', idsTopicos);
+    const {data: meusVotos} = await buscarTudoPaginadoVF(() => sb.from('votos_resolucao').select('topico_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).in('topico_id', idsTopicos).order('id'));
     idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
   }
   topicosPendentesDoUsuario = new Set(
@@ -15428,7 +15439,7 @@ async function abrirNotaQuestao(questaoId){
 async function renderizarListaNotasQuestao(){
   const el = document.getElementById('lista-notas-questao');
   el.innerHTML = '<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>';
-  const {data} = await sb.from('notas').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoNotaAtual).order('criado_em', {ascending:false});
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('notas').select('id, texto, criado_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoNotaAtual).order('criado_em', {ascending:false}).order('id'));
   if(!data || !data.length){ el.innerHTML = ''; return; }
   el.innerHTML = `<div style="margin-bottom:14px">` + data.map(n => `
     <div id="nota-questao-item-${n.id}" style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
@@ -16439,8 +16450,8 @@ let forumCache = [];
 
 async function carregarForum(){
   const [{data: todosTopicos}, {data: meusVotos}] = await Promise.all([
-    sb.from('topicos').select('*, questoes(enunciado, modulo_pscpp, bibliografia_id, capitulo)').order('criado_em', {ascending:false}),
-    sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id)
+    buscarTudoPaginadoVF(() => sb.from('topicos').select('*, questoes(enunciado, modulo_pscpp, bibliografia_id, capitulo)', {count: 'exact'}).order('criado_em', {ascending:false}).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('votos_resolucao').select('topico_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id'))
   ]);
   const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
 
@@ -16451,9 +16462,9 @@ async function carregarForum(){
   const mapaVisto = {};
   if(idsTopicos.length){
     const [{data: comentariosTodos}, {data: propostasTodas}, {data: minhasVisualizacoes}] = await Promise.all([
-      sb.from('comentarios').select('topico_id, criado_em').in('topico_id', idsTopicos).order('criado_em',{ascending:false}),
-      sb.from('propostas_edicao').select('topico_id, criado_em').in('topico_id', idsTopicos).order('criado_em',{ascending:false}),
-      sb.from('topicos_vistos').select('topico_id, visto_em').eq('usuario_id', usuarioAtual.id).in('topico_id', idsTopicos)
+      buscarTudoPaginadoVF(() => sb.from('comentarios').select('topico_id, criado_em', {count: 'exact'}).in('topico_id', idsTopicos).order('criado_em',{ascending:false}).order('id')),
+      buscarTudoPaginadoVF(() => sb.from('propostas_edicao').select('topico_id, criado_em', {count: 'exact'}).in('topico_id', idsTopicos).order('criado_em',{ascending:false}).order('id')),
+      buscarTudoPaginadoVF(() => sb.from('topicos_vistos').select('topico_id, visto_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).in('topico_id', idsTopicos).order('topico_id'))
     ]);
     (comentariosTodos||[]).forEach(c=>{
       if(!infoComentarios[c.topico_id]) infoComentarios[c.topico_id] = {total:0, ultima:c.criado_em};
@@ -16586,16 +16597,16 @@ function cancelarResposta(){
 async function renderizarDetalheQuestao(questaoId){
   const [{data: questao}, {data: minhasNotasDaQuestao}, {data: topicosDaQuestao}, {data: meusVotos}] = await Promise.all([
     sb.from('questoes').select('enunciado, alternativas').eq('id', questaoId).maybeSingle(),
-    sb.from('notas').select('id, texto, criado_em').eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId).order('criado_em', {ascending:false}),
-    sb.from('topicos').select('*').eq('questao_id', questaoId).order('criado_em', {ascending:false}),
-    sb.from('votos_resolucao').select('topico_id').eq('usuario_id', usuarioAtual.id)
+    buscarTudoPaginadoVF(() => sb.from('notas').select('id, texto, criado_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('questao_id', questaoId).order('criado_em', {ascending:false}).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('topicos').select('*', {count: 'exact'}).eq('questao_id', questaoId).order('criado_em', {ascending:false}).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('votos_resolucao').select('topico_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id'))
   ]);
   const idsVotados = new Set((meusVotos||[]).map(v=>v.topico_id));
 
   const idsTopicos = (topicosDaQuestao||[]).map(t=>t.id);
   const contagemComentarios = {};
   if(idsTopicos.length){
-    const {data: comentariosTodos} = await sb.from('comentarios').select('topico_id').in('topico_id', idsTopicos);
+    const {data: comentariosTodos} = await buscarTudoPaginadoVF(() => sb.from('comentarios').select('topico_id', {count: 'exact'}).in('topico_id', idsTopicos).order('id'));
     (comentariosTodos||[]).forEach(c=>{ contagemComentarios[c.topico_id] = (contagemComentarios[c.topico_id]||0)+1; });
   }
 
@@ -16725,8 +16736,8 @@ async function renderizarTopico(topicoId){
     renderizarListaForum();
   }
   const [{data: comentarios}, {data: votos}, {data: ultimaProposta}] = await Promise.all([
-    sb.from('comentarios').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).order('criado_em', {ascending:true}),
-    sb.from('votos_resolucao').select('*, usuarios(nome)').eq('topico_id', topicoId),
+    buscarTudoPaginadoVF(() => sb.from('comentarios').select('*, usuarios(nome, foto_url)', {count: 'exact'}).eq('topico_id', topicoId).order('criado_em', {ascending:true}).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('votos_resolucao').select('*, usuarios(nome)', {count: 'exact'}).eq('topico_id', topicoId).order('id')),
     topico.tipo==='erro'
       ? sb.from('propostas_edicao').select('*, usuarios(nome, foto_url)').eq('topico_id', topicoId).order('criado_em', {ascending:false}).limit(1).maybeSingle()
       : Promise.resolve({data:null})
@@ -16878,7 +16889,7 @@ async function reabrirTopico(topicoId){
 }
 
 async function verificarMaioriaTopico(topicoId){
-  const {data: votos} = await sb.from('votos_resolucao').select('id').eq('topico_id', topicoId);
+  const {data: votos} = await buscarTudoPaginadoVF(() => sb.from('votos_resolucao').select('id', {count: 'exact'}).eq('topico_id', topicoId).order('id'));
   const total = (votos||[]).length;
   const resolvido = total >= votosParaResolver();
   await sb.from('topicos').update({status: resolvido ? 'resolvido' : 'aberto'}).eq('id', topicoId);
@@ -17351,11 +17362,11 @@ async function carregarMetricasPessoais(viaPullToRefresh){
   }
 
   const [{data: respostasBrutas}, {data: minhasNotas}, {data: meusFavoritos}, {data: todasQuestoesBanco}, {data: minhasExclusoes}] = await Promise.all([
-    buscarTudoPaginadoVF(() => sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_id')),
-    sb.from('notas').select('id, questao_id, texto, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
-    sb.from('favoritos').select('id, questao_id, criado_em').eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}),
+    buscarTudoPaginadoVF(() => sb.from('respostas_finalizadas').select('questao_id, correta, respondido_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('notas').select('id, questao_id, texto, criado_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('favoritos').select('id, questao_id, criado_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending:false}).order('id')),
     buscarTudoPaginadoVF(() => sb.from('questoes').select('id, modulo_pscpp, tipo_questao', {count: 'exact'}).eq('anulada', false).order('id')),
-    sb.from('exclusoes').select('questao_id').eq('usuario_id', usuarioAtual.id).is('resolvido_em', null)
+    buscarTudoPaginadoVF(() => sb.from('exclusoes').select('questao_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('resolvido_em', null).order('id'))
   ]);
 
   metricasRespostasCache = respostasBrutas || [];
@@ -18102,6 +18113,47 @@ function identificarBibliografia(explicacao, enunciado){
   return null;
 }
 
+// ---- V/F: identificação da publicação pelo TÍTULO do cabeçalho ----
+// A lista fechada acima reconhece publicação por autor/sigla ("stopford",
+// "miguens", "bpg"). Quando o cabeçalho do arquivo V/F traz só o nome da
+// obra ("Economia Marítima, Capítulo 4"), nenhum termo de autor aparece no
+// texto e a identificação falhava, mandando o arquivo inteiro pro rascunho
+// — foi exatamente o que segurou 21 uploads de Economia Marítima. Esta é a
+// segunda tentativa, usada SÓ no fluxo V/F (o Quest continua igual): casa o
+// cabeçalho com o título da própria entrada, ignorando o complemento entre
+// parênteses ("(caps. 3, 4, 13-19)"), que varia por módulo e nunca aparece
+// escrito no cabeçalho do arquivo
+function tituloBaseBibliografiaVF(titulo){
+  return (titulo || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function identificarBibliografiaPorTituloCabecalhoVF(tituloCabecalho, capituloDoArquivo){
+  if(!tituloCabecalho) return null;
+  const cabecalhoNorm = normalizarBusca(tituloCabecalho);
+  if(!cabecalhoNorm) return null;
+  const candidatosBrutos = BIBLIOGRAFIA_FECHADA.filter(entrada => {
+    const tituloNorm = normalizarBusca(tituloBaseBibliografiaVF(entrada.titulo));
+    // título curto demais casaria dentro de qualquer coisa - exige um
+    // mínimo de corpo antes de aceitar como identificação
+    return tituloNorm.length >= 8 && cabecalhoNorm.includes(tituloNorm);
+  });
+  // dedup por módulo+título, mesma regra de identificarBibliografia
+  const candidatos = [...new Map(candidatosBrutos.map(c => [c.modulo+'|'+c.titulo, c])).values()];
+  if(!candidatos.length) return null;
+  if(candidatos.length === 1) return candidatos[0];
+  // mesma obra repartida entre módulos por faixa de capítulo (Nayak,
+  // Hidrodinâmica, Miguens) - desempata pelo capítulo do cabeçalho, com a
+  // mesma regra do fluxo normal (empate que sobra prefere Arte Naval)
+  const capNumero = parseInt(normalizarNumeraisRomanos(String(capituloDoArquivo || '')), 10);
+  if(Number.isFinite(capNumero)){
+    const comCapCerto = candidatos.filter(c => c.capitulos && c.capitulos.includes(capNumero));
+    if(comCapCerto.length === 1) return comCapCerto[0];
+    if(comCapCerto.length > 1) return comCapCerto.find(c => c.modulo === 'Arte Naval') || null;
+    const semRestricao = candidatos.filter(c => !c.capitulos);
+    if(semRestricao.length === 1) return semRestricao[0];
+  }
+  return null; // ambíguo entre módulos - vai pro rascunho de propósito
+}
+
 // Identifica bibliografia de cada questão do lote, e usa a mais comum entre
 // as que bateram como fallback pras que não bateram (assume 1 livro por
 // PDF, que é o padrão normal confirmado pelo Carlos)
@@ -18484,7 +18536,7 @@ async function abrirDetalheCadernoConcluido(cadernoId){
 
   const [{data: caderno}, {data: respostas}] = await Promise.all([
     sb.from('cadernos').select('*').eq('id', cadernoId).single(),
-    sb.from('respostas').select('questao_id, correta, resposta_dada').eq('caderno_id', cadernoId)
+    buscarTudoPaginadoVF(() => sb.from('respostas').select('questao_id, correta, resposta_dada', {count: 'exact'}).eq('caderno_id', cadernoId).order('id'))
   ]);
   const el = document.getElementById('modal-detalhe-caderno-conteudo');
 
@@ -18494,7 +18546,7 @@ async function abrirDetalheCadernoConcluido(cadernoId){
   }
 
   const idsQuestoes = [...new Set(respostas.map(r=>r.questao_id))];
-  const {data: questoes} = await sb.from('questoes').select('id, modulo_pscpp, capitulo, bibliografia_id, gabarito, anulada').in('id', idsQuestoes);
+  const {data: questoes} = await buscarTudoPaginadoVF(() => sb.from('questoes').select('id, modulo_pscpp, capitulo, bibliografia_id, gabarito, anulada', {count: 'exact'}).in('id', idsQuestoes).order('id'));
   const moduloPorQuestao = {};
   (questoes||[]).forEach(q=>{ moduloPorQuestao[q.id] = q.modulo_pscpp || 'Sem módulo'; });
 
@@ -18826,6 +18878,10 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
   // Busca o id direto no banco (não reaproveita mapaBibliografiaId, que é
   // uma variável local só de dentro do fluxo normal de upload — usar ela
   // aqui é a causa exata do travamento em 75% que aconteceu de verdade)
+  // calculado uma vez por arquivo (o cabeçalho é o mesmo pra todas as
+  // afirmações) e usado como segunda tentativa quando os termos de autor
+  // não acham nada no cabeçalho
+  const bibPorTituloCabecalhoVF = identificarBibliografiaPorTituloCabecalhoVF(tituloCabecalhoArquivo, capituloDoArquivo);
   const resultados = await Promise.all(questoes.map(async q => {
     // usa o título do cabeçalho geral do arquivo pra identificar a
     // bibliografia, EM VEZ do texto completo do campo BIBLIOGRAFIA: de
@@ -18840,7 +18896,10 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     const textoParaIdentificar = capituloDoArquivo && tituloCabecalhoArquivo
       ? `${tituloCabecalhoArquivo} Capítulo ${capituloDoArquivo}`
       : (tituloCabecalhoArquivo || q.bibliografiaTextoOriginal);
-    const bibEncontrada = identificarBibliografia(textoParaIdentificar, textoParaIdentificar);
+    // 1º pelos termos de autor (comportamento de sempre); se o cabeçalho
+    // só traz o nome da obra, cai no casamento por título
+    const bibEncontrada = identificarBibliografia(textoParaIdentificar, textoParaIdentificar)
+      || bibPorTituloCabecalhoVF;
     let bibliografiaId = null;
     let bibCapituloUnico = false;
     let bibValorCapituloFixo = null;
@@ -18926,7 +18985,7 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     cadastradas,
     puladas,
     rascunho: quantasRascunho,
-    erro: falhas.length ? `"${nomeArquivoAtual}": ${falhas.length} questão(ões) V/F falharam ao cadastrar (${falhas[0].erro}).` : null
+    erro: falhas.length ? `"${nomeArquivoAtual}": ${falhas.length} ${falhas.length>1?'questões V/F falharam':'questão V/F falhou'} ao cadastrar (${falhas[0].erro}).` : null
   };
 }
 
@@ -19062,7 +19121,7 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
     }
 
     if(paraRascunho.length){
-      mostrarBarraProgresso(status, 97, `${prefixoProgresso}Salvando ${paraRascunho.length} questão(ões) pendente(s) de revisão...`);
+      mostrarBarraProgresso(status, 97, `${prefixoProgresso}Salvando ${paraRascunho.length} ${paraRascunho.length>1?'questões pendentes':'questão pendente'} de revisão...`);
       await Promise.all(paraRascunho.map(q => sb.from('questoes_rascunho').insert({
         enunciado: q.enunciado,
         alternativas: q.alternativas,
@@ -19122,10 +19181,10 @@ async function enviarUpload(){
 
   mostrarBarraProgresso(status, 100, 'Concluído!');
   const textoPuladas = totalPuladas ? ` (${totalPuladas} já existia${totalPuladas>1?'m':''} igual e ${totalPuladas>1?'foram puladas':'foi pulada'})` : '';
-  const textoRascunho = totalRascunho ? ` <span style="color:#B8860B">${totalRascunho} precisam de revisão manual (bibliografia não identificada) – veja a notificação no Início.</span>` : '';
+  const textoRascunho = totalRascunho ? ` <span style="color:#B8860B">${totalRascunho} ${totalRascunho>1?'precisam':'precisa'} de revisão manual (bibliografia não identificada) – veja a notificação no Início.</span>` : '';
   let htmlFinal = totalCadastradas || totalPuladas
-    ? `<p style="color:#1B5E20;text-align:center;margin-top:8px">${totalCadastradas} questões cadastradas!${textoPuladas}</p>${textoRascunho ? `<p style="text-align:center;margin-top:6px">${textoRascunho}</p>` : ''}`
-    : (totalRascunho ? `<p style="color:#555;text-align:center;margin-top:8px">Lido com sucesso – ${totalRascunho} questão(ões) precisam de revisão manual antes de entrar no banco. Veja a notificação no Início.</p>` : '');
+    ? `<p style="color:#1B5E20;text-align:center;margin-top:8px">${totalCadastradas} ${totalCadastradas>1?'questões cadastradas':'questão cadastrada'}!${textoPuladas}</p>${textoRascunho ? `<p style="text-align:center;margin-top:6px">${textoRascunho}</p>` : ''}`
+    : (totalRascunho ? `<p style="color:#555;text-align:center;margin-top:8px">Lido com sucesso – ${totalRascunho} ${totalRascunho>1?'questões precisam':'questão precisa'} de revisão manual antes de entrar no banco. Veja a notificação no Início.</p>` : '');
 
   if(comErro.length){
     htmlFinal += `<div style="margin-top:10px">${comErro.map(r => `<p style="color:#B00020;font-size:var(--fs-c)">${escapeHtml(r.erro)}</p>${r.trecho ? `<textarea readonly style="width:100%;height:100px;font-size:var(--fs-a);font-family:monospace;margin:4px 0 8px;padding:6px;border:0.5px solid #ddd;border-radius:6px;color:#444" onclick="this.select()">${escapeHtml(r.trecho) || '(vazio)'}</textarea>` : ''}`).join('')}</div>`;
@@ -19217,9 +19276,14 @@ async function abrirRevisaoRascunho(){
   const container = document.getElementById('lista-rascunhos-pendentes');
   container.innerHTML = '<p style="text-align:center;color:#888">Carregando...</p>';
 
-  let query = sb.from('questoes_rascunho').select('*, usuarios(nome)').order('criado_em', {ascending:false});
-  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
-  const {data} = await query;
+  // paginado: sem isso a tela listava so os uploads que coubessem nas
+  // 1000 primeiras linhas, e a contagem de cada grupo saia menor
+  const montarQueryRevisaoRascunho = () => {
+    let q = sb.from('questoes_rascunho').select('*, usuarios(nome)', {count: 'exact'}).order('criado_em', {ascending:false}).order('id');
+    if(!usuarioAtual.is_admin) q = q.eq('autor_id', usuarioAtual.id);
+    return q;
+  };
+  const {data} = await buscarTudoPaginadoVF(montarQueryRevisaoRascunho);
 
   if(!data || !data.length){
     container.innerHTML = '<p style="text-align:center;color:#888">Nenhuma pendência no momento.</p>';
@@ -19329,9 +19393,14 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
     return;
   }
 
-  let query = sb.from('questoes_rascunho').select('*').eq('nome_arquivo_origem', nomeArquivo);
-  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
-  const {data: itens} = await query;
+  // paginado: um PDF com mais de 1000 questoes cadastraria so as 1000
+  // primeiras e deixaria o resto pra tras em silencio
+  const montarQueryGrupoRascunho = () => {
+    let q = sb.from('questoes_rascunho').select('*', {count: 'exact'}).eq('nome_arquivo_origem', nomeArquivo).order('id');
+    if(!usuarioAtual.is_admin) q = q.eq('autor_id', usuarioAtual.id);
+    return q;
+  };
+  const {data: itens} = await buscarTudoPaginadoVF(montarQueryGrupoRascunho);
   if(!itens || !itens.length) return;
 
   // confirmação dupla: a publicação escolhida À MÃO no dropdown bate de
@@ -19487,9 +19556,13 @@ async function abrirRevisaoRascunhoVF(){
   const container = document.getElementById('lista-rascunhos-pendentes-vf');
   container.innerHTML = '<p style="text-align:center;color:#888">Carregando...</p>';
 
-  let query = sb.from('questoes_vf_rascunho').select('*, usuarios(nome)').order('criado_em', {ascending:false});
-  if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
-  const {data} = await query;
+  // paginado, mesmo motivo da tela do Quest
+  const montarQueryRevisaoRascunhoVF = () => {
+    let q = sb.from('questoes_vf_rascunho').select('*, usuarios(nome)', {count: 'exact'}).order('criado_em', {ascending:false}).order('id');
+    if(!usuarioAtual.is_admin) q = q.eq('autor_id', usuarioAtual.id);
+    return q;
+  };
+  const {data} = await buscarTudoPaginadoVF(montarQueryRevisaoRascunhoVF);
 
   if(!data || !data.length){
     container.innerHTML = '<p style="text-align:center;color:#888">Nenhuma pendência no momento.</p>';
@@ -19553,9 +19626,13 @@ async function resolverGrupoRascunhoVF(nomeArquivo, idGrupo){
       return;
     }
 
-    let query = sb.from('questoes_vf_rascunho').select('*').eq('nome_arquivo_origem', nomeArquivo);
-    if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
-    const {data: itens} = await query;
+    // paginado, mesmo motivo do fluxo do Quest
+    const montarQueryGrupoRascunhoVF = () => {
+      let q = sb.from('questoes_vf_rascunho').select('*', {count: 'exact'}).eq('nome_arquivo_origem', nomeArquivo).order('id');
+      if(!usuarioAtual.is_admin) q = q.eq('autor_id', usuarioAtual.id);
+      return q;
+    };
+    const {data: itens} = await buscarTudoPaginadoVF(montarQueryGrupoRascunhoVF);
     if(!itens || !itens.length) return;
 
     // mesma confirmação dupla do fluxo normal: a publicação escolhida à
@@ -19758,7 +19835,7 @@ async function enviarPlanilha(){
 
   if(erros.length){
     extracaoEmAndamento = false;
-    status.innerHTML = `<p style="color:#B00020">${erros.length} linha(s) com problema – corrige na planilha e sobe de novo:</p><p style="color:#B00020;font-size:var(--fs-b)">${erros.slice(0,6).map(e=>escapeHtml(e)).join('<br>')}</p>`;
+    status.innerHTML = `<p style="color:#B00020">${erros.length} ${erros.length>1?'linhas':'linha'} com problema – corrige na planilha e sobe de novo:</p><p style="color:#B00020;font-size:var(--fs-b)">${erros.slice(0,6).map(e=>escapeHtml(e)).join('<br>')}</p>`;
     return;
   }
   if(!questoesValidas.length){
