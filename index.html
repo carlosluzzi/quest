@@ -1930,7 +1930,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-11-002';
+const VERSAO_APP = '2026-09-12-002';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5062,6 +5062,14 @@ function formatarTextoItemVF(texto){
     // reenviar o pedido toda vez que acontecer
     .replace(/—/g, '–');
   resultado = vfProcessarListasNotaVF(resultado);
+  // cor num trecho: \vermelho{...}, \ambar{...} (ou \âmbar), \verde{...},
+  // \azul{...} - mesmas 4 cores do card da nota, só que aplicadas à
+  // palavra/frase. Roda antes da matemática pra o "\v"/"\a" não ser
+  // confundido com comando de fórmula
+  resultado = resultado.replace(/\\(vermelho|ambar|âmbar|verde|azul)\{([^{}]*)\}/g, (m, cor, trecho) => {
+    const c = VF_CORES_NOTA_VF[cor === 'âmbar' ? 'ambar' : cor];
+    return `<span style="color:${c.texto};font-weight:600">${trecho}</span>`;
+  });
   resultado = resultado
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
@@ -9147,7 +9155,7 @@ async function vfBuscarNotasEmLoteVF(questaoIds){
   // já que os dados vêm juntos de qualquer forma
   const pendentes = questaoIds.filter(id => notasVF.has(id) && !vfListaNotasCacheVF.has(id));
   if(!pendentes.length) return;
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, questao_vf_id, texto, criado_em, fixada, eh_mnemonico, ordem_fixacao, alinhamento', {count: 'exact'})
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, questao_vf_id, texto, criado_em, fixada, eh_mnemonico, ordem_fixacao, alinhamento, cor', {count: 'exact'})
     .eq('usuario_id', usuarioAtual.id).in('questao_vf_id', pendentes).order('criado_em', {ascending:false}).order('id'));
   if(error) return;
   pendentes.forEach(id => { vfListaNotasCacheVF.set(id, []); vfNotaPreviewCacheVF.set(id, []); }); // marca como "já buscou" mesmo se não achar nada, evita rebuscar
@@ -11214,7 +11222,7 @@ function renderizarItemVF(){
   // Clicar em qualquer uma abre o popup de gerenciar
   const tagsDaQuestao = vfTagsPorQuestaoVF.get(item.id) || [];
   const tagsCustomizadasHtml = tagsDaQuestao.map(t =>
-    `<span onclick="vfAbrirPopupTagsVF('${item.id}')" style="color:#B23A34;font-weight:600;font-size:var(--fs-a);border:1.5px solid #B23A34;border-radius:8px;padding:1.5px 7.5px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center">${escapeHtml(t.nome)}</span>`
+    `<span onclick="vfAbrirPopupTagsVF('${item.id}')" style="color:#B23A34;font-weight:600;font-size:var(--fs-a);border:1.5px solid #B23A34;border-radius:4px;padding:1.5px 7.5px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center">${escapeHtml(t.nome)}</span>`
   ).join('');
   // ícone de tag + "+" combinados - botão só de adicionar quando ainda
   // não tem nenhuma tag customizada nessa questão
@@ -12697,7 +12705,7 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
     vfMontarPreviewNotasVF(container, vfNotaPreviewCacheVF.get(questaoVfId), questaoVfId);
     return;
   }
-  const {data} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, texto, ordem_fixacao, alinhamento', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).eq('fixada', true).order('ordem_fixacao', {ascending: true}).order('id'));
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, texto, ordem_fixacao, alinhamento, cor', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).eq('fixada', true).order('ordem_fixacao', {ascending: true}).order('id'));
   const notas = data || [];
   vfNotaPreviewCacheVF.set(questaoVfId, notas);
   // reconfere o elemento depois do await - se a pessoa já avançou pra
@@ -12705,6 +12713,104 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
   const containerAtual = document.getElementById('vf-preview-notas-container');
   if(!containerAtual) return;
   vfMontarPreviewNotasVF(containerAtual, notas, questaoVfId);
+}
+
+// ---- cor da nota (card inteiro) ----
+// 4 cores fixas + "sem cor". Fundo claro + borda esquerda forte, texto
+// continua preto - de propósito não usa o vermelho sólido (#B23A34 com
+// letra branca), que já é a cara do botão de mnemônico/fixar
+const VF_CORES_NOTA_VF = {
+  vermelho: {fundo: '#FCEBEB', borda: '#B23A34', texto: '#A32D2D', nome: 'Vermelho'},
+  ambar:    {fundo: '#FAEEDA', borda: '#EF9F27', texto: '#854F0B', nome: 'Âmbar'},
+  verde:    {fundo: '#EAF3DE', borda: '#639922', texto: '#3B6D11', nome: 'Verde'},
+  azul:     {fundo: '#E6F1FB', borda: '#2F6FB3', texto: '#0C447C', nome: 'Azul'}
+};
+// cor conhecida de cada nota (id -> cor), preenchida por quem renderiza -
+// serve pra fixar/desafixar e pra barra de cor saber o estado atual sem
+// reler o banco
+let vfNotasCorCacheVF = {};
+// CSS inline do card colorido (vazio quando sem cor)
+function vfEstiloCorNotaVF(cor){
+  const c = cor && VF_CORES_NOTA_VF[cor];
+  if(!c) return '';
+  return `background:${c.fundo};border-left:4px solid ${c.borda};`;
+}
+// bolinhas de cor (4 cores + "sem cor") - usadas na barra de segurar da
+// nota fixada (página) e no botão de cor da lista do modal
+function vfCriarBotoesCorNotaVF(corAtual, aoEscolher){
+  const frag = document.createDocumentFragment();
+  const opcoes = [null, ...Object.keys(VF_CORES_NOTA_VF)];
+  opcoes.forEach(cor => {
+    const btn = document.createElement('button');
+    btn.className = 'vf-nota-cor-btn';
+    btn.dataset.cor = cor || '';
+    const ativo = (corAtual || '') === (cor || '');
+    const fundo = cor ? VF_CORES_NOTA_VF[cor].borda : '#fff';
+    btn.title = cor ? VF_CORES_NOTA_VF[cor].nome : 'Sem cor';
+    btn.style.cssText = `width:22px;height:22px;border-radius:50%;padding:0;cursor:pointer;flex-shrink:0;background:${fundo};border:${cor ? '2px solid ' + fundo : '1.5px solid #bbb'};box-shadow:${ativo ? '0 0 0 2px #fff, 0 0 0 4px #111' : 'none'};display:flex;align-items:center;justify-content:center;color:#888;font-size:12px;line-height:1`;
+    if(!cor) btn.textContent = '×';
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      btn.parentElement.querySelectorAll('.vf-nota-cor-btn').forEach(b => { b.style.boxShadow = 'none'; });
+      btn.style.boxShadow = '0 0 0 2px #fff, 0 0 0 4px #111';
+      aoEscolher(cor);
+    };
+    frag.appendChild(btn);
+  });
+  return frag;
+}
+// salva a cor no banco e nos dois caches (preview e lista completa) -
+// mesmo cuidado do alinhamento: atualiza o valor já sabido, nunca
+// invalida e deixa recarregar
+async function vfSalvarCorNotaVF(notaId, cor, questaoVfId){
+  vfNotasCorCacheVF[notaId] = cor || null;
+  const listaFixadas = questaoVfId ? vfNotaPreviewCacheVF.get(questaoVfId) : null;
+  const notaFixada = listaFixadas?.find(n => n.id === notaId);
+  if(notaFixada) notaFixada.cor = cor || null;
+  const listaCompleta = questaoVfId ? vfListaNotasCacheVF.get(questaoVfId) : null;
+  const notaCompleta = listaCompleta?.find(n => n.id === notaId);
+  if(notaCompleta) notaCompleta.cor = cor || null;
+  const {error} = await sb.from('notas_vf').update({cor: cor || null}).eq('id', notaId);
+  if(error) vfMostrarAvisoVF('Não consegui salvar a cor. Tenta de novo.');
+}
+// aplica a cor num card de nota já desenhado (preview da página ou item
+// do modal), sem re-renderizar a tela inteira
+function vfAplicarCorNoCardNotaVF(el, cor){
+  if(!el) return;
+  const c = cor && VF_CORES_NOTA_VF[cor];
+  el.style.background = c ? c.fundo : '';
+  el.style.borderLeft = c ? `4px solid ${c.borda}` : '';
+  el.dataset.corNota = cor || '';
+}
+// botão de cor na lista do modal: toca, abre a barrinha de bolinhas
+// logo acima do botão; toca fora, fecha
+function vfAbrirBarraCorNotaModalVF(btn, notaId){
+  document.querySelectorAll('.vf-nota-cor-barra').forEach(b => b.remove());
+  const barra = document.createElement('div');
+  barra.className = 'vf-nota-cor-barra';
+  barra.style.cssText = 'position:absolute;right:0;top:-36px;display:flex;align-items:center;gap:8px;background:#fff;padding:6px 8px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,0.2);z-index:5';
+  barra.appendChild(vfCriarBotoesCorNotaVF(vfNotasCorCacheVF[notaId] || null, (cor) => {
+    vfAplicarCorNoCardNotaVF(document.getElementById(`vf-nota-texto-${notaId}`), cor);
+    const bolinha = btn.querySelector('span');
+    if(bolinha) bolinha.style.background = cor ? VF_CORES_NOTA_VF[cor].borda : '#fff';
+    vfSalvarCorNotaVF(notaId, cor, questaoNotaVfAtual);
+    // também atualiza o preview da página, se essa nota estiver fixada
+    const cardPreview = document.querySelector(`#vf-preview-notas-container .vf-nota-preview-item[data-nota-id="${notaId}"] > div`);
+    if(cardPreview) vfAplicarCorNoCardNotaVF(cardPreview, cor);
+    barra.remove();
+  }));
+  btn.parentElement.style.position = 'relative';
+  btn.parentElement.appendChild(barra);
+  const esconderSeTocarFora = (e) => {
+    if(e && e.target && e.target.closest('.vf-nota-cor-barra')) return;
+    barra.remove();
+    document.removeEventListener('touchstart', esconderSeTocarFora);
+    document.removeEventListener('mousedown', esconderSeTocarFora);
+  };
+  setTimeout(() => {
+    document.addEventListener('touchstart', esconderSeTocarFora);
+    document.addEventListener('mousedown', esconderSeTocarFora);
+  }, 0);
 }
 
 const VF_GAP_PREVIEW_NOTAS = 14; // mesmo espaçamento vertical que os cards já usavam entre si (margin-top:14px)
@@ -12730,6 +12836,8 @@ function vfMontarPreviewNotasVF(container, notas, questaoVfId){
     // card embutido, "card dentro de card" fica estranho
     const temTabela = /\\begin\{array\}/.test(n.texto);
     const classeCard = temTabela ? '' : 'card-questao';
+    vfNotasCorCacheVF[n.id] = n.cor || null;
+    const estiloCor = vfEstiloCorNotaVF(n.cor) + (temTabela && n.cor ? 'padding-left:10px;border-radius:6px;' : '');
     const alinhamento = n.alinhamento || 'esquerda';
     const alinhamentoCss = alinhamento === 'centro' ? 'center' : alinhamento === 'direita' ? 'right' : 'left';
     // padding simétrico quando centralizado - senão o espaço reservado
@@ -12739,7 +12847,7 @@ function vfMontarPreviewNotasVF(container, notas, questaoVfId){
     const conteudoInterno = temTabela
       ? formatarTextoItemVF(n.texto)
       : `<div style="color:#333;line-height:1.4;text-align:${alinhamentoCss};${paddingTexto}">${formatarTextoItemVF(n.texto)}</div>`;
-    el.innerHTML = `<div class="${classeCard}" data-alinhamento-nota="${alinhamento}" style="position:relative;cursor:pointer;margin-bottom:0" ontouchstart="vfIniciarPressionarNotaPreviewVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaPreviewSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaPreviewSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaPreviewVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaPreviewSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaPreviewSilenciosoVF()" onclick="vfCliqueNotaPreviewVF(event,'${questaoVfId}')">${conteudoInterno}
+    el.innerHTML = `<div class="${classeCard}" data-alinhamento-nota="${alinhamento}" data-cor-nota="${n.cor || ''}" style="position:relative;cursor:pointer;margin-bottom:0;${estiloCor}" ontouchstart="vfIniciarPressionarNotaPreviewVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaPreviewSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaPreviewSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaPreviewVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaPreviewSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaPreviewSilenciosoVF()" onclick="vfCliqueNotaPreviewVF(event,'${questaoVfId}')">${conteudoInterno}
       <div class="vf-alca-nota-preview" data-nota-id="${n.id}" ontouchstart="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" onmousedown="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#bbb;cursor:grab;touch-action:none">${VF_ICONE_ALCA_ARRASTO_VF}</div>
     </div>`;
     container.appendChild(el);
@@ -12815,6 +12923,14 @@ function vfMostrarBotoesAlinhamentoNotaVF(card, notaId){
     btn.className = 'vf-tabela-alinhamento-btn';
     barra.appendChild(btn);
   });
+  // separador + bolinhas de cor do card (vermelho/âmbar/verde/azul/sem cor)
+  const separador = document.createElement('div');
+  separador.style.cssText = 'width:1px;height:20px;background:#ddd;margin:0 4px';
+  barra.appendChild(separador);
+  barra.appendChild(vfCriarBotoesCorNotaVF(card.dataset.corNota || null, (cor) => {
+    vfAplicarCorNoCardNotaVF(card, cor);
+    vfSalvarCorNotaVF(notaId, cor, card.closest('#vf-preview-notas-container')?.dataset.questaoId);
+  }));
   card.appendChild(barra);
   const esconderSeTocarFora = (e) => {
     if(e && e.target && e.target.closest('.vf-tabela-alinhamento')) return;
@@ -14347,11 +14463,14 @@ let vfTimerPressionarNotaVF = null;
 let vfPosicaoInicialPressionarNotaVF = null;
 function vfHtmlItemNotaVF(n){
   vfNotasTextoBrutoCacheVF[n.id] = n.texto;
+  vfNotasCorCacheVF[n.id] = n.cor || null;
+  const corBolinha = n.cor && VF_CORES_NOTA_VF[n.cor] ? VF_CORES_NOTA_VF[n.cor].borda : '#fff';
   return `
-    <div id="vf-nota-item-${n.id}" style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee">
-      <div id="vf-nota-texto-${n.id}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111;cursor:pointer" ontouchstart="vfIniciarPressionarNotaVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(n.texto)}</div>
+    <div id="vf-nota-item-${n.id}" style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee;position:relative">
+      <div id="vf-nota-texto-${n.id}" data-cor-nota="${n.cor || ''}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111;cursor:pointer;padding:6px 8px;border-radius:6px;${vfEstiloCorNotaVF(n.cor)}" ontouchstart="vfIniciarPressionarNotaVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(n.texto)}</div>
       <button id="vf-nota-btn-fixar-${n.id}" onclick="vfAlternarFixarNotaVF('${n.id}', ${!!n.fixada})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.fixada?'#B23A34':'#ddd'};background:${n.fixada?'#B23A34':'#fff'};color:${n.fixada?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.fixada?'Desafixar (deixa de aparecer na página)':'Fixar (aparece na página da questão)'}">${VF_ICONE_PIN_VF}</button>
       <button id="vf-nota-btn-mnemonico-${n.id}" onclick="vfAlternarMnemonicoNotaVF('${n.id}', ${!!n.eh_mnemonico})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.eh_mnemonico?'#B23A34':'#ddd'};background:${n.eh_mnemonico?'#B23A34':'#fff'};color:${n.eh_mnemonico?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.eh_mnemonico?'Marcada como mnemônico':'Marcar como mnemônico'}">${VF_ICONE_MNEMONICO_VF}</button>
+      <button onclick="event.stopPropagation();vfAbrirBarraCorNotaModalVF(this,'${n.id}')" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid #ddd;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center" title="Cor da nota"><span style="width:14px;height:14px;border-radius:50%;border:1.5px solid #bbb;background:${corBolinha};display:block"></span></button>
       <button onclick="excluirNotaVF('${n.id}')" style="width:30px;height:30px;flex-shrink:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);display:flex;align-items:center;justify-content:center" title="Excluir nota">✕</button>
     </div>`;
 }
@@ -14382,7 +14501,7 @@ function vfCancelarPressionarNotaSilenciosoVF(evento){
 }
 async function renderizarListaNotasVF(){
   const el = document.getElementById('lista-notas-vf');
-  const {data} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, texto, criado_em, fixada, eh_mnemonico', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false}).order('id'));
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, texto, criado_em, fixada, eh_mnemonico, cor', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoNotaVfAtual).order('criado_em', {ascending:false}).order('id'));
   if(!data || !data.length){ el.innerHTML = ''; el.style.maxHeight = '0px'; return; }
   el.innerHTML = `<div id="vf-lista-notas-itens" style="margin-bottom:14px">` + data.map(vfHtmlItemNotaVF).join('') + `</div>`;
   // altura grande o bastante pra caber qualquer lista realista de notas -
@@ -14626,7 +14745,7 @@ async function adicionarNotaVF(){
   itensEl.insertAdjacentHTML('afterbegin', vfHtmlItemNotaVF({id: idTemp, texto, fixada: false, eh_mnemonico: false}));
   renderizarItemVF();
 
-  const {data, error} = await sb.from('notas_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoNotaVfAtual, texto}).select('id, texto, criado_em, fixada, eh_mnemonico').single();
+  const {data, error} = await sb.from('notas_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoNotaVfAtual, texto}).select('id, texto, criado_em, fixada, eh_mnemonico, cor').single();
   const itemTempEl = document.getElementById(`vf-nota-item-${idTemp}`);
   if(error || !data){
     itemTempEl?.remove(); // some o item temporário - a tentativa falhou de verdade
@@ -14738,7 +14857,7 @@ async function vfAlternarFixarNotaVF(notaId, fixadaAtual){
     // fixadas dessa questão) - some no cache já com esse valor, sem
     // precisar buscar de volta do banco
     ordemFixacao = listaAtual.length ? Math.max(...listaAtual.map(n => n.ordem_fixacao || 0)) + 1 : 0;
-    vfNotaPreviewCacheVF.set(questaoNotaVfAtual, [...listaAtual, {id: notaId, texto: textoDaNota, ordem_fixacao: ordemFixacao}]);
+    vfNotaPreviewCacheVF.set(questaoNotaVfAtual, [...listaAtual, {id: notaId, texto: textoDaNota, ordem_fixacao: ordemFixacao, cor: vfNotasCorCacheVF[notaId] || null}]);
     notasFixadasVF.add(questaoNotaVfAtual);
   }else{
     const novaLista = listaAtual.filter(n => n.id !== notaId);
