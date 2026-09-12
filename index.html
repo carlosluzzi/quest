@@ -1930,7 +1930,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-12-002';
+const VERSAO_APP = '2026-09-12-003';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -14981,11 +14981,20 @@ function vfMostrarDialogoExclusaoFamiliaVF(procurando){
     btnComIrmas.classList.add('hidden');
   }else{
     titulo.textContent = `Esta afirmação tem ${n} irmã${n>1?'s':''} da mesma família. O que excluir?`;
-    lista.innerHTML = vfIrmasParaExcluirVF.map(irma => `
+    // a RPC achar_irmas_vf devolve id/texto/resposta - o resumo a 120
+    // caracteres é feito aqui. Achado real: o código lia um campo
+    // "texto_resumido" que a função nunca devolveu, e o ".length" em cima
+    // de undefined estourava ANTES do abrirModal - resultado: o pop-up
+    // de excluir não abria em nenhuma questão que tivesse irmãs (e abria
+    // normal nas que não tinham, o que fazia parecer intermitente)
+    lista.innerHTML = vfIrmasParaExcluirVF.map(irma => {
+      const textoCompleto = irma.texto_resumido ?? irma.texto ?? '';
+      const resumido = textoCompleto.slice(0, 120);
+      return `
       <div style="padding:8px 0;border-bottom:0.5px solid #f0f0ee;font-size:var(--fs-c);color:#555">
-        <span style="font-weight:600;color:${irma.resposta ? '#2E7D32' : '#A32D2D'}">${irma.resposta ? 'V' : 'F'}</span> ${escapeHtml(irma.texto_resumido)}${irma.texto_resumido.length >= 120 ? '…' : ''}
-      </div>
-    `).join('');
+        <span style="font-weight:600;color:${irma.resposta ? '#2E7D32' : '#A32D2D'}">${irma.resposta ? 'V' : 'F'}</span> ${escapeHtml(resumido)}${textoCompleto.length > 120 ? '…' : ''}
+      </div>`;
+    }).join('');
     btnSoEsta.textContent = 'Só esta';
     btnComIrmas.textContent = `Esta e as irmãs (${n+1})`;
     btnComIrmas.classList.remove('hidden');
