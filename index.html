@@ -1930,7 +1930,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-12-003';
+const VERSAO_APP = '2026-09-12-004';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4516,7 +4516,7 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, la
       const corTraco = ehSoTraco ? 'color:#7A7A74;' : '';
       // largura só é aplicada na PRIMEIRA linha (table-layout:fixed
       // propaga pra coluna inteira) - nas demais linhas seria redundante
-      const estiloLargura = (indiceLinha === 0 && larguras) ? `width:${(larguras[i]/somaLarguras*100).toFixed(2)}%;` : '';
+      const estiloLargura = ''; // largura de coluna é decidida depois de renderizar, por vfAjustarLarguraTabelaVF (regra dos 80%)
       // alça de arrasto: só na primeira linha, só entre colunas (não na
       // última - não tem o que "roubar" espaço dela), só quando idEscopo
       // existe (sem ele não haveria como saber pra onde salvar depois).
@@ -4530,9 +4530,115 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, la
     const estiloLinha = ehCabecalho ? 'background:#EAECF1' : '';
     return `<tr style="${estiloLinha}">${celulasHtml}</tr>`;
   }).join('');
-  const estiloTabela = larguras ? 'width:100%;table-layout:fixed;border-collapse:collapse' : 'width:auto;max-width:100%;border-collapse:collapse';
-  return `<table style="${estiloTabela}">${linhasHtml}</table>`;
+  // a tabela SEMPRE nasce no tamanho natural do conteúdo. Quem decide se
+  // ela estica pra 100% (conteúdo passa de 80% do card) ou fica pequena
+  // com colunas iguais é vfAjustarLarguraTabelaVF, depois de medir na
+  // tela. [larguras:...] só vale como proporção quando ela está esticada
+  const estiloTabela = 'width:auto;max-width:100%;border-collapse:collapse';
+  const dataLarguras = larguras ? ` data-larguras="${larguras.join(',')}"` : '';
+  return `<table style="${estiloTabela}"${dataLarguras}>${linhasHtml}</table>`;
 }
+// ---- regra de largura das tabelas (decidida DEPOIS de renderizar) ----
+// 1. mede o tamanho natural (width:auto, células curtas sem quebra)
+// 2. se passar de 80% do card → estica pra 100%; com [larguras:...] as
+//    colunas seguem a proporção (table-layout:fixed); sem, o navegador
+//    distribui pelo conteúdo (coluna com muito texto fica maior, mas as
+//    curtas não são espremidas - o nowrap garante)
+// 3. se for menor → fica pequena, todas as colunas com a MESMA largura
+//    (a da coluna mais larga), obedecendo o alinhamento do bloco; nesse
+//    modo a alça de arrastar coluna some (não há proporção pra ajustar)
+// Roda de novo sozinha quando o card muda de largura (girar o iPad,
+// abrir um modal que estava escondido, etc)
+const VF_LIMIAR_TABELA_CHEIA_VF = 0.8;
+const VF_MAX_CHARS_CELULA_CURTA_VF = 24;
+function vfAjustarLarguraTabelaVF(bloco){
+  if(!bloco || !bloco.isConnected) return;
+  const tabelas = bloco.querySelectorAll('table');
+  if(tabelas.length !== 1) return; // \sidebyside (duas tabelas) fica como está
+  const tabela = tabelas[0];
+  const cartao = tabela.parentElement;
+  const primeiraLinha = tabela.querySelector('tr:first-child');
+  if(!primeiraLinha) return;
+  const celulas = Array.from(primeiraLinha.children);
+  const n = celulas.length;
+  if(!n) return;
+  const larguras = (tabela.dataset.larguras || '').split(',').map(Number).filter(v => v > 0);
+  const largurasOk = larguras.length === n ? larguras : null;
+
+  // volta pro estado natural antes de medir
+  bloco.style.width = 'fit-content';
+  cartao.style.width = '';
+  tabela.style.width = 'auto';
+  tabela.style.tableLayout = 'auto';
+  celulas.forEach(td => { td.style.width = ''; });
+  tabela.querySelectorAll('td').forEach(td => {
+    if(td.dataset.curta === undefined){
+      td.dataset.curta = (td.textContent.trim().length <= VF_MAX_CHARS_CELULA_CURTA_VF && !td.querySelector('br')) ? '1' : '0';
+    }
+    td.style.whiteSpace = td.dataset.curta === '1' ? 'nowrap' : '';
+  });
+
+  const container = bloco.parentElement ? bloco.parentElement.clientWidth : 0;
+  bloco.dataset.ultimoContainer = String(container);
+  if(!container) return; // escondido (aba/modal fechado) - o ResizeObserver chama de novo quando aparecer
+  const natural = tabela.getBoundingClientRect().width;
+  const alcas = tabela.querySelectorAll('.vf-tabela-alca-largura');
+
+  if(natural >= container * VF_LIMIAR_TABELA_CHEIA_VF){
+    bloco.style.width = '100%';
+    cartao.style.width = '100%';
+    tabela.style.width = '100%';
+    if(largurasOk){
+      const soma = largurasOk.reduce((a,b) => a+b, 0);
+      tabela.style.tableLayout = 'fixed';
+      celulas.forEach((td, i) => { td.style.width = (largurasOk[i]/soma*100).toFixed(2) + '%'; });
+    }
+    alcas.forEach(a => { a.style.display = ''; });
+    bloco.dataset.modoLargura = 'cheia';
+  }else{
+    const maiorColuna = Math.max(...celulas.map(td => td.getBoundingClientRect().width));
+    const total = Math.min(Math.ceil(maiorColuna * n) + 2, container);
+    tabela.style.tableLayout = 'fixed';
+    tabela.style.width = total + 'px';
+    celulas.forEach(td => { td.style.width = (100/n).toFixed(2) + '%'; });
+    alcas.forEach(a => { a.style.display = 'none'; });
+    bloco.dataset.modoLargura = 'igual';
+  }
+}
+// um ResizeObserver só pra todos os blocos - reajusta quando o CARD (pai)
+// muda de largura, não quando a própria tabela muda (senão entraria em
+// loop, já que o ajuste muda o tamanho dela)
+const vfObservadorTabelasVF = (typeof ResizeObserver !== 'undefined') ? new ResizeObserver(entradas => {
+  entradas.forEach(e => {
+    const bloco = e.target;
+    const containerAgora = bloco.parentElement ? bloco.parentElement.clientWidth : 0;
+    if(String(containerAgora) !== bloco.dataset.ultimoContainer) vfAjustarLarguraTabelaVF(bloco);
+  });
+}) : null;
+function vfRegistrarTabelaVF(bloco){
+  if(bloco.dataset.tabelaRegistrada) return;
+  bloco.dataset.tabelaRegistrada = '1';
+  vfAjustarLarguraTabelaVF(bloco);
+  if(vfObservadorTabelasVF) vfObservadorTabelasVF.observe(bloco);
+}
+// toda tabela que entra no DOM (por qualquer innerHTML, em qualquer tela)
+// passa pelo ajuste - sem precisar lembrar de chamar em cada renderização
+function vfIniciarObservacaoTabelasVF(){
+  if(!document.body) return;
+  new MutationObserver(mutacoes => {
+    mutacoes.forEach(m => {
+      m.addedNodes.forEach(node => {
+        if(node.nodeType !== 1) return;
+        if(node.classList?.contains('vf-tabela-bloco')) vfRegistrarTabelaVF(node);
+        node.querySelectorAll?.('.vf-tabela-bloco').forEach(vfRegistrarTabelaVF);
+      });
+    });
+  }).observe(document.body, {childList: true, subtree: true});
+  document.querySelectorAll('.vf-tabela-bloco').forEach(vfRegistrarTabelaVF);
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', vfIniciarObservacaoTabelasVF);
+else vfIniciarObservacaoTabelasVF();
+
 // envolve uma tabela interna no cartão padrão (borda, cantos, sombra)
 function vfEnvolverEmCartaoVF(tabelaHtml){
   return `<div style="display:table;max-width:100%;border:1px solid #E6E6E3;border-radius:10px;overflow-x:auto;overflow-y:hidden;background:#FBFBFA;box-shadow:0 1px 3px rgba(0,0,0,0.04)">${tabelaHtml}</div>`;
@@ -11833,12 +11939,15 @@ function vfIniciarArrastoColunaVF(evento){
 
   const ponto = evento.touches ? evento.touches[0] : evento;
   const tabela = bloco.querySelector('table');
-  // força table-layout:fixed mesmo se a tabela ainda não tinha larguras
-  // definidas (nascia com width:auto) - sem isso, mudar o width de uma
-  // célula individual não redimensiona a coluna de forma confiável
-  tabela.style.width = '100%';
-  tabela.style.tableLayout = 'fixed';
+  // a alça só existe no modo "cheia" (tabela já em 100%). Se ainda estava
+  // em table-layout:auto (sem [larguras]), congela as larguras atuais em
+  // % antes de virar fixed - assim o arrasto parte exatamente do que a
+  // pessoa está vendo, sem a tabela pular de tamanho
   const larguraTabela = tabela.getBoundingClientRect().width;
+  if(tabela.style.tableLayout !== 'fixed'){
+    celulas.forEach(td => { td.style.width = (td.getBoundingClientRect().width / larguraTabela * 100).toFixed(2) + '%'; });
+    tabela.style.tableLayout = 'fixed';
+  }
   const larguraIniEsq = celEsq.getBoundingClientRect().width;
   const larguraIniDir = celDir.getBoundingClientRect().width;
   const xInicial = ponto.clientX;
@@ -11888,6 +11997,7 @@ function vfIniciarArrastoColunaVF(evento){
     const largurasFinaisPx = celulas.map(c => c.getBoundingClientRect().width);
     const somaPx = largurasFinaisPx.reduce((a,b) => a+b, 0);
     const largurasFinais = largurasFinaisPx.map(px => Math.max(1, Math.round(px / somaPx * 100)));
+    tabela.dataset.larguras = largurasFinais.join(','); // pra um reajuste futuro (girar a tela) respeitar o arrasto
     vfSalvarLargurasTabelaVF(blocoId, largurasFinais);
   }
   document.addEventListener('mousemove', onMove);
@@ -12016,18 +12126,9 @@ function vfDesfazerAlteracoesTabelaVF(blocoId){
   // cada célula; sem larguras, volta pro comportamento antigo (ajusta
   // ao conteúdo, sem table-layout:fixed)
   const tabela = bloco.querySelector('table');
-  if(tabela && primeiraLinha){
-    const celulas = Array.from(primeiraLinha.children);
-    if(larguras){
-      const soma = larguras.reduce((a,b) => a+b, 0);
-      tabela.style.width = '100%';
-      tabela.style.tableLayout = 'fixed';
-      celulas.forEach((td, i) => { td.style.width = (larguras[i]/soma*100).toFixed(2) + '%'; });
-    }else{
-      tabela.style.width = 'auto';
-      tabela.style.tableLayout = '';
-      celulas.forEach(td => { td.style.width = ''; });
-    }
+  if(tabela){
+    if(larguras) tabela.dataset.larguras = larguras.join(','); else delete tabela.dataset.larguras;
+    vfAjustarLarguraTabelaVF(bloco); // regra dos 80% decide de novo, com as proporções originais
   }
 
   vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, larguras});
