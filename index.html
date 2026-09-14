@@ -2005,7 +2005,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-14-017';
+const VERSAO_APP = '2026-09-14-018';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -10390,9 +10390,15 @@ async function vfFinalizarSessaoFlashVF(e){
   // a partir do banco antes de contar/montar o retrato pro Tracker -
   // senão essa sessão ficava com contagem zerada e sem convite de envio,
   // mesmo com respostas reais já salvas
-  const historicoParaContagem = (estadoVF && estadoVF.historico && estadoVF.historico.length)
-    ? estadoVF.historico
-    : await vfReconstruirHistoricoDeSessaoPerdidaVF(iniciadoEmMs);
+  // sessão que atravessou recarga: o histórico da memória (se existir)
+  // começa DEPOIS da recarga, então contar por ele perderia tudo o que
+  // veio antes. Nesse caso o banco é a fonte - ele tem a sessão inteira,
+  // antes e depois. Achado real: dava pra clicar "Retomar", responder
+  // mais algumas e finalizar contando só essas últimas, com as anteriores
+  // sumindo da sessão (as respostas seguiam salvas, mas fora da conta)
+  const historicoParaContagem = (vfSessaoAtivaVF.recarregada || !(estadoVF && estadoVF.historico && estadoVF.historico.length))
+    ? await vfReconstruirHistoricoDeSessaoPerdidaVF(iniciadoEmMs)
+    : estadoVF.historico;
   // total de questões respondidas nessa sessão - agora é exato, não uma
   // aproximação: como estadoVF reseta por completo ao finalizar (ver
   // abaixo), o histórico contado aqui É de fato só dessa sessão, nunca
@@ -10947,6 +10953,14 @@ function vfRestaurarSessaoFlashVF(){
     salva.tempoAcumuladoMs += (agora - salva.ultimoResumeEm);
     salva.pausado = true;
   }
+  // marca que ESSA sessão atravessou uma recarga da página (troca de
+  // versão do app, aba recarregada, iPad descarregando a página da
+  // memória). O estadoVF - fila, posição e contadores - vive só na
+  // memória e se perde nessas horas; as respostas em si não, cada uma já
+  // foi gravada no banco na hora. A marca é o que permite, ao finalizar,
+  // contar pelo banco em vez de pelo histórico da memória, que nesse caso
+  // só teria as respostas dadas DEPOIS da recarga
+  salva.recarregada = true;
   vfSessaoAtivaVF = salva;
   vfSalvarSessaoNoStorageVF();
   vfSessaoRestauradaAguardandoDecisaoVF = true;
