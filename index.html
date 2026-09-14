@@ -1595,8 +1595,10 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     <div id="vf-lista-irmas-exclusao" style="max-height:45vh;overflow-y:auto;margin-bottom:10px"></div>
     <textarea id="motivo-exclusao-familia-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:70px;margin-bottom:14px"></textarea>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <button class="btn-primario" style="width:100%" id="vf-btn-exclusao-so-esta" onclick="confirmarExclusaoSoEstaVF()">Só esta</button>
-      <button class="btn-primario" style="width:100%" id="vf-btn-exclusao-com-irmas" onclick="confirmarExclusaoComIrmasVF()"></button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-primario" style="flex:1 1 0;min-width:0;white-space:nowrap" id="vf-btn-exclusao-so-esta" onclick="confirmarExclusaoSoEstaVF()">Só esta</button>
+        <button class="btn-primario" style="flex:1 1 0;min-width:0;white-space:nowrap" id="vf-btn-exclusao-com-irmas" onclick="confirmarExclusaoComIrmasVF()"></button>
+      </div>
       <button class="btn-secundario" style="width:100%" onclick="vfFecharDialogoExclusaoFamiliaVF()">Cancelar</button>
     </div>
   </div>
@@ -4555,7 +4557,12 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, la
       const temAlca = indiceLinha === 0 && idEscopo && i < celulas.length - 1;
       const alca = temAlca ? `<span class="vf-tabela-alca-largura" data-bloco-id="${idEscopo}" data-indice-coluna="${i}" ontouchstart="vfIniciarArrastoColunaVF(event)" onmousedown="vfIniciarArrastoColunaVF(event)" style="position:absolute;top:0;right:-4px;bottom:0;width:9px;cursor:col-resize;z-index:3;touch-action:none"></span>` : '';
       const posicaoRelativa = temAlca ? 'position:relative;' : '';
-      return `<td class="vf-tabela-celula" data-linha="${indiceLinha}" data-coluna="${i}" style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${bordaSuperior}${corTraco}${estiloLargura}${posicaoRelativa}">${conteudoCelula}${alca}</td>`;
+      // white-space:pre-wrap: o enter e o recuo que o Carlos digita na
+      // edição da célula valem de verdade - antes o HTML engolia os dois
+      // (viravam um espaço só) e a linha só quebrava por falta de largura,
+      // desalinhando o que ele tinha alinhado à mão. Continua quebrando
+      // sozinho quando o texto é comprido demais pra coluna
+      return `<td class="vf-tabela-celula" data-linha="${indiceLinha}" data-coluna="${i}" style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};white-space:pre-wrap;${bordaSuperior}${corTraco}${estiloLargura}${posicaoRelativa}">${conteudoCelula}${alca}</td>`;
     }).join('');
     const estiloLinha = ehCabecalho ? 'background:#EAECF1' : '';
     return `<tr style="${estiloLinha}">${celulasHtml}</tr>`;
@@ -6392,6 +6399,19 @@ document.addEventListener('touchstart', (e) => {
   const itemMenu = e.target.closest('.nav-item');
   const botaoIcone = itemMenu || e.target.closest('button, [onclick]');
   if(botaoIcone){
+    // trava o scroll nativo JÁ no toque inicial (só caneta chega aqui -
+    // dedo foi filtrado lá em cima e continua rolando a página normal).
+    // Achado real: em cima de um elemento clicável que não é o enunciado
+    // (a NOTA FIXADA é o caso que apareceu - o card inteiro tem onclick
+    // pra abrir a nota), a decisão "clique ou traço" só sai depois de
+    // VF_LIMIAR_ARRASTO_BOTAO_PX de movimento. Nessa janelinha o Safari
+    // já tinha COMEÇADO um scroll vertical nativo, e scroll começado não
+    // volta atrás com preventDefault depois - resultado: riscar pra cima
+    // e pra baixo rolava a tela em vez de desenhar, enquanto riscar pra
+    // o lado funcionava (não existe scroll horizontal pra roubar o
+    // gesto). O clique do toque curto não se perde: ele já é disparado à
+    // mão em vfFinalizarTracoDesenho (elementoParaClicar.click())
+    if(!e.target.closest('input, [contenteditable=""], [contenteditable="true"]')) e.preventDefault();
     vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX, elemento: botaoIcone};
     // suprime o efeito de "apertar" (button:active) já desde o primeiro
     // instante do toque, só pra caneta - achado real: a classe só era
@@ -12507,7 +12527,11 @@ function vfOrdenarTabelaPorColunaVF(bloco, coluna){
   if(direcao){
     const seta = document.createElement('span');
     seta.className = 'vf-seta-ordem';
-    seta.style.cssText = 'display:inline-block;margin-left:5px;font-size:0.75em;color:#B23A34;vertical-align:middle';
+    // largura zero de propósito: a setinha pinta pra fora da própria caixa,
+    // grudada à direita da palavra, sem entrar na conta da largura da coluna.
+    // Antes ela era inline-block normal (margin-left:5px) e em coluna estreita
+    // empurrava o cabeçalho pra uma segunda linha só pra caber ela
+    seta.style.cssText = 'display:inline-block;width:0;overflow:visible;white-space:nowrap;position:relative;left:3px;font-size:0.75em;color:#B23A34;vertical-align:middle;pointer-events:none';
     seta.textContent = direcao === 'asc' ? '▲' : '▼';
     const alca = cabecalho.children[coluna]?.querySelector('.vf-tabela-alca-largura');
     if(alca) cabecalho.children[coluna].insertBefore(seta, alca); else cabecalho.children[coluna]?.appendChild(seta);
@@ -15887,9 +15911,9 @@ function vfMostrarDialogoExclusaoFamiliaVF(procurando){
     lista.innerHTML = vfIrmasParaExcluirVF.map(irma => {
       const textoCompleto = irma.texto_resumido ?? irma.texto ?? '';
       return `
-      <div class="vf-irma-exclusao" data-irma-id="${irma.id}" onclick="vfAlternarIrmaExclusaoVF('${irma.id}')" style="display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-bottom:0.5px solid #f0f0ee;font-size:var(--fs-c);line-height:1.4;cursor:pointer;border-radius:6px">
+      <div class="vf-irma-exclusao" data-irma-id="${irma.id}" onclick="vfAlternarIrmaExclusaoVF('${irma.id}')" style="display:flex;gap:10px;align-items:center;padding:10px;border-bottom:0.5px solid #f0f0ee;font-size:var(--fs-c);line-height:1.4;cursor:pointer;border-radius:6px">
         <div style="flex:1"><span style="font-weight:600;color:${irma.resposta ? '#2E7D32' : '#A32D2D'}">${irma.resposta ? 'V' : 'F'}</span> ${formatarTextoItemVF(textoCompleto)}</div>
-        <span class="vf-irma-check" style="flex-shrink:0;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:1px"></span>
+        <span class="vf-irma-check" style="flex-shrink:0;width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center"></span>
       </div>`;
     }).join('');
     vfPintarIrmasExclusaoVF();
