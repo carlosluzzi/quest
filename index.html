@@ -1952,7 +1952,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-14-012';
+const VERSAO_APP = '2026-09-14-013';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6933,7 +6933,10 @@ function vfFinalizarTracoDesenho(e){
       // caracteres pequenos e adjacentes escritos rápido (ex: o "1" e o
       // "0" de "10") como se fossem o mesmo lugar tocado duas vezes.
       // Exige agora ainda mais precisão: rápido E bem no mesmo lugar
-      const virouDuploTap = tapAnterior && (agora - tapAnterior.quando) < 200 && Math.hypot(pontoAtual.x - tapAnterior.x, pontoAtual.y - tapAnterior.y) < 12;
+      // duplo toque caneta<->borracha DESLIGADO a pedido do Carlos (14/09) -
+      // dois pontinhos rápidos e próximos (ex: um "i" e um acento) viravam
+      // troca de ferramenta sem querer. A troca fica só pela barra
+      const virouDuploTap = false;
       vfPontoInicialTracoAtualVF = null;
       vfFormaTracoAtualVF = null;
       vfDesenhandoAgora = false;
