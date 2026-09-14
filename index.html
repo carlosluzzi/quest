@@ -323,6 +323,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
   #wrapper-barra-adicionar{display:none}
   #view-topico-detalhe{left:250px !important;width:calc(100% - 250px) !important}
   #pagina-flash-salvos-vf{left:250px !important;width:calc(100% - 250px) !important}
+  #pagina-biblioteca-vf{left:250px !important;width:calc(100% - 250px) !important}
   #pagina-favoritos-vf{left:250px !important;width:calc(100% - 250px) !important}
   .nav-icon{width:24px;height:24px}
   .badge-notificacao{top:3px;left:30px;right:auto}
@@ -999,6 +1000,10 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         </div>
       </div>
     </div>
+    <button id="vf-btn-abrir-biblioteca" class="hidden" onclick="vfAbrirBibliotecaVF()" style="background:none;border:none;padding:0;margin:-6px 2px 16px 2px;color:#B23A34;font-size:var(--fs-d);font-weight:600;cursor:pointer;font-family:inherit;align-items:center;gap:6px">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Buscar na biblioteca
+    </button>
     <div id="vf-conteudo" style="padding-bottom:170px;position:relative">
       <div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>
     </div>
@@ -1546,6 +1551,41 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   <div id="vf-lista-flash-salvos" style="flex:1;overflow-y:auto;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px"></div>
 </div>
 
+
+<!-- Biblioteca do Flash (só o Carlos): procurar uma palavra e VER as
+afirmações sem responder nenhuma. Mesma busca do filtro de palavra-chave,
+com o glossário português/inglês por trás -->
+<div id="pagina-biblioteca-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
+    <h2 style="margin:0;font-size:var(--fs-f);font-weight:700;color:#111">Biblioteca</h2>
+    <button onclick="vfFecharBibliotecaVF()" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div style="padding:14px 20px 0 20px;flex-shrink:0">
+    <div style="display:flex;gap:8px;align-items:stretch">
+      <input id="vf-biblioteca-busca" type="search" class="filter-select" placeholder="Palavra em português ou inglês" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfBuscarBibliotecaVF();}">
+      <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfBuscarBibliotecaVF()">Buscar</button>
+    </div>
+    <p id="vf-biblioteca-resumo" style="font-size:var(--fs-c);color:#888;margin:8px 0 0 0;min-height:1.3em;line-height:1.4"></p>
+  </div>
+  <div id="vf-biblioteca-lista" style="flex:1;overflow-y:auto;padding:14px 20px 24px 20px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px"></div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-biblioteca-editar-vf" onclick="if(event.target===this) fecharModal('modal-biblioteca-editar-vf')">
+  <div class="modal-conteudo popup-formulario">
+    <h3 class="config-title">Editar afirmação</h3>
+    <p style="font-size:var(--fs-c);color:#888;margin:0 0 6px 0">Afirmação</p>
+    <textarea id="vf-biblioteca-editar-texto" class="textarea-padrao" style="min-height:120px;margin-bottom:12px"></textarea>
+    <p style="font-size:var(--fs-c);color:#888;margin:0 0 6px 0">Correção (o que aparece quando a resposta é Falso)</p>
+    <textarea id="vf-biblioteca-editar-correcao" class="textarea-padrao" style="min-height:100px;margin-bottom:14px"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-biblioteca-editar-vf')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="vfSalvarEdicaoBibliotecaVF()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-envio-tracker">
   <div class="modal-conteudo">
     <div id="confirmacao-envio-tracker">
@@ -1641,8 +1681,8 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       <datalist id="vf-tags-datalist"></datalist>
       <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfAdicionarTagVF()">+</button>
     </div>
-    <button id="vf-tags-btn-ver" onclick="vfAlternarTodasTagsVF()" style="background:none;border:none;padding:6px 0 0 0;color:#B23A34;font-size:var(--fs-c);font-weight:600;cursor:pointer;font-family:inherit;display:block">Ver tags existentes</button>
-    <div id="vf-tags-todas" class="hidden" style="margin-top:6px;max-height:34vh;overflow-y:auto;border:0.5px solid #e0e0e0;border-radius:8px;padding:8px;background:#fafaf9;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start"></div>
+    <button id="vf-tags-btn-ver" onclick="vfAlternarTodasTagsVF()" style="background:none;border:none;padding:0;margin-top:16px;color:#B23A34;font-size:var(--fs-c);font-weight:600;cursor:pointer;font-family:inherit;display:block">Ver tags existentes</button>
+    <div id="vf-tags-todas" class="hidden" style="margin-top:10px;max-height:34vh;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start"></div>
     <p id="vf-tags-status" style="font-size:var(--fs-c);margin:6px 0 0 0;min-height:1.4em;line-height:1.4"></p>
     <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="vfFecharPopupTagsVF()">Fechar</button>
   </div>
@@ -2857,6 +2897,9 @@ async function mostrarAppShell(){
   if(souCarlos()){
     document.getElementById('bloco-upload-marinha').classList.remove('hidden');
     document.getElementById('nav-item-vf').classList.remove('hidden'); // Flash de volta, a pedido do Carlos
+    // biblioteca do Flash: mesma regra do Flash em si - só o Carlos vê
+    document.getElementById('vf-btn-abrir-biblioteca').classList.remove('hidden');
+    document.getElementById('vf-btn-abrir-biblioteca').style.display = 'inline-flex';
     document.getElementById('motivo-exclusao-questao').classList.remove('hidden');
     sb.rpc('concursos_disponiveis').then(({data})=>{
       document.getElementById('lista-concursos-existentes').innerHTML = (data||[]).map(c=>`<option value="${escapeHtml(c.concurso)}">`).join('');
@@ -6005,6 +6048,8 @@ function vfAlgumModalAbertoVF(){
   if(paginaSalvos && !paginaSalvos.classList.contains('hidden')) return true;
   const paginaFavoritos = document.getElementById('pagina-favoritos-vf');
   if(paginaFavoritos && !paginaFavoritos.classList.contains('hidden')) return true;
+  const paginaBiblioteca = document.getElementById('pagina-biblioteca-vf');
+  if(paginaBiblioteca && !paginaBiblioteca.classList.contains('hidden')) return true;
   // overlay de "retomar sessão" (aparece ao voltar pro app com uma
   // sessão pausada) também bloqueia - não usa a classe .modal-overlay,
   // então sem essa checagem específica a caneta tentava iniciar um traço
@@ -7591,6 +7636,239 @@ function vfFecharFavoritosVF(){
   document.getElementById('pagina-favoritos-vf').classList.add('hidden');
   retomarOuDescartarPendenteVF(); // retoma a pendente (ou descarta se passou de 30 min parada)
 }
+
+// ==================== Biblioteca do Flash (só o Carlos) ====================
+// Procurar uma palavra e VER as afirmações, sem responder nenhuma. Usa a
+// MESMA busca do filtro de palavra-chave (RPC buscar_questoes_por_termo_vf),
+// que já cruza português/inglês pelo glossário: "cavitação" acha
+// "cavitation". A busca traz só os ids; o conteúdo vem de 40 em 40 - montar
+// mil afirmações formatadas de uma vez derruba o Safari do iPad (mesma
+// razão que motivou a paginação no resto do app).
+let vfBibliotecaIdsVF = [];          // todos os ids que casaram com a palavra
+let vfBibliotecaCarregadasVF = [];    // as que já têm conteúdo na tela
+let vfBibliotecaExcluidasVF = new Set();
+let vfBibliotecaTermoVF = '';
+let vfBibliotecaCarregandoVF = false;
+let vfBibliotecaIdEditandoVF = null;
+const VF_BIBLIOTECA_PAGINA_VF = 40;
+
+function vfAbrirBibliotecaVF(){
+  if(!souCarlos()) return; // mesma regra do Flash: só o Carlos
+  if(typeof vfForcarSalvamentoEdicaoPendenteVF === 'function') vfForcarSalvamentoEdicaoPendenteVF();
+  pausarTimerVF(); // a pendente não fica rodando escondida atrás da tela
+  document.getElementById('pagina-biblioteca-vf').classList.remove('hidden');
+  setTimeout(() => { document.getElementById('vf-biblioteca-busca')?.focus(); }, 50);
+}
+
+function vfFecharBibliotecaVF(){
+  document.getElementById('pagina-biblioteca-vf').classList.add('hidden');
+  retomarOuDescartarPendenteVF();
+}
+
+async function vfBuscarBibliotecaVF(){
+  const termo = (document.getElementById('vf-biblioteca-busca').value || '').trim();
+  const lista = document.getElementById('vf-biblioteca-lista');
+  const resumo = document.getElementById('vf-biblioteca-resumo');
+  vfBibliotecaIdsVF = [];
+  vfBibliotecaCarregadasVF = [];
+  lista.innerHTML = '';
+  if(!termo){ resumo.textContent = 'Digite uma palavra pra procurar.'; return; }
+  vfBibliotecaTermoVF = termo;
+  resumo.textContent = 'Procurando…';
+  // as três coisas em paralelo: a busca em si, quais já estão excluídas
+  // (pra marcar na lista em vez de fingir que não estão) e o cache de
+  // bibliografia (idempotente - só busca de verdade na primeira vez)
+  const [{data: idsData, error: erroBusca}, {data: excData}] = await Promise.all([
+    sb.rpc('buscar_questoes_por_termo_vf', {p_termo: termo}),
+    buscarTudoPaginadoVF(() => sb.from('exclusoes_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
+    vfCarregarBibliografiaCacheVF()
+  ]);
+  if(erroBusca){
+    resumo.textContent = `Não consegui buscar agora (${erroBusca.message || 'erro de rede'}). Tenta de novo.`;
+    return;
+  }
+  vfBibliotecaExcluidasVF = new Set((excData || []).map(e => e.questao_vf_id));
+  // setof uuid pode vir como array de strings ou de objetos, igual no
+  // filtro por termo - trata os dois formatos
+  vfBibliotecaIdsVF = (idsData || []).map(r => typeof r === 'string' ? r : r.buscar_questoes_por_termo_vf).filter(Boolean);
+  if(!vfBibliotecaIdsVF.length){
+    resumo.innerHTML = `Nenhuma afirmação com "${escapeHtml(termo)}". Tenta em inglês, ou <a href="#" onclick="event.preventDefault();vfAbrirGlossarioVF('${escapeHtml(termo)}')" style="color:#B23A34">adicione o par no glossário</a>.`;
+    return;
+  }
+  await vfCarregarMaisBibliotecaVF();
+}
+
+async function vfCarregarMaisBibliotecaVF(){
+  if(vfBibliotecaCarregandoVF) return;
+  vfBibliotecaCarregandoVF = true;
+  const proximos = vfBibliotecaIdsVF.slice(vfBibliotecaCarregadasVF.length, vfBibliotecaCarregadasVF.length + VF_BIBLIOTECA_PAGINA_VF);
+  if(proximos.length){
+    const {data, error} = await sb.from('questoes_vf')
+      .select('id, texto, correcao, resposta, capitulo, bibliografia_id, eh_numero, eh_lista')
+      .in('id', proximos);
+    if(error){
+      vfBibliotecaCarregandoVF = false;
+      document.getElementById('vf-biblioteca-resumo').textContent = 'Não consegui carregar as afirmações. Tenta de novo.';
+      return;
+    }
+    // o banco devolve em ordem qualquer - remonta na ordem dos ids pedidos
+    const porId = new Map((data || []).map(q => [q.id, q]));
+    proximos.forEach(id => { const q = porId.get(id); if(q) vfBibliotecaCarregadasVF.push(q); });
+  }
+  vfBibliotecaCarregandoVF = false;
+  vfRenderizarBibliotecaVF();
+}
+
+function vfRenderizarBibliotecaVF(){
+  const lista = document.getElementById('vf-biblioteca-lista');
+  const resumo = document.getElementById('vf-biblioteca-resumo');
+  if(!lista) return;
+  const total = vfBibliotecaIdsVF.length;
+  const mostrando = vfBibliotecaCarregadasVF.length;
+  resumo.innerHTML = `${total} ${total === 1 ? 'afirmação' : 'afirmações'} com "${escapeHtml(vfBibliotecaTermoVF)}"${mostrando < total ? ` · mostrando ${mostrando}` : ''}`;
+  const faltam = total - mostrando;
+  lista.innerHTML = vfBibliotecaCarregadasVF.map(q => vfHtmlCardBibliotecaVF(q)).join('')
+    + (faltam > 0 ? `<button class="btn-secundario" style="width:100%" onclick="vfCarregarMaisBibliotecaVF()">Ver mais ${Math.min(VF_BIBLIOTECA_PAGINA_VF, faltam)}</button>` : '');
+}
+
+function vfHtmlCardBibliotecaVF(q){
+  const bib = (bibliografiaCache || []).find(b => b.id === q.bibliografia_id);
+  const publicacao = bib ? (bib.nome_exibicao || bib.titulo) : 'Publicação não identificada';
+  const excluida = vfBibliotecaExcluidasVF.has(q.id);
+  const favorita = favoritosVF.has(q.id);
+  // mesmo contexto de renderização da tela do Flash - sem ele, desenho
+  // (SVG) e tabela dentro da afirmação não sabem de quem são
+  vfContextoRenderizacaoSvgVF = {tipo: 'campo-vf', questaoId: q.id, campo: 'texto'};
+  const textoHtml = formatarTextoItemVF(q.texto || '');
+  const correcaoHtml = q.correcao ? formatarTextoItemVF(q.correcao) : '';
+  vfContextoRenderizacaoSvgVF = null;
+  const selo = q.resposta
+    ? '<span style="background:#EAF3DE;color:#3B6D11;font-weight:700;font-size:var(--fs-a);border-radius:4px;padding:2px 8px;letter-spacing:.03em">VERDADEIRO</span>'
+    : '<span style="background:#FCEBEB;color:#A32D2D;font-weight:700;font-size:var(--fs-a);border-radius:4px;padding:2px 8px;letter-spacing:.03em">FALSO</span>';
+  const seloExcluida = excluida ? '<span style="background:#F1EFE8;color:#666;font-weight:700;font-size:var(--fs-a);border-radius:4px;padding:2px 8px;letter-spacing:.03em">EXCLUÍDA</span>' : '';
+  return `
+    <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;background:#fff${excluida ? ';opacity:0.55' : ''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
+        <div style="min-width:0">
+          <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
+          ${q.capitulo ? `<p style="color:#999;font-size:var(--fs-a);margin:2px 0 0 0">${escapeHtml(q.capitulo)}</p>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">${seloExcluida}${selo}</div>
+      </div>
+      <div style="color:#111;font-size:var(--fs-d);line-height:1.6">${textoHtml}</div>
+      ${correcaoHtml ? `<div style="background:#f7f7f5;border:0.5px solid #eee;border-radius:10px;padding:8px;margin-top:10px;color:#111;font-size:var(--fs-d);line-height:1.6">${correcaoHtml}</div>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn-secundario" style="width:auto;padding:7px 14px" onclick="vfEditarDaBibliotecaVF('${q.id}')">Editar</button>
+        <button class="btn-secundario" style="width:auto;padding:7px 14px${favorita ? ';color:#B23A34' : ''}" onclick="vfAlternarFavoritoBibliotecaVF('${q.id}')">${favorita ? 'Desfavoritar' : 'Favoritar'}</button>
+        ${excluida ? '' : `<button class="btn-secundario" style="width:auto;padding:7px 14px;color:#A32D2D" onclick="vfExcluirDaBibliotecaVF('${q.id}')">Excluir</button>`}
+      </div>
+    </div>`;
+}
+
+// mantém em sincronia o que a sessão do Flash tem em memória - sem isso,
+// uma edição feita aqui só apareceria lá depois de recarregar o filtro
+function vfPropagarMudancaBibliotecaVF(id, mudancas){
+  const cacheAtual = (typeof vfConteudoCompletoCache !== 'undefined' && vfConteudoCompletoCache.get(id)) || {};
+  if(typeof vfConteudoCompletoCache !== 'undefined') vfConteudoCompletoCache.set(id, {...cacheAtual, ...mudancas});
+  const alvos = [];
+  const noPool = estadoVF?.pool?.find(i => i.id === id);
+  if(noPool) alvos.push(noPool);
+  (estadoVF?.historico || []).forEach(h => { if(h.item && h.item.id === id) alvos.push(h.item); });
+  alvos.forEach(item => Object.assign(item, mudancas));
+  const itemNaTela = estadoVF?.historico?.[estadoVF.posicao]?.item;
+  if(itemNaTela && itemNaTela.id === id && typeof renderizarItemVF === 'function') renderizarItemVF();
+}
+
+function vfEditarDaBibliotecaVF(id){
+  const q = vfBibliotecaCarregadasVF.find(x => x.id === id);
+  if(!q) return;
+  vfBibliotecaIdEditandoVF = id;
+  document.getElementById('vf-biblioteca-editar-texto').value = q.texto || '';
+  document.getElementById('vf-biblioteca-editar-correcao').value = q.correcao || '';
+  abrirModal('modal-biblioteca-editar-vf');
+}
+
+async function vfSalvarEdicaoBibliotecaVF(){
+  const id = vfBibliotecaIdEditandoVF;
+  const q = vfBibliotecaCarregadasVF.find(x => x.id === id);
+  if(!q) return;
+  const texto = (document.getElementById('vf-biblioteca-editar-texto').value || '').replace(/—/g, '–').trim();
+  const correcao = (document.getElementById('vf-biblioteca-editar-correcao').value || '').replace(/—/g, '–').trim();
+  if(!texto){ vfMostrarAvisoVF('A afirmação não pode ficar vazia.'); return; }
+  fecharModal('modal-biblioteca-editar-vf');
+  vfBibliotecaIdEditandoVF = null;
+  const mudancas = {};
+  if(texto !== (q.texto || '')){
+    mudancas.texto = texto;
+    // sem atualizar n_palavras, o algoritmo continua estimando o tempo de
+    // leitura pelo texto antigo (mesmo cuidado da edição pela tela do Flash)
+    mudancas.n_palavras = texto.split(/\s+/).filter(Boolean).length;
+  }
+  if(correcao !== (q.correcao || '')) mudancas.correcao = correcao || null;
+  if(!Object.keys(mudancas).length) return; // nada mudou
+  Object.assign(q, mudancas); // otimista: a tela muda já
+  vfRenderizarBibliotecaVF();
+  vfPropagarMudancaBibliotecaVF(id, mudancas);
+  await vfSalvarComRetryVF(
+    () => sb.from('questoes_vf').update(mudancas).eq('id', id),
+    'a edição da afirmação',
+    texto
+  );
+}
+
+async function vfAlternarFavoritoBibliotecaVF(id){
+  const eraFavorita = favoritosVF.has(id);
+  if(eraFavorita) favoritosVF.delete(id); else favoritosVF.add(id);
+  vfRenderizarBibliotecaVF();
+  const {error} = eraFavorita
+    ? await sb.from('favoritos_vf').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', id)
+    : await sb.from('favoritos_vf').insert({usuario_id: usuarioAtual.id, questao_vf_id: id});
+  if(error){
+    if(eraFavorita) favoritosVF.add(id); else favoritosVF.delete(id); // desfaz o otimismo
+    vfRenderizarBibliotecaVF();
+    vfMostrarAvisoVF('Não consegui salvar o favorito agora. Tenta de novo.');
+    return;
+  }
+  const itemNaTela = estadoVF?.historico?.[estadoVF.posicao]?.item;
+  if(itemNaTela && itemNaTela.id === id && typeof renderizarItemVF === 'function') renderizarItemVF();
+}
+
+function vfExcluirDaBibliotecaVF(id){
+  vfAbrirConfirmacaoGenericaVF(
+    'Excluir afirmação',
+    'Ela para de aparecer nas suas sessões do Flash. Isso vale só pra você - a afirmação continua no banco.',
+    () => vfConfirmarExclusaoBibliotecaVF(id)
+  );
+}
+
+async function vfConfirmarExclusaoBibliotecaVF(id){
+  vfBibliotecaExcluidasVF.add(id); // otimista
+  vfRenderizarBibliotecaVF();
+  // tira do pool da sessão em andamento também - senão a questão excluída
+  // aqui ainda apareceria pra responder daqui a pouco
+  if(estadoVF?.pool) estadoVF.pool = estadoVF.pool.filter(i => i.id !== id);
+  (estadoVF?.historico || []).forEach(h => { if(h.item && h.item.id === id) h.excluidaVF = true; });
+  if(typeof vfIrmasCacheVF !== 'undefined'){ vfIrmasCacheVF.delete(id); vfIrmasEmVooVF.delete(id); }
+  // upsert com ignoreDuplicates: se já estivesse excluída, é ignorada em
+  // silêncio em vez de derrubar a escrita (chave é usuario_id+questao_vf_id)
+  const {error} = await sb.from('exclusoes_vf').upsert(
+    [{usuario_id: usuarioAtual.id, questao_vf_id: id, motivo: null}],
+    {onConflict: 'usuario_id,questao_vf_id', ignoreDuplicates: true}
+  );
+  if(error){
+    vfBibliotecaExcluidasVF.delete(id);
+    vfRenderizarBibliotecaVF();
+    vfMostrarAvisoVF('Não consegui salvar a exclusão. Tenta de novo.');
+    console.error('erro ao excluir da biblioteca:', error);
+  }
+}
+
+// Esc fecha a biblioteca, igual clicar no X
+document.addEventListener('keydown', (e) => {
+  if(e.key !== 'Escape') return;
+  const pagina = document.getElementById('pagina-biblioteca-vf');
+  if(pagina && !pagina.classList.contains('hidden') && !document.querySelector('.modal-overlay:not(.hidden)')) vfFecharBibliotecaVF();
+});
 
 async function vfAbrirFlashSalvosVF(){
   if(typeof vfForcarSalvamentoEdicaoPendenteVF === 'function') vfForcarSalvamentoEdicaoPendenteVF();
