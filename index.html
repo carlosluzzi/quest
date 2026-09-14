@@ -260,7 +260,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 #vf-barra-desenho,#vf-barra-desenho *,#vf-painel-caneta,#vf-painel-caneta *,#vf-painel-borracha,#vf-painel-borracha *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
 .avatar-btn{width:36px;height:36px;border-radius:50%;background:#B23A34;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:var(--fs-d);flex-shrink:0;border:none;padding:0;margin:0;-webkit-appearance:none;appearance:none;cursor:pointer;overflow:hidden}
 
-.content{position:relative;flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;overscroll-behavior-y:none;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
+.content{position:relative;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;overscroll-behavior-y:none;padding:16px 16px calc(var(--nav-height, 76px) + 16px) 16px}
 #aba-vf{overscroll-behavior-y:none;margin:-16px -16px 0 -16px;padding:6px 6px 0 6px}
 #ptr-indicator{display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height 0.2s ease;flex-shrink:0;position:relative}
 #ptr-indicator.ativo{transition:none}
@@ -351,6 +351,10 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-tabela-alinhamento,.vf-tabela-alinhamento *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .vf-tabela-bloco,.vf-tabela-bloco *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .vf-tabela-ajustando td{box-shadow:inset 0 0 0 0.5px #CFCFCA}
+.vf-painel-inconsistencia{background:#fff;border:0.5px solid #E6E6E3;box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:16px 18px;box-sizing:border-box;font-family:inherit}
+.vf-painel-inconsistencia.popover{position:absolute;z-index:145;border-radius:14px}
+.vf-painel-inconsistencia.sheet{position:fixed;left:0;right:0;bottom:0;z-index:320;border-radius:16px 16px 0 0;max-height:72vh;overflow-y:auto;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+.vf-painel-inconsistencia.hidden{display:none}
 .vf-nota-clicavel{border-bottom:1.5px dotted #888;cursor:pointer}
 .vf-celula-anotavel-com-nota{text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
 .vf-celula-anotavel-sem-nota{cursor:pointer}
@@ -1658,6 +1662,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <!-- balãozinho de explicação - aparece perto do que foi tocado (\nota{}{}
      no LaTeX ou uma anotação clicada depois numa célula), fecha ao tocar
      fora ou no X -->
+<div id="vf-painel-inconsistencia" class="vf-painel-inconsistencia sheet hidden"></div>
 <div id="vf-balao-explicacao" class="hidden" style="position:fixed;z-index:400;max-width:280px;background:#F0F0ED;color:#111;border:0.5px solid #D8D8D3;border-radius:10px;padding:10px 14px;font-size:var(--fs-c);line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,0.18);white-space:pre-line"><span id="vf-balao-explicacao-texto"></span></div>
 
 <div class="modal-overlay hidden" id="modal-complementar-vf" onclick="if(event.target===this) fecharModalComplementarVF()">
@@ -1732,7 +1737,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 </div>
 
 <div class="modal-overlay hidden" id="modal-editar-celula-vf" onclick="if(event.target===this) vfFecharEdicaoCelulaVF()">
-  <div class="modal-conteudo">
+  <div class="modal-conteudo popup-formulario">
     <h3 class="config-title">Célula</h3>
     <textarea id="vf-editar-celula-texto" class="textarea-padrao" placeholder="Texto da célula" style="min-height:90px"></textarea>
     <div style="display:flex;gap:8px">
@@ -1743,7 +1748,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 </div>
 
 <div class="modal-overlay hidden" id="modal-anotacao-elemento-vf" onclick="if(event.target===this) fecharModal('modal-anotacao-elemento-vf')">
-  <div class="modal-conteudo">
+  <div class="modal-conteudo popup-formulario">
     <h3 class="config-title" id="vf-anotacao-elemento-titulo">Anotação</h3>
     <div id="vf-anotacao-elemento-bloco-celula" class="hidden">
       <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Texto da célula</div>
@@ -1947,7 +1952,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-14-005';
+const VERSAO_APP = '2026-09-14-012';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3128,12 +3133,20 @@ function vfAjustarPosicionamentoCanvasVF(){
   // mudanças de layout. Só redimensiona se não tiver um traço em
   // andamento (redimensionar no meio de um traço reseta o ponto de
   // referência da suavização)
-  let vfResizeCanvasRAF = null;
+  // debounce COM ESPERA (não só requestAnimationFrame): durante uma
+  // animação de altura (abrir/fechar os Filtros, 280ms), o
+  // ResizeObserver dispara a CADA quadro, e cada disparo redimensionava
+  // o canvas inteiro (realocar o buffer grande + tirar retrato do
+  // desenho + redesenhar) - ~17 vezes numa animação só. Era a "travada"
+  // ao tocar no chevron dos Filtros. Agora espera a altura parar de
+  // mudar por 160ms e redimensiona UMA vez
+  let vfResizeCanvasTimer = null;
   const resizeObserverCanvasVF = new ResizeObserver(() => {
-    if(vfResizeCanvasRAF) cancelAnimationFrame(vfResizeCanvasRAF);
-    vfResizeCanvasRAF = requestAnimationFrame(() => {
+    clearTimeout(vfResizeCanvasTimer);
+    vfResizeCanvasTimer = setTimeout(() => {
+      vfResizeCanvasTimer = null;
       if(vfEstaVisivelAgora() && !vfDesenhandoAgora) redimensionarCanvasDesenhoVF();
-    });
+    }, 160);
   });
   document.querySelectorAll('#content > .view-aba').forEach(aba => resizeObserverCanvasVF.observe(aba));
 })();
@@ -4509,7 +4522,7 @@ function vfFormatarCelulaArrayVF(celula){
 // espaço) usa um padding horizontal menor - com o padding largo normal,
 // colunas estreitas cortavam palavras tipo "curva"/"quase reta" em duas
 // linhas ruins
-function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, larguras, idEscopo){
+function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, larguras, idEscopo, larguraTotal){
   if(temCabecalho === undefined) temCabecalho = true; // padrão: mantém compatibilidade com chamadas existentes (sidebyside, preview da biblioteca, etc)
   const alinhamentos = colunasStr.split('').map(c => c === 'l' ? 'left' : c === 'r' ? 'right' : 'center');
   const paddingH = compacta ? '8px' : '14px';
@@ -4553,7 +4566,8 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, la
   // tela. [larguras:...] só vale como proporção quando ela está esticada
   const estiloTabela = 'width:auto;max-width:100%;border-collapse:collapse';
   const dataLarguras = larguras ? ` data-larguras="${larguras.join(',')}"` : '';
-  return `<table style="${estiloTabela}"${dataLarguras}>${linhasHtml}</table>`;
+  const dataLarguraTotal = larguraTotal ? ` data-largura-total="${larguraTotal}"` : '';
+  return `<table style="${estiloTabela}"${dataLarguras}${dataLarguraTotal}>${linhasHtml}</table>`;
 }
 // ---- regra de largura das tabelas (decidida DEPOIS de renderizar) ----
 // 1. mede o tamanho natural (width:auto, células curtas sem quebra)
@@ -4600,16 +4614,35 @@ function vfAjustarLarguraTabelaVF(bloco){
   if(!container) return; // escondido (aba/modal fechado) - o ResizeObserver chama de novo quando aparecer
   const natural = tabela.getBoundingClientRect().width;
   const alcas = tabela.querySelectorAll('.vf-tabela-alca-largura');
+  const larguraTotal = Number(tabela.dataset.larguraTotal || 0);
 
-  if(natural >= container * VF_LIMIAR_TABELA_CHEIA_VF){
+  if(larguraTotal > 0){
+    // largura explícita ([largura:NN], vinda da alça da borda direita):
+    // NN% do card, colunas nas proporções salvas (ou nas naturais)
+    const total = Math.round(container * larguraTotal / 100);
+    const proporcoes = largurasOk || celulas.map(td => td.getBoundingClientRect().width);
+    const soma = proporcoes.reduce((a,b) => a+b, 0) || 1;
+    if(natural > total + 1) tabela.querySelectorAll('td').forEach(td => { td.style.whiteSpace = ''; }); // não cabe sem quebrar - libera a quebra
+    tabela.style.tableLayout = 'fixed';
+    tabela.style.width = total + 'px';
+    celulas.forEach((td, i) => { td.style.width = (proporcoes[i]/soma*100).toFixed(2) + '%'; });
+    if(larguraTotal >= 100){ bloco.style.width = '100%'; cartao.style.width = '100%'; tabela.style.width = '100%'; }
+    alcas.forEach(a => { a.style.display = ''; });
+    bloco.dataset.modoLargura = 'fixa';
+  }else if(natural >= container * VF_LIMIAR_TABELA_CHEIA_VF){
+    // proporções: as salvas (se batem com o nº de colunas - adicionar uma
+    // coluna invalida as antigas) ou as naturais medidas agora. Layout
+    // SEMPRE fixo em 100%: a tabela nunca passa da largura do card.
+    // Se o conteúdo natural (células curtas sem quebra) não cabe em 100%,
+    // libera a quebra de linha - senão o texto vazava pra fora da célula
+    const proporcoesCheia = largurasOk || celulas.map(td => td.getBoundingClientRect().width);
+    const somaCheia = proporcoesCheia.reduce((a,b) => a+b, 0) || 1;
+    if(natural > container + 1) tabela.querySelectorAll('td').forEach(td => { td.style.whiteSpace = ''; });
     bloco.style.width = '100%';
     cartao.style.width = '100%';
     tabela.style.width = '100%';
-    if(largurasOk){
-      const soma = largurasOk.reduce((a,b) => a+b, 0);
-      tabela.style.tableLayout = 'fixed';
-      celulas.forEach((td, i) => { td.style.width = (largurasOk[i]/soma*100).toFixed(2) + '%'; });
-    }
+    tabela.style.tableLayout = 'fixed';
+    celulas.forEach((td, i) => { td.style.width = (proporcoesCheia[i]/somaCheia*100).toFixed(2) + '%'; });
     alcas.forEach(a => { a.style.display = ''; });
     bloco.dataset.modoLargura = 'cheia';
   }else{
@@ -4751,6 +4784,14 @@ function vfProcessarArrayLatexVF(texto){
       larguras = matchLarguras[1].split(',').map(Number).filter(n => n > 0);
       opcoesSemLarguras = opcoesSemLarguras.replace(matchLarguras[0], '');
     }
+    // largura:NN - largura TOTAL da tabela em % do card (definida pela
+    // alça da borda direita). Com ela, a regra dos 80% não decide mais
+    let larguraTotal = null;
+    const matchLarguraTotal = opcoesSemLarguras.match(/(?:^|,)\s*largura:(\d{1,3})/);
+    if(matchLarguraTotal){
+      larguraTotal = Math.max(10, Math.min(100, Number(matchLarguraTotal[1])));
+      opcoesSemLarguras = opcoesSemLarguras.replace(/largura:\d{1,3}/, '');
+    }
     const opcoes = opcoesSemLarguras.split(',').map(o => o.trim()).filter(Boolean);
     const alinhamentoFinal = opcoes.includes('centro') ? 'centro' : opcoes.includes('direita') ? 'direita' : 'esquerda';
     const temCabecalho = !opcoes.includes('semcabecalho');
@@ -4768,18 +4809,19 @@ function vfProcessarArrayLatexVF(texto){
       alinhamentoAtual: alinhamentoFinal,
       temCabecalhoAtual: temCabecalho,
       largurasAtuais: largurasValidas,
+      larguraTotalAtual: larguraTotal,
       // snapshot de como a tabela estava ao carregar essa tela - nunca
       // mutado depois (diferente de alinhamentoAtual/temCabecalhoAtual/
       // largurasAtuais, que acompanham cada edição). É pra onde o botão
       // "Desfazer" volta, se a pessoa se arrepender de um arrasto/ajuste
       // feito nessa mesma visualização
-      estadoInicialVF: {alinhamento: alinhamentoFinal, temCabecalho, larguras: largurasValidas}
+      estadoInicialVF: {alinhamento: alinhamentoFinal, temCabecalho, larguras: largurasValidas, larguraTotal}
     });
     const margemAlinhamento = alinhamentoFinal === 'centro' ? 'margin-left:auto;margin-right:auto;'
       : alinhamentoFinal === 'direita' ? 'margin-left:auto;margin-right:0;'
       : '';
     const legendaHtml = legendaTexto != null ? vfMontarLegendaTabelaVF(legendaTexto) : '';
-    return `<div id="${idEscopo}" class="vf-tabela-bloco" data-alinhamento-tabela="${alinhamentoFinal}" data-tem-cabecalho="${temCabecalho}" style="font-family:${VF_FONTE_TABELA};margin:10px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}">${vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(colunas, conteudo, false, temCabecalho, largurasValidas, idEscopo))}${legendaHtml}</div>`;
+    return `<div id="${idEscopo}" class="vf-tabela-bloco" data-alinhamento-tabela="${alinhamentoFinal}" data-tem-cabecalho="${temCabecalho}" style="font-family:${VF_FONTE_TABELA};margin:10px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}">${vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(colunas, conteudo, false, temCabecalho, largurasValidas, idEscopo, larguraTotal))}${legendaHtml}</div>`;
   });
 }
 
@@ -6326,6 +6368,7 @@ document.addEventListener('touchstart', (e) => {
   if(vfTocouNaBarra(e.target)) return; // deixa o toque chegar no botão normalmente
   if(e.target.closest('.vf-btn-resposta')) return; // idem pros botões Verdadeiro/Falso - nunca viram início de traço
   if(e.target.closest('#vf-sessao-balao')) return; // balão da sessão (arrastar, Pausar, Finalizar, fechar) - nunca vira início de traço, tem seu próprio sistema de arrasto/clique
+  if(e.target.closest('#vf-painel-inconsistencia')) return; // painel da inconsistência da fonte - idem
   if(e.target.closest('#vf-balao-explicacao')) return; // balão de explicação/anotação (\nota{}{} e anotações de célula) - não é um modal padrão, riscar em cima dele não pode vazar pro canvas por baixo
   if(vfBalaoArrastoInfoVF) return; // proteção redundante - nunca desenha enquanto o balão está sendo arrastado, mesmo que o toque não esteja mais fisicamente sobre ele
   if(e.target.closest('textarea')) return; // nunca vira início de traço - dentro de qualquer textarea (edição de explicação/enunciado/correção), o toque (caneta ou dedo) precisa ficar livre pro comportamento nativo de seleção/cursor, sem competir com o sistema de desenho
@@ -7589,7 +7632,7 @@ async function vfIrParaQuestaoSalvaVF(questaoVfId){
   const posicaoOriginal = estadoVF.posicao;
   document.getElementById('vf-conteudo').innerHTML = `<div style="padding:60px 20px;text-align:center;color:#999">Carregando...</div>`;
   const [{data: questao, error: erroQuestao}, {data: ultimaResposta}] = await Promise.all([
-    sb.from('questoes_vf').select('*').eq('id', questaoVfId).single(),
+    sb.from('questoes_vf').select('*, inconsistencias_vf(*)').eq('id', questaoVfId).single(),
     sb.from('log_respostas_vf').select('acertou, criado_em').eq('questao_vf_id', questaoVfId).eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending: false}).limit(1).maybeSingle()
   ]);
   if(erroQuestao || !questao){
@@ -9380,8 +9423,9 @@ async function vfGarantirConteudoCompletoVF(item){
   if(item.explicacao !== undefined) return; // já carregado nesse próprio objeto (explicacao é o sinal certo agora - texto já vem preenchido desde o pool leve, por causa da Regra 2/família)
   const emCache = vfConteudoCompletoCache.get(item.id);
   if(emCache){ Object.assign(item, emCache); return; }
-  const {data, error} = await sb.from('questoes_vf').select('texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local').eq('id', item.id).single();
+  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, inconsistencias_vf(*)').eq('id', item.id).single();
   if(error || !data) return;
+  vfRegistrarInconsistenciaVF(data);
   vfConteudoCompletoCache.set(item.id, data);
   Object.assign(item, data);
 }
@@ -9431,8 +9475,9 @@ async function vfBuscarConteudoEmLoteVF(itens){
   const pendentes = itens.filter(item => item.explicacao === undefined && !vfConteudoCompletoCache.has(item.id));
   if(!pendentes.length) return;
   const ids = pendentes.map(item => item.id);
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local', {count: 'exact'}).in('id', ids).order('id'));
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, inconsistencias_vf(*)', {count: 'exact'}).in('id', ids).order('id'));
   if(error || !data) return;
+  data.forEach(vfRegistrarInconsistenciaVF);
   const porId = new Map(data.map(d => [d.id, d]));
   pendentes.forEach(item => {
     const conteudo = porId.get(item.id);
@@ -10509,8 +10554,65 @@ window.addEventListener('pagehide', () => {
   }
 });
 
+// ---- correções em tempo real (questoes_vf) ----
+// Carlos corrige afirmações por outro chat (no Mac) enquanto estuda no
+// iPad, sem sair do app. Em vez de ficar consultando o banco, o app fica
+// OUVINDO: o Supabase empurra a linha nova quando alguém dá UPDATE em
+// questoes_vf (tabela na publicação supabase_realtime; coluna
+// atualizado_em + trigger criados junto, 14/09). Custo: uma conexão
+// leve aberta enquanto o Flash está em uso, zero consultas periódicas
+let vfCanalRealtimeVF = null;
+const VF_CAMPOS_REALTIME_VF = ['texto', 'resposta', 'explicacao', 'correcao', 'dificuldade', 'inconsistente', 'complementar_local', 'eh_numero', 'eh_lista', 'capitulo', 'anulada'];
+function vfLigarRealtimeQuestoesVF(){
+  if(vfCanalRealtimeVF || !sb || typeof sb.channel !== 'function') return;
+  try{
+    vfCanalRealtimeVF = sb.channel('questoes-vf-correcoes')
+      .on('postgres_changes', {event: 'UPDATE', schema: 'public', table: 'questoes_vf'}, (payload) => {
+        if(payload && payload.new) vfAplicarAtualizacaoQuestaoVF(payload.new);
+      })
+      .subscribe();
+  }catch(e){ console.warn('realtime questoes_vf indisponível:', e); vfCanalRealtimeVF = null; }
+}
+// aplica a linha nova onde a questão já estiver em memória (cache, pool,
+// histórico) e redesenha se for a que está na tela - sem tocar na fila,
+// na posição, nos contadores nem no que já foi respondido
+function vfAplicarAtualizacaoQuestaoVF(nova){
+  if(!nova || !nova.id) return;
+  const campos = {};
+  VF_CAMPOS_REALTIME_VF.forEach(c => { if(nova[c] !== undefined) campos[c] = nova[c]; });
+  const emCache = vfConteudoCompletoCache.get(nova.id);
+  if(emCache) Object.assign(emCache, campos);
+  let naTela = false;
+  if(estadoVF){
+    (estadoVF.pool || []).forEach(q => { if(q.id === nova.id) Object.assign(q, campos); });
+    (estadoVF.historico || []).forEach(h => { if(h.item && h.item.id === nova.id) Object.assign(h.item, campos); });
+    const atual = estadoVF.posicao >= 0 ? estadoVF.historico[estadoVF.posicao] : null;
+    naTela = !!(atual && atual.item && atual.item.id === nova.id);
+  }
+  if(naTela && !vfDesenhandoAgora && !vfAlgumModalAbertoVF() && typeof renderizarItemVF === 'function'){
+    renderizarItemVF();
+    vfMostrarToastLeveVF('Afirmação atualizada');
+  }
+}
+// avisinho não-bloqueante (pílula no topo, some sozinho) - o modal de
+// aviso interromperia o estudo só pra dizer que uma correção chegou
+function vfMostrarToastLeveVF(texto){
+  let el = document.getElementById('vf-toast-leve');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'vf-toast-leve';
+    el.style.cssText = 'position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:#111;color:#fff;font-size:var(--fs-b);font-weight:600;padding:8px 14px;border-radius:999px;z-index:450;opacity:0;transition:opacity .2s ease;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,0.2)';
+    document.body.appendChild(el);
+  }
+  el.textContent = texto;
+  el.style.opacity = '1';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.style.opacity = '0'; }, 1800);
+}
+
 async function entrarNoModoVF(){
   popularFiltroModuloVF();
+  vfLigarRealtimeQuestoesVF();
   vfAtualizarVisualTogglesFiltroVF();
   inicializarCanvasDesenhoVF(); // mede o canvas agora que a aba ficou visível de verdade
   if(estadoVF && estadoVF.posicao >= 0){
@@ -10559,8 +10661,9 @@ async function vfReconstruirHistoricoDaSessaoVF(){
   const resumo = vfSessaoAtivaVF?.historicoResumido;
   if(!resumo || !resumo.length) return null;
   const ids = resumo.map(r => r.id);
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('*', {count: 'exact'}).in('id', ids).order('id'));
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('*, inconsistencias_vf(*)', {count: 'exact'}).in('id', ids).order('id'));
   if(error || !data) return null;
+  data.forEach(vfRegistrarInconsistenciaVF);
   const porId = new Map(data.map(d => [d.id, d]));
   const historico = resumo.map(r => {
     const item = porId.get(r.id);
@@ -11465,7 +11568,7 @@ function renderizarItemVF(){
   const tagsPublicacao = [
     item.eh_numero ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center">NÚMERO</span>` : '',
     item.eh_lista ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center">LISTA</span>` : '',
-    item.inconsistente ? `<span style="background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>` : '',
+    (jaRespondida && item.inconsistente) ? vfHtmlBadgeInconsistenteVF(item.id) : '', // só depois de responder - antes, o badge entregaria que a afirmação é V
     (item.total_erros||0) >= VF_ALGO.LEECH_ERROS ? `<span onclick="event.stopPropagation();abrirModal('modal-info-leech-vf')" style="background:#F5E6C8;color:#8A6D1D;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center;cursor:pointer">LEECH · ${item.total_erros} ERROS</span>` : ''
   ].filter(Boolean).join('');
 
@@ -12243,6 +12346,7 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
   setTimeout(() => { vfIgnorarProximoCliqueTabelaVF = false; }, 600);
   const esconderSeTocarFora = (e) => {
     if(e && e.target && e.target.closest('.vf-tabela-alinhamento, .vf-tabela-divisor')) return;
+    vfUltimoFechamentoBarraTabelaVF = {blocoId: bloco.id, quando: Date.now()}; // o clique que vem em seguida é "em modo ajuste" (edita o cabeçalho, não ordena)
     barra.remove();
     vfEsconderDivisoresTabelaVF(bloco);
     document.removeEventListener('touchstart', esconderSeTocarFora);
@@ -12352,6 +12456,77 @@ async function vfConfirmarEdicaoCelulaVF(){
 // Nas tabelas anexadas (elemento-html) o <td> já tem o próprio onclick
 // (anotação), que para a propagação antes de chegar aqui
 let vfIgnorarProximoCliqueTabelaVF = false;
+// ---- ordenar pela coluna (só visualização) ----
+// toque no CABEÇALHO ordena as linhas do corpo: crescente ▲ → decrescente
+// ▼ → ordem original. Nada é salvo - é só como a tabela está sendo vista
+// agora; ao trocar de questão volta ao normal. Editar o texto do cabeçalho
+// passou a ser: segurar a tabela (modo ajuste) e tocar na célula
+let vfUltimoFechamentoBarraTabelaVF = null; // {blocoId, quando} - o toque que fecha a barra de ajuste é um toque "em modo ajuste"
+function vfChaveOrdenacaoVF(td){
+  const texto = Array.from(td.childNodes).filter(n => !(n.nodeType === 1 && (n.classList?.contains('vf-seta-ordem') || n.classList?.contains('vf-tabela-alca-largura')))).map(n => n.textContent).join('').trim();
+  if(!texto || /^[-–—]$/.test(texto)) return {vazio: true, texto: ''};
+  const m = texto.replace(/\s/g, '').replace(/^[±≈~=<>≤≥]+/, '').match(/^[-+]?\d+(?:[.,]\d+)?/);
+  if(m) return {vazio: false, numero: parseFloat(m[0].replace(',', '.')), texto};
+  return {vazio: false, texto};
+}
+function vfOrdenarTabelaPorColunaVF(bloco, coluna){
+  const tabela = bloco.querySelector('table');
+  if(!tabela) return;
+  const linhas = Array.from(tabela.querySelectorAll('tr'));
+  if(linhas.length < 3) return; // cabeçalho + 1 linha não tem o que ordenar
+  const cabecalho = linhas[0];
+  const corpo = linhas.slice(1);
+  if(!bloco._ordemOriginalVF) bloco._ordemOriginalVF = corpo.slice();
+  const atual = bloco.dataset.ordenacaoVF ? JSON.parse(bloco.dataset.ordenacaoVF) : null;
+  let direcao = 'asc';
+  if(atual && atual.coluna === coluna) direcao = atual.direcao === 'asc' ? 'desc' : (atual.direcao === 'desc' ? null : 'asc');
+  const pai = corpo[0].parentNode;
+  let ordenadas;
+  if(!direcao){
+    ordenadas = bloco._ordemOriginalVF;
+    delete bloco.dataset.ordenacaoVF;
+  }else{
+    const comChave = corpo.map((tr, i) => ({tr, i, chave: vfChaveOrdenacaoVF(tr.children[coluna] || tr.children[0])}));
+    comChave.sort((a, b) => {
+      if(a.chave.vazio !== b.chave.vazio) return a.chave.vazio ? 1 : -1; // "-" sempre no fim
+      let r;
+      if(typeof a.chave.numero === 'number' && typeof b.chave.numero === 'number') r = a.chave.numero - b.chave.numero;
+      else r = a.chave.texto.localeCompare(b.chave.texto, 'pt-BR', {numeric: true, sensitivity: 'base'});
+      if(r === 0) r = a.i - b.i; // estável
+      return direcao === 'asc' ? r : -r;
+    });
+    ordenadas = comChave.map(x => x.tr);
+    bloco.dataset.ordenacaoVF = JSON.stringify({coluna, direcao});
+  }
+  ordenadas.forEach(tr => pai.appendChild(tr));
+  // setinha no cabeçalho da coluna ativa
+  cabecalho.querySelectorAll('.vf-seta-ordem').forEach(s => s.remove());
+  if(direcao){
+    const seta = document.createElement('span');
+    seta.className = 'vf-seta-ordem';
+    seta.style.cssText = 'display:inline-block;margin-left:5px;font-size:0.75em;color:#B23A34;vertical-align:middle';
+    seta.textContent = direcao === 'asc' ? '▲' : '▼';
+    const alca = cabecalho.children[coluna]?.querySelector('.vf-tabela-alca-largura');
+    if(alca) cabecalho.children[coluna].insertBefore(seta, alca); else cabecalho.children[coluna]?.appendChild(seta);
+  }
+}
+document.addEventListener('click', (e) => {
+  const td = e.target.closest?.('td.vf-tabela-celula');
+  if(!td || td.dataset.linha !== '0') return;
+  if(e.target.closest('.vf-nota-clicavel, .vf-tabela-alca-largura, .vf-tabela-divisor, .vf-tabela-alinhamento')) return;
+  const bloco = td.closest('.vf-tabela-bloco');
+  if(!bloco || bloco.dataset.temCabecalho === 'false') return;
+  const origem = vfTabelaOrigemVF.get(bloco.id);
+  if(!origem || origem.ehSideBySideVF) return;
+  // barra de ajuste aberta (ou fechada por ESTE toque) = quer editar o cabeçalho, não ordenar
+  if(bloco.querySelector('.vf-tabela-alinhamento')) return;
+  if(vfUltimoFechamentoBarraTabelaVF && vfUltimoFechamentoBarraTabelaVF.blocoId === bloco.id && Date.now() - vfUltimoFechamentoBarraTabelaVF.quando < 600) return;
+  if(vfIgnorarProximoCliqueTabelaVF) return; // soltar depois de segurar - nem ordena nem edita
+  if(vfBalaoExplicacaoEstaAbertoVF()) return;
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+  vfOrdenarTabelaPorColunaVF(bloco, Number(td.dataset.coluna));
+}, true);
 document.addEventListener('click', (e) => {
   const td = e.target.closest?.('td.vf-tabela-celula');
   if(!td) return;
@@ -12372,17 +12547,109 @@ document.addEventListener('click', (e) => {
 // dedo ou caneta. Reusam vfIniciarArrastoColunaVF (mesmo dataset da
 // alça antiga). Só no modo "cheia" (tabela esticada): na pequena as
 // colunas são iguais por regra, não há proporção pra ajustar
+// arrasto da BORDA DIREITA da tabela: muda a largura total (salva como
+// [largura:NN], % do card). Trava em 100% (não passa do card) e num
+// mínimo razoável. Ao soltar, vira o modo "fixa" (largura explícita) e a
+// regra dos 80% deixa de decidir por essa tabela
+function vfIniciarArrastoBordaTabelaVF(evento){
+  evento.stopPropagation();
+  if(evento.cancelable) evento.preventDefault();
+  const alca = evento.currentTarget;
+  const bloco = document.getElementById(alca.dataset.blocoId);
+  const tabela = bloco?.querySelector('table');
+  const primeiraLinha = tabela?.querySelector('tr:first-child');
+  if(!bloco || !tabela || !primeiraLinha) return;
+  const celulas = Array.from(primeiraLinha.children);
+  const container = bloco.parentElement ? bloco.parentElement.clientWidth : 0;
+  if(!container) return;
+  const larguraIni = tabela.getBoundingClientRect().width;
+  // congela as colunas em % antes de mexer na largura total, senão o
+  // navegador redistribuiria tudo a cada pixel
+  if(tabela.style.tableLayout !== 'fixed'){
+    celulas.forEach(td => { td.style.width = (td.getBoundingClientRect().width / larguraIni * 100).toFixed(2) + '%'; });
+    tabela.style.tableLayout = 'fixed';
+  }
+  bloco.style.width = 'fit-content';
+  const cartao = tabela.parentElement;
+  if(cartao) cartao.style.width = '';
+  const ponto = evento.touches ? evento.touches[0] : evento;
+  const xInicial = ponto.clientX;
+  // só a ÚLTIMA coluna muda de tamanho - as outras ficam exatamente com a
+  // largura (em px) que têm agora; a largura total é a consequência
+  const largurasIniPx = celulas.map(c => c.getBoundingClientRect().width);
+  const somaOutras = largurasIniPx.slice(0, -1).reduce((a,b) => a+b, 0);
+  const ultimaIni = largurasIniPx[largurasIniPx.length - 1];
+  const MIN_ULTIMA_PX = 40;
+  alca.style.opacity = '0.6';
+  const rotulo = document.createElement('div');
+  rotulo.style.cssText = 'position:fixed;background:#111;color:#fff;font-family:-apple-system,sans-serif;font-size:11px;font-weight:600;padding:3px 7px;border-radius:5px;pointer-events:none;z-index:999;transform:translate(-50%,-130%)';
+  document.body.appendChild(rotulo);
+  let larguraAtual = larguraIni;
+  function mover(p){
+    const ultima = Math.max(MIN_ULTIMA_PX, Math.min(container - somaOutras, ultimaIni + (p.clientX - xInicial)));
+    larguraAtual = somaOutras + ultima;
+    tabela.style.width = larguraAtual + 'px';
+    celulas.forEach((td, i) => {
+      const px = i === celulas.length - 1 ? ultima : largurasIniPx[i];
+      td.style.width = (px / larguraAtual * 100).toFixed(2) + '%';
+    });
+    vfReposicionarDivisoresTabelaVF(bloco);
+    const r = alca.getBoundingClientRect();
+    rotulo.style.left = (r.left + r.width/2) + 'px';
+    rotulo.style.top = r.top + 'px';
+    rotulo.textContent = Math.round(larguraAtual / container * 100) + '%';
+  }
+  mover(ponto);
+  function onMove(e){ mover(e.touches ? e.touches[0] : e); }
+  function finalizar(){
+    alca.style.opacity = '';
+    rotulo.remove();
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', finalizar);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', finalizar);
+    let pct = Math.round(larguraAtual / container * 100);
+    if(pct >= 98) pct = 100;
+    tabela.dataset.larguraTotal = String(pct);
+    // guarda também as proporções atuais das colunas, senão o reajuste
+    // (girar a tela etc.) voltaria pra colunas iguais
+    const largurasPx = celulas.map(c => c.getBoundingClientRect().width);
+    const somaPx = largurasPx.reduce((a,b) => a+b, 0);
+    const larguras = largurasPx.map(px => Math.max(1, Math.round(px / somaPx * 100)));
+    tabela.dataset.larguras = larguras.join(',');
+    vfAjustarLarguraTabelaVF(bloco);
+    vfReposicionarDivisoresTabelaVF(bloco);
+    vfSalvarOpcoesTabelaVF(bloco.id, {larguras, larguraTotal: pct});
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', finalizar);
+  document.addEventListener('touchmove', onMove, {passive: false});
+  document.addEventListener('touchend', finalizar);
+}
+
 function vfMostrarDivisoresTabelaVF(bloco){
   vfEsconderDivisoresTabelaVF(bloco);
   const origem = vfTabelaOrigemVF.get(bloco.id);
   if(!origem || origem.ehSideBySideVF) return;
-  if(bloco.dataset.modoLargura !== 'cheia') return;
   const tabela = bloco.querySelector('table');
   const primeiraLinha = tabela?.querySelector('tr:first-child');
   if(!primeiraLinha) return;
   const celulas = Array.from(primeiraLinha.children);
   bloco.classList.add('vf-tabela-ajustando');
-  for(let i = 0; i < celulas.length - 1; i++){
+  // alça da BORDA DIREITA (largura total) - em qualquer modo
+  const borda = document.createElement('div');
+  borda.className = 'vf-tabela-divisor';
+  borda.dataset.blocoId = bloco.id;
+  borda.dataset.indiceColuna = 'borda';
+  borda.style.cssText = 'position:absolute;top:0;width:28px;z-index:4;cursor:col-resize;touch-action:none;display:flex;flex-direction:column;align-items:center';
+  borda.innerHTML = '<div style="width:16px;height:16px;border-radius:4px;background:#111;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);margin-top:-8px;flex-shrink:0"></div><div style="width:2px;flex:1;background:#111;opacity:0.7"></div>';
+  borda.ontouchstart = vfIniciarArrastoBordaTabelaVF;
+  borda.onmousedown = vfIniciarArrastoBordaTabelaVF;
+  bloco.appendChild(borda);
+  // divisores entre colunas - só quando há proporção pra ajustar
+  // (tabela esticada ou com largura fixa); na pequena as colunas são iguais
+  const podeAjustarColunas = bloco.dataset.modoLargura === 'cheia' || bloco.dataset.modoLargura === 'fixa';
+  for(let i = 0; podeAjustarColunas && i < celulas.length - 1; i++){
     const div = document.createElement('div');
     div.className = 'vf-tabela-divisor';
     div.dataset.blocoId = bloco.id;
@@ -12403,8 +12670,9 @@ function vfReposicionarDivisoresTabelaVF(bloco){
   const rectBloco = bloco.getBoundingClientRect();
   const rectTabela = tabela.getBoundingClientRect();
   bloco.querySelectorAll('.vf-tabela-divisor').forEach(div => {
+    const ehBorda = div.dataset.indiceColuna === 'borda';
     const i = Number(div.dataset.indiceColuna);
-    const rect = celulas[i]?.getBoundingClientRect();
+    const rect = ehBorda ? rectTabela : celulas[i]?.getBoundingClientRect();
     if(!rect) return;
     div.style.left = (rect.right - rectBloco.left - 14) + 'px';
     div.style.top = (rectTabela.top - rectBloco.top) + 'px';
@@ -12423,7 +12691,7 @@ function vfDesfazerAlteracoesTabelaVF(blocoId){
   const origem = vfTabelaOrigemVF.get(blocoId);
   const bloco = document.getElementById(blocoId);
   if(!origem?.estadoInicialVF || !bloco) return;
-  const {alinhamento, temCabecalho, larguras} = origem.estadoInicialVF;
+  const {alinhamento, temCabecalho, larguras, larguraTotal} = origem.estadoInicialVF;
 
   // alinhamento
   bloco.dataset.alinhamentoTabela = alinhamento;
@@ -12444,10 +12712,12 @@ function vfDesfazerAlteracoesTabelaVF(blocoId){
   const tabela = bloco.querySelector('table');
   if(tabela){
     if(larguras) tabela.dataset.larguras = larguras.join(','); else delete tabela.dataset.larguras;
+    if(larguraTotal) tabela.dataset.larguraTotal = String(larguraTotal); else delete tabela.dataset.larguraTotal;
     vfAjustarLarguraTabelaVF(bloco); // regra dos 80% decide de novo, com as proporções originais
+    vfReposicionarDivisoresTabelaVF(bloco);
   }
 
-  vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, larguras});
+  vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, larguras, larguraTotal: larguraTotal || null});
 }
 
 // localiza a ocorrência exata dessa tabela no texto-fonte e substitui só
@@ -12455,7 +12725,7 @@ function vfDesfazerAlteracoesTabelaVF(blocoId){
 // semcabecalho) - mesma lógica de vfSalvarAtributosSvgVF, mas pro
 // \begin{array}. Aceita mudança parcial: passa só o que mudou, preserva
 // o resto do que já estava lá
-async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, larguras} = {}){
+async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, larguras, larguraTotal} = {}){
   const origem = vfTabelaOrigemVF.get(blocoId);
   if(!origem || !origem.contexto){
     vfMostrarAvisoVF('Não consegui salvar essa mudança (não achei de onde essa tabela veio). A mudança visual continua nessa tela, mas não fica salva.');
@@ -12464,10 +12734,12 @@ async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, largu
   const alinhamentoFinal = alinhamento !== undefined ? alinhamento : (origem.alinhamentoAtual || 'esquerda');
   const temCabecalhoFinal = temCabecalho !== undefined ? temCabecalho : (origem.temCabecalhoAtual !== false);
   const largurasFinal = larguras !== undefined ? larguras : origem.largurasAtuais;
+  const larguraTotalFinal = larguraTotal !== undefined ? larguraTotal : origem.larguraTotalAtual;
   const tokens = [];
   if(alinhamentoFinal !== 'esquerda') tokens.push(alinhamentoFinal);
   if(!temCabecalhoFinal && !origem.ehSideBySideVF) tokens.push('semcabecalho'); // sidebyside não tem esse controle pro par inteiro - cada array interno já tem o seu
   if(largurasFinal) tokens.push(`larguras:${largurasFinal.join(',')}`);
+  if(larguraTotalFinal && !origem.ehSideBySideVF) tokens.push(`largura:${larguraTotalFinal}`);
   const colchetes = tokens.length ? `[${tokens.join(',')}]` : '';
   // \sidebyside[...] ou \begin{array}[...] - o comando certo depende de
   // qual tipo de bloco é essa origem
@@ -12479,6 +12751,7 @@ async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, largu
   origem.alinhamentoAtual = alinhamentoFinal;
   origem.temCabecalhoAtual = temCabecalhoFinal;
   origem.largurasAtuais = largurasFinal;
+  origem.larguraTotalAtual = larguraTotalFinal || null;
 }
 // substitui o trecho-fonte de uma tabela (textoOriginalMatch → novoTrecho)
 // no campo de onde ela veio e salva - usado pelas opções de tabela
@@ -13514,6 +13787,108 @@ function vfCliqueNotaClicavelVF(evento){
   if(vfBalaoExplicacaoEstaAbertoVF()){ vfEsconderBalaoExplicacaoVF(); return; }
   vfMostrarBalaoExplicacaoVF(evento, evento.currentTarget.dataset.explicacao);
 }
+// ---- Inconsistências da fonte (tabela inconsistencias_vf) ----
+// questoes_vf.inconsistente = true marca afirmação literal do livro cuja
+// resposta segue o livro, mas o livro está errado/se contradiz. A tabela
+// inconsistencias_vf guarda o resumo estruturado (1:0..1 por questão) e
+// vem junto no select da questão (inconsistencias_vf(*)) - nunca em query
+// separada por clique. Só leitura no app; quem grava é o Fable.
+let vfInconsistenciasVF = new Map(); // questao_vf_id -> linha de inconsistencias_vf (ou null se marcada mas sem resumo)
+const VF_GRAVIDADE_INCONSISTENCIA_VF = {
+  'erro de impressão':   {fundo: '#F1EFE8', texto: '#444441'},
+  'remissão quebrada':   {fundo: '#E6F1FB', texto: '#0C447C'},
+  'contradição interna': {fundo: '#FAEEDA', texto: '#633806'},
+  'erro conceitual':     {fundo: '#FCEBEB', texto: '#791F1F'}
+};
+// normaliza o que o PostgREST devolve (objeto no 1:1, array no 1:N) e
+// registra no mapa - chamada em todo lugar que carrega questoes_vf
+function vfRegistrarInconsistenciaVF(linhaQuestao){
+  if(!linhaQuestao || !linhaQuestao.id) return;
+  const bruto = linhaQuestao.inconsistencias_vf;
+  const resumo = Array.isArray(bruto) ? (bruto[0] || null) : (bruto || null);
+  if(resumo) vfInconsistenciasVF.set(linhaQuestao.id, resumo);
+  else if(linhaQuestao.inconsistente){
+    if(!vfInconsistenciasVF.has(linhaQuestao.id)) console.warn('[inconsistente sem resumo] questao_vf_id =', linhaQuestao.id);
+    vfInconsistenciasVF.set(linhaQuestao.id, null);
+  }
+}
+// badge INCONSISTENTE: botão (abre o painel) quando há resumo; badge
+// simples quando não há. Só é chamado depois de responder - antes de
+// responder não pode existir sinal de que a fonte está errada, senão
+// entrega que a afirmação é V
+function vfHtmlBadgeInconsistenteVF(questaoVfId){
+  const estiloBase = 'background:#B23A34;color:#fff;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;display:inline-flex;align-items:center;gap:5px';
+  const resumo = vfInconsistenciasVF.get(questaoVfId);
+  if(!resumo) return `<span style="${estiloBase}" title="Marcado como inconsistente no gabarito de origem">INCONSISTENTE</span>`;
+  return `<button type="button" class="vf-badge-inconsistente" data-questao-id="${questaoVfId}" aria-expanded="false" onclick="event.stopPropagation();vfAlternarPainelInconsistenciaVF(this,'${questaoVfId}')" style="${estiloBase};border:none;cursor:pointer;font-family:inherit" title="Ver o resumo do erro da fonte">INCONSISTENTE<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>`;
+}
+let vfPainelInconsistenciaAbertoParaVF = null;
+function vfAlternarPainelInconsistenciaVF(btn, questaoVfId){
+  if(vfPainelInconsistenciaAbertoParaVF === questaoVfId){ vfFecharPainelInconsistenciaVF(); return; }
+  vfAbrirPainelInconsistenciaVF(btn, questaoVfId);
+}
+function vfAbrirPainelInconsistenciaVF(btn, questaoVfId){
+  const resumo = vfInconsistenciasVF.get(questaoVfId);
+  if(!resumo) return;
+  vfFecharPainelInconsistenciaVF();
+  const painel = document.getElementById('vf-painel-inconsistencia');
+  const grav = VF_GRAVIDADE_INCONSISTENCIA_VF[resumo.gravidade] || VF_GRAVIDADE_INCONSISTENCIA_VF['erro de impressão'];
+  const secao = (rotulo, texto, extra) => texto ? `
+    <div style="margin-top:12px">
+      <div style="font-size:var(--fs-a);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#888;margin-bottom:3px">${rotulo}</div>
+      <div style="font-size:var(--fs-c);line-height:1.45;color:#111;${extra || ''}">${formatarTextoItemVF(texto)}</div>
+    </div>` : '';
+  painel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="background:${grav.fundo};color:${grav.texto};font-size:var(--fs-a);font-weight:700;padding:4px 10px;border-radius:6px;letter-spacing:.03em;text-transform:capitalize">${escapeHtml(resumo.gravidade || '')}</span>
+      <button type="button" onclick="vfFecharPainelInconsistenciaVF()" style="background:none;border:none;color:#888;font-size:var(--fs-e);cursor:pointer;padding:4px 6px;line-height:1" title="Fechar">✕</button>
+    </div>
+    ${secao('O que o livro diz', resumo.trecho_da_fonte, 'font-style:italic;color:#444')}
+    ${secao('O que está errado', resumo.o_que_esta_errado)}
+    ${secao('O correto seria', resumo.o_que_seria_correto)}
+    ${secao('Por quê', resumo.por_que)}
+    ${secao('Na prova', resumo.como_estudar, 'background:#FAEEDA;border-left:4px solid #EF9F27;border-radius:6px;padding:8px 10px;color:#4A2E05')}
+    <div style="margin-top:14px;font-size:var(--fs-a);color:#999">Resposta do app segue o livro.</div>`;
+  painel.classList.remove('hidden');
+  const desktop = window.matchMedia('(min-width: 1100px)').matches;
+  const content = document.getElementById('content');
+  if(desktop && content && btn && content.contains(btn)){
+    // popover ancorado no badge, dentro da área que rola
+    if(painel.parentElement !== content) content.appendChild(painel);
+    painel.className = 'vf-painel-inconsistencia popover';
+    const rb = btn.getBoundingClientRect(), rc = content.getBoundingClientRect();
+    const largura = Math.min(400, content.clientWidth - 20);
+    painel.style.width = largura + 'px';
+    let left = rb.right - rc.left + content.scrollLeft - largura;
+    left = Math.max(10, Math.min(left, content.clientWidth - largura - 10));
+    painel.style.left = left + 'px';
+    painel.style.top = (rb.bottom - rc.top + content.scrollTop + 8) + 'px';
+  }else{
+    // bottom sheet
+    if(painel.parentElement !== document.body) document.body.appendChild(painel);
+    painel.className = 'vf-painel-inconsistencia sheet';
+    painel.style.width = ''; painel.style.left = ''; painel.style.top = '';
+  }
+  vfPainelInconsistenciaAbertoParaVF = questaoVfId;
+  if(btn) btn.setAttribute('aria-expanded', 'true');
+  setTimeout(() => {
+    document.addEventListener('touchstart', vfFecharPainelInconsistenciaSeForaVF, {passive: true});
+    document.addEventListener('mousedown', vfFecharPainelInconsistenciaSeForaVF);
+  }, 0);
+}
+function vfFecharPainelInconsistenciaSeForaVF(e){
+  if(e && e.target && (e.target.closest('#vf-painel-inconsistencia') || e.target.closest('.vf-badge-inconsistente'))) return;
+  vfFecharPainelInconsistenciaVF();
+}
+function vfFecharPainelInconsistenciaVF(){
+  const painel = document.getElementById('vf-painel-inconsistencia');
+  if(painel) painel.classList.add('hidden');
+  document.querySelectorAll('.vf-badge-inconsistente[aria-expanded="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+  vfPainelInconsistenciaAbertoParaVF = null;
+  document.removeEventListener('touchstart', vfFecharPainelInconsistenciaSeForaVF);
+  document.removeEventListener('mousedown', vfFecharPainelInconsistenciaSeForaVF);
+}
+
 function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   const balao = document.getElementById('vf-balao-explicacao');
   const span = document.getElementById('vf-balao-explicacao-texto');
@@ -13549,38 +13924,69 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   // posição padrão do CSS (sem left/top definidos - canto superior
   // esquerdo). Checar o comprimento, não só a existência, resolve
   const ponto = (evento.touches && evento.touches.length > 0) ? evento.touches[0] : evento;
-  // guarda o elemento tocado e a posição do toque relativa a ele - o balão
-  // é position:fixed, então ao rolar a tela ele ficava parado enquanto a
-  // célula ia embora. Com a âncora, vfReposicionarBalaoExplicacaoVF
-  // recalcula a cada rolagem e ele acompanha a célula
   const ancora = (evento.currentTarget && evento.currentTarget.getBoundingClientRect) ? evento.currentTarget : (evento.target?.closest?.('td, span, div') || null);
+  // o balão mora DENTRO do container que rola (#content) quando a âncora
+  // está lá: position:absolute, rola junto com o conteúdo de forma nativa
+  // (sem reposicionar a cada evento de scroll, que era o que dava os
+  // "pulinhos"), e fica ABAIXO da barra fixa de botões (z-index menor).
+  // Fora do #content (ex: modal da explicação), continua fixo na tela e
+  // acompanha a rolagem por reposicionamento
+  const content = document.getElementById('content');
+  const dentroDoContent = !!(content && ancora && content.contains(ancora));
+  if(dentroDoContent){
+    if(balao.parentElement !== content) content.appendChild(balao);
+    balao.style.position = 'absolute';
+    balao.style.zIndex = '140';
+  }else{
+    if(balao.parentElement !== document.body) document.body.appendChild(balao);
+    balao.style.position = 'fixed';
+    balao.style.zIndex = '400';
+  }
   if(ancora){
     const ra = ancora.getBoundingClientRect();
-    vfBalaoAncoraVF = {el: ancora, dx: ponto.clientX - ra.left, dy: ponto.clientY - ra.top};
+    vfBalaoAncoraVF = {el: ancora, dx: ponto.clientX - ra.left, dy: ponto.clientY - ra.top, dentroDoContent};
   }else{
     vfBalaoAncoraVF = null;
   }
   requestAnimationFrame(() => vfPosicionarBalaoExplicacaoVF(ponto.clientX, ponto.clientY));
 }
 let vfBalaoAncoraVF = null;
+// posiciona à DIREITA e ABAIXO do ponto tocado (como a dica de um mouse) -
+// se não couber à direita, vai pra esquerda do ponto; se não couber
+// embaixo (contando a barra fixa de botões), vai pra cima. Recebe
+// coordenadas de tela e converte pra dentro do #content quando é o caso
 function vfPosicionarBalaoExplicacaoVF(clientX, clientY){
   const balao = document.getElementById('vf-balao-explicacao');
-  const margem = 10;
+  const margem = 10, afastamento = 14;
   const rect = balao.getBoundingClientRect();
-  let left = clientX - rect.width/2;
+  const barra = document.querySelector('.vf-barra-fixa');
+  const barraVisivel = barra && barra.offsetParent !== null && getComputedStyle(barra).display !== 'none';
+  const limiteInferior = (barraVisivel ? barra.getBoundingClientRect().top : window.innerHeight) - margem;
+  let left = clientX + afastamento;
+  if(left + rect.width > window.innerWidth - margem) left = clientX - rect.width - afastamento;
   left = Math.max(margem, Math.min(left, window.innerWidth - rect.width - margem));
-  let top = clientY + 18;
-  if(top + rect.height > window.innerHeight - margem) top = clientY - rect.height - 18; // sem espaço embaixo, mostra em cima do dedo
+  let top = clientY + afastamento;
+  if(top + rect.height > limiteInferior) top = clientY - rect.height - afastamento;
+  if(top < margem) top = margem;
+  if(balao.style.position === 'absolute' && balao.parentElement && balao.parentElement.id === 'content'){
+    const content = balao.parentElement;
+    const rc = content.getBoundingClientRect();
+    left = left - rc.left + content.scrollLeft;
+    top = top - rc.top + content.scrollTop;
+    // não deixa o balão estourar a largura do próprio container (em tela
+    // grande, o conteúdo é mais estreito que a janela - senão nascia uma
+    // rolagem horizontal)
+    left = Math.max(margem, Math.min(left, content.clientWidth - rect.width - margem));
+  }
   balao.style.left = left + 'px';
   balao.style.top = top + 'px';
 }
 function vfReposicionarBalaoExplicacaoVF(){
   if(!vfBalaoExplicacaoEstaAbertoVF() || !vfBalaoAncoraVF) return;
-  const {el, dx, dy} = vfBalaoAncoraVF;
+  const {el, dx, dy, dentroDoContent} = vfBalaoAncoraVF;
   if(!el.isConnected){ vfEsconderBalaoExplicacaoVF(); return; }
+  if(dentroDoContent) return; // rola nativamente junto com o conteúdo - nada a fazer
   const ra = el.getBoundingClientRect();
-  // âncora saiu da tela por completo - fecha, em vez de deixar o balão
-  // grudado na borda apontando pra nada
   if(ra.bottom < 0 || ra.top > window.innerHeight){ vfEsconderBalaoExplicacaoVF(); return; }
   vfPosicionarBalaoExplicacaoVF(ra.left + dx, ra.top + dy);
 }
