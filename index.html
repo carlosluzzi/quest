@@ -201,7 +201,10 @@ trocando a custom property de cada slider individualmente */
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
 .chev.open{transform:rotate(180deg)}
-#bottom-nav.teclado-aberto{display:none}
+/* o menu só precisa sumir quando é a barra de BAIXO (o teclado da tela
+cobre ela). Na largura de sidebar ele fica na lateral esquerda, onde
+teclado nenhum encosta - sumir ali só atrapalhava */
+@media(max-width:1099px){#bottom-nav.teclado-aberto{display:none}}
 .vf-barra-fixa.teclado-aberto-vf{display:none}
 .icone-modulo-mini{width:14px;height:14px;display:inline-flex;flex-shrink:0}
 .icone-modulo-mini svg{width:100%;height:100%;display:block}
@@ -1024,7 +1027,16 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
   com o glossário português/inglês por trás -->
   <div class="view-aba hidden" id="aba-biblioteca">
     <h3 style="margin:0 0 4px 0">Biblioteca</h3>
-    <p style="color:#888;font-size:var(--fs-c);margin:0 0 14px 0;line-height:1.4">Procure uma palavra e veja as afirmações sem responder nenhuma. Funciona em português ou inglês.</p>
+    <p style="color:#888;font-size:var(--fs-c);margin:0 0 14px 0;line-height:1.4">Veja as afirmações sem responder nenhuma. A palavra funciona em português ou inglês; os filtros valem sozinhos, sem palavra nenhuma.</p>
+    <select id="vf-biblioteca-filtro-modulo" class="filter-select" style="margin-bottom:8px" onchange="vfBibliotecaMudarModuloVF()">
+      <option value="">Todos os módulos</option>
+    </select>
+    <select id="vf-biblioteca-filtro-publicacao" class="filter-select" style="margin-bottom:8px" onchange="vfBibliotecaMudarPublicacaoVF()" disabled>
+      <option value="">Todas as publicações</option>
+    </select>
+    <select id="vf-biblioteca-filtro-capitulo" class="filter-select" style="margin-bottom:8px" disabled>
+      <option value="">Todos os capítulos</option>
+    </select>
     <div style="display:flex;gap:8px;align-items:stretch">
       <input id="vf-biblioteca-busca" type="search" class="filter-select" placeholder="Palavra em português ou inglês" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfBuscarBibliotecaVF();}">
       <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfBuscarBibliotecaVF()">Buscar</button>
@@ -1993,7 +2005,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-14-014';
+const VERSAO_APP = '2026-09-14-017';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7638,6 +7650,7 @@ let vfBibliotecaIdsVF = [];          // todos os ids que casaram com a palavra
 let vfBibliotecaCarregadasVF = [];    // as que já têm conteúdo na tela
 let vfBibliotecaExcluidasVF = new Set();
 let vfBibliotecaTermoVF = '';
+let vfBibliotecaDescricaoFiltroVF = ''; // "publicação · Chapter 6", pro resumo em cima da lista
 let vfBibliotecaCarregandoVF = false;
 let vfBibliotecaIdEditandoVF = null;
 const VF_BIBLIOTECA_PAGINA_VF = 40;
@@ -7647,40 +7660,133 @@ const VF_BIBLIOTECA_PAGINA_VF = 40;
 // tela flutuante por cima do Flash
 function vfEntrarNaBibliotecaVF(){
   if(typeof vfForcarSalvamentoEdicaoPendenteVF === 'function') vfForcarSalvamentoEdicaoPendenteVF();
-  const campo = document.getElementById('vf-biblioteca-busca');
-  // só põe o cursor no campo quando ainda não tem busca nenhuma feita -
-  // voltar pra aba com resultado na tela não deve abrir o teclado por cima
-  if(campo && !vfBibliotecaIdsVF.length) setTimeout(() => campo.focus(), 50);
+  vfPopularFiltroModuloBibliotecaVF(); // não espera - a tela já abre, o select preenche quando chegar
+  // NÃO põe o cursor no campo sozinho: focar um campo de texto dispara o
+  // focusin global que esconde o menu (regra do teclado na tela). Quem
+  // abria a Biblioteca via o menu sumir sozinho e só voltar depois de
+  // tocar em qualquer outro lugar. Agora o teclado só aparece quando o
+  // Carlos toca no campo de propósito
+}
+
+// mesmos módulos/publicações do filtro do Flash (as RPCs já devolvem só o
+// que tem afirmação de verdade) - o que não tem nada fica desabilitado em
+// vez de sumir: assim dá pra ver que a categoria existe
+async function vfPopularFiltroModuloBibliotecaVF(){
+  const el = document.getElementById('vf-biblioteca-filtro-modulo');
+  if(!el || el.dataset.populado) return;
+  await vfCarregarBibliografiaCacheVF();
+  const [{data: modulosData}, {data: pubsData}] = await Promise.all([
+    sb.rpc('modulos_com_questoes_vf'),
+    sb.rpc('publicacoes_com_questoes_vf')
+  ]);
+  const modulosComVF = new Set((modulosData || []).map(r => r.modulo_pscpp).filter(Boolean));
+  if(!vfPublicacoesComQuestaoVF) vfPublicacoesComQuestaoVF = new Set((pubsData || []).map(r => r.bibliografia_id).filter(Boolean));
+  el.innerHTML = '<option value="">Todos os módulos</option>' + VF_MODULOS_PSCPP_FIXOS.map(m =>
+    `<option value="${escapeHtml(m)}" ${modulosComVF.has(m) ? '' : 'disabled style="color:#ccc"'}>${escapeHtml(m)}</option>`
+  ).join('');
+  el.dataset.populado = '1';
+}
+
+function vfBibliotecaMudarModuloVF(){
+  const modulo = document.getElementById('vf-biblioteca-filtro-modulo').value;
+  const elPub = document.getElementById('vf-biblioteca-filtro-publicacao');
+  const elCap = document.getElementById('vf-biblioteca-filtro-capitulo');
+  elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+  elCap.disabled = true;
+  if(!modulo){
+    elPub.innerHTML = '<option value="">Todas as publicações</option>';
+    elPub.disabled = true;
+    return;
+  }
+  const pubs = (bibliografiaCache || []).filter(b => b.modulo_pscpp === modulo)
+    .sort((a, b) => (a.nome_exibicao || a.titulo).localeCompare(b.nome_exibicao || b.titulo, 'pt'));
+  elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(pub => {
+    const vazia = vfPublicacoesComQuestaoVF && !vfPublicacoesComQuestaoVF.has(pub.id);
+    return `<option value="${pub.id}" ${vazia ? 'disabled style="color:#ccc"' : ''}>${escapeHtml(pub.nome_exibicao || pub.titulo)}</option>`;
+  }).join('');
+  elPub.disabled = false;
+}
+
+async function vfBibliotecaMudarPublicacaoVF(){
+  const publicacao = document.getElementById('vf-biblioteca-filtro-publicacao').value;
+  const elCap = document.getElementById('vf-biblioteca-filtro-capitulo');
+  elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+  elCap.disabled = !publicacao;
+  if(!publicacao) return;
+  const bib = (bibliografiaCache || []).find(b => b.id === publicacao);
+  const rotulo = rotuloCapituloDoLivro(bib?.titulo) + ' '; // "Chapter", "Capítulo", "Section"... vem da bibliografia
+  const {data} = await sb.rpc('capitulos_distintos_por_publicacao_vf', {p_bibliografia_id: publicacao});
+  const capitulos = [...new Set((data || []).map(q => q.capitulo).filter(Boolean))]
+    .sort((a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0) || a.localeCompare(b, 'pt'));
+  elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c =>
+    `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
+  ).join('');
 }
 
 async function vfBuscarBibliotecaVF(){
   const termo = (document.getElementById('vf-biblioteca-busca').value || '').trim();
+  const modulo = document.getElementById('vf-biblioteca-filtro-modulo').value;
+  const publicacao = document.getElementById('vf-biblioteca-filtro-publicacao').value;
+  const capitulo = document.getElementById('vf-biblioteca-filtro-capitulo').value;
   const lista = document.getElementById('vf-biblioteca-lista');
   const resumo = document.getElementById('vf-biblioteca-resumo');
   vfBibliotecaIdsVF = [];
   vfBibliotecaCarregadasVF = [];
   lista.innerHTML = '';
-  if(!termo){ resumo.textContent = 'Digite uma palavra pra procurar.'; return; }
+  if(!termo && !modulo && !publicacao){
+    resumo.textContent = 'Digite uma palavra ou escolha um módulo/publicação.';
+    return;
+  }
   vfBibliotecaTermoVF = termo;
+  vfBibliotecaDescricaoFiltroVF = [
+    publicacao ? (() => { const b = (bibliografiaCache || []).find(x => x.id === publicacao); return b ? (b.nome_exibicao || b.titulo) : null; })() : modulo,
+    capitulo ? (capitulo === 'Único' ? capitulo : rotuloCapituloDoLivro(((bibliografiaCache || []).find(x => x.id === publicacao) || {}).titulo) + ' ' + capitulo) : null
+  ].filter(Boolean).join(' · ');
   resumo.textContent = 'Procurando…';
-  // as três coisas em paralelo: a busca em si, quais já estão excluídas
-  // (pra marcar na lista em vez de fingir que não estão) e o cache de
-  // bibliografia (idempotente - só busca de verdade na primeira vez)
-  const [{data: idsData, error: erroBusca}, {data: excData}] = await Promise.all([
-    sb.rpc('buscar_questoes_por_termo_vf', {p_termo: termo}),
+  // três coisas em paralelo: a busca por palavra (quando tem palavra), os
+  // ids que casam com os filtros (quando tem filtro) e quais já estão
+  // excluídas - pra marcar na lista em vez de fingir que não estão
+  const promessaTermo = termo
+    ? sb.rpc('buscar_questoes_por_termo_vf', {p_termo: termo})
+    : Promise.resolve({data: null, error: null});
+  const promessaFiltro = (modulo || publicacao)
+    ? (() => {
+        const idsBib = publicacao
+          ? [publicacao]
+          : (bibliografiaCache || []).filter(b => b.modulo_pscpp === modulo).map(b => b.id);
+        if(!idsBib.length) return Promise.resolve({data: [], error: null});
+        return buscarTudoPaginadoVF(() => {
+          let q = sb.from('questoes_vf').select('id', {count: 'exact'}).eq('anulada', false).in('bibliografia_id', idsBib);
+          if(capitulo) q = q.eq('capitulo', capitulo);
+          return q.order('bibliografia_id').order('capitulo').order('id');
+        });
+      })()
+    : Promise.resolve({data: null, error: null});
+  const [{data: idsTermoData, error: erroBusca}, {data: idsFiltroData, error: erroFiltro}, {data: excData}] = await Promise.all([
+    promessaTermo,
+    promessaFiltro,
     buscarTudoPaginadoVF(() => sb.from('exclusoes_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     vfCarregarBibliografiaCacheVF()
   ]);
-  if(erroBusca){
-    resumo.textContent = `Não consegui buscar agora (${erroBusca.message || 'erro de rede'}). Tenta de novo.`;
+  if(erroBusca || erroFiltro){
+    resumo.textContent = `Não consegui buscar agora (${(erroBusca || erroFiltro).message || 'erro de rede'}). Tenta de novo.`;
     return;
   }
   vfBibliotecaExcluidasVF = new Set((excData || []).map(e => e.questao_vf_id));
   // setof uuid pode vir como array de strings ou de objetos, igual no
-  // filtro por termo - trata os dois formatos
-  vfBibliotecaIdsVF = (idsData || []).map(r => typeof r === 'string' ? r : r.buscar_questoes_por_termo_vf).filter(Boolean);
+  // filtro por termo do Flash - trata os dois formatos
+  const idsTermo = termo ? (idsTermoData || []).map(r => typeof r === 'string' ? r : r.buscar_questoes_por_termo_vf).filter(Boolean) : null;
+  const idsFiltro = idsFiltroData ? idsFiltroData.map(r => r.id) : null;
+  if(idsTermo && idsFiltro){
+    const conjunto = new Set(idsFiltro);
+    vfBibliotecaIdsVF = idsTermo.filter(id => conjunto.has(id)); // ordem da busca por palavra
+  }else{
+    vfBibliotecaIdsVF = idsTermo || idsFiltro || [];
+  }
   if(!vfBibliotecaIdsVF.length){
-    resumo.innerHTML = `Nenhuma afirmação com "${escapeHtml(termo)}". Tenta em inglês, ou <a href="#" onclick="event.preventDefault();vfAbrirGlossarioVF('${escapeHtml(termo)}')" style="color:#B23A34">adicione o par no glossário</a>.`;
+    resumo.innerHTML = termo
+      ? `Nenhuma afirmação com "${escapeHtml(termo)}"${vfBibliotecaDescricaoFiltroVF ? ' nesse filtro' : ''}. Tenta em inglês, ampliar o filtro, ou <a href="#" onclick="event.preventDefault();vfAbrirGlossarioVF('${escapeHtml(termo)}')" style="color:#B23A34">adicione o par no glossário</a>.`
+      : 'Nenhuma afirmação nesse filtro.';
     return;
   }
   await vfCarregarMaisBibliotecaVF();
@@ -7713,7 +7819,11 @@ function vfRenderizarBibliotecaVF(){
   if(!lista) return;
   const total = vfBibliotecaIdsVF.length;
   const mostrando = vfBibliotecaCarregadasVF.length;
-  resumo.innerHTML = `${total} ${total === 1 ? 'afirmação' : 'afirmações'} com "${escapeHtml(vfBibliotecaTermoVF)}"${mostrando < total ? ` · mostrando ${mostrando}` : ''}`;
+  const alvo = [
+    vfBibliotecaTermoVF ? `com "${escapeHtml(vfBibliotecaTermoVF)}"` : '',
+    vfBibliotecaDescricaoFiltroVF ? `em ${escapeHtml(vfBibliotecaDescricaoFiltroVF)}` : ''
+  ].filter(Boolean).join(' ');
+  resumo.innerHTML = `${total} ${total === 1 ? 'afirmação' : 'afirmações'} ${alvo}${mostrando < total ? ` · mostrando ${mostrando}` : ''}`;
   const faltam = total - mostrando;
   lista.innerHTML = vfBibliotecaCarregadasVF.map(q => vfHtmlCardBibliotecaVF(q)).join('')
     + (faltam > 0 ? `<button class="btn-secundario" style="width:100%" onclick="vfCarregarMaisBibliotecaVF()">Ver mais ${Math.min(VF_BIBLIOTECA_PAGINA_VF, faltam)}</button>` : '');
@@ -7722,6 +7832,13 @@ function vfRenderizarBibliotecaVF(){
 function vfHtmlCardBibliotecaVF(q){
   const bib = (bibliografiaCache || []).find(b => b.id === q.bibliografia_id);
   const publicacao = bib ? (bib.nome_exibicao || bib.titulo) : 'Publicação não identificada';
+  // o rótulo do capítulo vem da bibliografia (Chapter / Capítulo /
+  // Section...) e é procurado pelo TÍTULO real, não pelo nome de exibição
+  const rotulo = rotuloCapituloDoLivro(bib?.titulo);
+  const capituloLimpo = q.capitulo ? String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '') : '';
+  const capituloHtml = capituloLimpo
+    ? `<p style="color:#999;font-size:var(--fs-c);margin:1px 0 0 0;line-height:1.25">${escapeHtml(capituloLimpo === 'Único' ? capituloLimpo : rotulo + ' ' + capituloLimpo)}</p>`
+    : '';
   const excluida = vfBibliotecaExcluidasVF.has(q.id);
   const favorita = favoritosVF.has(q.id);
   // mesmo contexto de renderização da tela do Flash - sem ele, desenho
@@ -7730,25 +7847,25 @@ function vfHtmlCardBibliotecaVF(q){
   const textoHtml = formatarTextoItemVF(q.texto || '');
   const correcaoHtml = q.correcao ? formatarTextoItemVF(q.correcao) : '';
   vfContextoRenderizacaoSvgVF = null;
-  const selo = q.resposta
-    ? '<span style="background:#EAF3DE;color:#3B6D11;font-weight:700;font-size:var(--fs-a);border-radius:4px;padding:2px 8px;letter-spacing:.03em">VERDADEIRO</span>'
-    : '<span style="background:#FCEBEB;color:#A32D2D;font-weight:700;font-size:var(--fs-a);border-radius:4px;padding:2px 8px;letter-spacing:.03em">FALSO</span>';
-  const seloExcluida = excluida ? '<span style="background:#F1EFE8;color:#666;font-weight:700;font-size:var(--fs-a);border-radius:4px;padding:2px 8px;letter-spacing:.03em">EXCLUÍDA</span>' : '';
+  // V/F como letra colada no texto, igual à lista de irmãs do pop-up de
+  // excluir - o badge grande de antes competia com o nome da publicação
+  const selo = `<span style="font-weight:700;color:${q.resposta ? '#2E7D32' : '#A32D2D'}">${q.resposta ? 'V' : 'F'}</span> `;
+  const estiloAcao = 'width:auto;background:none;border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:var(--fs-c);font-weight:500;color:#666;cursor:pointer;font-family:inherit';
   return `
     <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;background:#fff${excluida ? ';opacity:0.55' : ''}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 8px">
         <div style="min-width:0">
-          <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
-          ${q.capitulo ? `<p style="color:#999;font-size:var(--fs-a);margin:2px 0 0 0">${escapeHtml(q.capitulo)}</p>` : ''}
+          <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0;line-height:1.25">${escapeHtml(publicacao)}</p>
+          ${capituloHtml}
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">${seloExcluida}${selo}</div>
+        ${excluida ? '<span style="background:#F1EFE8;color:#666;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;flex-shrink:0">EXCLUÍDA</span>' : ''}
       </div>
-      <div style="color:#111;font-size:var(--fs-d);line-height:1.6">${textoHtml}</div>
+      <div style="color:#111;font-size:var(--fs-d);line-height:1.6">${selo}${textoHtml}</div>
       ${correcaoHtml ? `<div style="background:#f7f7f5;border:0.5px solid #eee;border-radius:10px;padding:8px;margin-top:10px;color:#111;font-size:var(--fs-d);line-height:1.6">${correcaoHtml}</div>` : ''}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-        <button class="btn-secundario" style="width:auto;padding:7px 14px" onclick="vfEditarDaBibliotecaVF('${q.id}')">Editar</button>
-        <button class="btn-secundario" style="width:auto;padding:7px 14px${favorita ? ';color:#B23A34' : ''}" onclick="vfAlternarFavoritoBibliotecaVF('${q.id}')">${favorita ? 'Desfavoritar' : 'Favoritar'}</button>
-        ${excluida ? '' : `<button class="btn-secundario" style="width:auto;padding:7px 14px;color:#A32D2D" onclick="vfExcluirDaBibliotecaVF('${q.id}')">Excluir</button>`}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
+        <button style="${estiloAcao}" onclick="vfEditarDaBibliotecaVF('${q.id}')">Editar</button>
+        <button style="${estiloAcao}${favorita ? ';color:#B23A34;border-color:#E8C4C2' : ''}" onclick="vfAlternarFavoritoBibliotecaVF('${q.id}')">${favorita ? 'Desfavoritar' : 'Favoritar'}</button>
+        ${excluida ? '' : `<button style="${estiloAcao};color:#A32D2D" onclick="vfExcluirDaBibliotecaVF('${q.id}')">Excluir</button>`}
       </div>
     </div>`;
 }
@@ -14350,10 +14467,23 @@ let vfBalaoAncoraVF = null;
 function vfPosicionarBalaoExplicacaoVF(clientX, clientY){
   const balao = document.getElementById('vf-balao-explicacao');
   const margem = 10, afastamento = 14;
-  const rect = balao.getBoundingClientRect();
   const barra = document.querySelector('.vf-barra-fixa');
-  const barraVisivel = barra && barra.offsetParent !== null && getComputedStyle(barra).display !== 'none';
-  const limiteInferior = (barraVisivel ? barra.getBoundingClientRect().top : window.innerHeight) - margem;
+  // ACHADO REAL: o teste antigo era "barra.offsetParent !== null", e a
+  // barra é position:fixed - pra elemento fixo o offsetParent é SEMPRE
+  // null (regra do próprio padrão, não é bug de navegador). Ou seja, a
+  // barra nunca contava como visível, o limite de baixo virava a altura
+  // da janela inteira, e o balão nascia pra baixo em cima da barra, com
+  // o texto cortado embaixo dela (z-index 140 contra 150). Agora a
+  // visibilidade é medida pelo que dá pra ver mesmo: classe, display e
+  // altura de verdade
+  const barraRect = barra ? barra.getBoundingClientRect() : null;
+  const barraVisivel = !!(barra && !barra.classList.contains('hidden') && getComputedStyle(barra).display !== 'none' && barraRect.height > 0);
+  const limiteInferior = (barraVisivel ? barraRect.top : window.innerHeight) - margem;
+  // balão mais alto que o espaço útil rola por dentro, em vez de escapar
+  // pra debaixo da barra (ou pra fora da tela) sem jeito de ler o resto
+  balao.style.maxHeight = Math.max(80, limiteInferior - margem) + 'px';
+  balao.style.overflowY = 'auto';
+  const rect = balao.getBoundingClientRect(); // medido DEPOIS do maxHeight, senão vem a altura sem limite
   let left = clientX + afastamento;
   if(left + rect.width > window.innerWidth - margem) left = clientX - rect.width - afastamento;
   left = Math.max(margem, Math.min(left, window.innerWidth - rect.width - margem));
