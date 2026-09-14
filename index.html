@@ -1947,7 +1947,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-14-003';
+const VERSAO_APP = '2026-09-14-005';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5162,7 +5162,7 @@ function vfProcessarListasNotaVF(texto){
   const blocos = [];
   let itensListaAtual = null;
   for(const linha of linhas){
-    const m = linha.match(/^[*\-]\s+(.+)$/);
+    const m = linha.match(/^(?:[*\-•]|--)\s+(.+)$/); // "- ", "-- ", "* " ou "• " no começo da linha viram item de lista (espaço obrigatório - "-5 m" não é lista)
     if(m){
       if(!itensListaAtual) itensListaAtual = [];
       itensListaAtual.push(`<li>${m[1]}</li>`);
@@ -13523,7 +13523,17 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   // no banco), sem precisar corrigir cada uma manualmente. Achado real:
   // um "\n" no início, combinado com o white-space:pre-line do balão,
   // criava um espaço em branco grande antes do texto começar
-  span.textContent = (texto || '').trim();
+  const textoLimpo = (texto || '').trim();
+  // mesma formatação das notas: **negrito**, *itálico*, linhas com "- "
+  // viram lista, quebras de linha preservadas, símbolos matemáticos
+  span.innerHTML = formatarTextoItemVF(textoLimpo);
+  balao.style.whiteSpace = 'normal'; // o HTML já traz as quebras (<br>) - com pre-line elas dobrariam
+  // largura conforme a quantidade de texto: pouca informação continua no
+  // balão estreito; muita informação ganha um balão mais largo (menos
+  // linhas, mais fácil de ler), sempre dentro da tela
+  const tamanho = textoLimpo.length;
+  const larguraIdeal = tamanho < 140 ? 280 : tamanho < 320 ? 360 : tamanho < 600 ? 440 : 520;
+  balao.style.maxWidth = Math.min(larguraIdeal, window.innerWidth - 20) + 'px';
   // o balão inteiro (a informação em si) fica clicável quando há edição
   // associada - sem nenhum link "editar" separado aparecendo dentro dele
   balao.style.cursor = aoEditar ? 'pointer' : 'default';
@@ -15462,18 +15472,47 @@ function vfMostrarDialogoExclusaoFamiliaVF(procurando){
     // normal nas que não tinham, o que fazia parecer intermitente)
     // afirmação INTEIRA (pedido do Carlos: cortada não dá pra decidir se
     // exclui ou não) - a lista rola se ficar comprida
+    // Cada irmã é marcável (toque na linha): todas começam marcadas, e o
+    // botão "Esta + N irmãs" segue o que está marcado
+    vfIrmasMarcadasVF = new Set(vfIrmasParaExcluirVF.map(i => i.id));
     lista.innerHTML = vfIrmasParaExcluirVF.map(irma => {
       const textoCompleto = irma.texto_resumido ?? irma.texto ?? '';
       return `
-      <div style="padding:8px 0;border-bottom:0.5px solid #f0f0ee;font-size:var(--fs-c);color:#555;line-height:1.4">
-        <span style="font-weight:600;color:${irma.resposta ? '#2E7D32' : '#A32D2D'}">${irma.resposta ? 'V' : 'F'}</span> ${formatarTextoItemVF(textoCompleto)}
+      <div class="vf-irma-exclusao" data-irma-id="${irma.id}" onclick="vfAlternarIrmaExclusaoVF('${irma.id}')" style="display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-bottom:0.5px solid #f0f0ee;font-size:var(--fs-c);line-height:1.4;cursor:pointer;border-radius:6px">
+        <div style="flex:1"><span style="font-weight:600;color:${irma.resposta ? '#2E7D32' : '#A32D2D'}">${irma.resposta ? 'V' : 'F'}</span> ${formatarTextoItemVF(textoCompleto)}</div>
+        <span class="vf-irma-check" style="flex-shrink:0;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:1px"></span>
       </div>`;
     }).join('');
+    vfPintarIrmasExclusaoVF();
     btnSoEsta.textContent = 'Só esta';
-    btnComIrmas.textContent = `Esta e as irmãs (${n+1})`;
     btnComIrmas.classList.remove('hidden');
   }
   abrirModal('modal-confirmar-exclusao-familia-vf');
+}
+
+// quais irmãs estão marcadas pra excluir junto (ids) - pintura das
+// linhas e texto do botão seguem esse conjunto
+let vfIrmasMarcadasVF = new Set();
+function vfAlternarIrmaExclusaoVF(id){
+  if(vfIrmasMarcadasVF.has(id)) vfIrmasMarcadasVF.delete(id); else vfIrmasMarcadasVF.add(id);
+  vfPintarIrmasExclusaoVF();
+}
+function vfPintarIrmasExclusaoVF(){
+  document.querySelectorAll('#vf-lista-irmas-exclusao .vf-irma-exclusao').forEach(linha => {
+    const marcada = vfIrmasMarcadasVF.has(linha.dataset.irmaId);
+    linha.style.background = marcada ? '#FCEBEB' : '';
+    linha.style.color = marcada ? '#333' : '#999';
+    const check = linha.querySelector('.vf-irma-check');
+    check.style.border = marcada ? '1px solid #B23A34' : '1px solid #ccc';
+    check.style.background = marcada ? '#B23A34' : '#fff';
+    check.innerHTML = marcada ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : '';
+  });
+  const btnComIrmas = document.getElementById('vf-btn-exclusao-com-irmas');
+  const n = vfIrmasMarcadasVF.size;
+  if(btnComIrmas){
+    btnComIrmas.classList.toggle('hidden', n === 0);
+    btnComIrmas.textContent = n === 1 ? 'Esta + 1 irmã' : `Esta + ${n} irmãs`;
+  }
 }
 
 function vfFecharDialogoExclusaoFamiliaVF(){
@@ -15558,7 +15597,8 @@ async function confirmarExclusaoComIrmasVF(){
   if(!questaoVfParaExcluir) return;
   const idPrincipal = questaoVfParaExcluir;
   const motivo = document.getElementById('motivo-exclusao-familia-vf').value.trim() || null;
-  const idsIrmas = vfIrmasParaExcluirVF.map(i => i.id);
+  const idsIrmas = vfIrmasParaExcluirVF.map(i => i.id).filter(id => vfIrmasMarcadasVF.has(id));
+  if(!idsIrmas.length) return confirmarExclusaoSoEstaVF();
   const linhas = [
     {usuario_id: usuarioAtual.id, questao_vf_id: idPrincipal, motivo},
     ...idsIrmas.map(id => ({usuario_id: usuarioAtual.id, questao_vf_id: id, motivo: 'família'}))
