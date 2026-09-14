@@ -2016,7 +2016,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-14-021';
+const VERSAO_APP = '2026-09-14-024';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4731,6 +4731,94 @@ function vfAjustarLarguraTabelaVF(bloco){
     alcas.forEach(a => { a.style.display = 'none'; });
     bloco.dataset.modoLargura = 'igual';
   }
+  vfAlinharTabelasIrmasVF(bloco.parentElement);
+  vfEspacarTabelasIrmasVF(bloco.parentElement);
+}
+
+// espaço entre duas tabelas coladas uma na outra na mesma caixinha: uma
+// linha e meia, e só. O vão grande vinha das quebras de linha do próprio
+// texto-fonte (a linha em branco entre um \end{array} e o \begin{array}
+// seguinte vira <br>) somadas à margem de cada bloco - juntas davam um
+// buraco. Aqui os <br> entre as duas somem e a distância passa a ser
+// medida, não acidental
+function vfEspacarTabelasIrmasVF(container){
+  if(!container) return;
+  const estilo = getComputedStyle(container);
+  const alturaLinha = parseFloat(estilo.lineHeight) || (parseFloat(estilo.fontSize) || 14) * 1.6;
+  const espaco = Math.round(alturaLinha * 1.5);
+  container.querySelectorAll(':scope > .vf-tabela-bloco').forEach(bloco => {
+    let anterior = bloco.previousSibling;
+    const descartar = [];
+    while(anterior){
+      const ehEspacoBranco = anterior.nodeType === 3 && !anterior.textContent.trim();
+      const ehQuebra = anterior.nodeType === 1 && anterior.tagName === 'BR';
+      if(!ehEspacoBranco && !ehQuebra) break;
+      descartar.push(anterior);
+      anterior = anterior.previousSibling;
+    }
+    if(!(anterior && anterior.nodeType === 1 && anterior.classList?.contains('vf-tabela-bloco'))) return;
+    descartar.forEach(n => n.remove());
+    bloco.style.marginTop = espaco + 'px';
+  });
+}
+
+// duas (ou mais) tabelas na MESMA caixinha, com o mesmo número de
+// colunas, passam a ter as colunas alinhadas entre si - lidas como uma
+// continuação da outra, não como duas tabelas soltas. Cada coluna fica
+// com a maior largura natural entre as tabelas, e todas ficam com a mesma
+// largura total.
+// Ajuste manual manda: se alguma tabela do grupo já tem largura ou
+// proporção escolhida na mão ([larguras:...] ou [largura:NN]), o grupo
+// inteiro fica como está - nada do que ele arrastou é desfeito daqui
+function vfAlinharTabelasIrmasVF(container){
+  if(!container) return;
+  const grupos = new Map();
+  container.querySelectorAll(':scope > .vf-tabela-bloco').forEach(b => {
+    const tabelas = b.querySelectorAll('table');
+    if(tabelas.length !== 1) return; // \sidebyside já é um par por conta própria
+    const linha = tabelas[0].querySelector('tr:first-child');
+    if(!linha || !linha.children.length) return;
+    const n = linha.children.length;
+    if(!grupos.has(n)) grupos.set(n, []);
+    grupos.get(n).push({bloco: b, tabela: tabelas[0], celulas: Array.from(linha.children)});
+  });
+  grupos.forEach((grupo, n) => {
+    if(grupo.length < 2) return;
+    if(grupo.some(g => g.tabela.dataset.larguras || Number(g.tabela.dataset.larguraTotal || 0) > 0)) return;
+    // mede todas no estado natural ANTES de aplicar qualquer coisa - medir
+    // com uma delas já alinhada faria a largura escorregar um pouco a cada
+    // passada (o ajuste de uma vira a "medida natural" da próxima)
+    grupo.forEach(g => {
+      g.bloco.style.width = 'fit-content';
+      g.tabela.style.tableLayout = 'auto';
+      g.tabela.style.width = 'auto';
+      g.celulas.forEach(td => { td.style.width = ''; });
+    });
+    const maximos = new Array(n).fill(0);
+    let larguraAlvo = 0;
+    grupo.forEach(g => {
+      larguraAlvo = Math.max(larguraAlvo, g.tabela.getBoundingClientRect().width);
+      g.celulas.forEach((td, i) => { maximos[i] = Math.max(maximos[i], td.getBoundingClientRect().width); });
+    });
+    const limite = container.clientWidth || larguraAlvo;
+    if(larguraAlvo > limite){
+      // o conteúdo junto não cabe na caixa - libera a quebra de linha,
+      // mesma saída das outras regras de largura
+      grupo.forEach(g => g.tabela.querySelectorAll('td').forEach(td => { td.style.whiteSpace = ''; }));
+      larguraAlvo = limite;
+    }
+    const soma = maximos.reduce((a, b) => a + b, 0) || 1;
+    grupo.forEach(g => {
+      const cartao = g.tabela.parentElement;
+      if(cartao) cartao.style.width = '';
+      g.bloco.style.width = larguraAlvo + 'px';
+      g.tabela.style.tableLayout = 'fixed';
+      g.tabela.style.width = larguraAlvo + 'px';
+      g.celulas.forEach((td, i) => { td.style.width = (maximos[i] / soma * 100).toFixed(2) + '%'; });
+      g.tabela.querySelectorAll('.vf-tabela-alca-largura').forEach(a => { a.style.display = ''; });
+      g.bloco.dataset.modoLargura = 'alinhada';
+    });
+  });
 }
 // um ResizeObserver só pra todos os blocos - reajusta quando o CARD (pai)
 // muda de largura, não quando a própria tabela muda (senão entraria em
@@ -7956,7 +8044,7 @@ async function vfCarregarGrifosBibliotecaVF(ids){
   const {data, error} = await buscarTudoPaginadoVF(() => sb.from('marcacoes_texto_vf')
     .select('*', {count: 'exact'})
     .eq('usuario_id', usuarioAtual.id).eq('origem', 'flash')
-    .in('questao_id', ids).order('id'));
+    .in('questao_id', ids).order('criado_em').order('id'));
   if(error || !data) return;
   const porQuestao = new Map();
   data.forEach(m => {
@@ -7965,11 +8053,14 @@ async function vfCarregarGrifosBibliotecaVF(ids){
     if(!porEscopo.has(m.escopo_id)) porEscopo.set(m.escopo_id, []);
     porEscopo.get(m.escopo_id).push(m);
   });
+  // a passada mais recente é a de data mais nova. ATENÇÃO: 'id' aqui é
+  // uuid, não número - comparar id pra achar "a última" não funciona
+  // (Math.max de uuid dá NaN, e nenhuma passada era escolhida)
   porQuestao.forEach((porEscopo, questaoId) => {
-    let ultimas = null, maiorId = -1;
+    let ultimas = null, maisNova = -Infinity;
     porEscopo.forEach(marcacoes => {
-      const idMax = Math.max(...marcacoes.map(m => m.id));
-      if(idMax > maiorId){ maiorId = idMax; ultimas = marcacoes; }
+      const quando = Math.max(...marcacoes.map(m => new Date(m.criado_em).getTime() || 0));
+      if(quando >= maisNova){ maisNova = quando; ultimas = marcacoes; }
     });
     vfBibliotecaGrifosVF.set(questaoId, {marcacoes: ultimas || [], passadas: porEscopo.size});
   });
@@ -9185,11 +9276,14 @@ async function vfCarregarCacheMarcacoesDoEscopoVF(origem, escopoId){
 // que tentar sincronizar incrementalmente marca por marca. Também
 // atualiza o cache em memória na hora, pra navegar pra frente e voltar
 // na mesma sessão já refletir sem precisar esperar o banco de novo
-async function vfPersistirMarcacoesTextoVF(origem, escopoId, questaoId){
+async function vfPersistirMarcacoesTextoVF(origem, escopoId, questaoId, marcacoesJaCapturadas){
   if(!usuarioAtual || !escopoId || !questaoId) return;
   const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
   const correcao = document.getElementById('vf-correcao-atual');
-  const marcacoes = [
+  // normalmente lê da tela; mas quem chama pode passar as marcações já
+  // capturadas antes (ver responderVF: lá a tela já foi remontada quando
+  // a gravação acontece, e ler dela devolveria vazio)
+  const marcacoes = marcacoesJaCapturadas || [
     ...vfExtrairMarcacoesAtuaisVF(enunciado, 'enunciado'),
     ...vfExtrairMarcacoesAtuaisVF(correcao, 'correcao'),
   ];
@@ -12859,8 +12953,24 @@ function vfIniciarArrastoColunaVF(evento){
     const somaPx = largurasFinaisPx.reduce((a,b) => a+b, 0);
     const largurasFinais = largurasFinaisPx.map(px => Math.max(1, Math.round(px / somaPx * 100)));
     tabela.dataset.larguras = largurasFinais.join(','); // pra um reajuste futuro (girar a tela) respeitar o arrasto
+    const opcoes = {larguras: largurasFinais};
+    // tabela pequena (modo "igual") tem as colunas forçadas iguais a cada
+    // redesenho - salvar só as proporções não adiantaria, o ajuste sumiria
+    // na próxima renderização. Fixar a largura ATUAL dela (a mesma que
+    // está na tela, nada muda de tamanho) passa a tabela pro modo "fixa",
+    // que respeita as proporções. Só acontece quando ele mexe numa coluna
+    // de propósito: nascer com colunas iguais continua sendo a regra
+    if(bloco.dataset.modoLargura === 'igual'){
+      const containerAgora = bloco.parentElement ? bloco.parentElement.clientWidth : 0;
+      if(containerAgora){
+        const pct = Math.max(10, Math.min(100, Math.round(tabela.getBoundingClientRect().width / containerAgora * 100)));
+        tabela.dataset.larguraTotal = String(pct);
+        bloco.dataset.modoLargura = 'fixa';
+        opcoes.larguraTotal = pct;
+      }
+    }
     vfReposicionarDivisoresTabelaVF(bloco);
-    vfSalvarLargurasTabelaVF(blocoId, largurasFinais);
+    vfSalvarOpcoesTabelaVF(blocoId, opcoes);
   }
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', finalizar);
@@ -13293,10 +13403,12 @@ function vfMostrarDivisoresTabelaVF(bloco){
   borda.ontouchstart = vfIniciarArrastoBordaTabelaVF;
   borda.onmousedown = vfIniciarArrastoBordaTabelaVF;
   bloco.appendChild(borda);
-  // divisores entre colunas - só quando há proporção pra ajustar
-  // (tabela esticada ou com largura fixa); na pequena as colunas são iguais
-  const podeAjustarColunas = bloco.dataset.modoLargura === 'cheia' || bloco.dataset.modoLargura === 'fixa';
-  for(let i = 0; podeAjustarColunas && i < celulas.length - 1; i++){
+  // divisores entre colunas em QUALQUER modo. A regra de nascer com
+  // colunas iguais quando a tabela é pequena continua valendo - ela só
+  // deixa de valer se ele mexer de propósito numa coluna (ver finalizar()
+  // em vfIniciarArrastoColunaVF, que nesse caso fixa a largura da tabela
+  // pra o ajuste não ser desfeito no próximo redesenho)
+  for(let i = 0; i < celulas.length - 1; i++){
     const div = document.createElement('div');
     div.className = 'vf-tabela-divisor';
     div.dataset.blocoId = bloco.id;
@@ -13703,6 +13815,18 @@ async function responderVF(resposta){
   // porque o upsert ainda não tinha chegado no servidor
   escritasPendentesVF.set(item.id, {...item});
 
+  // ACHADO REAL: grifo feito ANTES de responder se perdia por completo.
+  // A ordem era: renderizarItemVF() remontava o enunciado do zero (levando
+  // junto os spans de marcação) e SÓ DEPOIS a gravação lia a tela pra
+  // saber o que salvar - achava tela limpa e não salvava nada. Como o
+  // caminho normal é ler a afirmação, grifar o que chamou atenção e só
+  // então responder, na prática NENHUM grifo do Flash chegava ao banco
+  // (confirmado: zero linhas com origem 'flash' em marcacoes_texto_vf).
+  // Agora o que está grifado é capturado aqui, antes do re-render
+  const grifosAntesDeResponderVF = [
+    ...vfExtrairMarcacoesAtuaisVF(document.getElementById('vf-enunciado-atual'), 'enunciado'),
+    ...vfExtrairMarcacoesAtuaisVF(document.getElementById('vf-correcao-atual'), 'correcao')
+  ];
   vfSalvarEClimparAnotacaoVF(entrada); // guarda o que foi desenhado como imagem e limpa o canvas, senão fica em cima do resultado
   renderizarItemVF(); // mostra o resultado na hora, sem esperar o banco
 
@@ -13745,7 +13869,13 @@ async function responderVF(resposta){
   const idRespostaCriada = logRespostaResultado?.data?.id;
   if(idRespostaCriada){
     entrada.idRespostaVF = idRespostaCriada;
-    vfPersistirMarcacoesTextoVF('flash', idRespostaCriada, item.id);
+    // passa os grifos capturados antes do re-render (a tela agora está
+    // sem eles); e depois de gravar, repinta na afirmação que está na
+    // tela - o grifo não pode sumir só porque a pessoa respondeu
+    await vfPersistirMarcacoesTextoVF('flash', idRespostaCriada, item.id, grifosAntesDeResponderVF);
+    if(grifosAntesDeResponderVF.length && estadoVF?.historico?.[estadoVF.posicao]?.item?.id === item.id){
+      vfAplicarMarcacoesDoCacheVF('flash', idRespostaCriada, item.id);
+    }
   }
   })();
   vfRespostasEmVooVF.set(item.id, promiseRespostaVF);
