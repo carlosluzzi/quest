@@ -356,6 +356,11 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-painel-inconsistencia.sheet{position:fixed;left:0;right:0;bottom:0;z-index:320;border-radius:16px 16px 0 0;max-height:72vh;overflow-y:auto;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
 .vf-painel-inconsistencia.hidden{display:none}
 .vf-nota-clicavel{border-bottom:1.5px dotted #888;cursor:pointer}
+/* recuo/espaços digitados numa célula de tabela valem de verdade. Vai
+na CLASSE, nunca inline: vfAjustarLarguraTabelaVF zera
+td.style.whiteSpace (ou põe nowrap nas células curtas), e um valor
+inline seria apagado nessa hora - na classe, o "" volta pra cá */
+.vf-tabela-celula{white-space:pre-wrap}
 .vf-celula-anotavel-com-nota{text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
 .vf-celula-anotavel-sem-nota{cursor:pointer}
 .item-lista-modulo{padding:9px 8px;font-size:var(--fs-d);line-height:1.3;color:#111;cursor:pointer;border-bottom:0.5px solid #eee}
@@ -1632,10 +1637,12 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     <h3 class="config-title">Tags dessa afirmação</h3>
     <div id="vf-tags-lista-atual" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;min-height:25px"></div>
     <div style="display:flex;gap:8px;align-items:stretch">
-      <input type="text" id="vf-tags-input-novo" class="filter-select" placeholder="Digite ou escolhe uma tag" list="vf-tags-datalist" style="flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfAdicionarTagVF();}">
+      <input type="text" id="vf-tags-input-novo" class="filter-select" placeholder="Digite ou escolhe uma tag" list="vf-tags-datalist" style="flex:1;margin-bottom:0" oninput="vfFiltrarTodasTagsVF()" onkeydown="if(event.key==='Enter'){event.preventDefault();vfAdicionarTagVF();}">
       <datalist id="vf-tags-datalist"></datalist>
       <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfAdicionarTagVF()">+</button>
     </div>
+    <button id="vf-tags-btn-ver" onclick="vfAlternarTodasTagsVF()" style="background:none;border:none;padding:6px 0 0 0;color:#B23A34;font-size:var(--fs-c);font-weight:600;cursor:pointer;font-family:inherit;display:block">Ver tags existentes</button>
+    <div id="vf-tags-todas" class="hidden" style="margin-top:6px;max-height:34vh;overflow-y:auto;border:0.5px solid #e0e0e0;border-radius:8px;padding:8px;background:#fafaf9;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start"></div>
     <p id="vf-tags-status" style="font-size:var(--fs-c);margin:6px 0 0 0;min-height:1.4em;line-height:1.4"></p>
     <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="vfFecharPopupTagsVF()">Fechar</button>
   </div>
@@ -4507,6 +4514,12 @@ function vfFormatarCelulaArrayVF(celula){
   // comando LaTeX padrão diferente de \\ (que já é o separador ENTRE
   // linhas da tabela, não pode ser reaproveitado sem ambiguidade)
   c = c.replace(/\\newline/g, '<br>');
+  // enter DE VERDADE digitado na edição da célula vale o mesmo que
+  // \newline. Precisa virar <br> mesmo com white-space:pre-wrap na
+  // classe: células curtas levam nowrap de vfAjustarLarguraTabelaVF
+  // (que engoliria a quebra), e a checagem de "curta" de lá procura
+  // justamente um <br> pra saber que a célula tem quebra própria
+  c = c.replace(/\r\n?|\n/g, '<br>');
   c = c.replace(/\\text\{([^}]*)\}/g, '$1');
   c = c.replace(/\{,\}/g, ',');
   c = c.replace(/\\,/g, ''); // espaço fino do LaTeX - aqui vira SEM espaço nenhum (5,0x, não 5,0 x - notação científica normal não separa coeficiente de variável)
@@ -4557,12 +4570,11 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, la
       const temAlca = indiceLinha === 0 && idEscopo && i < celulas.length - 1;
       const alca = temAlca ? `<span class="vf-tabela-alca-largura" data-bloco-id="${idEscopo}" data-indice-coluna="${i}" ontouchstart="vfIniciarArrastoColunaVF(event)" onmousedown="vfIniciarArrastoColunaVF(event)" style="position:absolute;top:0;right:-4px;bottom:0;width:9px;cursor:col-resize;z-index:3;touch-action:none"></span>` : '';
       const posicaoRelativa = temAlca ? 'position:relative;' : '';
-      // white-space:pre-wrap: o enter e o recuo que o Carlos digita na
-      // edição da célula valem de verdade - antes o HTML engolia os dois
-      // (viravam um espaço só) e a linha só quebrava por falta de largura,
-      // desalinhando o que ele tinha alinhado à mão. Continua quebrando
-      // sozinho quando o texto é comprido demais pra coluna
-      return `<td class="vf-tabela-celula" data-linha="${indiceLinha}" data-coluna="${i}" style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};white-space:pre-wrap;${bordaSuperior}${corTraco}${estiloLargura}${posicaoRelativa}">${conteudoCelula}${alca}</td>`;
+      // o recuo digitado na célula é preservado pelo white-space:pre-wrap
+      // da classe .vf-tabela-celula (no CSS, NÃO aqui inline: quem ajusta
+      // a largura da tabela zera td.style.whiteSpace, o que apagaria um
+      // valor inline mas cai de volta na regra da classe)
+      return `<td class="vf-tabela-celula" data-linha="${indiceLinha}" data-coluna="${i}" style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${bordaSuperior}${corTraco}${estiloLargura}${posicaoRelativa}">${conteudoCelula}${alca}</td>`;
     }).join('');
     const estiloLinha = ehCabecalho ? 'background:#EAECF1' : '';
     return `<tr style="${estiloLinha}">${celulasHtml}</tr>`;
@@ -12485,11 +12497,44 @@ let vfIgnorarProximoCliqueTabelaVF = false;
 // agora; ao trocar de questão volta ao normal. Editar o texto do cabeçalho
 // passou a ser: segurar a tabela (modo ajuste) e tocar na célula
 let vfUltimoFechamentoBarraTabelaVF = null; // {blocoId, quando} - o toque que fecha a barra de ajuste é um toque "em modo ajuste"
+// escalas de palavra (alto/medio/baixo, forte/fraco, total/parcial/nenhum,
+// sim/nao): ordem alfabetica nessas colunas nao diz nada - "alto, baixo,
+// medio" nao e ordem nenhuma. Aqui cada palavra vira um NUMERO de posicao
+// na escala, entao a coluna ordena do menor pro maior de verdade (e o
+// segundo toque inverte, do maior pro menor). Coluna que nao for de
+// escala continua no comportamento de sempre (numero, senao alfabetico)
+const VF_ESCALA_ORDENACAO_VF = (() => {
+  const grupos = [
+    [0, ['nenhum','nenhuma','nulo','nula','zero','inexistente','ausente','nao','n/a','na','nunca','sem']],
+    [1, ['muito baixo','muito baixa','muito fraco','muito fraca','muito pequeno','muito pequena','minimo','minima','raro','rara','sim']],
+    [2, ['baixo','baixa','pequeno','pequena','fraco','fraca','leve','reduzido','reduzida','limitado','limitada','ocasional','menor','curto','curta','lento','lenta']],
+    [3, ['medio','media','moderado','moderada','intermediario','intermediaria','regular','parcial','razoavel','mediano','mediana','as vezes']],
+    [4, ['alto','alta','grande','forte','elevado','elevada','severo','severa','maior','amplo','ampla','frequente','significativo','significativa','longo','longa','rapido','rapida']],
+    [5, ['muito alto','muito alta','muito forte','muito grande','altissimo','altissima','maximo','maxima','total','completo','completa','integral','critico','critica','extremo','extrema','permanente','sempre','constante']]
+  ];
+  const mapa = {};
+  grupos.forEach(([valor, palavras]) => palavras.forEach(p => { mapa[p] = valor; }));
+  return mapa;
+})();
+// tira acento/maiuscula/pontuacao final e tenta a celula inteira; se nao
+// bater, tenta so o pedaco antes de um parenteses/travessao/barra (cobre
+// "Alto (3 a 5)", "Baixa - poucos casos"). Fora isso nao adivinha nada:
+// so palavra de escala conhecida vira posicao
+function vfPosicaoNaEscalaVF(texto){
+  const normal = texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[.,;:!?]+$/, '').replace(/\s+/g, ' ').trim();
+  const tentativas = [normal, normal.split(/[(\[\/–—]|\s-\s/)[0].trim()];
+  for(const t of tentativas){
+    if(t && VF_ESCALA_ORDENACAO_VF[t] !== undefined) return VF_ESCALA_ORDENACAO_VF[t];
+  }
+  return null;
+}
 function vfChaveOrdenacaoVF(td){
   const texto = Array.from(td.childNodes).filter(n => !(n.nodeType === 1 && (n.classList?.contains('vf-seta-ordem') || n.classList?.contains('vf-tabela-alca-largura')))).map(n => n.textContent).join('').trim();
   if(!texto || /^[-–—]$/.test(texto)) return {vazio: true, texto: ''};
   const m = texto.replace(/\s/g, '').replace(/^[±≈~=<>≤≥]+/, '').match(/^[-+]?\d+(?:[.,]\d+)?/);
   if(m) return {vazio: false, numero: parseFloat(m[0].replace(',', '.')), texto};
+  const posicao = vfPosicaoNaEscalaVF(texto);
+  if(posicao !== null) return {vazio: false, numero: posicao, texto};
   return {vazio: false, texto};
 }
 function vfOrdenarTabelaPorColunaVF(bloco, coluna){
@@ -13204,6 +13249,63 @@ function vfRenderizarListaTagsAtualVF(){
   const htmlCustomizadas = tags.map(t => `<span style="color:#B23A34;font-weight:600;font-size:var(--fs-b);border:1.5px solid #B23A34;border-radius:8px;padding:3.5px 6.5px;display:inline-flex;align-items:center;gap:6px">${escapeHtml(t.nome)}<span onclick="vfRemoverTagVF('${t.id}')" style="cursor:pointer;color:#999;font-weight:700">✕</span></span>`).join('');
   const html = htmlAutomaticas + htmlCustomizadas;
   container.innerHTML = html || '<span style="display:inline-block;color:#999;font-size:var(--fs-c)">Nenhuma tag ainda.</span>';
+  vfRenderizarTodasTagsVF(); // as que a questão já tem aparecem marcadas na busca - repinta junto, sempre
+}
+
+// ---- procurar entre as tags que já existem ----
+// o <datalist> do input existe desde sempre, mas o Safari do iPad
+// simplesmente não mostra sugestão nenhuma por ele - na prática não dava
+// pra saber que tags já existiam sem lembrar o nome de cabeça. Esta
+// lista resolve isso: abre/fecha pelo botão, filtra ao vivo pelo que
+// está digitado no campo, e um toque na tag já adiciona
+function vfNormalizarBuscaTagVF(texto){
+  return (texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+function vfAlternarTodasTagsVF(){
+  const caixa = document.getElementById('vf-tags-todas');
+  if(!caixa) return;
+  const abrindo = caixa.classList.contains('hidden');
+  caixa.classList.toggle('hidden', !abrindo);
+  const botao = document.getElementById('vf-tags-btn-ver');
+  if(botao) botao.textContent = abrindo ? 'Esconder tags existentes' : 'Ver tags existentes';
+  if(abrindo) vfRenderizarTodasTagsVF();
+}
+function vfFiltrarTodasTagsVF(){
+  const caixa = document.getElementById('vf-tags-todas');
+  if(caixa && !caixa.classList.contains('hidden')) vfRenderizarTodasTagsVF();
+}
+function vfRenderizarTodasTagsVF(){
+  const caixa = document.getElementById('vf-tags-todas');
+  if(!caixa || caixa.classList.contains('hidden')) return;
+  const busca = vfNormalizarBuscaTagVF(document.getElementById('vf-tags-input-novo')?.value);
+  const jaTem = new Set((vfTagsPorQuestaoVF.get(vfQuestaoIdTagsAtualVF) || []).map(t => t.id));
+  const lista = vfTodasTagsCacheVF
+    .filter(t => !busca || vfNormalizarBuscaTagVF(t.nome).includes(busca))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
+  if(!lista.length){
+    caixa.innerHTML = `<span style="color:#999;font-size:var(--fs-c)">${busca ? 'Nenhuma tag existente com esse nome - o botão + cria uma nova.' : 'Nenhuma tag criada ainda.'}</span>`;
+    return;
+  }
+  // tag que a questão JÁ tem continua na lista (some seria pior: dá a
+  // impressão de que ela não existe), só que apagada e sem clique
+  caixa.innerHTML = lista.map(t => {
+    const tem = jaTem.has(t.id);
+    const estilo = tem
+      ? 'color:#bbb;border:1.5px solid #e0e0e0;cursor:default'
+      : 'color:#B23A34;border:1.5px solid #B23A34;cursor:pointer';
+    const clique = tem ? '' : ` onclick="vfUsarTagExistenteVF('${t.id}')"`;
+    return `<span${clique} style="${estilo};font-weight:600;font-size:var(--fs-b);border-radius:8px;padding:3.5px 6.5px;display:inline-flex;align-items:center">${escapeHtml(t.nome)}</span>`;
+  }).join('');
+}
+// toque numa tag da lista: joga o nome no campo e usa o MESMO caminho de
+// sempre (vfAdicionarTagVF), que já sabe reaproveitar tag existente,
+// tratar NÚMERO/LISTA e salvar otimista - nada duplicado aqui
+function vfUsarTagExistenteVF(tagId){
+  const tag = vfTodasTagsCacheVF.find(t => String(t.id) === String(tagId));
+  if(!tag) return;
+  const input = document.getElementById('vf-tags-input-novo');
+  if(input) input.value = tag.nome;
+  vfAdicionarTagVF();
 }
 
 // desmarca eh_numero/eh_lista direto pelo popup de tags - espelha a
@@ -13225,6 +13327,9 @@ function vfAbrirPopupTagsVF(questaoId){
   document.getElementById('vf-tags-input-novo').value = '';
   document.getElementById('vf-tags-status').textContent = '';
   document.getElementById('vf-tags-datalist').innerHTML = vfTodasTagsCacheVF.map(t => `<option value="${escapeHtml(t.nome)}">`).join('');
+  // a lista de busca sempre começa fechada - abre no botão, por questão
+  document.getElementById('vf-tags-todas').classList.add('hidden');
+  document.getElementById('vf-tags-btn-ver').textContent = 'Ver tags existentes';
   vfRenderizarListaTagsAtualVF();
   abrirModal('modal-tags-vf');
 }
