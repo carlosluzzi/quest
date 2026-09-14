@@ -350,6 +350,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-svg-bloco,.vf-svg-bloco *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .vf-tabela-alinhamento,.vf-tabela-alinhamento *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .vf-tabela-bloco,.vf-tabela-bloco *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.vf-tabela-ajustando td{box-shadow:inset 0 0 0 0.5px #CFCFCA}
 .vf-nota-clicavel{border-bottom:1.5px dotted #888;cursor:pointer}
 .vf-celula-anotavel-com-nota{text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
 .vf-celula-anotavel-sem-nota{cursor:pointer}
@@ -1587,7 +1588,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-confirmar-exclusao-familia-vf" onclick="if(event.target===this) vfFecharDialogoExclusaoFamiliaVF()">
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title" id="vf-titulo-exclusao-familia"></h3>
-    <div id="vf-lista-irmas-exclusao" style="max-height:180px;overflow-y:auto;margin-bottom:10px"></div>
+    <div id="vf-lista-irmas-exclusao" style="max-height:45vh;overflow-y:auto;margin-bottom:10px"></div>
     <textarea id="motivo-exclusao-familia-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:70px;margin-bottom:14px"></textarea>
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn-primario" style="width:100%" id="vf-btn-exclusao-so-esta" onclick="confirmarExclusaoSoEstaVF()">Só esta</button>
@@ -1730,9 +1731,25 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-editar-celula-vf" onclick="if(event.target===this) vfFecharEdicaoCelulaVF()">
+  <div class="modal-conteudo">
+    <h3 class="config-title">Célula</h3>
+    <textarea id="vf-editar-celula-texto" class="textarea-padrao" placeholder="Texto da célula" style="min-height:90px"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="vfFecharEdicaoCelulaVF()">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="vfConfirmarEdicaoCelulaVF()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-anotacao-elemento-vf" onclick="if(event.target===this) fecharModal('modal-anotacao-elemento-vf')">
   <div class="modal-conteudo">
-    <h3 class="config-title">Anotação</h3>
+    <h3 class="config-title" id="vf-anotacao-elemento-titulo">Anotação</h3>
+    <div id="vf-anotacao-elemento-bloco-celula" class="hidden">
+      <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Texto da célula</div>
+      <textarea id="vf-anotacao-elemento-celula-texto" class="textarea-padrao" placeholder="Texto da célula" style="min-height:70px"></textarea>
+      <div style="font-size:var(--fs-b);color:#888;margin:10px 0 4px">Anotação (balão ao tocar)</div>
+    </div>
     <textarea id="vf-anotacao-elemento-texto" class="textarea-padrao" placeholder="Explicação pra esse pedaço" style="min-height:100px"></textarea>
     <div style="display:flex;gap:8px">
       <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-anotacao-elemento-vf')">Cancelar</button>
@@ -1930,7 +1947,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-12-004';
+const VERSAO_APP = '2026-09-14-003';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4525,7 +4542,7 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, la
       const temAlca = indiceLinha === 0 && idEscopo && i < celulas.length - 1;
       const alca = temAlca ? `<span class="vf-tabela-alca-largura" data-bloco-id="${idEscopo}" data-indice-coluna="${i}" ontouchstart="vfIniciarArrastoColunaVF(event)" onmousedown="vfIniciarArrastoColunaVF(event)" style="position:absolute;top:0;right:-4px;bottom:0;width:9px;cursor:col-resize;z-index:3;touch-action:none"></span>` : '';
       const posicaoRelativa = temAlca ? 'position:relative;' : '';
-      return `<td style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${bordaSuperior}${corTraco}${estiloLargura}${posicaoRelativa}">${conteudoCelula}${alca}</td>`;
+      return `<td class="vf-tabela-celula" data-linha="${indiceLinha}" data-coluna="${i}" style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${bordaSuperior}${corTraco}${estiloLargura}${posicaoRelativa}">${conteudoCelula}${alca}</td>`;
     }).join('');
     const estiloLinha = ehCabecalho ? 'background:#EAECF1' : '';
     return `<tr style="${estiloLinha}">${celulasHtml}</tr>`;
@@ -6247,10 +6264,32 @@ function vfEhToqueDeCaneta(touch){
 const VF_SUPORTA_COALESCED_VF = typeof PointerEvent !== 'undefined' && typeof PointerEvent.prototype.getCoalescedEvents === 'function';
 let vfUltimoPointerIdCanetaVF = null;
 let vfPointerIdAtivoVF = null;
+// pontos que a caneta reporta entre o pointerdown e o touchstart do
+// mesmo toque (o traço só "começa" oficialmente no touchstart) - guardados
+// e desenhados assim que o traço abre, pra não perder o comecinho da letra
+let vfPontosAntesDoInicioVF = [];
 if(VF_SUPORTA_COALESCED_VF){
   document.addEventListener('pointerdown', (e) => {
-    if(e.pointerType === 'pen') vfUltimoPointerIdCanetaVF = e.pointerId;
+    if(e.pointerType !== 'pen') return;
+    vfUltimoPointerIdCanetaVF = e.pointerId;
+    vfPontosAntesDoInicioVF = [];
+    // achado real (a "linha entre as letras" ao escrever rápido): quando
+    // a página está ocupada, os eventos de caneta (pointer) e de toque
+    // (touch) chegam fora de ordem - o pointerdown da letra NOVA pode
+    // chegar antes do touchend da letra anterior. Como o pointerId da
+    // caneta é o mesmo, os pontos da letra nova eram desenhados como
+    // continuação da anterior. Um pointerdown com traço ainda aberto só
+    // pode significar que o anterior já acabou: fecha ele aqui, agora
+    if(vfDesenhandoAgora) vfFinalizarTracoDesenho({changedTouches: [{clientX: e.clientX, clientY: e.clientY}], sintetico: true});
   }, {capture: true, passive: true});
+  // fecha o traço no pointerup/pointercancel da própria caneta, sem
+  // esperar o touchend (que pode vir atrasado pelo mesmo motivo)
+  const fecharPeloPointerVF = (e) => {
+    if(e.pointerType !== 'pen') return;
+    if(vfDesenhandoAgora && e.pointerId === vfPointerIdAtivoVF) vfFinalizarTracoDesenho({changedTouches: [{clientX: e.clientX, clientY: e.clientY}], sintetico: true});
+  };
+  document.addEventListener('pointerup', fecharPeloPointerVF, {capture: true, passive: true});
+  document.addEventListener('pointercancel', fecharPeloPointerVF, {capture: true, passive: true});
 }
 // rastreamento simples e sempre disponível (não depende de suporte a
 // PointerEvent/coalesced) - usado como fallback nos handlers de "toque
@@ -6343,6 +6382,7 @@ document.addEventListener('touchstart', (e) => {
 
   const rect = canvas.getBoundingClientRect();
   const ponto = {x: touch.clientX - rect.left, y: touch.clientY - rect.top};
+  vfCapturarAntesDoTracoVF(canvas); // cópia da área visível, pro histórico por região
   // snapshot pequeno (não o canvas inteiro, que agora pode ser bem grande)
   // da região ao redor do toque - se isso virar um tap leve (não um
   // traço de verdade), restaura essa região depois, desfazendo qualquer
@@ -6354,11 +6394,13 @@ document.addEventListener('touchstart', (e) => {
     const ladoSnapshot = 120 * dprSnapshot; // margem generosa - um tap leve não deveria se mover mais que isso
     const xSnapshot = Math.round(ponto.x * dprSnapshot - ladoSnapshot/2);
     const ySnapshot = Math.round(ponto.y * dprSnapshot - ladoSnapshot/2);
-    vfSnapshotRegiaoTapLeveVF = {
+    const xS = Math.max(0, xSnapshot), yS = Math.max(0, ySnapshot);
+    const wS = Math.min(canvas.width - xS, ladoSnapshot - (xS - xSnapshot)), hS = Math.min(canvas.height - yS, ladoSnapshot - (yS - ySnapshot));
+    vfSnapshotRegiaoTapLeveVF = (wS > 0 && hS > 0) ? {
       ctx: ctxAtivoSnapshot,
-      x: xSnapshot, y: ySnapshot, lado: ladoSnapshot,
-      imageData: ctxAtivoSnapshot.getImageData(xSnapshot, ySnapshot, ladoSnapshot, ladoSnapshot)
-    };
+      x: xS, y: yS,
+      recorte: vfRecortarCanvasVF(canvas, xS, yS, wS, hS)
+    } : null;
   }catch(e){ vfSnapshotRegiaoTapLeveVF = null; } // fora dos limites do canvas ou outro erro - sem snapshot, o pior caso é a marquinha residual antiga (não regride nada)
   vfUltimoPontoDesenho = ponto;
   vfPontoMedioAnterior = ponto;
@@ -6424,6 +6466,13 @@ document.addEventListener('touchstart', (e) => {
   // se aplica aos dois - sempre trava, sem mais distinção por tela
   vfTravarScrollContentVF();
   mostrarBarraDesenhoVF();
+  // pontos que chegaram pela caneta antes desse touchstart - desenha agora
+  if(VF_SUPORTA_COALESCED_VF && vfPontosAntesDoInicioVF.length){
+    const pendentes = vfPontosAntesDoInicioVF;
+    vfPontosAntesDoInicioVF = [];
+    pendentes.forEach(pt => vfProcessarPontoDesenhoVF(pt.x, pt.y, pt.p, rect));
+    vfAtualizarPreviewDestaqueVF();
+  }
 }, {passive: false});
 
 document.addEventListener('touchmove', (e) => {
@@ -6452,6 +6501,7 @@ document.addEventListener('touchmove', (e) => {
           const canvas = document.getElementById(vfModalExplicacaoAbertoVF() ? 'vf-canvas-desenho-explicacao' : 'vf-canvas-desenho');
           const rect = canvas.getBoundingClientRect();
           const ponto = {x: vfBotaoPendenteToqueInfo.x - rect.left, y: vfBotaoPendenteToqueInfo.y - rect.top};
+          vfCapturarAntesDoTracoVF(canvas); // mesma captura do outro caminho de início de traço
           vfUltimoPontoDesenho = ponto;
           vfPontoMedioAnterior = ponto;
           vfFormaTracoAtualVF = {minX: vfBotaoPendenteToqueInfo.x, maxX: vfBotaoPendenteToqueInfo.x, minY: vfBotaoPendenteToqueInfo.y, maxY: vfBotaoPendenteToqueInfo.y, comprimento: 0, ultimoX: vfBotaoPendenteToqueInfo.x, ultimoY: vfBotaoPendenteToqueInfo.y};
@@ -6784,7 +6834,12 @@ function vfAtualizarPreviewDestaqueVF(){
 // atrasar nada, ao contrário de tentar adivinhar a curvatura
 if(VF_SUPORTA_COALESCED_VF){
   document.addEventListener('pointermove', (e) => {
-    if(!vfDesenhandoAgora) return;
+    if(!vfDesenhandoAgora){
+      if(e.pointerType === 'pen' && e.pointerId === vfUltimoPointerIdCanetaVF && (e.buttons & 1) && vfPontosAntesDoInicioVF.length < 60){
+        vfPontosAntesDoInicioVF.push({x: e.clientX, y: e.clientY, p: e.pressure});
+      }
+      return;
+    }
     if(e.pointerId !== vfPointerIdAtivoVF) return;
     // mesma correção do fallback de touchmove logo acima: usa o canvas
     // certo conforme o contexto, não sempre o principal
@@ -6850,11 +6905,11 @@ function vfFinalizarTracoDesenho(e){
         // toques (essa e a do toque anterior, que tinha ficado guardada
         // esperando pra ver se um segundo toque chegaria)
         if(vfSnapshotRegiaoTapLeveVF){
-          try{ vfSnapshotRegiaoTapLeveVF.ctx.putImageData(vfSnapshotRegiaoTapLeveVF.imageData, vfSnapshotRegiaoTapLeveVF.x, vfSnapshotRegiaoTapLeveVF.y); }catch(err){}
+          try{ vfColarRegiaoVF(vfSnapshotRegiaoTapLeveVF.ctx, vfSnapshotRegiaoTapLeveVF.recorte, vfSnapshotRegiaoTapLeveVF.x, vfSnapshotRegiaoTapLeveVF.y); }catch(err){}
           vfSnapshotRegiaoTapLeveVF = null;
         }
         if(tapAnterior.snapshot){
-          try{ tapAnterior.snapshot.ctx.putImageData(tapAnterior.snapshot.imageData, tapAnterior.snapshot.x, tapAnterior.snapshot.y); }catch(err){}
+          try{ vfColarRegiaoVF(tapAnterior.snapshot.ctx, tapAnterior.snapshot.recorte, tapAnterior.snapshot.x, tapAnterior.snapshot.y); }catch(err){}
         }
         clearTimeout(tapAnterior.timeoutId);
         vfUltimoTapLeveCanetaVF = null; // consumido - não encadeia um terceiro tap como se fosse outro duplo toque
@@ -6875,7 +6930,9 @@ function vfFinalizarTracoDesenho(e){
       const timeoutId = setTimeout(() => {
         if(vfUltimoTapLeveCanetaVF && vfUltimoTapLeveCanetaVF.quando === agora){
           vfUltimoTapLeveCanetaVF = null;
-          vfSalvarEstadoHistoricoVF(); // marca pequena confirmada como traço de verdade - agora sim entra no histórico
+          // marca pequena confirmada como traço de verdade - entra no
+          // histórico como entrada por região (o "antes" é o próprio snapshot do toque)
+          vfSalvarEstadoHistoricoVF(snapshotDesseTap ? {regiao: {x: snapshotDesseTap.x, y: snapshotDesseTap.y, antes: snapshotDesseTap.recorte}} : undefined);
         }
       }, 360);
       vfUltimoTapLeveCanetaVF = {x: pontoAtual.x, y: pontoAtual.y, quando: agora, snapshot: snapshotDesseTap, timeoutId};
@@ -6914,8 +6971,9 @@ function vfFinalizarTracoDesenho(e){
         const dprRasurao = (window.devicePixelRatio || 1) * 1.5;
         ctxRasurao.globalCompositeOperation = 'source-over';
         ctxRasurao.globalAlpha = 1;
+        const antesDoRasurao = canvasRasurao.toDataURL(); // raro - só aqui vale pagar o toDataURL do canvas inteiro
         ctxRasurao.clearRect(0, 0, canvasRasurao.width/dprRasurao, canvasRasurao.height/dprRasurao);
-        vfSalvarEstadoHistoricoVF();
+        vfSalvarEstadoHistoricoVF({antesCompleto: antesDoRasurao});
       }
       canvasRasurao.style.opacity = ''; // caso o modo destaque tivesse deixado o canvas real invisível durante o traço
       vfCanvasTracoTemp = null;
@@ -6930,6 +6988,8 @@ function vfFinalizarTracoDesenho(e){
       return;
     }
   }
+  vfRegiaoTracoPendenteVF = vfCalcularRegiaoTracoVF(vfFormaTracoAtualVF);
+  if(vfRegiaoTracoPendenteVF) vfRegiaoTracoPendenteVF.canvas = vfRegiaoAntesDoTracoVF.canvas;
   vfFormaTracoAtualVF = null;
   // sempre libera, mesmo que o identifier não bata exatamente (evita a
   // trava de scroll ficar presa ligada por algum caso raro do navegador)
@@ -7004,29 +7064,117 @@ function vfModalExplicacaoAbertoVF(){
   return !!(modalExplicacao && !modalExplicacao.classList.contains('hidden'));
 }
 
-function vfSalvarEstadoHistoricoVF(){
+// ---- histórico de desenho por REGIÃO (desfazer/refazer) ----
+// Antes, cada traço terminava com canvas.toDataURL() do canvas INTEIRO
+// (página toda, em 3x de resolução) - codificar isso em PNG/base64 é
+// síncrono e pesado (dezenas a centenas de ms no iPad). Escrevendo
+// rápido, isso era a "travada" entre uma letra e outra, e a fila de
+// eventos represada nesse tempo era o que fazia o traço seguinte nascer
+// grudado no anterior (a linha entre as letras).
+// Agora cada entrada guarda só a região tocada pelo traço: um recorte
+// pequeno de ANTES (copiado no início do traço, direto de canvas pra
+// canvas, sem readback) e um de DEPOIS. Desfazer = colar o "antes";
+// refazer = colar o "depois". Nada de toDataURL no caminho da caneta.
+// Entradas "completas" (dataUrl) continuam existindo pros casos raros
+// que mexem no canvas inteiro (rasurão, desenho restaurado ao abrir).
+let vfCanvasAntesDoTracoVF = null;     // cópia da área visível do canvas, feita no início do traço
+let vfRegiaoAntesDoTracoVF = null;     // {sx, sy, sw, sh} em pixels do canvas, o que a cópia cobre
+let vfRegiaoTracoPendenteVF = null;    // região do último traço terminado, esperando virar entrada
+function vfEscalaCanvasVF(canvas){
+  const rect = canvas.getBoundingClientRect();
+  return rect.width ? canvas.width / rect.width : (window.devicePixelRatio || 1) * 1.5;
+}
+// copia (GPU→GPU) a parte VISÍVEL do canvas pra um canvas de rascunho
+// reutilizado - o traço que vai começar só pode acontecer dentro da tela
+// (a rolagem fica travada durante o traço), então isso basta pro "antes"
+function vfCapturarAntesDoTracoVF(canvas){
+  try{
+    const rect = canvas.getBoundingClientRect();
+    const escala = vfEscalaCanvasVF(canvas);
+    const x0 = Math.max(0, -rect.left), y0 = Math.max(0, -rect.top);
+    const x1 = Math.min(rect.width, window.innerWidth - rect.left), y1 = Math.min(rect.height, window.innerHeight - rect.top);
+    if(x1 <= x0 || y1 <= y0){ vfRegiaoAntesDoTracoVF = null; return; }
+    const sx = Math.floor(x0 * escala), sy = Math.floor(y0 * escala);
+    const sw = Math.min(canvas.width - sx, Math.ceil((x1 - x0) * escala)), sh = Math.min(canvas.height - sy, Math.ceil((y1 - y0) * escala));
+    if(!vfCanvasAntesDoTracoVF) vfCanvasAntesDoTracoVF = document.createElement('canvas');
+    if(vfCanvasAntesDoTracoVF.width !== sw || vfCanvasAntesDoTracoVF.height !== sh){ vfCanvasAntesDoTracoVF.width = sw; vfCanvasAntesDoTracoVF.height = sh; }
+    const c = vfCanvasAntesDoTracoVF.getContext('2d');
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalCompositeOperation = 'source-over';
+    c.globalAlpha = 1;
+    c.clearRect(0, 0, sw, sh);
+    c.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+    vfRegiaoAntesDoTracoVF = {sx, sy, sw, sh, canvas};
+  }catch(e){ vfRegiaoAntesDoTracoVF = null; }
+}
+// converte a caixa do traço (coordenadas de tela) numa região em pixels do
+// canvas, com margem pra espessura, recortada à área que foi copiada
+function vfCalcularRegiaoTracoVF(forma){
+  if(!forma || !vfRegiaoAntesDoTracoVF) return null;
+  const {sx, sy, sw, sh, canvas} = vfRegiaoAntesDoTracoVF;
+  const rect = canvas.getBoundingClientRect();
+  const escala = vfEscalaCanvasVF(canvas);
+  const margemCss = Math.max(vfEspessuraDesenhoAtual || 0, vfEspessuraDestaqueAtual || 0, vfTamanhoBorracha || 0) * 3 + 40;
+  let x0 = Math.floor((forma.minX - rect.left - margemCss) * escala), y0 = Math.floor((forma.minY - rect.top - margemCss) * escala);
+  let x1 = Math.ceil((forma.maxX - rect.left + margemCss) * escala), y1 = Math.ceil((forma.maxY - rect.top + margemCss) * escala);
+  x0 = Math.max(x0, sx); y0 = Math.max(y0, sy); x1 = Math.min(x1, sx + sw); y1 = Math.min(y1, sy + sh);
+  if(x1 <= x0 || y1 <= y0) return null;
+  return {x: x0, y: y0, w: x1 - x0, h: y1 - y0};
+}
+function vfRecortarCanvasVF(origem, x, y, w, h, offsetX, offsetY){
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  c.getContext('2d').drawImage(origem, x - (offsetX || 0), y - (offsetY || 0), w, h, 0, 0, w, h);
+  return c;
+}
+// cola um recorte de volta no canvas (substitui os pixels da região)
+function vfColarRegiaoVF(ctx, recorte, x, y){
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.clearRect(x, y, recorte.width, recorte.height);
+  ctx.drawImage(recorte, x, y);
+  ctx.restore();
+}
+
+// cria a entrada de histórico do que acabou de acontecer no canvas.
+// opcoes.regiao = {x, y, w, h, antes} força uma entrada por região com um
+// "antes" já pronto (toque leve); sem isso, usa a região do último traço
+// (vfRegiaoTracoPendenteVF); sem nenhuma das duas, entrada completa
+function vfSalvarEstadoHistoricoVF(opcoes){
   const naExplicacao = vfModalExplicacaoAbertoVF();
   const canvas = document.getElementById(naExplicacao ? 'vf-canvas-desenho-explicacao' : 'vf-canvas-desenho');
   const ctx = naExplicacao ? vfCtxDesenhoExplicacaoVF : vfCtxDesenho;
   if(!canvas || !ctx) return;
   const content = document.getElementById('content');
-  // se o usuário tinha desfeito e desenhou algo novo, descarta o "futuro"
-  // que ficou pra trás - não faz mais sentido poder refazer aquilo
   if(naExplicacao){
     vfHistoricoDesenhoExplicacao = vfHistoricoDesenhoExplicacao.slice(0, vfIndiceHistoricoExplicacaoVF + 1);
   }else{
     vfHistoricoDesenho = vfHistoricoDesenho.slice(0, vfIndiceHistoricoVF + 1);
   }
-  // guarda a largura/altura REAIS do conteúdo (não da tela toda) junto
-  // com a imagem - é o que permite calcular depois, ao girar a tela, um
-  // fator de correção proporcional (não um "não faz nada" nem um
-  // "estica pra viewport inteira", os dois já tentados e errados)
-  const entrada = {
-    dataUrl: canvas.toDataURL(),
-    timestamp: Date.now(),
-    larguraConteudo: content ? content.clientWidth : null,
-    alturaConteudo: content ? content.scrollHeight : null
-  };
+  let entrada;
+  const regiaoPronta = opcoes?.regiao || null;
+  const regiaoTraco = (!regiaoPronta && vfRegiaoTracoPendenteVF && vfRegiaoTracoPendenteVF.canvas === canvas) ? vfRegiaoTracoPendenteVF : null;
+  vfRegiaoTracoPendenteVF = null;
+  if(regiaoPronta){
+    entrada = {tipo: 'regiao', x: regiaoPronta.x, y: regiaoPronta.y, antes: regiaoPronta.antes, depois: vfRecortarCanvasVF(canvas, regiaoPronta.x, regiaoPronta.y, regiaoPronta.antes.width, regiaoPronta.antes.height)};
+  }else if(regiaoTraco){
+    const {x, y, w, h} = regiaoTraco;
+    const {sx, sy} = vfRegiaoAntesDoTracoVF;
+    entrada = {tipo: 'regiao', x, y, antes: vfRecortarCanvasVF(vfCanvasAntesDoTracoVF, x, y, w, h, sx, sy), depois: vfRecortarCanvasVF(canvas, x, y, w, h)};
+  }else{
+    // caminho raro (rasurão, desenho restaurado ao abrir a questão): o
+    // "antes" completo, se alguém capturou, está em opcoes.antesCompleto
+    entrada = {tipo: 'completo', antes: opcoes?.antesCompleto || null, depois: canvas.toDataURL()};
+  }
+  entrada.timestamp = Date.now();
+  entrada.larguraConteudo = content ? content.clientWidth : null;
+  entrada.alturaConteudo = content ? content.scrollHeight : null;
+  // "dataUrl" continua existindo pra quem restaura ao girar a tela /
+  // redimensionar - mas só é válido pra entrada do índice ATUAL, que por
+  // definição é o que está no canvas agora. Calculado só quando pedido
+  Object.defineProperty(entrada, 'dataUrl', {get(){ return canvas.toDataURL(); }});
   if(naExplicacao){
     vfHistoricoDesenhoExplicacao.push(entrada);
     if(vfHistoricoDesenhoExplicacao.length > VF_LIMITE_HISTORICO) vfHistoricoDesenhoExplicacao.shift();
@@ -7037,6 +7185,40 @@ function vfSalvarEstadoHistoricoVF(){
     vfIndiceHistoricoVF = vfHistoricoDesenho.length - 1;
   }
   vfAtualizarBotoesHistoricoVF();
+}
+
+// aplica um lado de uma entrada ('antes' pra desfazer, 'depois' pra refazer)
+let vfSequenciaRestauracaoVF = 0;
+function vfAplicarEntradaHistoricoVF(entrada, lado){
+  const naExplicacao = vfModalExplicacaoAbertoVF();
+  const canvas = document.getElementById(naExplicacao ? 'vf-canvas-desenho-explicacao' : 'vf-canvas-desenho');
+  const ctx = naExplicacao ? vfCtxDesenhoExplicacaoVF : vfCtxDesenho;
+  if(!canvas || !ctx || !entrada) return;
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  if(entrada.tipo === 'regiao'){
+    vfColarRegiaoVF(ctx, entrada[lado], entrada.x, entrada.y);
+    vfAtualizarBotoesHistoricoVF();
+    return;
+  }
+  const dataUrl = entrada[lado];
+  const minhaSequencia = ++vfSequenciaRestauracaoVF;
+  if(!dataUrl){
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+    vfAtualizarBotoesHistoricoVF();
+    return;
+  }
+  const img = new Image();
+  img.onload = () => {
+    if(minhaSequencia !== vfSequenciaRestauracaoVF) return;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+    ctx.drawImage(img, 0, 0, canvas.width/dpr, canvas.height/dpr);
+    vfAtualizarBotoesHistoricoVF();
+  };
+  img.src = dataUrl;
 }
 
 // ---- histórico PARALELO pra marcação de texto (grifar/sublinhar/riscar)
@@ -7082,41 +7264,6 @@ function vfRestaurarEstadoMarcacaoTextoVF(estado){
   if(correcao && estado.correcaoHtml !== null) correcao.innerHTML = estado.correcaoHtml;
 }
 
-let vfSequenciaRestauracaoVF = 0; // protege contra 2 restaurações se cruzando se clicar rápido demais
-function vfRestaurarEstadoHistoricoVF(estado){
-  const naExplicacao = vfModalExplicacaoAbertoVF();
-  const canvas = document.getElementById(naExplicacao ? 'vf-canvas-desenho-explicacao' : 'vf-canvas-desenho');
-  const ctx = naExplicacao ? vfCtxDesenhoExplicacaoVF : vfCtxDesenho;
-  if(!canvas || !ctx) return;
-  const dpr = (window.devicePixelRatio || 1) * 1.5;
-  const minhaSequencia = ++vfSequenciaRestauracaoVF;
-  if(!estado){
-    // não tem nenhum estado anterior - só limpa mesmo (volta ao vazio)
-    ctx.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
-    vfAtualizarBotoesHistoricoVF();
-    return;
-  }
-  // carrega a imagem ANTES de limpar - limpar e desenhar acontecem juntos,
-  // sem deixar um instante de canvas vazio visível entre os dois (era
-  // isso que causava o "piscar" ao clicar em desfazer/refazer)
-  const img = new Image();
-  img.onload = () => {
-    if(minhaSequencia !== vfSequenciaRestauracaoVF) return; // já tem uma chamada mais nova, descarta essa
-    ctx.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
-    // o modo de composição fica "destination-out" (apagar) depois de usar
-    // a borracha, e ISSO NUNCA SE DESFAZIA SOZINHO — desenhar (restaurar)
-    // em cima de um canvas já limpo usando modo "apagar" não pinta nada
-    // de volta (apagar algo que já está transparente não muda nada).
-    // Essa era a causa real do desfazer "parecer" apagar tudo em vez de
-    // restaurar: a imagem restaurada simplesmente nunca era pintada
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 1; // mesma lição do bug do modo "apagar" - o destaque deixa alpha reduzido, precisa resetar antes de restaurar
-    ctx.drawImage(img, 0, 0, canvas.width/dpr, canvas.height/dpr);
-    vfAtualizarBotoesHistoricoVF();
-  };
-  img.src = estado.dataUrl;
-}
-
 // desfazer/refazer decide ENTRE os dois sistemas (desenho no canvas e
 // marcação de texto no DOM) qual foi a ação mais recente, comparando os
 // timestamps guardados em cada histórico - antes só existia o do
@@ -7132,9 +7279,9 @@ function vfDesfazerDesenho(){
     // explicação: só tem desenho, não tem marcação de texto pra
     // considerar - mais simples que o caso principal abaixo
     if(vfIndiceHistoricoExplicacaoVF < 0) return;
+    const entradaDesfeita = vfHistoricoDesenhoExplicacao[vfIndiceHistoricoExplicacaoVF];
     vfIndiceHistoricoExplicacaoVF--;
-    const estadoAnterior = vfIndiceHistoricoExplicacaoVF >= 0 ? vfHistoricoDesenhoExplicacao[vfIndiceHistoricoExplicacaoVF] : null;
-    vfRestaurarEstadoHistoricoVF(estadoAnterior);
+    vfAplicarEntradaHistoricoVF(entradaDesfeita, 'antes');
     return;
   }
 
@@ -7150,9 +7297,9 @@ function vfDesfazerDesenho(){
     vfRestaurarEstadoMarcacaoTextoVF(estadoAnterior);
     vfAtualizarBotoesHistoricoVF();
   }else{
+    const entradaDesfeita = vfHistoricoDesenho[vfIndiceHistoricoVF];
     vfIndiceHistoricoVF--;
-    const estadoAnterior = vfIndiceHistoricoVF >= 0 ? vfHistoricoDesenho[vfIndiceHistoricoVF] : null;
-    vfRestaurarEstadoHistoricoVF(estadoAnterior);
+    vfAplicarEntradaHistoricoVF(entradaDesfeita, 'antes');
   }
 }
 
@@ -7165,7 +7312,7 @@ function vfRefazerDesenho(){
   if(naExplicacao){
     if(vfIndiceHistoricoExplicacaoVF >= vfHistoricoDesenhoExplicacao.length - 1) return;
     vfIndiceHistoricoExplicacaoVF++;
-    vfRestaurarEstadoHistoricoVF(vfHistoricoDesenhoExplicacao[vfIndiceHistoricoExplicacaoVF]);
+    vfAplicarEntradaHistoricoVF(vfHistoricoDesenhoExplicacao[vfIndiceHistoricoExplicacaoVF], 'depois');
     return;
   }
 
@@ -7182,7 +7329,7 @@ function vfRefazerDesenho(){
     vfAtualizarBotoesHistoricoVF();
   }else{
     vfIndiceHistoricoVF++;
-    vfRestaurarEstadoHistoricoVF(vfHistoricoDesenho[vfIndiceHistoricoVF]);
+    vfAplicarEntradaHistoricoVF(vfHistoricoDesenho[vfIndiceHistoricoVF], 'depois');
   }
 }
 
@@ -11904,7 +12051,7 @@ function vfIniciarPressionarTabelaVF(evento){
   const bloco = evento.target.closest?.('.vf-tabela-bloco');
   if(!bloco) return;
   if(evento.target.closest('.vf-tabela-alinhamento')) return; // já tocando no próprio controle, não rearma
-  if(evento.target.closest('.vf-tabela-alca-largura')) return; // arrastando a alça de largura, não é long-press
+  if(evento.target.closest('.vf-tabela-alca-largura, .vf-tabela-divisor')) return; // arrastando a alça/divisor de largura, não é long-press
   clearTimeout(vfTimerPressionarTabelaVF);
   vfTimerPressionarTabelaVF = setTimeout(() => vfMostrarBotoesAlinhamentoTabelaVF(bloco), 500);
   const cancelarSeMoveu = () => { clearTimeout(vfTimerPressionarTabelaVF); limpar(); };
@@ -11971,6 +12118,7 @@ function vfIniciarArrastoColunaVF(evento){
     if(novaDir < MIN_PX){ novaDir = MIN_PX; novaEsq = larguraIniEsq + larguraIniDir - MIN_PX; }
     celEsq.style.width = (novaEsq / larguraTabela * 100) + '%';
     celDir.style.width = (novaDir / larguraTabela * 100) + '%';
+    vfReposicionarDivisoresTabelaVF(bloco);
 
     const rect = alca.getBoundingClientRect();
     const x = rect.left + rect.width/2;
@@ -11998,6 +12146,7 @@ function vfIniciarArrastoColunaVF(evento){
     const somaPx = largurasFinaisPx.reduce((a,b) => a+b, 0);
     const largurasFinais = largurasFinaisPx.map(px => Math.max(1, Math.round(px / somaPx * 100)));
     tabela.dataset.larguras = largurasFinais.join(','); // pra um reajuste futuro (girar a tela) respeitar o arrasto
+    vfReposicionarDivisoresTabelaVF(bloco);
     vfSalvarLargurasTabelaVF(blocoId, largurasFinais);
   }
   document.addEventListener('mousemove', onMove);
@@ -12082,15 +12231,20 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
     btnDesfazer.onclick = (e) => {
       e.stopPropagation();
       barra.remove();
+      vfEsconderDivisoresTabelaVF(bloco);
       vfDesfazerAlteracoesTabelaVF(bloco.id);
     };
     barra.appendChild(btnDesfazer);
   }
 
   bloco.appendChild(barra);
+  vfMostrarDivisoresTabelaVF(bloco); // linhas verticais arrastáveis (modo "cheia")
+  vfIgnorarProximoCliqueTabelaVF = true; // soltar o dedo depois de segurar gera um clique - não pode abrir a edição de célula
+  setTimeout(() => { vfIgnorarProximoCliqueTabelaVF = false; }, 600);
   const esconderSeTocarFora = (e) => {
-    if(e && e.target && e.target.closest('.vf-tabela-alinhamento')) return;
+    if(e && e.target && e.target.closest('.vf-tabela-alinhamento, .vf-tabela-divisor')) return;
     barra.remove();
+    vfEsconderDivisoresTabelaVF(bloco);
     document.removeEventListener('touchstart', esconderSeTocarFora);
     document.removeEventListener('mousedown', esconderSeTocarFora);
   };
@@ -12098,6 +12252,168 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
     document.addEventListener('touchstart', esconderSeTocarFora, {passive: true});
     document.addEventListener('mousedown', esconderSeTocarFora);
   }, 50);
+}
+
+// ---- edição de célula de tabela (toque simples numa célula) ----
+// Lê o \begin{array} de origem, troca só a célula pedida e salva de volta
+// pelo mesmo caminho das opções de tabela (vfPersistirTrechoTabelaVF).
+// A célula na tela é atualizada no lugar, sem re-renderizar a questão.
+// \sidebyside fica de fora (duas tabelas no mesmo trecho-fonte).
+const VF_REGEX_ARRAY_FONTE_VF = /^(\\begin\{array\}(?:\[[^\]]*\])?\{[lcr]+\})([\s\S]*?)(\\end\{array\}[\s\S]*)$/;
+// separa o conteúdo do array em linhas BRUTAS (mantendo [Npt], espaços e
+// linhas vazias) e devolve, pra cada linha visível na tela, o índice da
+// linha bruta correspondente - a renderização ignora linhas vazias, então
+// "linha 2 na tela" nem sempre é "parte 2 do split"
+function vfLerCelulasFonteVF(textoOriginalMatch){
+  const m = textoOriginalMatch.match(VF_REGEX_ARRAY_FONTE_VF);
+  if(!m) return null;
+  const partes = m[2].split('\\\\');
+  const mapaLinhas = [];
+  partes.forEach((p, i) => { if(p.replace(/\[\d+pt\]/g, '').trim()) mapaLinhas.push(i); });
+  return {prefixo: m[1], partes, sufixo: m[3], mapaLinhas};
+}
+function vfTextoBrutoCelulaVF(blocoId, linha, coluna){
+  const origem = vfTabelaOrigemVF.get(blocoId);
+  if(!origem || origem.ehSideBySideVF) return null;
+  const fonte = vfLerCelulasFonteVF(origem.textoOriginalMatch);
+  if(!fonte || fonte.mapaLinhas[linha] === undefined) return null;
+  const celulas = fonte.partes[fonte.mapaLinhas[linha]].replace(/\[\d+pt\]/g, '').split('&');
+  if(coluna >= celulas.length) return ''; // célula que não existe na fonte (linha mais curta) - vazia
+  return celulas[coluna].trim();
+}
+// monta o trecho-fonte novo com a célula trocada (não salva)
+function vfMontarTrechoComCelulaVF(blocoId, linha, coluna, textoNovo){
+  const origem = vfTabelaOrigemVF.get(blocoId);
+  if(!origem || origem.ehSideBySideVF) return null;
+  const fonte = vfLerCelulasFonteVF(origem.textoOriginalMatch);
+  if(!fonte || fonte.mapaLinhas[linha] === undefined) return null;
+  const idx = fonte.mapaLinhas[linha];
+  const espacamento = (fonte.partes[idx].match(/\[\d+pt\]/g) || []).join('');
+  const celulas = fonte.partes[idx].replace(/\[\d+pt\]/g, '').split('&').map(c => c.trim());
+  while(celulas.length <= coluna) celulas.push('');
+  celulas[coluna] = textoNovo.replace(/&/g, 'e').replace(/\\\\/g, '\\newline'); // "&" e "\\" quebrariam a estrutura da tabela
+  fonte.partes[idx] = espacamento + '\n' + celulas.join(' & ') + (idx === fonte.partes.length - 1 ? '\n' : '');
+  return fonte.prefixo + fonte.partes.join('\\\\') + fonte.sufixo;
+}
+// redesenha só a célula na tela com o texto novo, preservando a alça de
+// largura (se tiver) e o clique de anotação (fica no próprio <td>)
+function vfRedesenharCelulaVF(td, textoNovo){
+  const alca = td.querySelector('.vf-tabela-alca-largura');
+  td.innerHTML = vfFormatarCelulaArrayVF(textoNovo);
+  if(alca) td.appendChild(alca);
+  const ehSoTraco = /^[-–—]$/.test(textoNovo.trim());
+  td.style.color = ehSoTraco ? '#7A7A74' : '';
+  delete td.dataset.curta;
+  const bloco = td.closest('.vf-tabela-bloco');
+  if(bloco) vfAjustarLarguraTabelaVF(bloco);
+}
+// salva o texto novo de uma célula (fonte + banco + tela)
+async function vfSalvarTextoCelulaVF(td, textoNovo){
+  const bloco = td.closest('.vf-tabela-bloco');
+  if(!bloco) return false;
+  const linha = Number(td.dataset.linha), coluna = Number(td.dataset.coluna);
+  const novoTrecho = vfMontarTrechoComCelulaVF(bloco.id, linha, coluna, textoNovo);
+  if(novoTrecho === null){ vfMostrarAvisoVF('Não consegui localizar essa célula no texto de origem.'); return false; }
+  vfRedesenharCelulaVF(td, textoNovo);
+  const ok = await vfPersistirTrechoTabelaVF(bloco.id, novoTrecho);
+  return ok;
+}
+
+// pop-up de edição de célula (tabelas do enunciado/correção - nas
+// anexadas, o campo de texto entra dentro do pop-up de anotação)
+let vfCelulaEmEdicaoVF = null;
+function vfAbrirEdicaoCelulaVF(td){
+  const bloco = td.closest('.vf-tabela-bloco');
+  if(!bloco) return;
+  const textoBruto = vfTextoBrutoCelulaVF(bloco.id, Number(td.dataset.linha), Number(td.dataset.coluna));
+  if(textoBruto === null) return;
+  vfCelulaEmEdicaoVF = td;
+  if(typeof pausarTimerVF === 'function') pausarTimerVF();
+  const campo = document.getElementById('vf-editar-celula-texto');
+  campo.value = textoBruto;
+  abrirModal('modal-editar-celula-vf');
+  setTimeout(() => { campo.focus(); }, 50);
+}
+function vfFecharEdicaoCelulaVF(){
+  fecharModal('modal-editar-celula-vf');
+  vfCelulaEmEdicaoVF = null;
+  if(typeof retomarOuDescartarPendenteVF === 'function') retomarOuDescartarPendenteVF();
+}
+async function vfConfirmarEdicaoCelulaVF(){
+  const td = vfCelulaEmEdicaoVF;
+  if(!td) return;
+  const textoNovo = document.getElementById('vf-editar-celula-texto').value.replace(/—/g, '–').trim();
+  fecharModal('modal-editar-celula-vf');
+  vfCelulaEmEdicaoVF = null;
+  await vfSalvarTextoCelulaVF(td, textoNovo);
+  if(typeof retomarOuDescartarPendenteVF === 'function') retomarOuDescartarPendenteVF();
+}
+// toque simples em célula de tabela do enunciado/correção abre a edição.
+// Nas tabelas anexadas (elemento-html) o <td> já tem o próprio onclick
+// (anotação), que para a propagação antes de chegar aqui
+let vfIgnorarProximoCliqueTabelaVF = false;
+document.addEventListener('click', (e) => {
+  const td = e.target.closest?.('td.vf-tabela-celula');
+  if(!td) return;
+  if(vfIgnorarProximoCliqueTabelaVF){ vfIgnorarProximoCliqueTabelaVF = false; return; }
+  if(e.target.closest('.vf-nota-clicavel, .vf-tabela-alca-largura, .vf-tabela-divisor, .vf-tabela-alinhamento')) return;
+  if(vfBalaoExplicacaoEstaAbertoVF()) return; // esse toque só fecha o balão (o listener global faz isso)
+  const bloco = td.closest('.vf-tabela-bloco');
+  const origem = bloco && vfTabelaOrigemVF.get(bloco.id);
+  if(!origem || origem.ehSideBySideVF || origem.contexto?.tipo !== 'campo-vf') return;
+  if(bloco.querySelector('.vf-tabela-alinhamento')) return; // barra de ajuste aberta - o toque fecha ela, não edita
+  e.stopPropagation();
+  vfAbrirEdicaoCelulaVF(td);
+});
+
+// ---- divisores estilo planilha (modo ajuste) ----
+// linhas verticais visíveis em cada divisa de coluna, atravessando a
+// tabela, com área de toque larga e um puxador no topo - arrastáveis com
+// dedo ou caneta. Reusam vfIniciarArrastoColunaVF (mesmo dataset da
+// alça antiga). Só no modo "cheia" (tabela esticada): na pequena as
+// colunas são iguais por regra, não há proporção pra ajustar
+function vfMostrarDivisoresTabelaVF(bloco){
+  vfEsconderDivisoresTabelaVF(bloco);
+  const origem = vfTabelaOrigemVF.get(bloco.id);
+  if(!origem || origem.ehSideBySideVF) return;
+  if(bloco.dataset.modoLargura !== 'cheia') return;
+  const tabela = bloco.querySelector('table');
+  const primeiraLinha = tabela?.querySelector('tr:first-child');
+  if(!primeiraLinha) return;
+  const celulas = Array.from(primeiraLinha.children);
+  bloco.classList.add('vf-tabela-ajustando');
+  for(let i = 0; i < celulas.length - 1; i++){
+    const div = document.createElement('div');
+    div.className = 'vf-tabela-divisor';
+    div.dataset.blocoId = bloco.id;
+    div.dataset.indiceColuna = String(i);
+    div.style.cssText = 'position:absolute;top:0;width:28px;z-index:4;cursor:col-resize;touch-action:none;display:flex;flex-direction:column;align-items:center';
+    div.innerHTML = '<div style="width:14px;height:14px;border-radius:50%;background:#B23A34;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);margin-top:-7px;flex-shrink:0"></div><div style="width:2px;flex:1;background:#B23A34;opacity:0.85"></div>';
+    div.ontouchstart = vfIniciarArrastoColunaVF;
+    div.onmousedown = vfIniciarArrastoColunaVF;
+    bloco.appendChild(div);
+  }
+  vfReposicionarDivisoresTabelaVF(bloco);
+}
+function vfReposicionarDivisoresTabelaVF(bloco){
+  const tabela = bloco.querySelector('table');
+  const primeiraLinha = tabela?.querySelector('tr:first-child');
+  if(!primeiraLinha) return;
+  const celulas = Array.from(primeiraLinha.children);
+  const rectBloco = bloco.getBoundingClientRect();
+  const rectTabela = tabela.getBoundingClientRect();
+  bloco.querySelectorAll('.vf-tabela-divisor').forEach(div => {
+    const i = Number(div.dataset.indiceColuna);
+    const rect = celulas[i]?.getBoundingClientRect();
+    if(!rect) return;
+    div.style.left = (rect.right - rectBloco.left - 14) + 'px';
+    div.style.top = (rectTabela.top - rectBloco.top) + 'px';
+    div.style.height = rectTabela.height + 'px';
+  });
+}
+function vfEsconderDivisoresTabelaVF(bloco){
+  bloco.querySelectorAll('.vf-tabela-divisor').forEach(d => d.remove());
+  bloco.classList.remove('vf-tabela-ajustando');
 }
 
 // volta uma tabela (alinhamento, cabeçalho, largura de coluna) pro
@@ -12153,20 +12469,34 @@ async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, largu
   if(!temCabecalhoFinal && !origem.ehSideBySideVF) tokens.push('semcabecalho'); // sidebyside não tem esse controle pro par inteiro - cada array interno já tem o seu
   if(largurasFinal) tokens.push(`larguras:${largurasFinal.join(',')}`);
   const colchetes = tokens.length ? `[${tokens.join(',')}]` : '';
-
-  const {contexto, textoOriginalMatch} = origem;
   // \sidebyside[...] ou \begin{array}[...] - o comando certo depende de
   // qual tipo de bloco é essa origem
   const comandoRegex = origem.ehSideBySideVF ? /^\\sidebyside(?:\[[^\]]*\])?/ : /^\\begin\{array\}(?:\[[^\]]*\])?/;
   const comandoNovo = origem.ehSideBySideVF ? `\\sidebyside${colchetes}` : `\\begin{array}${colchetes}`;
-  const novoTrecho = textoOriginalMatch.replace(comandoRegex, comandoNovo);
-
+  const novoTrecho = origem.textoOriginalMatch.replace(comandoRegex, comandoNovo);
+  const ok = await vfPersistirTrechoTabelaVF(blocoId, novoTrecho);
+  if(!ok) return;
+  origem.alinhamentoAtual = alinhamentoFinal;
+  origem.temCabecalhoAtual = temCabecalhoFinal;
+  origem.largurasAtuais = largurasFinal;
+}
+// substitui o trecho-fonte de uma tabela (textoOriginalMatch → novoTrecho)
+// no campo de onde ela veio e salva - usado pelas opções de tabela
+// (alinhamento/cabeçalho/larguras) e pela edição de célula. Devolve true
+// se conseguiu
+async function vfPersistirTrechoTabelaVF(blocoId, novoTrecho){
+  const origem = vfTabelaOrigemVF.get(blocoId);
+  if(!origem || !origem.contexto){
+    vfMostrarAvisoVF('Não consegui salvar essa mudança (não achei de onde essa tabela veio). A mudança visual continua nessa tela, mas não fica salva.');
+    return false;
+  }
+  const {contexto, textoOriginalMatch} = origem;
   if(contexto.tipo === 'campo-vf'){
     const entrada = estadoVF.historico.find(h => h.item.id === contexto.questaoId);
     const textoAtual = entrada?.item?.[contexto.campo];
     if(!entrada || textoAtual === undefined || !textoAtual.includes(textoOriginalMatch)){
-      vfMostrarAvisoVF('Não consegui salvar essa mudança (o texto pode ter mudado nesse meio tempo). Tenta segurar de novo.');
-      return;
+      vfMostrarAvisoVF('Não consegui salvar essa mudança (o texto pode ter mudado nesse meio tempo). Tenta de novo.');
+      return false;
     }
     const textoNovo = textoAtual.replace(textoOriginalMatch, novoTrecho);
     entrada.item[contexto.campo] = textoNovo;
@@ -12180,30 +12510,26 @@ async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, largu
   }else if(contexto.tipo === 'elemento-html'){
     const {data, error: erroBusca} = await sb.from('elementos_html_vf').select('latex_fonte').eq('id', contexto.elementoId).single();
     if(erroBusca || !data || !data.latex_fonte.includes(textoOriginalMatch)){
-      vfMostrarAvisoVF('Não consegui salvar essa mudança (o elemento pode ter mudado nesse meio tempo). Tenta segurar de novo.');
-      return;
+      vfMostrarAvisoVF('Não consegui salvar essa mudança (o elemento pode ter mudado nesse meio tempo). Tenta de novo.');
+      return false;
     }
     const textoNovo = data.latex_fonte.replace(textoOriginalMatch, novoTrecho);
     const itemCache = vfBibliotecaComplementarCacheVF?.find(e => e.id === contexto.elementoId);
     if(itemCache) itemCache.latex_fonte = textoNovo;
-    // elemento reutilizável: pode estar anexado em várias questões
-    // diferentes, cada uma com seu próprio cache local (vfElementosCacheVF)
-    // já carregado. Sem invalidar aqui, a mudança salvava certo no banco
-    // mas só aparecia na questão atual - outra questão com essa mesma
-    // tabela anexada continuava mostrando a versão antiga até recarregar
-    // por algum outro motivo
     vfInvalidarCacheElementosPorElementoIdVF(contexto.elementoId);
     await vfSalvarComRetryVF(
       () => sb.from('elementos_html_vf').update({latex_fonte: textoNovo}).eq('id', contexto.elementoId),
       'a mudança na tabela',
       null
     );
+  }else{
+    vfMostrarAvisoVF('Não consegui salvar essa mudança (origem desconhecida).');
+    return false;
   }
   origem.textoOriginalMatch = novoTrecho;
-  origem.alinhamentoAtual = alinhamentoFinal;
-  origem.temCabecalhoAtual = temCabecalhoFinal;
-  origem.largurasAtuais = largurasFinal;
+  return true;
 }
+
 function vfSalvarAlinhamentoTabelaVF(blocoId, alinhamento){
   return vfSalvarOpcoesTabelaVF(blocoId, {alinhamento});
 }
@@ -13213,17 +13539,43 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   // posição padrão do CSS (sem left/top definidos - canto superior
   // esquerdo). Checar o comprimento, não só a existência, resolve
   const ponto = (evento.touches && evento.touches.length > 0) ? evento.touches[0] : evento;
-  const margem = 10;
-  requestAnimationFrame(() => {
-    const rect = balao.getBoundingClientRect();
-    let left = ponto.clientX - rect.width/2;
-    left = Math.max(margem, Math.min(left, window.innerWidth - rect.width - margem));
-    let top = ponto.clientY + 18;
-    if(top + rect.height > window.innerHeight - margem) top = ponto.clientY - rect.height - 18; // sem espaço embaixo, mostra em cima do dedo
-    balao.style.left = left + 'px';
-    balao.style.top = top + 'px';
-  });
+  // guarda o elemento tocado e a posição do toque relativa a ele - o balão
+  // é position:fixed, então ao rolar a tela ele ficava parado enquanto a
+  // célula ia embora. Com a âncora, vfReposicionarBalaoExplicacaoVF
+  // recalcula a cada rolagem e ele acompanha a célula
+  const ancora = (evento.currentTarget && evento.currentTarget.getBoundingClientRect) ? evento.currentTarget : (evento.target?.closest?.('td, span, div') || null);
+  if(ancora){
+    const ra = ancora.getBoundingClientRect();
+    vfBalaoAncoraVF = {el: ancora, dx: ponto.clientX - ra.left, dy: ponto.clientY - ra.top};
+  }else{
+    vfBalaoAncoraVF = null;
+  }
+  requestAnimationFrame(() => vfPosicionarBalaoExplicacaoVF(ponto.clientX, ponto.clientY));
 }
+let vfBalaoAncoraVF = null;
+function vfPosicionarBalaoExplicacaoVF(clientX, clientY){
+  const balao = document.getElementById('vf-balao-explicacao');
+  const margem = 10;
+  const rect = balao.getBoundingClientRect();
+  let left = clientX - rect.width/2;
+  left = Math.max(margem, Math.min(left, window.innerWidth - rect.width - margem));
+  let top = clientY + 18;
+  if(top + rect.height > window.innerHeight - margem) top = clientY - rect.height - 18; // sem espaço embaixo, mostra em cima do dedo
+  balao.style.left = left + 'px';
+  balao.style.top = top + 'px';
+}
+function vfReposicionarBalaoExplicacaoVF(){
+  if(!vfBalaoExplicacaoEstaAbertoVF() || !vfBalaoAncoraVF) return;
+  const {el, dx, dy} = vfBalaoAncoraVF;
+  if(!el.isConnected){ vfEsconderBalaoExplicacaoVF(); return; }
+  const ra = el.getBoundingClientRect();
+  // âncora saiu da tela por completo - fecha, em vez de deixar o balão
+  // grudado na borda apontando pra nada
+  if(ra.bottom < 0 || ra.top > window.innerHeight){ vfEsconderBalaoExplicacaoVF(); return; }
+  vfPosicionarBalaoExplicacaoVF(ra.left + dx, ra.top + dy);
+}
+document.addEventListener('scroll', vfReposicionarBalaoExplicacaoVF, {capture: true, passive: true});
+window.addEventListener('resize', vfReposicionarBalaoExplicacaoVF);
 function vfEsconderBalaoExplicacaoVF(){
   document.getElementById('vf-balao-explicacao').classList.add('hidden');
 }
@@ -14465,8 +14817,19 @@ function vfAplicarIdentificadoresECliquesVF(bloco, mapaAnotacoes, elementoHtmlId
 // criada/editada agora) - preenchido ao abrir, usado só na hora de salvar
 let vfAnotacaoContextoAtualVF = null;
 function vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, textoAtual, celulaEl){
-  vfAnotacaoContextoAtualVF = {elementoHtmlId, identificador, celulaEl};
+  vfAnotacaoContextoAtualVF = {elementoHtmlId, identificador, celulaEl, textoCelulaOriginal: null};
   document.getElementById('vf-anotacao-elemento-texto').value = textoAtual || '';
+  // célula de tabela com origem localizável: mostra também o texto dela
+  // pra editar no mesmo pop-up (\sidebyside e blocos sem origem: só a anotação)
+  const blocoTabela = celulaEl?.closest?.('.vf-tabela-bloco');
+  const textoCelula = (blocoTabela && celulaEl.dataset.linha !== undefined) ? vfTextoBrutoCelulaVF(blocoTabela.id, Number(celulaEl.dataset.linha), Number(celulaEl.dataset.coluna)) : null;
+  const blocoCampo = document.getElementById('vf-anotacao-elemento-bloco-celula');
+  blocoCampo.classList.toggle('hidden', textoCelula === null);
+  document.getElementById('vf-anotacao-elemento-titulo').textContent = textoCelula === null ? 'Anotação' : 'Célula';
+  if(textoCelula !== null){
+    document.getElementById('vf-anotacao-elemento-celula-texto').value = textoCelula;
+    vfAnotacaoContextoAtualVF.textoCelulaOriginal = textoCelula;
+  }
   document.getElementById('vf-anotacao-elemento-btn-excluir').classList.toggle('hidden', !textoAtual);
   abrirModal('modal-anotacao-elemento-vf');
 }
@@ -14494,9 +14857,18 @@ async function vfExcluirAnotacaoElementoVF(){
 }
 async function vfConfirmarAnotacaoElementoVF(){
   if(!vfAnotacaoContextoAtualVF) return;
-  const {elementoHtmlId, identificador, celulaEl} = vfAnotacaoContextoAtualVF;
+  const {elementoHtmlId, identificador, celulaEl, textoCelulaOriginal} = vfAnotacaoContextoAtualVF;
   const texto = document.getElementById('vf-anotacao-elemento-texto').value.trim().replace(/—/g, '–'); // travessão longo sempre vira curto, mesma regra do resto do app
-  if(!texto) return;
+  // texto da célula (quando o campo está visível) - salva se mudou,
+  // independente da anotação
+  if(textoCelulaOriginal !== null){
+    const textoCelulaNovo = document.getElementById('vf-anotacao-elemento-celula-texto').value.replace(/—/g, '–').trim();
+    if(textoCelulaNovo !== textoCelulaOriginal){
+      await vfSalvarTextoCelulaVF(celulaEl, textoCelulaNovo);
+      vfAnotacaoContextoAtualVF.textoCelulaOriginal = textoCelulaNovo;
+    }
+  }
+  if(!texto){ fecharModal('modal-anotacao-elemento-vf'); return; }
   const {error} = await sb.from('anotacoes_elemento_html_vf').upsert({elemento_html_id: elementoHtmlId, identificador, texto_explicacao: texto}, {onConflict: 'elemento_html_id,identificador'});
   if(error){ vfMostrarAvisoVF('Erro ao salvar anotação: '+error.message); return; }
   vfInvalidarCacheElementosPorElementoIdVF(elementoHtmlId);
@@ -15088,12 +15460,13 @@ function vfMostrarDialogoExclusaoFamiliaVF(procurando){
     // de undefined estourava ANTES do abrirModal - resultado: o pop-up
     // de excluir não abria em nenhuma questão que tivesse irmãs (e abria
     // normal nas que não tinham, o que fazia parecer intermitente)
+    // afirmação INTEIRA (pedido do Carlos: cortada não dá pra decidir se
+    // exclui ou não) - a lista rola se ficar comprida
     lista.innerHTML = vfIrmasParaExcluirVF.map(irma => {
       const textoCompleto = irma.texto_resumido ?? irma.texto ?? '';
-      const resumido = textoCompleto.slice(0, 120);
       return `
-      <div style="padding:8px 0;border-bottom:0.5px solid #f0f0ee;font-size:var(--fs-c);color:#555">
-        <span style="font-weight:600;color:${irma.resposta ? '#2E7D32' : '#A32D2D'}">${irma.resposta ? 'V' : 'F'}</span> ${escapeHtml(resumido)}${textoCompleto.length > 120 ? '…' : ''}
+      <div style="padding:8px 0;border-bottom:0.5px solid #f0f0ee;font-size:var(--fs-c);color:#555;line-height:1.4">
+        <span style="font-weight:600;color:${irma.resposta ? '#2E7D32' : '#A32D2D'}">${irma.resposta ? 'V' : 'F'}</span> ${formatarTextoItemVF(textoCompleto)}
       </div>`;
     }).join('');
     btnSoEsta.textContent = 'Só esta';
