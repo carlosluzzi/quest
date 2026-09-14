@@ -323,7 +323,6 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
   #wrapper-barra-adicionar{display:none}
   #view-topico-detalhe{left:250px !important;width:calc(100% - 250px) !important}
   #pagina-flash-salvos-vf{left:250px !important;width:calc(100% - 250px) !important}
-  #pagina-biblioteca-vf{left:250px !important;width:calc(100% - 250px) !important}
   #pagina-favoritos-vf{left:250px !important;width:calc(100% - 250px) !important}
   .nav-icon{width:24px;height:24px}
   .badge-notificacao{top:3px;left:30px;right:auto}
@@ -1000,10 +999,6 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         </div>
       </div>
     </div>
-    <button id="vf-btn-abrir-biblioteca" class="hidden" onclick="vfAbrirBibliotecaVF()" style="background:none;border:none;padding:0;margin:-6px 2px 16px 2px;color:#B23A34;font-size:var(--fs-d);font-weight:600;cursor:pointer;font-family:inherit;align-items:center;gap:6px">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      Buscar na biblioteca
-    </button>
     <div id="vf-conteudo" style="padding-bottom:170px;position:relative">
       <div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>
     </div>
@@ -1024,6 +1019,20 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
   </div>
 
   <!-- ===== ADICIONAR QUESTÕES (popup no mobile/tablet, página no desktop) ===== -->
+  <!-- Biblioteca (só o Carlos): procurar uma palavra e VER as afirmações
+  sem responder nenhuma. Mesma busca do filtro de palavra-chave do Flash,
+  com o glossário português/inglês por trás -->
+  <div class="view-aba hidden" id="aba-biblioteca">
+    <h3 style="margin:0 0 4px 0">Biblioteca</h3>
+    <p style="color:#888;font-size:var(--fs-c);margin:0 0 14px 0;line-height:1.4">Procure uma palavra e veja as afirmações sem responder nenhuma. Funciona em português ou inglês.</p>
+    <div style="display:flex;gap:8px;align-items:stretch">
+      <input id="vf-biblioteca-busca" type="search" class="filter-select" placeholder="Palavra em português ou inglês" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfBuscarBibliotecaVF();}">
+      <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfBuscarBibliotecaVF()">Buscar</button>
+    </div>
+    <p id="vf-biblioteca-resumo" style="font-size:var(--fs-c);color:#888;margin:10px 0 0 0;min-height:1.3em;line-height:1.4"></p>
+    <div id="vf-biblioteca-lista" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"></div>
+  </div>
+
   <div class="view-aba hidden" id="aba-adicionar">
     <div class="modal-conteudo">
       <h3 id="titulo-adicionar-questoes">Adicionar questões</h3>
@@ -1085,6 +1094,9 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     </div>
     <div class="nav-item hidden" id="nav-item-vf" data-aba="vf" onclick="trocarAba('vf')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></span><span class="nav-label">Flash</span>
+    </div>
+    <div class="nav-item hidden" id="nav-item-biblioteca" data-aba="biblioteca" onclick="trocarAba('biblioteca')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H10v18H5.5A1.5 1.5 0 0 1 4 19.5Z"/><path d="M10 3h4.5A1.5 1.5 0 0 1 16 4.5v15a1.5 1.5 0 0 1-1.5 1.5H10"/><path d="m17.5 5.8 2.2-.6 2.2 14.6-2.9.8"/></svg></span><span class="nav-label">Biblioteca</span>
     </div>
     <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
@@ -1552,26 +1564,6 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 </div>
 
 
-<!-- Biblioteca do Flash (só o Carlos): procurar uma palavra e VER as
-afirmações sem responder nenhuma. Mesma busca do filtro de palavra-chave,
-com o glossário português/inglês por trás -->
-<div id="pagina-biblioteca-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden">
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
-    <h2 style="margin:0;font-size:var(--fs-f);font-weight:700;color:#111">Biblioteca</h2>
-    <button onclick="vfFecharBibliotecaVF()" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-  </div>
-  <div style="padding:14px 20px 0 20px;flex-shrink:0">
-    <div style="display:flex;gap:8px;align-items:stretch">
-      <input id="vf-biblioteca-busca" type="search" class="filter-select" placeholder="Palavra em português ou inglês" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfBuscarBibliotecaVF();}">
-      <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfBuscarBibliotecaVF()">Buscar</button>
-    </div>
-    <p id="vf-biblioteca-resumo" style="font-size:var(--fs-c);color:#888;margin:8px 0 0 0;min-height:1.3em;line-height:1.4"></p>
-  </div>
-  <div id="vf-biblioteca-lista" style="flex:1;overflow-y:auto;padding:14px 20px 24px 20px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px"></div>
-</div>
-
 <div class="modal-overlay hidden" id="modal-biblioteca-editar-vf" onclick="if(event.target===this) fecharModal('modal-biblioteca-editar-vf')">
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title">Editar afirmação</h3>
@@ -2001,7 +1993,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-14-013';
+const VERSAO_APP = '2026-09-14-014';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2897,9 +2889,8 @@ async function mostrarAppShell(){
   if(souCarlos()){
     document.getElementById('bloco-upload-marinha').classList.remove('hidden');
     document.getElementById('nav-item-vf').classList.remove('hidden'); // Flash de volta, a pedido do Carlos
-    // biblioteca do Flash: mesma regra do Flash em si - só o Carlos vê
-    document.getElementById('vf-btn-abrir-biblioteca').classList.remove('hidden');
-    document.getElementById('vf-btn-abrir-biblioteca').style.display = 'inline-flex';
+    // Biblioteca: mesma regra do Flash em si - só o Carlos vê
+    document.getElementById('nav-item-biblioteca').classList.remove('hidden');
     document.getElementById('motivo-exclusao-questao').classList.remove('hidden');
     sb.rpc('concursos_disponiveis').then(({data})=>{
       document.getElementById('lista-concursos-existentes').innerHTML = (data||[]).map(c=>`<option value="${escapeHtml(c.concurso)}">`).join('');
@@ -3351,6 +3342,7 @@ function trocarAba(nome, pularContadorQuest){
   if(nome==='placar') carregarMetricasPessoais();
   if(nome==='quests' && !pularContadorQuest) contarDisponiveisAgora();
   if(nome==='vf') entrarNoModoVF();
+  if(nome==='biblioteca') vfEntrarNaBibliotecaVF();
   if(nome==='adicionar' && !extracaoEmAndamento){
     document.getElementById('upload-status').innerHTML = '';
     document.getElementById('upload-planilha-status').innerHTML = '';
@@ -6048,8 +6040,6 @@ function vfAlgumModalAbertoVF(){
   if(paginaSalvos && !paginaSalvos.classList.contains('hidden')) return true;
   const paginaFavoritos = document.getElementById('pagina-favoritos-vf');
   if(paginaFavoritos && !paginaFavoritos.classList.contains('hidden')) return true;
-  const paginaBiblioteca = document.getElementById('pagina-biblioteca-vf');
-  if(paginaBiblioteca && !paginaBiblioteca.classList.contains('hidden')) return true;
   // overlay de "retomar sessão" (aparece ao voltar pro app com uma
   // sessão pausada) também bloqueia - não usa a classe .modal-overlay,
   // então sem essa checagem específica a caneta tentava iniciar um traço
@@ -7652,17 +7642,15 @@ let vfBibliotecaCarregandoVF = false;
 let vfBibliotecaIdEditandoVF = null;
 const VF_BIBLIOTECA_PAGINA_VF = 40;
 
-function vfAbrirBibliotecaVF(){
-  if(!souCarlos()) return; // mesma regra do Flash: só o Carlos
+// chamada por trocarAba('biblioteca') - a Biblioteca é uma aba do menu
+// (vale pro menu de baixo e pra sidebar, é o mesmo #bottom-nav), não uma
+// tela flutuante por cima do Flash
+function vfEntrarNaBibliotecaVF(){
   if(typeof vfForcarSalvamentoEdicaoPendenteVF === 'function') vfForcarSalvamentoEdicaoPendenteVF();
-  pausarTimerVF(); // a pendente não fica rodando escondida atrás da tela
-  document.getElementById('pagina-biblioteca-vf').classList.remove('hidden');
-  setTimeout(() => { document.getElementById('vf-biblioteca-busca')?.focus(); }, 50);
-}
-
-function vfFecharBibliotecaVF(){
-  document.getElementById('pagina-biblioteca-vf').classList.add('hidden');
-  retomarOuDescartarPendenteVF();
+  const campo = document.getElementById('vf-biblioteca-busca');
+  // só põe o cursor no campo quando ainda não tem busca nenhuma feita -
+  // voltar pra aba com resultado na tela não deve abrir o teclado por cima
+  if(campo && !vfBibliotecaIdsVF.length) setTimeout(() => campo.focus(), 50);
 }
 
 async function vfBuscarBibliotecaVF(){
@@ -7863,12 +7851,6 @@ async function vfConfirmarExclusaoBibliotecaVF(id){
   }
 }
 
-// Esc fecha a biblioteca, igual clicar no X
-document.addEventListener('keydown', (e) => {
-  if(e.key !== 'Escape') return;
-  const pagina = document.getElementById('pagina-biblioteca-vf');
-  if(pagina && !pagina.classList.contains('hidden') && !document.querySelector('.modal-overlay:not(.hidden)')) vfFecharBibliotecaVF();
-});
 
 async function vfAbrirFlashSalvosVF(){
   if(typeof vfForcarSalvamentoEdicaoPendenteVF === 'function') vfForcarSalvamentoEdicaoPendenteVF();
