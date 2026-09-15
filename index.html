@@ -2016,7 +2016,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-15-025';
+const VERSAO_APP = '2026-09-15-026';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5364,12 +5364,20 @@ function vfReinserirTabelasVF(texto, tabelas){
 // indevido dentro da lista quando a conversão de quebra de linha rodar
 // depois. Aceita tanto * quanto - como marcador (o teclado do iPad às
 // vezes autocorrige um pro outro, então tratar os dois cobre esse caso)
-function vfProcessarListasNotaVF(texto){
+// "1)" "1." "01)" "a)" "a." "I." "II)" "IV)" no começo da linha também
+// viram item de lista - mas SÓ nas notas (aceitarNumeracao). No enunciado
+// de uma questão a numeração romana é o conteúdo em si ("apenas I e III
+// estão corretas"), transformar em bullet apagaria justamente o que
+// precisa ser lido. O espaço depois do marcador é obrigatório, senão
+// "1.5 m" viraria lista
+const VF_MARCADOR_LISTA_NUMERADA_VF = /^\s*(?:\d{1,2}|[a-zA-Z]|[IVXLivxl]{1,5})[.)]\s+(.+)$/;
+function vfProcessarListasNotaVF(texto, aceitarNumeracao){
   const linhas = texto.split('\n');
   const blocos = [];
   let itensListaAtual = null;
   for(const linha of linhas){
-    const m = linha.match(/^(?:[*\-•]|--)\s+(.+)$/); // "- ", "-- ", "* " ou "• " no começo da linha viram item de lista (espaço obrigatório - "-5 m" não é lista)
+    const m = linha.match(/^(?:[*\-•]|--)\s+(.+)$/) // "- ", "-- ", "* " ou "• " no começo da linha viram item de lista (espaço obrigatório - "-5 m" não é lista)
+      || (aceitarNumeracao ? linha.match(VF_MARCADOR_LISTA_NUMERADA_VF) : null);
     if(m){
       if(!itensListaAtual) itensListaAtual = [];
       itensListaAtual.push(`<li>${m[1]}</li>`);
@@ -5381,7 +5389,7 @@ function vfProcessarListasNotaVF(texto){
   if(itensListaAtual) blocos.push(`<ul style="margin:6px 0;padding-left:22px">${itensListaAtual.join('')}</ul>`);
   return blocos.join('\n');
 }
-function formatarTextoItemVF(texto){
+function formatarTextoItemVF(texto, opcoes){
   if(!texto) return '';
   texto = vfLimparApostrofoUnderscoreVF(texto);
   const {textoComPlaceholder, tabelas} = vfExtrairTabelasComoPlaceholderVF(texto);
@@ -5391,7 +5399,7 @@ function formatarTextoItemVF(texto){
     // aqui na exibição resolve de vez, sem precisar reeditar o PDF nem
     // reenviar o pedido toda vez que acontecer
     .replace(/—/g, '–');
-  resultado = vfProcessarListasNotaVF(resultado);
+  resultado = vfProcessarListasNotaVF(resultado, opcoes?.listaNumerada);
   // cor num trecho: \vermelho{...}, \ambar{...} (ou \âmbar), \verde{...},
   // \azul{...} - mesmas 4 cores do card da nota, só que aplicadas à
   // palavra/frase. Roda antes da matemática pra o "\v"/"\a" não ser
@@ -14400,8 +14408,8 @@ function vfMontarPreviewNotasVF(container, notas, questaoVfId){
     // mesmo com text-align:center
     const paddingTexto = alinhamento === 'centro' ? 'padding:0 32px' : 'padding-right:32px';
     const conteudoInterno = temTabela
-      ? formatarTextoItemVF(n.texto)
-      : `<div style="color:#333;line-height:1.4;text-align:${alinhamentoCss};${paddingTexto}">${formatarTextoItemVF(n.texto)}</div>`;
+      ? formatarTextoItemVF(n.texto, {listaNumerada: true})
+      : `<div style="color:#333;line-height:1.4;text-align:${alinhamentoCss};${paddingTexto}">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>`;
     el.innerHTML = `<div class="${classeCard}" data-alinhamento-nota="${alinhamento}" data-cor-nota="${n.cor || ''}" style="position:relative;cursor:pointer;margin-bottom:0;${estiloCor}" ontouchstart="vfIniciarPressionarNotaPreviewVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaPreviewSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaPreviewSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaPreviewVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaPreviewSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaPreviewSilenciosoVF()" onclick="vfCliqueNotaPreviewVF(event,'${questaoVfId}')">${conteudoInterno}
       <div class="vf-alca-nota-preview" data-nota-id="${n.id}" ontouchstart="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" onmousedown="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#bbb;cursor:grab;touch-action:none">${VF_ICONE_ALCA_ARRASTO_VF}</div>
     </div>`;
@@ -16224,7 +16232,7 @@ function vfHtmlItemNotaVF(n){
   const corBolinha = n.cor && VF_CORES_NOTA_VF[n.cor] ? VF_CORES_NOTA_VF[n.cor].borda : '#fff';
   return `
     <div id="vf-nota-item-${n.id}" style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee;position:relative">
-      <div id="vf-nota-texto-${n.id}" data-cor-nota="${n.cor || ''}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111;cursor:pointer;padding:6px 8px;border-radius:6px;${vfEstiloCorNotaVF(n.cor)}" ontouchstart="vfIniciarPressionarNotaVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(n.texto)}</div>
+      <div id="vf-nota-texto-${n.id}" data-cor-nota="${n.cor || ''}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111;cursor:pointer;padding:6px 8px;border-radius:6px;${vfEstiloCorNotaVF(n.cor)}" ontouchstart="vfIniciarPressionarNotaVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>
       <button id="vf-nota-btn-fixar-${n.id}" onclick="vfAlternarFixarNotaVF('${n.id}', ${!!n.fixada})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.fixada?'#B23A34':'#ddd'};background:${n.fixada?'#B23A34':'#fff'};color:${n.fixada?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.fixada?'Desafixar (deixa de aparecer na página)':'Fixar (aparece na página da questão)'}">${VF_ICONE_PIN_VF}</button>
       <button id="vf-nota-btn-mnemonico-${n.id}" onclick="vfAlternarMnemonicoNotaVF('${n.id}', ${!!n.eh_mnemonico})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.eh_mnemonico?'#B23A34':'#ddd'};background:${n.eh_mnemonico?'#B23A34':'#fff'};color:${n.eh_mnemonico?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.eh_mnemonico?'Marcada como mnemônico':'Marcar como mnemônico'}">${VF_ICONE_MNEMONICO_VF}</button>
       <button onclick="event.stopPropagation();vfAbrirBarraCorNotaModalVF(this,'${n.id}')" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid #ddd;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center" title="Cor da nota"><span style="width:14px;height:14px;border-radius:50%;border:1.5px solid #bbb;background:${corBolinha};display:block"></span></button>
@@ -16286,7 +16294,7 @@ async function vfSalvarEdicaoNotaVF(notaId){
   const textarea = document.getElementById(`vf-nota-textarea-${notaId}`);
   const textoOriginal = vfNotaTextoOriginalAntesEditarVF[notaId];
   const textoNovo = textarea?.value.trim();
-  const htmlVisualizacao = (texto) => `<div id="vf-nota-texto-${notaId}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111;cursor:pointer" ontouchstart="vfIniciarPressionarNotaVF(event,'${notaId}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${notaId}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(texto)}</div>`;
+  const htmlVisualizacao = (texto) => `<div id="vf-nota-texto-${notaId}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111;cursor:pointer" ontouchstart="vfIniciarPressionarNotaVF(event,'${notaId}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${notaId}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(texto, {listaNumerada: true})}</div>`;
   if(!textoNovo || textoNovo === textoOriginal){
     // vazio (nota sem texto não é válida) ou sem mudança nenhuma - só
     // volta pra visualização normal, sem tocar no banco. Substitui o
