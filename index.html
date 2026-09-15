@@ -2019,7 +2019,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-15-035';
+const VERSAO_APP = '2026-09-15-036';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -14333,7 +14333,30 @@ async function vfRemoverTagVF(tagId){
     vfTagsPorQuestaoVF.set(questaoId, [...listaAtual, tagRemovida]);
     vfRenderizarListaTagsAtualVF();
     renderizarItemVF();
+    return;
   }
+  await vfApagarTagOrfaVF(tagId);
+}
+
+// tag que não está em questão nenhuma deixa de existir. Sem isso, um erro
+// de digitação salvo sem querer ("usta" no lugar de "lista") ficava pra
+// sempre na lista de tags, mesmo depois de tirado da única questão onde
+// estava - e ainda aparecia como sugestão dali em diante.
+// A contagem é feita SEM filtrar por usuário de propósito: o banco de
+// afirmações é compartilhado, e uma tag ainda usada por outra pessoa não
+// pode sumir porque o Carlos tirou da dele
+async function vfApagarTagOrfaVF(tagId){
+  const {count, error} = await sb.from('questoes_vf_tags')
+    .select('tag_id', {count: 'exact', head: true}).eq('tag_id', tagId);
+  if(error || count === null || count > 0) return;
+  const {error: erroApagar} = await sb.from('tags_vf').delete().eq('id', tagId);
+  if(erroApagar){ console.error('erro ao apagar tag órfã:', erroApagar); return; }
+  vfTodasTagsCacheVF = vfTodasTagsCacheVF.filter(t => String(t.id) !== String(tagId));
+  // o pop-up de tags pode estar aberto: repinta a lista de busca e o
+  // datalist pra tag apagada sumir das sugestões na hora
+  const datalist = document.getElementById('vf-tags-datalist');
+  if(datalist) datalist.innerHTML = vfTodasTagsCacheVF.map(t => `<option value="${escapeHtml(t.nome)}">`).join('');
+  if(typeof vfRenderizarTodasTagsVF === 'function') vfRenderizarTodasTagsVF();
 }
 
 async function toggleFavoritoVF(questaoVfId){
