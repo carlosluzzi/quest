@@ -2016,7 +2016,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-15-029';
+const VERSAO_APP = '2026-09-15-030';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2166,7 +2166,7 @@ function formatarEnunciadoInterno(texto){
   let escapedCompleto = escapeHtml(texto).replace(/\s+/g, ' ').trim();
   escapedCompleto = vfAplicarMarcacaoMatematicaVF(escapedCompleto); // gregas, operadores, sqrt, sobrescrito com chaves - mesmo padrão do V/F
   escapedCompleto = escapedCompleto
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
       if(!abreNegrito && !fechaNegrito) return base + vfSobrescritoOuTagVF(exp); // sem negrito envolvendo - pode tentar Unicode puro
       return base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>'; // com negrito - Unicode perderia o negrito, mantém <sup> de sempre
     }) // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
@@ -2373,7 +2373,7 @@ function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   alternativasTexto = vfLimparApostrofoUnderscoreVF(alternativasTexto);
   const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
       if(!abreNegrito && !fechaNegrito) return base + vfSobrescritoOuTagVF(exp);
       return base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>';
     })
@@ -4597,7 +4597,7 @@ function vfFormatarCelulaArrayVF(celula){
   c = c.replace(/\\,/g, ''); // espaço fino do LaTeX - aqui vira SEM espaço nenhum (5,0x, não 5,0 x - notação científica normal não separa coeficiente de variável)
   c = c.replace(/\\ /g, ' '); // \  (barra + espaço) força espaço em LaTeX de verdade, mas aqui um espaço normal já resolve - sem isso, aparecia a barra literal na tela
   c = vfAplicarMarcacaoMatematicaVF(c);
-  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp));
+  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp));
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   return c;
@@ -5222,7 +5222,7 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
     // sobrescrito com chaves: X^{Y...} - qualquer conteúdo dentro,
     // inclusive sinal de menos e múltiplos caracteres (ex: 10^{-1})
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9)\]])\^\{([^}]+)\}/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞)\]\}])\^\{([^}]+)\}/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
     // alguns símbolos matemáticos são desenhados pelas fontes com altura
     // visual bem menor que letras/números normais, mesmo com o mesmo
     // font-size (parecem "pequenos"/perdidos no meio do texto) - aumenta
@@ -5463,7 +5463,7 @@ function formatarTextoItemVF(texto, opcoes){
     .replace(/\n/g, '<br>');
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
   resultado = resultado
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
       if(!abreNegrito && !fechaNegrito) return base + vfSobrescritoOuTagVF(exp);
       return base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>';
     })
@@ -19060,7 +19060,7 @@ function removerMarcadoresSubscrito(texto){
   return (texto||'')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_\{([^{}]+)\}/g, '$1$2')
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1$2')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9\)\]]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
 }
 async function abrirFormularioEdicao(questaoId, topicoId){
   const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
