@@ -2019,7 +2019,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-15-034';
+const VERSAO_APP = '2026-09-15-035';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4748,8 +4748,30 @@ function vfAjustarLarguraTabelaVF(bloco){
     alcas.forEach(a => { a.style.display = 'none'; });
     bloco.dataset.modoLargura = 'igual';
   }
-  vfAlinharTabelasIrmasVF(bloco.parentElement);
-  vfEspacarTabelasIrmasVF(bloco.parentElement);
+  vfAgendarAjusteIrmasTabelaVF(bloco.parentElement);
+}
+
+// alinhar e espaçar tabelas irmãs mede e reposiciona - caro. Chamado
+// direto, rodava uma vez POR BLOCO (duas tabelas na caixa = o trabalho
+// inteiro duas vezes) e a cada disparo do ResizeObserver. Agendando por
+// quadro, a mesma caixa é resolvida UMA vez por rajada de mudança de
+// layout - que é exatamente o que acontece ao abrir/fechar um pop-up
+const vfContainersTabelaPendentesVF = new Set();
+let vfFrameAjusteIrmasVF = null;
+function vfAgendarAjusteIrmasTabelaVF(container){
+  if(!container) return;
+  vfContainersTabelaPendentesVF.add(container);
+  if(vfFrameAjusteIrmasVF) return;
+  vfFrameAjusteIrmasVF = requestAnimationFrame(() => {
+    vfFrameAjusteIrmasVF = null;
+    const pendentes = [...vfContainersTabelaPendentesVF];
+    vfContainersTabelaPendentesVF.clear();
+    pendentes.forEach(c => {
+      if(!c.isConnected) return;
+      vfAlinharTabelasIrmasVF(c);
+      vfEspacarTabelasIrmasVF(c);
+    });
+  });
 }
 
 // espaço entre duas tabelas coladas uma na outra na mesma caixinha: uma
@@ -4760,6 +4782,7 @@ function vfAjustarLarguraTabelaVF(bloco){
 // medida, não acidental
 function vfEspacarTabelasIrmasVF(container){
   if(!container) return;
+  if(container.querySelectorAll(':scope > .vf-tabela-bloco').length < 2) return; // idem: sem irmã, sem espaço pra ajustar
   const estilo = getComputedStyle(container);
   const alturaLinha = parseFloat(estilo.lineHeight) || (parseFloat(estilo.fontSize) || 14) * 1.6;
   const espaco = Math.round(alturaLinha * 1.5);
@@ -4775,7 +4798,8 @@ function vfEspacarTabelasIrmasVF(container){
     }
     if(!(anterior && anterior.nodeType === 1 && anterior.classList?.contains('vf-tabela-bloco'))) return;
     descartar.forEach(n => n.remove());
-    bloco.style.marginTop = espaco + 'px';
+    const alvo = espaco + 'px';
+    if(bloco.style.marginTop !== alvo) bloco.style.marginTop = alvo; // reescrever o mesmo valor ainda invalida o layout
   });
 }
 
@@ -4789,8 +4813,10 @@ function vfEspacarTabelasIrmasVF(container){
 // inteiro fica como está - nada do que ele arrastou é desfeito daqui
 function vfAlinharTabelasIrmasVF(container){
   if(!container) return;
+  const blocos = container.querySelectorAll(':scope > .vf-tabela-bloco');
+  if(blocos.length < 2) return; // caixa com uma tabela só - nada a alinhar, nem vale medir
   const grupos = new Map();
-  container.querySelectorAll(':scope > .vf-tabela-bloco').forEach(b => {
+  blocos.forEach(b => {
     const tabelas = b.querySelectorAll('table');
     if(tabelas.length !== 1) return; // \sidebyside já é um par por conta própria
     const linha = tabelas[0].querySelector('tr:first-child');
