@@ -2016,7 +2016,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-15-027';
+const VERSAO_APP = '2026-09-15-029';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4372,7 +4372,21 @@ const VF_NOMES_MATEMATICOS_REGEX = Object.keys({...VF_LETRAS_GREGAS, ...VF_OPERA
 // regex construídas a partir da lista fechada de nomes conhecidos (não
 // "qualquer sequência de letras") - ver VF_NOMES_MATEMATICOS_REGEX acima
 const VF_REGEX_NOME_COM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')(?![A-Za-z])\\{([^}]*)\\}', 'g');
-const VF_REGEX_NOME_SEM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')(?![A-Za-z])', 'g');
+// "(?![a-z])" e não "(?![A-Za-zÀ-ú])": letra MINÚSCULA logo depois ainda
+// bloqueia (senão "\in" casaria dentro de "\int"), mas letra MAIÚSCULA
+// passa a ser lida como variável colada no símbolo - "\rhoU" vira ρU, que
+// é como se escreve na prática. O grupo de espaços no fim é consumido
+// junto: em LaTeX o espaço depois de um comando só marca onde o nome
+// acaba, não é espaço de verdade (ver vfJuntarSimboloVF)
+const VF_REGEX_NOME_SEM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX + ')(?![a-z])([ \\t]*)', 'g');
+// decide se o espaço depois do símbolo some. Some quando o que vem em
+// seguida é uma variável solta (uma letra sozinha, tipo o U de ρU) ou
+// outro comando - aí é fórmula. Não some quando vem uma palavra: numa
+// frase como "\rho de água" ou "\alpha é o ângulo" o espaço é do texto,
+// e engolir ele grudaria as palavras
+function vfJuntarSimboloVF(resto){
+  return /^\\[A-Za-z]/.test(resto) || /^[A-Za-z](?![A-Za-zÀ-ÿ])/.test(resto);
+}
 // fonte serifada, exceção deliberada só pras tabelas (\begin{array}) -
 // o resto do app continua na fonte padrão sem serifa, intocada
 const VF_FONTE_TABELA = `'Charter','Iowan Old Style',Georgia,'Times New Roman',serif`;
@@ -5084,12 +5098,16 @@ function vfProcessarFracoesVF(texto){
   };
   let resultado = '';
   let pos = 0;
-  const regexInicio = /\\frac\{/g;
+  // aceita espaço depois do \frac e entre os dois grupos: escrever
+  // "\frac {a}{b}" é natural, e antes disso a fórmula inteira ficava
+  // crua na tela (aparecia a palavra frac junto com as chaves)
+  const regexInicio = /\\frac\s*\{/g;
   let match;
   while((match = regexInicio.exec(texto))){
     const grupo1 = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
     if(!grupo1){ regexInicio.lastIndex = match.index + match[0].length; continue; }
-    const pos2 = grupo1.fimPos + 1;
+    let pos2 = grupo1.fimPos + 1;
+    while(texto[pos2] === ' ' || texto[pos2] === '\t') pos2++; // "}{" ou "} {" - tanto faz
     if(texto[pos2] !== '{'){ regexInicio.lastIndex = match.index + match[0].length; continue; }
     const grupo2 = vfExtrairGrupoBalanceadoVF(texto, pos2);
     if(!grupo2){ regexInicio.lastIndex = match.index + match[0].length; continue; }
@@ -5180,7 +5198,11 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     // gregas/operadores via \nome - roda ANTES do sqrt/superscript, pra
     // esses símbolos resolvidos poderem participar deles depois (ex:
     // \Delta^{2} precisa que \Delta já tenha virado Δ antes do ^ agir)
-    .replace(VF_REGEX_NOME_SEM_CHAVES, (match, nome) => (VF_LETRAS_GREGAS[nome] || VF_OPERADORES_MATEMATICOS[nome] || match))
+    .replace(VF_REGEX_NOME_SEM_CHAVES, (match, nome, espacos, posicao, inteiro) => {
+      const simbolo = VF_LETRAS_GREGAS[nome] || VF_OPERADORES_MATEMATICOS[nome];
+      if(!simbolo) return match; // nome desconhecido - devolve cru, inclusive os espaços
+      return simbolo + (vfJuntarSimboloVF(inteiro.slice(posicao + match.length)) ? '' : espacos);
+    })
     // acentos matemáticos - \dot{} (derivada no tempo, comum em
     // engenharia/física: ψ̇), \ddot{}, \hat{}, \bar{}, \vec{}, \tilde{}.
     // Usa caractere Unicode de combinação (gruda no caractere anterior,
@@ -5192,6 +5214,10 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
       const combinacao = {dot:'\u0307', ddot:'\u0308', hat:'\u0302', bar:'\u0304', vec:'\u20d7', tilde:'\u0303'}[nome];
       return conteudo + combinacao;
     })
+    // \text{...} é só "escreva isto como texto normal" - some e deixa o
+    // conteúdo. Já valia dentro de célula de tabela; fora dela ficava cru
+    // na tela (\text{½} aparecia com a palavra text e as chaves)
+    .replace(/\\text\{([^{}]*)\}/g, '$1')
     // \sqrt{...} depois das gregas (pode ter grega dentro, tipo \sqrt{\Delta})
     .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
     // sobrescrito com chaves: X^{Y...} - qualquer conteúdo dentro,
