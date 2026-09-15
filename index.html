@@ -2016,7 +2016,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-15-026';
+const VERSAO_APP = '2026-09-15-027';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5364,29 +5364,48 @@ function vfReinserirTabelasVF(texto, tabelas){
 // indevido dentro da lista quando a conversão de quebra de linha rodar
 // depois. Aceita tanto * quanto - como marcador (o teclado do iPad às
 // vezes autocorrige um pro outro, então tratar os dois cobre esse caso)
-// "1)" "1." "01)" "a)" "a." "I." "II)" "IV)" no começo da linha também
-// viram item de lista - mas SÓ nas notas (aceitarNumeracao). No enunciado
-// de uma questão a numeração romana é o conteúdo em si ("apenas I e III
-// estão corretas"), transformar em bullet apagaria justamente o que
-// precisa ser lido. O espaço depois do marcador é obrigatório, senão
-// "1.5 m" viraria lista
-const VF_MARCADOR_LISTA_NUMERADA_VF = /^\s*(?:\d{1,2}|[a-zA-Z]|[IVXLivxl]{1,5})[.)]\s+(.+)$/;
+// "1)" "1." "01)" "a)" "a." "I." "II)" "IV)" no começo da linha viram
+// item de lista MANTENDO o próprio marcador ("1." continua "1.", "b)"
+// continua "b)") - a numeração é informação, trocar por bolinha apagaria
+// a ordem. Vale SÓ nas notas (aceitarNumeracao): no enunciado de uma
+// questão a numeração romana é o conteúdo em si ("apenas I e III estão
+// corretas"), e ali nada pode mudar. O espaço depois do marcador é
+// obrigatório, senão "1.5 m" viraria lista
+const VF_MARCADOR_LISTA_NUMERADA_VF = /^\s*((?:\d{1,2}|[a-zA-Z]|[IVXLivxl]{1,5})[.)])\s+(.+)$/;
 function vfProcessarListasNotaVF(texto, aceitarNumeracao){
   const linhas = texto.split('\n');
   const blocos = [];
-  let itensListaAtual = null;
+  let itens = null, tipoAtual = null;
+  // fecha a lista aberta - chamado ao trocar de tipo (bolinha <-> número),
+  // ao encontrar linha comum, e no fim do texto
+  const fechar = () => {
+    if(!itens) return;
+    blocos.push(tipoAtual === 'numerada'
+      ? `<ul style="margin:6px 0;padding-left:2px;list-style:none">${itens.join('')}</ul>`
+      : `<ul style="margin:6px 0;padding-left:22px">${itens.join('')}</ul>`);
+    itens = null; tipoAtual = null;
+  };
   for(const linha of linhas){
-    const m = linha.match(/^(?:[*\-•]|--)\s+(.+)$/) // "- ", "-- ", "* " ou "• " no começo da linha viram item de lista (espaço obrigatório - "-5 m" não é lista)
-      || (aceitarNumeracao ? linha.match(VF_MARCADOR_LISTA_NUMERADA_VF) : null);
-    if(m){
-      if(!itensListaAtual) itensListaAtual = [];
-      itensListaAtual.push(`<li>${m[1]}</li>`);
+    const simples = linha.match(/^(?:[*\-•]|--)\s+(.+)$/); // "- ", "-- ", "* " ou "• " no começo da linha viram item de lista (espaço obrigatório - "-5 m" não é lista)
+    const numerada = !simples && aceitarNumeracao ? linha.match(VF_MARCADOR_LISTA_NUMERADA_VF) : null;
+    if(simples){
+      if(tipoAtual !== 'simples') fechar();
+      tipoAtual = 'simples';
+      itens = itens || [];
+      itens.push(`<li>${simples[1]}</li>`);
+    }else if(numerada){
+      if(tipoAtual !== 'numerada') fechar();
+      tipoAtual = 'numerada';
+      itens = itens || [];
+      // marcador e texto em colunas: a linha que quebra alinha embaixo do
+      // TEXTO, não embaixo do número - é o que faz a lista parecer lista
+      itens.push(`<li style="display:flex;gap:8px;margin:2px 0"><span style="flex-shrink:0;min-width:1.8em">${numerada[1]}</span><span style="min-width:0">${numerada[2]}</span></li>`);
     }else{
-      if(itensListaAtual){ blocos.push(`<ul style="margin:6px 0;padding-left:22px">${itensListaAtual.join('')}</ul>`); itensListaAtual = null; }
+      fechar();
       blocos.push(linha);
     }
   }
-  if(itensListaAtual) blocos.push(`<ul style="margin:6px 0;padding-left:22px">${itensListaAtual.join('')}</ul>`);
+  fechar();
   return blocos.join('\n');
 }
 function formatarTextoItemVF(texto, opcoes){
