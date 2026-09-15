@@ -1568,8 +1568,11 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     <select id="vf-favoritos-filtro-modulo" class="filter-select" style="margin-bottom:8px" onchange="vfFavoritosMudarModuloVF()">
       <option value="">Todos os módulos</option>
     </select>
-    <select id="vf-favoritos-filtro-publicacao" class="filter-select" style="margin-bottom:0" onchange="vfRenderizarFavoritosVF()">
+    <select id="vf-favoritos-filtro-publicacao" class="filter-select" style="margin-bottom:8px" onchange="vfFavoritosMudarPublicacaoVF()">
       <option value="">Todas as publicações</option>
+    </select>
+    <select id="vf-favoritos-filtro-capitulo" class="filter-select" style="margin-bottom:0" onchange="vfRenderizarFavoritosVF()" disabled>
+      <option value="">Todos os capítulos</option>
     </select>
     <p id="vf-favoritos-resumo" style="font-size:var(--fs-c);color:#888;margin:8px 0 0 0;min-height:1.3em;line-height:1.4"></p>
   </div>
@@ -2016,7 +2019,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-15-030';
+const VERSAO_APP = '2026-09-15-032';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7757,7 +7760,7 @@ async function vfAbrirFavoritosVF(bibliografiaInicial){
   // (usuario_id, questao_vf_id). Pedir 'id' no select quebrava a página
   // inteira (erro de coluna inexistente) - achado testando direto no banco
   const {data, error} = await buscarTudoPaginadoVF(() => sb.from('favoritos_vf')
-    .select('criado_em, questao_vf_id, questoes_vf(texto, bibliografia_id, bibliografia(titulo, nome_exibicao, modulo_pscpp))', {count: 'exact'})
+    .select('criado_em, questao_vf_id, questoes_vf(texto, capitulo, bibliografia_id, bibliografia(titulo, nome_exibicao, modulo_pscpp))', {count: 'exact'})
     .eq('usuario_id', usuarioAtual.id)
     .order('criado_em', {ascending: false}).order('questao_vf_id'));
   if(error){ el.innerHTML = '<p style="color:#A32D2D;text-align:center;padding:20px 0">Erro ao carregar.</p>'; return; }
@@ -7787,6 +7790,9 @@ function vfPopularFiltrosFavoritosVF(bibliografiaInicial){
   elModulo.value = favInicial?.questoes_vf?.bibliografia?.modulo_pscpp || '';
   vfPopularPublicacoesFavoritosVF();
   if(favInicial) document.getElementById('vf-favoritos-filtro-publicacao').value = bibliografiaInicial;
+  // capítulo NÃO vem pré-escolhido de propósito: abrir na publicação
+  // mostra tudo daquele livro, e ele estreita depois se quiser
+  vfPopularCapitulosFavoritosVF();
 }
 
 function vfPopularPublicacoesFavoritosVF(){
@@ -7807,12 +7813,42 @@ function vfPopularPublicacoesFavoritosVF(){
 
 function vfFavoritosMudarModuloVF(){
   vfPopularPublicacoesFavoritosVF(); // trocar o módulo reseta a publicação
+  vfPopularCapitulosFavoritosVF();   // ...e o capítulo junto
   vfRenderizarFavoritosVF();
+}
+
+function vfFavoritosMudarPublicacaoVF(){
+  vfPopularCapitulosFavoritosVF();
+  vfRenderizarFavoritosVF();
+}
+
+// capítulo só faz sentido dentro de UMA publicação - "Capítulo 3" de dois
+// livros diferentes não é a mesma coisa. Por isso o select fica
+// desabilitado enquanto a publicação for "todas", mesma regra do filtro
+// do Flash. O rótulo (Chapter / Capítulo / Section) vem da bibliografia
+function vfPopularCapitulosFavoritosVF(){
+  const publicacao = document.getElementById('vf-favoritos-filtro-publicacao').value;
+  const elCap = document.getElementById('vf-favoritos-filtro-capitulo');
+  elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+  elCap.disabled = !publicacao;
+  if(!publicacao) return;
+  const bib = (bibliografiaCache || []).find(b => b.id === publicacao);
+  const rotulo = rotuloCapituloDoLivro(bib?.titulo) + ' ';
+  const capitulos = [...new Set(vfFavoritosCacheVF
+    .filter(f => f.questoes_vf?.bibliografia_id === publicacao)
+    .map(f => f.questoes_vf?.capitulo)
+    .filter(Boolean)
+    .map(c => String(c).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')))]
+    .sort((a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0) || a.localeCompare(b, 'pt'));
+  elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c =>
+    `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
+  ).join('');
 }
 
 function vfLimparFiltroFavoritosVF(){
   document.getElementById('vf-favoritos-filtro-modulo').value = '';
   vfPopularPublicacoesFavoritosVF();
+  vfPopularCapitulosFavoritosVF();
   vfRenderizarFavoritosVF();
 }
 
@@ -7822,14 +7858,17 @@ function vfRenderizarFavoritosVF(){
   if(!el) return;
   const modulo = document.getElementById('vf-favoritos-filtro-modulo').value;
   const publicacao = document.getElementById('vf-favoritos-filtro-publicacao').value;
+  const capitulo = document.getElementById('vf-favoritos-filtro-capitulo').value;
+  const semPrefixo = c => String(c || '').replace(/^cap(?:[íi]tulo)?\.?\s*/i, '');
   const lista = vfFavoritosCacheVF.filter(f => {
     const bib = f.questoes_vf?.bibliografia;
     if(modulo && bib?.modulo_pscpp !== modulo) return false;
     if(publicacao && f.questoes_vf?.bibliografia_id !== publicacao) return false;
+    if(capitulo && semPrefixo(f.questoes_vf?.capitulo) !== capitulo) return false;
     return true;
   });
   const total = vfFavoritosCacheVF.length;
-  const filtrando = !!(modulo || publicacao);
+  const filtrando = !!(modulo || publicacao || capitulo);
   resumo.innerHTML = filtrando
     ? `${lista.length} de ${total} ${total === 1 ? 'favorita' : 'favoritas'} · <a href="#" onclick="event.preventDefault();vfLimparFiltroFavoritosVF()" style="color:#B23A34;font-weight:600">ver todas</a>`
     : `${total} ${total === 1 ? 'favorita' : 'favoritas'}`;
@@ -7839,13 +7878,18 @@ function vfRenderizarFavoritosVF(){
   }
   el.innerHTML = lista.map(f => {
     const publicacaoNome = f.questoes_vf?.bibliografia?.nome_exibicao || f.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
+    // capítulo com o rótulo do próprio livro (Chapter / Capítulo / Section)
+    const capituloLimpo = semPrefixo(f.questoes_vf?.capitulo);
+    const capituloTexto = capituloLimpo
+      ? (capituloLimpo === 'Único' ? capituloLimpo : `${rotuloCapituloDoLivro(f.questoes_vf?.bibliografia?.titulo)} ${capituloLimpo}`)
+      : '';
     const dataFormatada = new Date(f.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
     return `
       <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${f.questao_vf_id}')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div>
             <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacaoNome)}</p>
-            <p style="color:#999;font-size:var(--fs-a);margin:2px 0 0 0">${dataFormatada}</p>
+            <p style="color:#999;font-size:var(--fs-a);margin:2px 0 0 0">${capituloTexto ? `${escapeHtml(capituloTexto)} · ` : ''}${dataFormatada}</p>
           </div>
           <button class="btn-icone-pequeno" onclick="event.stopPropagation();vfDesfavoritarDaListaVF('${f.questao_vf_id}')" title="Desfavoritar">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
@@ -9377,6 +9421,31 @@ function vfAplicarMarcacoesDoCacheVF(origem, escopoId, questaoId){
     if(!container) return;
     const range = vfRangeDoOffsetGlobalVF(container, m.offset_inicio, m.offset_fim);
     if(range) vfCriarSpanMarcaVF(m.tipo_marca, m.cor, range);
+  });
+}
+
+// grifos que estão na tela AGORA (antes de qualquer redesenho) e como
+// devolvê-los depois. Qualquer ação que remonte o enunciado - adicionar
+// tag, favoritar, marcar mnemônico - reconstrói o HTML do zero e leva os
+// spans de marcação junto. Guardar e repor mantém o grifo onde ele estava
+let vfIdRenderizadoVF = null; // id da questão que está desenhada na tela
+function vfCapturarGrifosDaTelaVF(){
+  return [
+    ...vfExtrairMarcacoesAtuaisVF(document.getElementById('vf-enunciado-atual'), 'enunciado'),
+    ...vfExtrairMarcacoesAtuaisVF(document.getElementById('vf-correcao-atual'), 'correcao')
+  ];
+}
+function vfAplicarGrifosNaTelaVF(marcacoes){
+  if(!marcacoes || !marcacoes.length) return;
+  const enunciado = document.getElementById('vf-enunciado-atual');
+  const correcao = document.getElementById('vf-correcao-atual');
+  // de trás pra frente: criar um span muda a contagem de nós dali pra
+  // frente (mesmo cuidado de vfAplicarMarcacoesDoCacheVF)
+  [...marcacoes].sort((a, b) => b.offsetInicio - a.offsetInicio).forEach(m => {
+    const container = m.container === 'correcao' ? correcao : enunciado;
+    if(!container) return;
+    const range = vfRangeDoOffsetGlobalVF(container, m.offsetInicio, m.offsetFim);
+    if(range) vfCriarSpanMarcaVF(m.tipo, m.cor, range);
   });
 }
 
@@ -12259,6 +12328,9 @@ function renderizarItemVF(){
   const entrada = estadoVF.historico[estadoVF.posicao];
   if(!entrada) return;
   const item = entrada.item;
+  // só preserva grifo quando é a MESMA questão que já estava na tela -
+  // ao trocar de questão o enunciado tem que vir limpo
+  const grifosNaTelaVF = (vfIdRenderizadoVF === item.id) ? vfCapturarGrifosDaTelaVF() : null;
   if(item.explicacao === undefined){
     // conteúdo pesado (texto/explicação/correção) ainda não chegou - busca
     // agora e re-renderiza assim que tiver. Na prática isso quase nunca
@@ -12391,10 +12463,16 @@ function renderizarItemVF(){
   `;
 
   renderizarBarraFixaVF(item, jaRespondida);
-  // marcação de texto só existe pra recuperar se essa questão já foi
-  // respondida ANTES (idRespostaVF já foi gravado num momento anterior) -
-  // sem isso ainda, não tem o que carregar, o enunciado já vem limpo
+  vfIdRenderizadoVF = item.id;
+  // questão já respondida: os grifos estão salvos no banco (gravados no
+  // instante em que foram feitos), então recupera de lá.
+  // Ainda não respondida: não existe onde gravar (o grifo é amarrado à
+  // tentativa, e a tentativa só nasce ao responder) - aí devolve o que
+  // estava na tela antes deste redesenho. ACHADO REAL: sem isso, grifar e
+  // em seguida adicionar uma tag apagava o grifo, porque a tag remonta o
+  // card inteiro
   if(entrada.idRespostaVF) vfCarregarMarcacoesTextoVF('flash', entrada.idRespostaVF, item.id);
+  else vfAplicarGrifosNaTelaVF(grifosNaTelaVF);
   // preview de mnemônico/nota - só busca se já sabemos (via notasVF) que
   // existe alguma; se não existe, o convite já foi montado direto no
   // HTML acima, sem precisar de busca nenhuma
