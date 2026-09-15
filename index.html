@@ -2019,7 +2019,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-15-032';
+const VERSAO_APP = '2026-09-15-034';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9006,12 +9006,18 @@ document.addEventListener('touchend', (e) => {
   if(vfTelaAtualVF() === 'quest' && cadernoAtual && questoesCaderno[indiceQuestaoAtual]){
     vfPersistirMarcacoesTextoVF('quest', cadernoAtual.id, questoesCaderno[indiceQuestaoAtual].id);
   }
-  // Flash: só persiste se a questão atual JÁ foi respondida (já existe um
-  // idRespostaVF pra vincular) - grifar na tela de explicação/resultado,
-  // depois de já ter respondido, também precisa salvar
+  // Flash: salva SEMPRE, na hora. Depois de responder o grifo é amarrado à
+  // tentativa (idRespostaVF). ANTES de responder a tentativa ainda não
+  // existe, então ele é amarrado provisoriamente à própria questão -
+  // ACHADO REAL: sem isso, grifar e não responder (ou responder só muito
+  // depois) simplesmente não gravava nada, e o grifo existia só na tela.
+  // Ao responder, as linhas provisórias são trocadas pelas da tentativa
+  // (ver responderVF)
   if(vfTelaAtualVF() === 'flash' && estadoVF){
     const entradaAtual = estadoVF.historico[estadoVF.posicao];
-    if(entradaAtual && entradaAtual.idRespostaVF) vfPersistirMarcacoesTextoVF('flash', entradaAtual.idRespostaVF, entradaAtual.item.id);
+    if(entradaAtual){
+      vfPersistirMarcacoesTextoVF('flash', entradaAtual.idRespostaVF || entradaAtual.item.id, entradaAtual.item.id);
+    }
   }
 });
 
@@ -9374,7 +9380,10 @@ async function vfCarregarCacheMarcacoesDoEscopoVF(origem, escopoId){
 // atualiza o cache em memória na hora, pra navegar pra frente e voltar
 // na mesma sessão já refletir sem precisar esperar o banco de novo
 async function vfPersistirMarcacoesTextoVF(origem, escopoId, questaoId, marcacoesJaCapturadas){
-  if(!usuarioAtual || !escopoId || !questaoId) return;
+  if(!usuarioAtual || !escopoId || !questaoId){
+    console.warn('grifo não salvo - faltou identificar de quem/onde:', {temUsuario: !!usuarioAtual, origem, escopoId, questaoId});
+    return;
+  }
   const enunciado = document.getElementById('vf-enunciado-atual') || document.getElementById('quest-enunciado-atual');
   const correcao = document.getElementById('vf-correcao-atual');
   // normalmente lê da tela; mas quem chama pode passar as marcações já
@@ -9391,12 +9400,25 @@ async function vfPersistirMarcacoesTextoVF(origem, escopoId, questaoId, marcacoe
   vfCacheMarcacoesVF.get(chaveCache).set(questaoId, marcacoes.map(m => ({
     container: m.container, tipo_marca: m.tipo, cor: m.cor, offset_inicio: m.offsetInicio, offset_fim: m.offsetFim
   })));
-  await sb.from('marcacoes_texto_vf').delete().eq('usuario_id', usuarioAtual.id).eq('origem', origem).eq('escopo_id', escopoId).eq('questao_id', questaoId);
-  if(marcacoes.length){
-    await sb.from('marcacoes_texto_vf').insert(marcacoes.map(m => ({
-      usuario_id: usuarioAtual.id, origem, escopo_id: escopoId, questao_id: questaoId,
-      container: m.container, tipo_marca: m.tipo, cor: m.cor, offset_inicio: m.offsetInicio, offset_fim: m.offsetFim
-    })));
+  // a gravação era feita sem olhar o resultado: qualquer recusa do banco
+  // (ou exceção no meio do caminho) passava batida e o grifo ficava só na
+  // tela, sem ninguém saber. Agora, se falhar, ele AVISA - grifo é coisa
+  // que não dá pra conferir no olho, some sem deixar rastro
+  try{
+    const {error: erroApagar} = await sb.from('marcacoes_texto_vf').delete()
+      .eq('usuario_id', usuarioAtual.id).eq('origem', origem)
+      .eq('escopo_id', escopoId).eq('questao_id', questaoId);
+    if(erroApagar) throw erroApagar;
+    if(marcacoes.length){
+      const {error: erroGravar} = await sb.from('marcacoes_texto_vf').insert(marcacoes.map(m => ({
+        usuario_id: usuarioAtual.id, origem, escopo_id: escopoId, questao_id: questaoId,
+        container: m.container, tipo_marca: m.tipo, cor: m.cor, offset_inicio: m.offsetInicio, offset_fim: m.offsetFim
+      })));
+      if(erroGravar) throw erroGravar;
+    }
+  }catch(e){
+    console.error('erro ao salvar grifo:', e, {origem, escopoId, questaoId, marcacoes});
+    vfMostrarAvisoVF(`Não consegui salvar o grifo: ${e?.message || e?.code || 'erro desconhecido'}. Ele continua na tela, mas some ao sair da questão.`, 'Grifo não salvo');
   }
 }
 
@@ -14004,6 +14026,15 @@ async function responderVF(resposta){
     // sem eles); e depois de gravar, repinta na afirmação que está na
     // tela - o grifo não pode sumir só porque a pessoa respondeu
     await vfPersistirMarcacoesTextoVF('flash', idRespostaCriada, item.id, grifosAntesDeResponderVF);
+    // as provisórias (escopo = a própria questão, gravadas enquanto ela
+    // ainda não tinha resposta) já foram regravadas acima no escopo da
+    // tentativa - apaga pra não contarem como uma "passada" a mais
+    if(grifosAntesDeResponderVF.length){
+      sb.from('marcacoes_texto_vf').delete()
+        .eq('usuario_id', usuarioAtual.id).eq('origem', 'flash')
+        .eq('escopo_id', item.id).eq('questao_id', item.id)
+        .then(({error}) => { if(error) console.error('erro ao limpar grifos provisórios:', error); });
+    }
     if(grifosAntesDeResponderVF.length && estadoVF?.historico?.[estadoVF.posicao]?.item?.id === item.id){
       vfAplicarMarcacoesDoCacheVF('flash', idRespostaCriada, item.id);
     }
