@@ -1662,6 +1662,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
         <button class="btn-primario" style="flex:1 1 0;min-width:0;white-space:nowrap" id="vf-btn-exclusao-so-esta" onclick="confirmarExclusaoSoEstaVF()">Só esta</button>
         <button class="btn-primario" style="flex:1 1 0;min-width:0;white-space:nowrap" id="vf-btn-exclusao-com-irmas" onclick="confirmarExclusaoComIrmasVF()"></button>
       </div>
+      <button class="btn-primario" style="width:100%;background:#fff;color:#B23A34;border:1px solid #B23A34" id="vf-btn-exclusao-so-irmas" onclick="confirmarExclusaoSoIrmasVF()"></button>
       <button class="btn-secundario" style="width:100%" onclick="vfFecharDialogoExclusaoFamiliaVF()">Cancelar</button>
     </div>
   </div>
@@ -2019,7 +2020,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-15-036';
+const VERSAO_APP = '2026-09-15-037';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -16937,16 +16938,19 @@ function vfMostrarDialogoExclusaoFamiliaVF(procurando){
   const lista = document.getElementById('vf-lista-irmas-exclusao');
   const btnSoEsta = document.getElementById('vf-btn-exclusao-so-esta');
   const btnComIrmas = document.getElementById('vf-btn-exclusao-com-irmas');
+  const btnSoIrmas = document.getElementById('vf-btn-exclusao-so-irmas');
   if(procurando){
     titulo.textContent = 'Excluir afirmação';
     lista.innerHTML = '<div style="padding:8px 0;font-size:var(--fs-c);color:#999">procurando irmãs…</div>';
     btnSoEsta.textContent = 'Excluir esta';
     btnComIrmas.classList.add('hidden');
+    btnSoIrmas.classList.add('hidden');
   }else if(n === 0){
     titulo.textContent = 'Excluir afirmação';
     lista.innerHTML = '<div style="padding:8px 0;font-size:var(--fs-c);color:#999">Sem irmãs da mesma família.</div>';
     btnSoEsta.textContent = 'Excluir esta';
     btnComIrmas.classList.add('hidden');
+    btnSoIrmas.classList.add('hidden');
   }else{
     titulo.textContent = `Esta afirmação tem ${n} irmã${n>1?'s':''} da mesma família. O que excluir?`;
     // a RPC achar_irmas_vf devolve id/texto/resposta - o resumo a 120
@@ -16971,6 +16975,7 @@ function vfMostrarDialogoExclusaoFamiliaVF(procurando){
     vfPintarIrmasExclusaoVF();
     btnSoEsta.textContent = 'Só esta';
     btnComIrmas.classList.remove('hidden');
+    btnSoIrmas.classList.remove('hidden');
   }
   abrirModal('modal-confirmar-exclusao-familia-vf');
 }
@@ -16993,10 +16998,17 @@ function vfPintarIrmasExclusaoVF(){
     check.innerHTML = marcada ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : '';
   });
   const btnComIrmas = document.getElementById('vf-btn-exclusao-com-irmas');
+  const btnSoIrmas = document.getElementById('vf-btn-exclusao-so-irmas');
   const n = vfIrmasMarcadasVF.size;
   if(btnComIrmas){
     btnComIrmas.classList.toggle('hidden', n === 0);
     btnComIrmas.textContent = n === 1 ? 'Esta + 1 irmã' : `Esta + ${n} irmãs`;
+  }
+  // "só as irmãs": exclui as marcadas e DEIXA esta em pé - útil quando a
+  // afirmação boa é a que está na tela e as repetidas é que sobram
+  if(btnSoIrmas){
+    btnSoIrmas.classList.toggle('hidden', n === 0);
+    btnSoIrmas.textContent = n === 1 ? 'Só a irmã marcada' : `Só as ${n} irmãs marcadas`;
   }
 }
 
@@ -17089,6 +17101,23 @@ async function confirmarExclusaoComIrmasVF(){
     ...idsIrmas.map(id => ({usuario_id: usuarioAtual.id, questao_vf_id: id, motivo: 'família'}))
   ];
   await vfExecutarExclusaoVF([idPrincipal, ...idsIrmas], linhas, 'modal-confirmar-exclusao-familia-vf');
+}
+
+// exclui SÓ as irmãs marcadas - a questão que está na tela continua
+// existindo, e a sessão segue nela (vfExecutarExclusaoVF só avança de
+// questão quando a atual está entre as excluídas)
+async function confirmarExclusaoSoIrmasVF(){
+  if(!questaoVfParaExcluir) return;
+  const motivo = document.getElementById('motivo-exclusao-familia-vf').value.trim() || null;
+  const idsIrmas = vfIrmasParaExcluirVF.map(i => i.id).filter(id => vfIrmasMarcadasVF.has(id));
+  if(!idsIrmas.length) return;
+  // a família da questão que FICA mudou - sem limpar o cache dela, reabrir
+  // o pop-up ofereceria de novo as irmãs que acabaram de ser excluídas
+  const idQueFica = questaoVfParaExcluir;
+  vfIrmasCacheVF.delete(idQueFica);
+  vfIrmasEmVooVF.delete(idQueFica);
+  const linhas = idsIrmas.map(id => ({usuario_id: usuarioAtual.id, questao_vf_id: id, motivo: motivo || 'família'}));
+  await vfExecutarExclusaoVF(idsIrmas, linhas, 'modal-confirmar-exclusao-familia-vf');
 }
 
 // próxima/anterior entrada do histórico que ainda EXISTE (não foi
