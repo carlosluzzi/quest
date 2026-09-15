@@ -2016,7 +2016,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-14-024';
+const VERSAO_APP = '2026-09-15-025';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -18311,6 +18311,16 @@ async function confirmarEnvioTracker(){
   vfMostrarAvisoVF('Enviando pro Tracker…', 'PSCPP Tracker');
 
   const tempoMinutos = Math.max(1, Math.round((new Date(retrato.finalizadoEm) - new Date(retrato.criadoEm)) / 60000));
+  // data da atividade = o DIA em que a sessão/caderno foi finalizado, no
+  // fuso de São Paulo. ACHADO REAL: o payload não mandava 'data' nenhuma,
+  // e do lado do Tracker a função de gravar cai num COALESCE com "agora"
+  // quando o campo não vem - ou seja, a atividade ficava com a data do
+  // ENVIO, não a do estudo. Enquanto finalizar e enviar acontecem no
+  // mesmo dia ninguém percebe; fechando o iPad e enviando no dia
+  // seguinte, a sessão entrava no dia errado (PQF 059: estudada em 14/09,
+  // gravada como 15/09). O banco já aceitava o campo, só faltava mandar.
+  // Sessão que vira a meia-noite conta no dia em que foi finalizada
+  const dataAtividade = vfDiaLocalDeVF(new Date(retrato.finalizadoEm).getTime());
 
   let payload;
   if(retrato.origemFlash){
@@ -18345,6 +18355,7 @@ async function confirmarEnvioTracker(){
 
     payload = {
       origem: 'flash',
+      data: dataAtividade,
       tempo_gasto_minutos: tempoMinutos,
       modulo: moduloUnico,
       publicacao: publicacaoUnica,
@@ -18390,6 +18401,7 @@ async function confirmarEnvioTracker(){
 
     payload = {
       origem: 'quest',
+      data: dataAtividade,
       tempo_gasto_minutos: tempoMinutos,
       modulo: moduloUnico,
       publicacao: publicacaoUnica,
