@@ -364,6 +364,15 @@ na CLASSE, nunca inline: vfAjustarLarguraTabelaVF zera
 td.style.whiteSpace (ou põe nowrap nas células curtas), e um valor
 inline seria apagado nessa hora - na classe, o "" volta pra cá */
 .vf-tabela-celula{white-space:pre-wrap}
+/* sobrescrito/subscrito sem esticar a linha: vertical-align:super (o
+   padrão do navegador pro <sup>) empurra a caixa da linha pra cima e a
+   linha inteira fica mais alta que as vizinhas - numa tabela, a linha
+   com 1st/2nd ficava visivelmente mais gorda que as outras. Com
+   line-height:0 + position:relative + top, o deslocamento é só visual e
+   a altura da linha continua a mesma */
+sup,sub{font-size:0.72em;line-height:0;position:relative;vertical-align:baseline}
+sup{top:-0.45em}
+sub{top:0.22em}
 .vf-celula-anotavel-com-nota{text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
 .vf-celula-anotavel-sem-nota{cursor:pointer}
 .item-lista-modulo{padding:9px 8px;font-size:var(--fs-d);line-height:1.3;color:#111;cursor:pointer;border-bottom:0.5px solid #eee}
@@ -2034,7 +2043,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-16-043';
+const VERSAO_APP = '2026-09-16-044';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
