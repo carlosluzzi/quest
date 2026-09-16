@@ -2079,7 +2079,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-16-061';
+const VERSAO_APP = '2026-09-16-062';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -17217,12 +17217,12 @@ async function vfCarregarNotasFixadasIrmasVF(questaoVfId){
     const temTabela = /\\begin\{array\}/.test(n.texto);
     const conteudo = temTabela
       ? formatarTextoItemVF(n.texto, {listaNumerada: true})
-      : `<div style="color:#333;line-height:1.4;text-align:${alinhamentoCss};padding-right:44px">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>`;
+      : `<div style="color:#333;line-height:1.4;text-align:${alinhamentoCss}">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>`;
     return `
-      <div style="margin-bottom:10px">
+      <div id="vf-nota-irma-card-${n.id}" style="margin-bottom:10px">
         <div class="${temTabela ? '' : 'card-questao'}" style="position:relative;margin-bottom:0;border-style:dashed;${vfEstiloCorNotaVF(n.cor)}">
           <div style="opacity:0.45">${conteudo}</div>
-          <button onclick="vfAdicionarNotaFixadaDaIrmaVF('${n.id}')" title="Adicionar essa nota nessa afirmação também" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#B23A34;font-size:var(--fs-f);line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">+</button>
+          <button onclick="vfAdicionarNotaFixadaDaIrmaVF('${n.id}')" title="Adicionar essa nota nessa afirmação também" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;border:0.5px solid #DDD;background:#fff;color:#777;font-size:var(--fs-g);font-weight:300;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.10);-webkit-tap-highlight-color:transparent">+</button>
         </div>
         <div style="font-size:var(--fs-a);color:#aaa;margin:3px 0 0 4px">nota de uma irmã dessa afirmação</div>
       </div>`;
@@ -17232,13 +17232,38 @@ async function vfCarregarNotasFixadasIrmasVF(questaoVfId){
 
 async function vfAdicionarNotaFixadaDaIrmaVF(notaId){
   const origem = vfNotasFixadasIrmasVF.find(n => n.id === notaId);
-  const destino = document.getElementById('vf-preview-notas-irmas-container')?.dataset.questaoId;
+  const containerIrmas = document.getElementById('vf-preview-notas-irmas-container');
+  const destino = containerIrmas?.dataset.questaoId;
   if(!origem || !destino) return;
-  // some da oferta na hora - sensação de "trouxe pra cá", sem esperar rede
+  // tudo acontece na tela ANTES de falar com o banco, e sem redesenhar a
+  // questão inteira: renderizarItemVF() remonta o conteúdo todo, o que
+  // fazia a página dar aquele pulinho de rolagem e demorava. Aqui só a
+  // pilha de notas fixadas é remontada, no lugar onde já está
   vfNotasFixadasIrmasVF = vfNotasFixadasIrmasVF.filter(n => n.id !== notaId);
+  document.getElementById(`vf-nota-irma-card-${notaId}`)?.remove();
+  if(!vfNotasFixadasIrmasVF.length && containerIrmas){ containerIrmas.classList.add('hidden'); containerIrmas.innerHTML = ''; }
+
   const fixadasAtuais = vfNotaPreviewCacheVF.get(destino) || [];
-  // entra fixada (é assim que ela aparece na página, que é o ponto) e no
-  // fim da pilha, sem mexer na ordem das que já estavam
+  const idProvisorio = 'nova-' + Date.now();
+  const notaLocal = {id: idProvisorio, texto: origem.texto, ordem_fixacao: fixadasAtuais.length, alinhamento: origem.alinhamento || null, cor: origem.cor || null};
+  const listaNova = [...fixadasAtuais, notaLocal];
+  vfNotaPreviewCacheVF.set(destino, listaNova);
+  notasVF.add(destino);
+  notasFixadasVF.add(destino);
+  vfListaNotasCacheVF.delete(destino);
+  vfNotasBibliotecaCacheVF = null;
+  // a questão pode não ter nenhuma nota fixada ainda - nesse caso o
+  // container da pilha nem existe na tela, e é criado aqui, logo acima
+  // do bloco das ofertas das irmãs
+  let containerFixadas = document.getElementById('vf-preview-notas-container');
+  if(!containerFixadas && containerIrmas?.parentElement){
+    containerFixadas = document.createElement('div');
+    containerFixadas.id = 'vf-preview-notas-container';
+    containerFixadas.style.cssText = 'position:relative;margin-top:14px';
+    containerIrmas.parentElement.insertBefore(containerFixadas, containerIrmas);
+  }
+  if(containerFixadas) vfMontarPreviewNotasVF(containerFixadas, listaNova, destino);
+
   const {data, error} = await sb.from('notas_vf').insert({
     usuario_id: usuarioAtual.id,
     questao_vf_id: destino,
@@ -17249,19 +17274,22 @@ async function vfAdicionarNotaFixadaDaIrmaVF(notaId){
     fixada: true,
     ordem_fixacao: fixadasAtuais.length
   }).select('id, texto, ordem_fixacao, alinhamento, cor').single();
+
   if(error || !data){
-    vfNotasFixadasIrmasVF.push(origem);
+    // desfaz o otimismo: tira a nota da pilha e devolve a oferta
+    vfNotaPreviewCacheVF.set(destino, fixadasAtuais);
+    if(!fixadasAtuais.length) notasFixadasVF.delete(destino);
+    const containerAgora = document.getElementById('vf-preview-notas-container');
+    if(containerAgora) vfMontarPreviewNotasVF(containerAgora, fixadasAtuais, destino);
     vfMostrarAvisoVF('Não consegui trazer a nota. Tenta de novo.');
     vfCarregarNotasFixadasIrmasVF(destino);
     return;
   }
-  notasVF.add(destino);
-  notasFixadasVF.add(destino);
-  vfNotaPreviewCacheVF.set(destino, [...fixadasAtuais, data]);
-  vfListaNotasCacheVF.delete(destino);
-  vfNotasBibliotecaCacheVF = null; // a biblioteca de notas passa a ter mais uma
-  const naTela = estadoVF?.historico?.[estadoVF.posicao]?.item?.id;
-  if(naTela === destino && typeof renderizarItemVF === 'function') renderizarItemVF(); // redesenha: a nota sobe pro bloco das fixadas, já sólida
+  // troca o id provisório pelo real, pra fixar/arrastar/editar funcionarem
+  const naLista = (vfNotaPreviewCacheVF.get(destino) || []).find(x => x.id === idProvisorio);
+  if(naLista) Object.assign(naLista, data);
+  const containerFinal = document.getElementById('vf-preview-notas-container');
+  if(containerFinal) vfMontarPreviewNotasVF(containerFinal, vfNotaPreviewCacheVF.get(destino) || [], destino);
 }
 
 async function abrirNotaVF(questaoVfId){
