@@ -2079,7 +2079,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-16-065';
+const VERSAO_APP = '2026-09-16-066';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5314,14 +5314,87 @@ function vfProcessarUnderbraceVF(texto){
   return resultado;
 }
 
+// \overline{GM} / \bar{GM} - a barra em cima da letra (média, valor
+// médio, distância entre pontos: GM, KG, BM). Mesma solução visual da
+// fração e do underbrace: uma linha de verdade via border, na cor do
+// texto, em vez de tentar empilhar o caractere combinante Unicode (que
+// some ou sai torto dependendo da fonte e do tamanho da letra)
+function vfProcessarOverlineVF(texto){
+  let resultado = '';
+  let pos = 0;
+  const regexInicio = /\\(?:overline|bar)\s*\{/g;
+  let match;
+  while((match = regexInicio.exec(texto))){
+    const grupo = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+    if(!grupo){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    resultado += texto.slice(pos, match.index);
+    resultado += `<span style="border-top:1.1px solid currentColor;padding:0.1em 0.08em 0 0.08em;display:inline-block;line-height:1.1">${grupo.conteudo}</span>`;
+    pos = grupo.fimPos + 1;
+    regexInicio.lastIndex = pos;
+  }
+  resultado += texto.slice(pos);
+  return resultado;
+}
+
+// \left( ... \right) - parêntese/colchete/chave que acompanha a altura
+// do miolo. Antes os dois comandos eram simplesmente apagados e sobrava
+// um parêntese de tamanho normal: em volta de uma fração empilhada ele
+// ficava do tamanho de um dos andares só, com cara de erro. Roda DEPOIS
+// das frações de propósito - nesse ponto o miolo já é HTML, e dá pra
+// medir se ele é "alto" (fração/overline dentro) e aumentar o glifo. O
+// parêntese cresce por font-size (o desenho real da fonte, proporcional)
+// e não por transform (que esticaria o traço e engrossaria só num eixo)
+const VF_PARES_DELIMITADORES_VF = {'(': ')', '[': ']', '\\{': '\\}', '|': '|'};
+function vfProcessarDelimitadoresGrandesVF(texto){
+  let resultado = '';
+  let pos = 0;
+  const regexInicio = /\\left\s*(\\\{|[([|.])/g;
+  let match;
+  while((match = regexInicio.exec(texto))){
+    const abre = match[1];
+    const fecha = VF_PARES_DELIMITADORES_VF[abre] || '';
+    // procura o \right correspondente, respeitando \left aninhados
+    const regexParceiro = /\\(left|right)\s*(\\\}|[)\]|.])/g;
+    regexParceiro.lastIndex = match.index + match[0].length;
+    let nivel = 0, fim = null, m2;
+    while((m2 = regexParceiro.exec(texto))){
+      if(m2[1] === 'left'){ nivel++; continue; }
+      if(nivel > 0){ nivel--; continue; }
+      fim = m2; break;
+    }
+    if(!fim){ regexInicio.lastIndex = match.index + match[0].length; continue; } // sem par: deixa cru pra não estragar o texto
+    const miolo = texto.slice(match.index + match[0].length, fim.index);
+    // miolo alto = tem fração empilhada, overline ou underbrace dentro
+    const alto = /display:inline-block;text-align:center|border-top:1.1px|border-bottom:1.3px/.test(miolo);
+    const escala = alto ? 2.05 : 1;
+    const estilo = alto
+      ? 'display:inline-block;font-size:2.05em;line-height:0;vertical-align:middle;position:relative;top:-0.03em;font-weight:300'
+      : '';
+    const pinta = (ch) => {
+      if(!ch || ch === '.') return ''; // \left. / \right. = lado invisível, padrão do LaTeX
+      const visivel = ch === '\\{' ? '{' : (ch === '\\}' ? '}' : ch);
+      return estilo ? `<span style="${estilo}">${visivel}</span>` : visivel;
+    };
+    resultado += texto.slice(pos, match.index) + pinta(abre) + miolo + pinta(fim[2] || fecha);
+    pos = fim.index + fim[0].length;
+    regexInicio.lastIndex = pos;
+  }
+  resultado += texto.slice(pos);
+  return resultado;
+}
+
 function vfAplicarMarcacaoMatematicaVF(textoEscapado){
   let c = vfProcessarTextoPequenoVF(textoEscapado)
     .replace(/\\,/g, '') // espaço fino do LaTeX - aqui vira SEM espaço nenhum (5,0x, não 5,0 x)
     .replace(/\\ /g, ' ') // \  (barra + espaço) força espaço em LaTeX de verdade - mesma ideia, espaço normal já resolve
-    .replace(/\\left|\\right/g, '') // só ajustam o tamanho do delimitador em LaTeX de verdade - o delimitador em si (colchete, parêntese, etc) já vem logo depois e aparece normalmente sem eles
+    // \left( ... \right) é tratado depois das frações, em
+    // vfProcessarDelimitadoresGrandesVF - lá dá pra saber se o miolo é
+    // alto (uma fração empilhada, por exemplo) e crescer o parêntese
     .replace(/\\text\{([^{}]*)\}/g, '$1'); // \text{...} fora de tabela - achado real: só era processado dentro de célula (vfFormatarCelulaArrayVF), "\text{ com }" solto no meio de uma fórmula ficava cru
   c = vfProcessarFracoesVF(c);
   c = vfProcessarUnderbraceVF(c);
+  c = vfProcessarOverlineVF(c);
+  c = vfProcessarDelimitadoresGrandesVF(c); // por último: precisa do miolo já montado pra saber se cresce o parêntese
   return c
     // \nome{conteudo} - letra grega/operador seguido de chaves SEM
     // expoente (ex: \delta{V_P}) - converte o símbolo e remove as
@@ -6383,6 +6456,65 @@ let vfDesenhandoAgora = false;
 // dispara um resize via ResizeObserver - sem essa flag, toDataURL()
 // rodava à toa em cada uma dessas mudanças, mesmo sem nada pra preservar
 let vfCanvasPodeTerConteudoVF = false;
+// CONTADOR DE GERAÇÃO DO CANVAS - o canvas de desenho é UM só, dividido
+// entre Flash, Quest e Rascunho. Toda restauração de desenho passa por
+// img.onload, que é ASSÍNCRONO: entre pedir a imagem e ela chegar, o
+// usuário pode já ter trocado de tela. Achado real (bug do rascunho): ao
+// abrir a folha, vfAtualizarVisibilidadeCanvasVF() redimensionava o
+// canvas AINDA com o desenho do Flash dentro, tirava um retrato dele e
+// agendava o redesenho; a limpeza acontecia logo depois, mas o onload
+// chegava DEPOIS dela e pintava os traços do Flash na folha - fora de
+// escala (por isso "pulando"), e o auto-salvamento da folha ainda os
+// gravava ali, sumindo do Flash. Cada restauração guarda a geração (e a
+// tela) do momento em que foi agendada e desiste se qualquer uma mudou
+let vfGeracaoCanvasVF = 0;
+// desenho da tela de trás guardado enquanto a folha de rascunho está
+// aberta - o que estava riscado no Flash/Quest volta pra lá ao fechar
+let vfDesenhoGuardadoTelaAnteriorVF = null;
+function vfGuardarDesenhoDaTelaAnteriorVF(){
+  vfDesenhoGuardadoTelaAnteriorVF = null;
+  const canvas = document.getElementById('vf-canvas-desenho');
+  const content = document.getElementById('content');
+  if(!canvas || !vfCanvasPodeTerConteudoVF || !canvas.width || !canvas.height) return;
+  const tela = vfTelaAtualVF();
+  if(tela !== 'flash' && tela !== 'quest') return; // só essas duas têm desenho pra preservar
+  try{
+    vfDesenhoGuardadoTelaAnteriorVF = {
+      dataUrl: canvas.toDataURL(),
+      tela,
+      largura: content ? content.clientWidth : null,
+      altura: parseFloat(canvas.style.height) || null
+    };
+  }catch(e){ vfDesenhoGuardadoTelaAnteriorVF = null; }
+}
+function vfRestaurarDesenhoDaTelaAnteriorVF(){
+  const guardado = vfDesenhoGuardadoTelaAnteriorVF;
+  vfDesenhoGuardadoTelaAnteriorVF = null; // consome: vale uma volta só
+  if(!guardado || !vfCtxDesenho) return;
+  if(vfTelaAtualVF() !== guardado.tela) return; // voltou pra outra tela - o desenho não é dela
+  const canvas = document.getElementById('vf-canvas-desenho');
+  const content = document.getElementById('content');
+  if(!canvas) return;
+  const geracao = vfGeracaoCanvasVF;
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
+  const img = new Image();
+  img.onload = () => {
+    if(geracao !== vfGeracaoCanvasVF || vfTelaAtualVF() !== guardado.tela || !vfCtxDesenho) return;
+    vfCtxDesenho.globalCompositeOperation = 'source-over';
+    vfCtxDesenho.globalAlpha = 1;
+    let larguraDestino = img.width/dpr, alturaDestino = img.height/dpr;
+    if(content && guardado.largura && guardado.altura){
+      const alturaAgora = parseFloat(canvas.style.height) || guardado.altura;
+      larguraDestino = (img.width/dpr) * (content.clientWidth / guardado.largura);
+      alturaDestino = (img.height/dpr) * (alturaAgora / guardado.altura);
+    }
+    vfCtxDesenho.drawImage(img, 0, 0, larguraDestino, alturaDestino);
+    vfCanvasPodeTerConteudoVF = true;
+    vfSalvarEstadoHistoricoVF(); // entra no desfazer da tela de volta
+    mostrarBarraDesenhoVF();
+  };
+  img.src = guardado.dataUrl;
+}
 // controla o "modo de visualização" ao abrir uma questão salva que não é
 // da sessão atual - guarda de onde saiu pra poder voltar quando o usuário
 // clicar Próxima/Anterior/sair, em vez de continuar navegando a partir
@@ -6611,8 +6743,14 @@ function vfRedimensionarCanvasDesenhoInternoVF(){
     ? {dataUrl: snapshotAntesDoResize, larguraConteudo: larguraConteudoAntes, alturaConteudo: alturaConteudoAntes}
     : (typeof vfIndiceHistoricoVF !== 'undefined' && vfIndiceHistoricoVF >= 0 && vfHistoricoDesenho[vfIndiceHistoricoVF]) || null;
   if(origemRestauracao){
+    // ver vfGeracaoCanvasVF: se a tela mudar (ou o canvas for limpo de
+    // propósito) entre o pedido e a chegada da imagem, essa restauração
+    // não vale mais - pintaria o desenho de uma tela em cima de outra
+    const geracaoNoAgendamentoVF = vfGeracaoCanvasVF;
+    const telaNoAgendamentoVF = vfTelaAtualVF();
     const img = new Image();
     img.onload = () => {
+      if(geracaoNoAgendamentoVF !== vfGeracaoCanvasVF || telaNoAgendamentoVF !== vfTelaAtualVF()) return;
       ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = 1;
       let larguraDestino = img.width/dpr, alturaDestino = img.height/dpr;
@@ -10321,6 +10459,7 @@ function limparCanvasDesenhoVF(){
   document.body.classList.remove('vf-desenho-ativo');
   vfDesativarModoMarcacaoTextoVF();
   vfLimparHistoricoVF();
+  vfGeracaoCanvasVF++; // invalida qualquer restauração assíncrona ainda a caminho (ver vfGeracaoCanvasVF)
   if(!canvas || !vfCtxDesenho) return;
   const dpr = (window.devicePixelRatio || 1) * 1.5;
   vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
@@ -18939,8 +19078,10 @@ function vfRestaurarDesenhoQuestaoQuestVF(questaoId){
   const canvas = document.getElementById('vf-canvas-desenho');
   const content = document.getElementById('content');
   const dpr = (window.devicePixelRatio || 1) * 1.5;
+  const geracaoRestauroVF = vfGeracaoCanvasVF; // ver vfGeracaoCanvasVF
   const img = new Image();
   img.onload = () => {
+    if(geracaoRestauroVF !== vfGeracaoCanvasVF || vfTelaAtualVF() !== 'quest' || !vfCtxDesenho) return;
     vfCtxDesenho.globalCompositeOperation = 'source-over';
     vfCtxDesenho.globalAlpha = 1;
     let larguraDestino = img.width/dpr, alturaDestino = img.height/dpr;
@@ -18969,6 +19110,10 @@ function vfRestaurarDesenhoQuestaoQuestVF(questaoId){
 let vfAbaAnteriorAoRascunhoVF = null; // guarda qual aba estava visível antes, pra voltar exatamente pra ela ao fechar
 
 function abrirRascunhoLivreVF(){
+  // PRIMEIRA coisa: o que está riscado no Flash/Quest fica guardado aqui
+  // pra voltar ao fechar a folha. Tem que ser antes de qualquer mudança
+  // de layout - depois que as abas somem, o canvas já foi remedido
+  vfGuardarDesenhoDaTelaAnteriorVF();
   // #quests-resolucao não tem a classe .view-aba própria (só o pai
   // #aba-quests tem) - mas vfTelaAtualVF()/vfEstaVisivelAgora() checam
   // ela diretamente, sem considerar se o pai está escondido. Escondendo
@@ -19049,6 +19194,14 @@ function fecharRascunhoLivreVF(){
     document.getElementById('vf-barra-fixa')?.classList.remove('hidden');
   }
   vfAtualizarVisibilidadeCanvasVF();
+  // devolve o desenho que estava na tela antes de entrar na folha - o
+  // quadro seguinte porque o canvas só volta ao tamanho do Flash/Quest
+  // depois que o layout dessa tela assenta
+  requestAnimationFrame(() => {
+    if(!document.getElementById('aba-rascunho-livre-vf')?.classList.contains('hidden')) return; // voltou pra folha antes de terminar
+    inicializarCanvasDesenhoVF();
+    vfRestaurarDesenhoDaTelaAnteriorVF();
+  });
   const nomeNavAlvo = idVolta === 'quests-resolucao' ? 'quests' : idVolta.replace(/^aba-/, '');
   document.querySelectorAll('#bottom-nav .nav-item').forEach(item => item.classList.toggle('active', item.dataset.aba === nomeNavAlvo));
 }
@@ -19091,8 +19244,10 @@ function vfRestaurarRascunhoLivreVF(){
   }
   if(!salvo.dataUrl) return;
   const dpr = (window.devicePixelRatio || 1) * 1.5;
+  const geracaoRestauroVF = vfGeracaoCanvasVF; // ver vfGeracaoCanvasVF
   const img = new Image();
   img.onload = () => {
+    if(geracaoRestauroVF !== vfGeracaoCanvasVF || vfTelaAtualVF() !== 'rascunho' || !vfCtxDesenho) return;
     vfCtxDesenho.globalCompositeOperation = 'source-over';
     vfCtxDesenho.globalAlpha = 1;
     let larguraDestino = img.width/dpr, alturaDestino = img.height/dpr;
@@ -19110,6 +19265,7 @@ function vfRestaurarRascunhoLivreVF(){
   // vez depois que tudo assentou devolve a folha sem custo nenhum
   setTimeout(() => {
     if(document.getElementById('aba-rascunho-livre-vf')?.classList.contains('hidden')) return;
+    if(geracaoRestauroVF !== vfGeracaoCanvasVF) return; // a folha foi limpa/trocada nesse meio tempo
     if(!vfCtxDesenho || !img.complete) return;
     const papelAgora = document.getElementById('rascunho-livre-papel');
     const dprAgora = (window.devicePixelRatio || 1) * 1.5;
