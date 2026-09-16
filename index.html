@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+\<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -69,11 +69,11 @@ DENTRO das próprias bordas, nunca é cortado pelo overflow do pai */
 .vf-foco-interno-vf:focus{outline:none;box-shadow:inset 0 0 0 1.5px #B23A34}
 #vf-editor-rich-caixa table{border-collapse:collapse;margin:4px 0}
 #vf-editor-rich-caixa table td{border:1px solid #ccc;padding:6px 10px;min-width:32px}
-#vf-editor-rich-caixa table tr:first-child.vf-editor-tr-cabecalho td{background:#EAECF1;font-weight:600}
+#vf-editor-rich-caixa table tr:first-child.vf-editor-tr-cabecalho td{background:#F2F1EC;color:#44443F;font-weight:600}
 .vf-editor-tabela-wrap{position:relative;display:inline-block;margin:6px 16px 20px 6px}
 .vf-editor-tabela-alca{position:absolute;right:-14px;bottom:-14px;width:22px;height:22px;border-radius:6px;background:#fff;border:1.5px solid #999;color:#666;display:flex;align-items:center;justify-content:center;cursor:nwse-resize;-webkit-tap-highlight-color:transparent;touch-action:none;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
 .vf-editor-tabela-cabecalho-toggle{position:absolute;left:-14px;top:-14px;width:22px;height:22px;border-radius:6px;background:#fff;border:1.5px solid #999;color:#666;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
-.vf-editor-tabela-cabecalho-toggle.ativo{background:#EAECF1;border-color:#7A87B5;color:#3A4270}
+.vf-editor-tabela-cabecalho-toggle.ativo{background:#F2F1EC;border-color:#B9B7AC;color:#44443F}
 .vf-editor-tabela-tooltip{position:fixed;background:#2a2a2e;color:#fff;font-size:var(--fs-c);font-weight:600;padding:5px 10px;border-radius:7px;z-index:600;pointer-events:none;white-space:nowrap}
 button{font-family:inherit;transition:transform 0.12s ease,opacity 0.12s ease;border:none;cursor:pointer;background:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* só nas telas onde a caneta compete com botões pelo toque (Flash e
@@ -993,21 +993,30 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
           <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-filtro-termo')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
         </div>
         <div id="vf-filtro-termo-expansao" style="font-size:var(--fs-c);color:#888;margin-bottom:8px"></div>
-        <div style="display:flex;gap:8px">
-          <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 10px;font-size:var(--fs-d);font-weight:500;cursor:pointer;font-family:inherit">Número</button>
-          <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 10px;font-size:var(--fs-d);font-weight:500;cursor:pointer;font-family:inherit">Lista</button>
+        <!-- cada controle em UMA linha: rótulo à esquerda, botões à direita.
+        Antes, "Varredura" e "Novas" gastavam duas linhas cada (o nome em
+        cima, os botões embaixo) - isso comia altura de tela à toa no
+        Flash. Ordem pedida pelo Carlos: Tipo, Novas, e Varredura por
+        último -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee;border-top:0;margin-top:0;padding-top:0">
+          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Tipo</span>
+          <span style="display:flex;gap:6px;min-width:0">
+            <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 9px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">Número</button>
+            <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 9px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">Lista</button>
+            <button id="vf-filtro-inconsistente" onclick="toggleFiltroTagVF('inconsistente')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 9px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">Inconsist.</button>
+          </span>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
-          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333">Varredura (sem repetir) <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-varredura-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
+          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Novas <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-nova-a-cada-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
+          <span style="display:flex;gap:6px;min-width:0">
+            <button id="vf-nova-a-cada-3" onclick="vfTrocarNovaACadaVF(3)" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 9px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">1/3</button>
+            <button id="vf-nova-a-cada-2" onclick="vfTrocarNovaACadaVF(2)" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 9px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">1/2</button>
+            <button id="vf-nova-a-cada-1.5" onclick="vfTrocarNovaACadaVF(1.5)" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 9px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">2/3</button>
+          </span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
+          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Varredura (sem repetir) <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-varredura-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
           <button id="vf-toggle-varredura" onclick="vfToggleVarreduraVF()" style="width:44px;height:26px;border-radius:13px;border:none;background:#ddd;position:relative;cursor:pointer;flex-shrink:0;transition:background 0.2s"><span id="vf-toggle-varredura-bolinha" style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:transform 0.2s"></span></button>
-        </div>
-        <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
-          <div style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;margin-bottom:6px">Novas <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-nova-a-cada-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></div>
-          <div style="display:flex;gap:6px">
-            <button id="vf-nova-a-cada-3" onclick="vfTrocarNovaACadaVF(3)" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">1 a cada 3</button>
-            <button id="vf-nova-a-cada-2" onclick="vfTrocarNovaACadaVF(2)" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">1 a cada 2</button>
-            <button id="vf-nova-a-cada-1.5" onclick="vfTrocarNovaACadaVF(1.5)" style="flex:1;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit">2 a cada 3</button>
-          </div>
         </div>
       </div>
     </div>
@@ -1742,7 +1751,12 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     </div>
     <div id="vf-nota-conteudo-questao">
       <div id="lista-notas-vf" style="transition:max-height 0.25s ease;overflow:hidden;max-height:0"></div>
-      <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:140px"></textarea>
+      <div id="vf-notas-irmas-vf" class="hidden" style="margin-bottom:14px"></div>
+      <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px">
+        <button type="button" title="Tirar recuo da linha" onpointerdown="vfBotaoRecuoNotaVF(event,true,'texto-nota-vf')" style="width:34px;height:30px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;font-size:var(--fs-e);line-height:1;-webkit-tap-highlight-color:transparent">⇤</button>
+        <button type="button" title="Recuar a linha" onpointerdown="vfBotaoRecuoNotaVF(event,false,'texto-nota-vf')" style="width:34px;height:30px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;font-size:var(--fs-e);line-height:1;-webkit-tap-highlight-color:transparent">⇥</button>
+      </div>
+      <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:140px" onkeydown="vfTeclaTabNotaVF(event)"></textarea>
       <button class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
     </div>
     <div id="vf-nota-conteudo-biblioteca" class="hidden"></div>
@@ -2043,7 +2057,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-16-044';
+const VERSAO_APP = '2026-09-16-051';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4420,6 +4434,13 @@ function vfJuntarSimboloVF(resto){
 }
 // fonte serifada, exceção deliberada só pras tabelas (\begin{array}) -
 // o resto do app continua na fonte padrão sem serifa, intocada
+// cor da faixa de cabeçalho da tabela. Era #EAECF1 (cinza frio, puxado
+// pro azul) - veio de outra paleta e destoava do app, que é todo neutro
+// quente (#FBFBFA de fundo, #f7f7f5 nos cartões, #E6E6E3 nas bordas).
+// Trocado pelo mesmo cinza-papel dos cartões, com o texto num grafite
+// quente em vez do preto do corpo
+const VF_COR_FUNDO_CABECALHO_TABELA_VF = '#F2F1EC';
+const VF_COR_TEXTO_CABECALHO_TABELA_VF = '#44443F';
 const VF_FONTE_TABELA = `'Charter','Iowan Old Style',Georgia,'Times New Roman',serif`;
 // ícone de alfinete usado no botão de "fixar" - mesmo botão/lógica tanto
 // nas notas quanto nos elementos complementares anexados: fixa = aparece
@@ -4656,6 +4677,7 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, la
     const celulasHtml = celulas.map((c, i) => {
       const alinhamento = alinhamentos[i] || 'center';
       const pesoTexto = ehCabecalho ? 600 : 400;
+      const corCabecalho = ehCabecalho ? `color:${VF_COR_TEXTO_CABECALHO_TABELA_VF};` : '';
       const bordaSuperior = indiceLinha > 0 ? 'border-top:1px solid #EAEAE7;' : '';
       const conteudoCelula = vfFormatarCelulaArrayVF(c);
       // célula com só um traço solto (vazio/não se aplica) vira cinza
@@ -4677,9 +4699,9 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, la
       // da classe .vf-tabela-celula (no CSS, NÃO aqui inline: quem ajusta
       // a largura da tabela zera td.style.whiteSpace, o que apagaria um
       // valor inline mas cai de volta na regra da classe)
-      return `<td class="vf-tabela-celula" data-linha="${indiceLinha}" data-coluna="${i}" style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${bordaSuperior}${corTraco}${estiloLargura}${posicaoRelativa}">${conteudoCelula}${alca}</td>`;
+      return `<td class="vf-tabela-celula" data-linha="${indiceLinha}" data-coluna="${i}" style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${corCabecalho}${bordaSuperior}${corTraco}${estiloLargura}${posicaoRelativa}">${conteudoCelula}${alca}</td>`;
     }).join('');
-    const estiloLinha = ehCabecalho ? 'background:#EAECF1' : '';
+    const estiloLinha = ehCabecalho ? `background:${VF_COR_FUNDO_CABECALHO_TABELA_VF}` : '';
     return `<tr style="${estiloLinha}">${celulasHtml}</tr>`;
   }).join('');
   // a tabela SEMPRE nasce no tamanho natural do conteúdo. Quem decide se
@@ -5499,28 +5521,85 @@ function vfProcessarListasNotaVF(texto, aceitarNumeracao){
       : `<ul style="margin:6px 0;padding-left:22px">${itens.join('')}</ul>`);
     itens = null; tipoAtual = null;
   };
-  for(const linha of linhas){
+  for(const linhaBruta of linhas){
+    // espaço no começo da linha (a tecla Tab escreve 3 de cada vez, ver
+    // vfTeclaTabNotaVF) vira recuo DE VERDADE: em HTML espaço no começo
+    // some, e pior, ele quebraria o reconhecimento do marcador de lista,
+    // que é ancorado no início da linha. Aqui o recuo é medido, tirado do
+    // texto, e devolvido como margem à esquerda
+    const partes = linhaBruta.match(/^([ \t]*)([\s\S]*)$/) || [null, '', linhaBruta];
+    const nivelRecuo = Math.min(5, Math.floor(partes[1].replace(/\t/g, '   ').length / 3));
+    const linha = partes[2];
+    const estiloRecuo = nivelRecuo ? `margin-left:${nivelRecuo * 20}px;` : '';
     const simples = linha.match(/^(?:[*\-•]|--)\s+(.+)$/); // "- ", "-- ", "* " ou "• " no começo da linha viram item de lista (espaço obrigatório - "-5 m" não é lista)
     const numerada = !simples && aceitarNumeracao ? linha.match(VF_MARCADOR_LISTA_NUMERADA_VF) : null;
     if(simples){
       if(tipoAtual !== 'simples') fechar();
       tipoAtual = 'simples';
       itens = itens || [];
-      itens.push(`<li>${simples[1]}</li>`);
+      itens.push(`<li style="${estiloRecuo}">${simples[1]}</li>`);
     }else if(numerada){
       if(tipoAtual !== 'numerada') fechar();
       tipoAtual = 'numerada';
       itens = itens || [];
       // marcador e texto em colunas: a linha que quebra alinha embaixo do
       // TEXTO, não embaixo do número - é o que faz a lista parecer lista
-      itens.push(`<li style="display:flex;gap:8px;margin:2px 0"><span style="flex-shrink:0;min-width:1.8em">${numerada[1]}</span><span style="min-width:0">${numerada[2]}</span></li>`);
+      itens.push(`<li style="display:flex;gap:8px;margin:2px 0;${estiloRecuo}"><span style="flex-shrink:0;min-width:1.8em">${numerada[1]}</span><span style="min-width:0">${numerada[2]}</span></li>`);
     }else{
       fechar();
-      blocos.push(linha);
+      blocos.push(estiloRecuo ? `<span style="display:inline-block;${estiloRecuo}">${linha}</span>` : linha);
     }
   }
   fechar();
   return blocos.join('\n');
+}
+
+// Tab / Shift+Tab dentro de uma nota = recuo, não "pular pro próximo
+// campo". Trabalha na LINHA inteira (não no ponto do cursor): é o que
+// serve pra empurrar um sub-item pra dentro de um item de lista. Com
+// texto selecionado, recua todas as linhas da seleção de uma vez
+const VF_RECUO_NOTA_VF = '   '; // 3 espaços = 1 nível (ver vfProcessarListasNotaVF)
+function vfTeclaTabNotaVF(evento){
+  if(evento.key !== 'Tab') return;
+  evento.preventDefault();
+  vfAplicarRecuoNotaVF(evento.target, evento.shiftKey);
+}
+// no iPad o teclado da tela não tem Tab confiável - os dois botõezinhos
+// ⇤ ⇥ fazem a mesma coisa com um toque. preventDefault no pointerdown é
+// o que segura o foco no campo: sem ele, o toque no botão tira o foco do
+// textarea, e na edição inline perder o foco é justamente o que salva e
+// fecha a edição
+function vfBotaoRecuoNotaVF(evento, remover, idCampoPadrao){
+  evento.preventDefault();
+  const ativo = document.activeElement;
+  const ta = (ativo && ativo.tagName === 'TEXTAREA') ? ativo : document.getElementById(idCampoPadrao);
+  if(!ta) return;
+  ta.focus();
+  vfAplicarRecuoNotaVF(ta, remover);
+}
+function vfAplicarRecuoNotaVF(ta, remover){
+  if(!ta || ta.value === undefined) return;
+  const valor = ta.value;
+  const ini = ta.selectionStart, fim = ta.selectionEnd;
+  const inicioBloco = valor.lastIndexOf('\n', ini - 1) + 1;
+  let fimBloco = valor.indexOf('\n', fim);
+  if(fimBloco === -1) fimBloco = valor.length;
+  let deltaPrimeira = 0, deltaTotal = 0;
+  const novas = valor.slice(inicioBloco, fimBloco).split('\n').map((linha, i) => {
+    if(remover){
+      const tira = linha.match(/^(\t| {1,3})/);
+      if(!tira) return linha;
+      if(i === 0) deltaPrimeira = -tira[1].length;
+      deltaTotal -= tira[1].length;
+      return linha.slice(tira[1].length);
+    }
+    if(i === 0) deltaPrimeira = VF_RECUO_NOTA_VF.length;
+    deltaTotal += VF_RECUO_NOTA_VF.length;
+    return VF_RECUO_NOTA_VF + linha;
+  });
+  ta.value = valor.slice(0, inicioBloco) + novas.join('\n') + valor.slice(fimBloco);
+  ta.selectionStart = Math.max(inicioBloco, ini + deltaPrimeira);
+  ta.selectionEnd = Math.max(inicioBloco, fim + deltaTotal);
 }
 function formatarTextoItemVF(texto, opcoes){
   if(!texto) return '';
@@ -6121,7 +6200,7 @@ let filtroVF = (function(){
     const salvo = localStorage.getItem('pscpp_vf_filtro');
     if(salvo) return JSON.parse(salvo);
   }catch(e){}
-  return {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false, termo: null};
+  return {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false, inconsistente: false, termo: null};
 })();
 function vfSalvarFiltroNoStorageVF(){
   try{ localStorage.setItem('pscpp_vf_filtro', JSON.stringify(filtroVF)); }catch(e){}
@@ -10583,7 +10662,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     // caracteres cada), então só esses dois hashes prontos entram na
     // query, não o conteúdo pesado inteiro. Ideia do Fable: evita trazer
     // de volta os ~10MB que a otimização original tinha eliminado
-    let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, capitulo, n_palavras, bibliografia_id, chave_familia_trecho, chave_familia_texto, anulada', {count: 'exact'}).eq('anulada', false);
+    let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, inconsistente, capitulo, n_palavras, bibliografia_id, chave_familia_trecho, chave_familia_texto, anulada', {count: 'exact'}).eq('anulada', false);
     if(filtroVF.publicacao) q = q.eq('bibliografia_id', filtroVF.publicacao);
     if(filtroVF.capitulo) q = q.eq('capitulo', filtroVF.capitulo);
     // Número + Lista juntos = UNIÃO (ou uma coisa ou outra), não interseção —
@@ -10592,6 +10671,9 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     if(filtroVF.numero && filtroVF.lista) q = q.or('eh_numero.eq.true,eh_lista.eq.true');
     else if(filtroVF.numero) q = q.eq('eh_numero', true);
     else if(filtroVF.lista) q = q.eq('eh_lista', true);
+    // inconsistente é independente: cruza com o que estiver ligado acima
+    // (é "e", não "ou" - "só as de número QUE são inconsistentes")
+    if(filtroVF.inconsistente) q = q.eq('inconsistente', true);
     return q.order('id'); // obrigatório pra paginação com .range() ser estável — sem
     // ordem definida o Postgres não garante a mesma sequência entre uma
     // página e outra, podendo pular ou duplicar linha acima de 1000
@@ -10832,7 +10914,7 @@ async function vfIniciarSessaoFlashVF(){
 // nova (ver vfIniciarSessaoFlashVF), pra a próxima vez que a tela de
 // filtros aparecer vir sempre limpa, não com a escolha da sessão anterior
 function vfLimparFiltroVF(){
-  filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false};
+  filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false, inconsistente: false};
   vfSalvarFiltroNoStorageVF();
   const elModulo = document.getElementById('vf-filtro-modulo');
   const elPub = document.getElementById('vf-filtro-publicacao');
@@ -11328,7 +11410,7 @@ async function vfRenderizarConteudoPainelSessaoVF(){
 // trocar de filtro permite o aviso repetir quando o mesmo momento
 // chegar nele
 function vfChaveFiltroAtualVF(){
-  return JSON.stringify({m: filtroVF.modulo, p: filtroVF.publicacao, c: filtroVF.capitulo, n: filtroVF.numero, l: filtroVF.lista, t: filtroVF.termo});
+  return JSON.stringify({m: filtroVF.modulo, p: filtroVF.publicacao, c: filtroVF.capitulo, n: filtroVF.numero, l: filtroVF.lista, i: filtroVF.inconsistente, t: filtroVF.termo});
 }
 let vfAvisosRodeiTudoMostradosVF = new Set();
 
@@ -11351,7 +11433,8 @@ function vfMontarPlaceholderPanoramaVF(){
 
 
   const nomePublicacao = filtroVF.publicacao ? (bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.nome_exibicao || bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.titulo) : null;
-  const tipoTexto = filtroVF.numero && filtroVF.lista ? 'Número ou Lista' : filtroVF.numero ? 'Número' : filtroVF.lista ? 'Lista' : null;
+  const tipoBase = filtroVF.numero && filtroVF.lista ? 'Número ou Lista' : filtroVF.numero ? 'Número' : filtroVF.lista ? 'Lista' : null;
+  const tipoTexto = filtroVF.inconsistente ? (tipoBase ? tipoBase + ' + Inconsistente' : 'Inconsistente') : tipoBase;
   const linhasFiltro = [
     filtroVF.modulo ? `<div class="vf-filtro-linha"><span>Módulo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.modulo)}</span></div>` : '',
     nomePublicacao ? `<div class="vf-filtro-linha"><span style="flex-shrink:0">Publicação</span><span class="vf-filtro-valor" style="font-size:var(--fs-d);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(nomePublicacao)}">${escapeHtml(nomePublicacao)}</span></div>` : '',
@@ -11395,7 +11478,8 @@ async function vfCarregarPanoramaFiltroVF(){
     p_ids_bibliografia: idsBibliografia,
     p_capitulo: filtroVF.capitulo || null,
     p_numero: !!filtroVF.numero,
-    p_lista: !!filtroVF.lista
+    p_lista: !!filtroVF.lista,
+    p_inconsistente: !!filtroVF.inconsistente
   });
   const totalFiltro = panorama?.[0]?.total || 0;
   const jaVistas = panorama?.[0]?.ja_vistas || 0;
@@ -12020,15 +12104,28 @@ function mudarFiltroVF(){
   vfRecarregarPoolComDebounceVF();
 }
 
+const VF_FILTROS_TIPO_VF = ['numero', 'lista', 'inconsistente'];
 function toggleFiltroTagVF(tipo){
-  const campo = tipo === 'numero' ? 'numero' : 'lista';
-  filtroVF[campo] = !filtroVF[campo];
-  const btn = document.getElementById('vf-filtro-'+tipo);
-  btn.style.background = filtroVF[campo] ? '#B23A34' : '#fff';
-  btn.style.color = filtroVF[campo] ? '#fff' : '#888';
-  btn.style.borderColor = filtroVF[campo] ? '#B23A34' : '#ddd';
+  if(!VF_FILTROS_TIPO_VF.includes(tipo)) return;
+  filtroVF[tipo] = !filtroVF[tipo];
+  vfPintarBotoesFiltroTipoVF();
   vfRecarregarPoolComDebounceVF();
 }
+// pinta os três botões a partir do estado - chamado no toggle e também
+// na abertura do app: o filtro é restaurado do localStorage, e sem isso
+// ele ficava ativo por baixo com o botão branco, parecendo desligado
+function vfPintarBotoesFiltroTipoVF(){
+  VF_FILTROS_TIPO_VF.forEach(tipo => {
+    const btn = document.getElementById('vf-filtro-' + tipo);
+    if(!btn) return;
+    const ativo = !!filtroVF[tipo];
+    btn.style.background = ativo ? '#B23A34' : '#fff';
+    btn.style.color = ativo ? '#fff' : '#888';
+    btn.style.borderColor = ativo ? '#B23A34' : '#ddd';
+  });
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', vfPintarBotoesFiltroTipoVF);
+else vfPintarBotoesFiltroTipoVF();
 
 // filtro por palavra-chave (pt/en) - digitar recarrega o pool sozinho
 // depois de 400ms sem digitar (mesmo padrão de debounce já usado em
@@ -12536,8 +12633,13 @@ function renderizarItemVF(){
   // aparecer sozinho (com um convite pontilhado quando ainda não tinha
   // nota) - agora só aparece alguma coisa se o usuário fixou pelo menos
   // uma nota explicitamente (mesmo padrão do "anexar" do Complementar)
-  const cardNotaHtml = (jaRespondida && notasFixadasVF.has(item.id))
-    ? `<div id="vf-preview-notas-container" style="position:relative;margin-top:14px"></div>`
+  // o segundo container é das notas fixadas nas IRMÃS: aparecem aqui
+  // apagadinhas, com um "+" pra trazer pra cá sem abrir o popup de notas
+  // (ver vfCarregarNotasFixadasIrmasVF). Nasce vazio e escondido - só
+  // ganha conteúdo se alguma irmã tiver nota fixada que ainda não está
+  // nesta questão
+  const cardNotaHtml = jaRespondida
+    ? `${notasFixadasVF.has(item.id) ? `<div id="vf-preview-notas-container" style="position:relative;margin-top:14px"></div>` : ''}<div id="vf-preview-notas-irmas-container" class="hidden" style="margin-top:14px"></div>`
     : '';
 
 
@@ -12649,6 +12751,7 @@ function renderizarItemVF(){
       const containerVazio = document.getElementById('vf-elementos-html-anexados');
       if(containerVazio) containerVazio.innerHTML = ''; // garante que não sobrou conteúdo de uma questão anterior
     }
+    vfCarregarNotasFixadasIrmasVF(item.id); // em segundo plano - nunca segura a renderização do resultado
     Promise.all([
       notasFixadasVF.has(item.id) ? vfCarregarPreviewNotaVF(item.id) : Promise.resolve(),
       (temAlgumElementoAnexado && !vfElementosCacheVF.has(item.id)) ? vfCarregarElementosAnexadosVF(item.id) : Promise.resolve()
@@ -13329,8 +13432,11 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
       bloco.dataset.temCabecalho = novoValor;
       const primeiraLinha = bloco.querySelector('table tr:first-child');
       if(primeiraLinha){
-        primeiraLinha.style.background = novoValor ? '#EAECF1' : '';
-        primeiraLinha.querySelectorAll('td').forEach(td => { td.style.fontWeight = novoValor ? '600' : '400'; });
+        primeiraLinha.style.background = novoValor ? VF_COR_FUNDO_CABECALHO_TABELA_VF : '';
+        primeiraLinha.querySelectorAll('td').forEach(td => {
+          td.style.fontWeight = novoValor ? '600' : '400';
+          td.style.color = novoValor ? VF_COR_TEXTO_CABECALHO_TABELA_VF : '';
+        });
       }
       btnCabecalho.style.background = novoValor ? '#B23A34' : 'transparent';
       btnCabecalho.style.color = novoValor ? '#fff' : '#666';
@@ -13765,8 +13871,11 @@ function vfDesfazerAlteracoesTabelaVF(blocoId){
   bloco.dataset.temCabecalho = temCabecalho;
   const primeiraLinha = bloco.querySelector('table tr:first-child');
   if(primeiraLinha){
-    primeiraLinha.style.background = temCabecalho ? '#EAECF1' : '';
-    primeiraLinha.querySelectorAll('td').forEach(td => { td.style.fontWeight = temCabecalho ? '600' : '400'; });
+    primeiraLinha.style.background = temCabecalho ? VF_COR_FUNDO_CABECALHO_TABELA_VF : '';
+    primeiraLinha.querySelectorAll('td').forEach(td => {
+      td.style.fontWeight = temCabecalho ? '600' : '400';
+      td.style.color = temCabecalho ? VF_COR_TEXTO_CABECALHO_TABELA_VF : '';
+    });
   }
 
   // largura de coluna - com larguras, restaura o width:% original de
@@ -14259,7 +14368,8 @@ function vfRenderizarListaTagsAtualVF(){
   const itemAtual = estadoVF?.pool?.find(i => i.id === vfQuestaoIdTagsAtualVF) || estadoVF?.historico?.find(h => h.item.id === vfQuestaoIdTagsAtualVF)?.item;
   const tagsAutomaticas = [
     itemAtual?.eh_numero ? {campo: 'eh_numero', nome: 'NÚMERO'} : null,
-    itemAtual?.eh_lista ? {campo: 'eh_lista', nome: 'LISTA'} : null
+    itemAtual?.eh_lista ? {campo: 'eh_lista', nome: 'LISTA'} : null,
+    itemAtual?.inconsistente ? {campo: 'inconsistente', nome: 'INCONSISTENTE'} : null
   ].filter(Boolean);
   const htmlAutomaticas = tagsAutomaticas.map(t =>
     `<span style="background:#B23A34;color:#fff;font-weight:700;font-size:var(--fs-b);border-radius:8px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px;letter-spacing:.03em">${t.nome}<span onclick="vfDesmarcarTagAutomaticaVF('${t.campo}')" style="cursor:pointer;color:#F0C9C5;font-weight:700">✕</span></span>`
@@ -14371,12 +14481,16 @@ async function vfAdicionarTagVF(){
   // filtro. Marcar por aqui atualiza o campo estrutural de verdade -
   // mesmo badge, mesmo comportamento, funciona com o filtro
   const nomeSemAcento = nomeDigitado.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const campoEstrutural = nomeSemAcento === 'NUMERO' ? 'eh_numero' : nomeSemAcento === 'LISTA' ? 'eh_lista' : null;
+  const campoEstrutural = nomeSemAcento === 'NUMERO' ? 'eh_numero'
+    : nomeSemAcento === 'LISTA' ? 'eh_lista'
+    : nomeSemAcento === 'INCONSISTENTE' ? 'inconsistente' // mesma ideia: o selo vermelho de inconsistente é campo da afirmação, não tag solta - escrever aqui liga o campo de verdade, que é o que o filtro usa
+    : null;
   if(campoEstrutural){
     const questaoId = vfQuestaoIdTagsAtualVF;
     const itemNoPool = estadoVF?.pool?.find(i => i.id === questaoId) || estadoVF?.historico?.find(h => h.item.id === questaoId)?.item;
     if(itemNoPool && itemNoPool[campoEstrutural]){
-      statusEl.innerHTML = `<span style="color:#B00020">Essa questão já está marcada como ${campoEstrutural === 'eh_numero' ? 'Número' : 'Lista'}.</span>`;
+      const rotuloCampo = campoEstrutural === 'eh_numero' ? 'Número' : campoEstrutural === 'eh_lista' ? 'Lista' : 'Inconsistente';
+      statusEl.innerHTML = `<span style="color:#B00020">Essa questão já está marcada como ${rotuloCampo}.</span>`;
       return;
     }
     const {error} = await sb.from('questoes_vf').update({[campoEstrutural]: true}).eq('id', questaoId);
@@ -16017,7 +16131,8 @@ async function vfAbrirListaExcluidasVF(){
     p_ids_bibliografia: idsBibliografia,
     p_capitulo: filtroVF.capitulo || null,
     p_numero: !!filtroVF.numero,
-    p_lista: !!filtroVF.lista
+    p_lista: !!filtroVF.lista,
+    p_inconsistente: !!filtroVF.inconsistente
   });
   if(error){ corpo.innerHTML = `<p style="text-align:center;color:#A32D2D;padding:20px 0">Erro ao carregar: ${escapeHtml(error.message)}</p>`; return; }
   vfRenderizarListaExcluidasVF(data || []);
@@ -16083,7 +16198,8 @@ async function vfAbrirListaLeechesVF(){
     p_ids_bibliografia: idsBibliografia,
     p_capitulo: filtroVF.capitulo || null,
     p_numero: !!filtroVF.numero,
-    p_lista: !!filtroVF.lista
+    p_lista: !!filtroVF.lista,
+    p_inconsistente: !!filtroVF.inconsistente
   });
   if(error){ corpo.innerHTML = `<p style="text-align:center;color:#A32D2D;padding:20px 0">Erro ao carregar: ${escapeHtml(error.message)}</p>`; return; }
   vfRenderizarListaLeechesVF(data || []);
@@ -16709,7 +16825,14 @@ function vfEditarNotaBibliotecaVF(notaId, pref){
   const container = document.getElementById(`vf-notalib-texto-${pref}-${notaId}`);
   if(!container) return;
   const original = vfNotasTextoBrutoCacheVF[notaId] ?? container.textContent;
-  container.outerHTML = `<textarea id="vf-notalib-textarea-${pref}-${notaId}" class="textarea-padrao vf-foco-interno-vf" style="flex:1;min-height:120px">${escapeHtml(original)}</textarea>`;
+  const idCampo = `vf-notalib-textarea-${pref}-${notaId}`;
+  container.outerHTML = `<div style="flex:1;min-width:0">
+      <textarea id="${idCampo}" class="textarea-padrao vf-foco-interno-vf" style="width:100%;min-height:120px;box-sizing:border-box" onkeydown="vfTeclaTabNotaVF(event)">${escapeHtml(original)}</textarea>
+      <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:4px">
+        <button type="button" title="Tirar recuo da linha" onpointerdown="vfBotaoRecuoNotaVF(event,true,'${idCampo}')" style="width:34px;height:28px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent">⇤</button>
+        <button type="button" title="Recuar a linha" onpointerdown="vfBotaoRecuoNotaVF(event,false,'${idCampo}')" style="width:34px;height:28px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent">⇥</button>
+      </div>
+    </div>`;
   const textarea = document.getElementById(`vf-notalib-textarea-${pref}-${notaId}`);
   textarea?.focus();
   textarea?.addEventListener('blur', () => vfSalvarEdicaoNotaBibliotecaVF(notaId, pref, original));
@@ -16798,12 +16921,173 @@ function vfMudarSecaoBibliotecaVF(secao){
   if(secao === 'notas') vfAbrirBibliotecaNotasVF('aba', 'vf-biblioteca-conteudo-notas', true);
 }
 
+// ---- notas escritas nas IRMÃS dessa afirmação ----
+// se uma nota já vale pra uma irmã, quase sempre vale pra esta também -
+// mas nota é por questão, então ela não aparece sozinha aqui. Em vez de
+// obrigar a reescrever (ou a lembrar que existia), a nota da irmã aparece
+// apagadinha no fim da lista, com um "+" que copia ela pra cá. Enquanto
+// não copiar, nada muda no banco: é só uma oferta
+let vfNotasIrmasAtuaisVF = [];
+async function vfCarregarNotasIrmasVF(questaoVfId){
+  const el = document.getElementById('vf-notas-irmas-vf');
+  if(!el) return;
+  vfNotasIrmasAtuaisVF = [];
+  el.classList.add('hidden');
+  el.innerHTML = '';
+  const irmas = await vfPreBuscarIrmasVF(questaoVfId); // mesma pré-busca do pop-up de excluir, normalmente já respondida
+  if(questaoNotaVfAtual !== questaoVfId) return; // trocou de questão no meio do caminho
+  const ids = (irmas || []).map(i => i.id).filter(Boolean);
+  if(!ids.length) return;
+  const {data, error} = await sb.from('notas_vf')
+    .select('id, texto, cor, eh_mnemonico, questao_vf_id')
+    .eq('usuario_id', usuarioAtual.id).in('questao_vf_id', ids)
+    .order('criado_em', {ascending: false});
+  if(error || !data || !data.length) return;
+  if(questaoNotaVfAtual !== questaoVfId) return;
+  // não oferece o que já está escrito igualzinho aqui - senão viraria
+  // duplicata na mesma questão
+  const jaAqui = new Set(Object.values(vfNotasTextoBrutoCacheVF || {}).map(t => (t || '').trim()));
+  const daLista = (vfListaNotasCacheVF.get(questaoVfId) || []).map(n => (n.texto || '').trim());
+  daLista.forEach(t => jaAqui.add(t));
+  vfNotasIrmasAtuaisVF = data.filter(n => !jaAqui.has((n.texto || '').trim()));
+  if(!vfNotasIrmasAtuaisVF.length) return;
+  vfRenderizarNotasIrmasVF();
+}
+
+function vfRenderizarNotasIrmasVF(){
+  const el = document.getElementById('vf-notas-irmas-vf');
+  if(!el) return;
+  if(!vfNotasIrmasAtuaisVF.length){ el.classList.add('hidden'); el.innerHTML = ''; return; }
+  el.classList.remove('hidden');
+  el.innerHTML = `<div style="font-size:var(--fs-b);color:#999;margin:2px 0 6px">Escrita${vfNotasIrmasAtuaisVF.length > 1 ? 's' : ''} numa irmã dessa afirmação</div>` +
+    vfNotasIrmasAtuaisVF.map(n => `
+      <div id="vf-nota-irma-${n.id}" style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:0.5px dashed #eee">
+        <div style="flex:1;font-size:var(--fs-d);color:#111;opacity:0.45;padding:6px 8px;border-radius:6px;${vfEstiloCorNotaVF(n.cor)}">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>
+        <button onclick="vfCopiarNotaDaIrmaVF('${n.id}')" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#B23A34;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:var(--fs-e);line-height:1" title="Adicionar essa nota também nessa questão">+</button>
+      </div>`).join('');
+}
+
+async function vfCopiarNotaDaIrmaVF(notaId){
+  const origem = vfNotasIrmasAtuaisVF.find(n => n.id === notaId);
+  if(!origem || !questaoNotaVfAtual) return;
+  const destino = questaoNotaVfAtual;
+  // some da oferta na hora - a sensação é de "movi pra cá", sem esperar
+  // a ida ao banco; se der erro, volta
+  vfNotasIrmasAtuaisVF = vfNotasIrmasAtuaisVF.filter(n => n.id !== notaId);
+  vfRenderizarNotasIrmasVF();
+  // cor e marcação de mnemônico vêm junto (são da nota, não da questão);
+  // fixar não - aparecer na página é uma decisão dessa questão aqui
+  const {error} = await sb.from('notas_vf').insert({
+    usuario_id: usuarioAtual.id,
+    questao_vf_id: destino,
+    texto: origem.texto,
+    cor: origem.cor || null,
+    eh_mnemonico: !!origem.eh_mnemonico
+  });
+  if(error){
+    vfNotasIrmasAtuaisVF.push(origem);
+    vfRenderizarNotasIrmasVF();
+    vfMostrarAvisoVF('Não consegui copiar a nota. Tenta de novo.');
+    return;
+  }
+  notasVF.add(destino);
+  vfListaNotasCacheVF.delete(destino);
+  vfNotasBibliotecaCacheVF = null; // a biblioteca de notas passa a ter mais uma
+  if(questaoNotaVfAtual === destino) await renderizarListaNotasVF();
+  const naTela = estadoVF?.historico?.[estadoVF.posicao]?.item?.id;
+  if(naTela === destino && typeof renderizarItemVF === 'function') renderizarItemVF();
+}
+
+// ---- notas fixadas nas IRMÃS, oferecidas na própria página ----
+// rodando flash em sequência, a irmã de uma afirmação anotada aparece
+// horas depois - e a nota não vem junto, porque nota é por questão. Em
+// vez de obrigar a abrir o popup, reescrever e fixar de novo, a nota
+// fixada da irmã aparece logo abaixo das notas desta questão, apagada,
+// com um "+". Um toque copia pra cá já fixada e ele segue pra próxima.
+// Enquanto não tocar, nada é gravado: é só uma oferta na tela
+let vfNotasFixadasIrmasVF = [];
+async function vfCarregarNotasFixadasIrmasVF(questaoVfId){
+  const container = document.getElementById('vf-preview-notas-irmas-container');
+  if(!container || !usuarioAtual) return;
+  vfNotasFixadasIrmasVF = [];
+  container.classList.add('hidden');
+  container.innerHTML = '';
+  const irmas = await vfPreBuscarIrmasVF(questaoVfId); // mesma pré-busca do pop-up de excluir - normalmente já respondida
+  const ids = (irmas || []).map(i => i.id).filter(Boolean);
+  if(!ids.length) return;
+  const {data, error} = await sb.from('notas_vf')
+    .select('id, texto, cor, alinhamento, eh_mnemonico')
+    .eq('usuario_id', usuarioAtual.id).eq('fixada', true).in('questao_vf_id', ids)
+    .order('criado_em', {ascending: false});
+  if(error || !data || !data.length) return;
+  // se a tela já trocou de questão enquanto isso, não pinta nada
+  if(estadoVF?.historico?.[estadoVF.posicao]?.item?.id !== questaoVfId) return;
+  const jaAqui = new Set((vfNotaPreviewCacheVF.get(questaoVfId) || []).map(n => (n.texto || '').trim()));
+  vfNotasFixadasIrmasVF = data.filter(n => !jaAqui.has((n.texto || '').trim()));
+  if(!vfNotasFixadasIrmasVF.length) return;
+  const atual = document.getElementById('vf-preview-notas-irmas-container');
+  if(!atual) return;
+  atual.dataset.questaoId = questaoVfId;
+  atual.innerHTML = vfNotasFixadasIrmasVF.map(n => {
+    const alinhamento = n.alinhamento || 'esquerda';
+    const alinhamentoCss = alinhamento === 'centro' ? 'center' : alinhamento === 'direita' ? 'right' : 'left';
+    const temTabela = /\\begin\{array\}/.test(n.texto);
+    const conteudo = temTabela
+      ? formatarTextoItemVF(n.texto, {listaNumerada: true})
+      : `<div style="color:#333;line-height:1.4;text-align:${alinhamentoCss};padding-right:44px">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>`;
+    return `
+      <div style="margin-bottom:10px">
+        <div class="${temTabela ? '' : 'card-questao'}" style="position:relative;margin-bottom:0;border-style:dashed;${vfEstiloCorNotaVF(n.cor)}">
+          <div style="opacity:0.45">${conteudo}</div>
+          <button onclick="vfAdicionarNotaFixadaDaIrmaVF('${n.id}')" title="Adicionar essa nota nessa afirmação também" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#B23A34;font-size:var(--fs-f);line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">+</button>
+        </div>
+        <div style="font-size:var(--fs-a);color:#aaa;margin:3px 0 0 4px">nota de uma irmã dessa afirmação</div>
+      </div>`;
+  }).join('');
+  atual.classList.remove('hidden');
+}
+
+async function vfAdicionarNotaFixadaDaIrmaVF(notaId){
+  const origem = vfNotasFixadasIrmasVF.find(n => n.id === notaId);
+  const destino = document.getElementById('vf-preview-notas-irmas-container')?.dataset.questaoId;
+  if(!origem || !destino) return;
+  // some da oferta na hora - sensação de "trouxe pra cá", sem esperar rede
+  vfNotasFixadasIrmasVF = vfNotasFixadasIrmasVF.filter(n => n.id !== notaId);
+  const fixadasAtuais = vfNotaPreviewCacheVF.get(destino) || [];
+  // entra fixada (é assim que ela aparece na página, que é o ponto) e no
+  // fim da pilha, sem mexer na ordem das que já estavam
+  const {data, error} = await sb.from('notas_vf').insert({
+    usuario_id: usuarioAtual.id,
+    questao_vf_id: destino,
+    texto: origem.texto,
+    cor: origem.cor || null,
+    alinhamento: origem.alinhamento || null,
+    eh_mnemonico: !!origem.eh_mnemonico,
+    fixada: true,
+    ordem_fixacao: fixadasAtuais.length
+  }).select('id, texto, ordem_fixacao, alinhamento, cor').single();
+  if(error || !data){
+    vfNotasFixadasIrmasVF.push(origem);
+    vfMostrarAvisoVF('Não consegui trazer a nota. Tenta de novo.');
+    vfCarregarNotasFixadasIrmasVF(destino);
+    return;
+  }
+  notasVF.add(destino);
+  notasFixadasVF.add(destino);
+  vfNotaPreviewCacheVF.set(destino, [...fixadasAtuais, data]);
+  vfListaNotasCacheVF.delete(destino);
+  vfNotasBibliotecaCacheVF = null; // a biblioteca de notas passa a ter mais uma
+  const naTela = estadoVF?.historico?.[estadoVF.posicao]?.item?.id;
+  if(naTela === destino && typeof renderizarItemVF === 'function') renderizarItemVF(); // redesenha: a nota sobe pro bloco das fixadas, já sólida
+}
+
 async function abrirNotaVF(questaoVfId){
   pausarTimerVF(); // abrir Notas/Excluir com questão pendente conta como sair da tela — você está escrevendo, não lendo a afirmação
   questaoNotaVfAtual = questaoVfId;
   document.getElementById('texto-nota-vf').value = '';
   vfMudarAbaNotaVF('questao'); // sempre abre onde ele vai escrever, nunca na biblioteca
   abrirModal('modal-nota-vf');
+  vfCarregarNotasIrmasVF(questaoVfId); // em segundo plano - o popup não espera por isso
   // se já tem a lista completa em cache (pré-buscada junto com o resto do
   // conteúdo da questão), renderiza na hora, sem esperar o banco - só
   // busca ao vivo se a pré-busca ainda não tinha terminado a tempo
@@ -16895,7 +17179,7 @@ function vfEditarNotaVF(notaId){
   const container = document.getElementById(`vf-nota-texto-${notaId}`);
   if(!container) return;
   vfNotaTextoOriginalAntesEditarVF[notaId] = vfNotasTextoBrutoCacheVF[notaId] ?? container.textContent;
-  container.outerHTML = `<textarea id="vf-nota-textarea-${notaId}" class="textarea-padrao vf-foco-interno-vf" style="flex:1">${escapeHtml(vfNotaTextoOriginalAntesEditarVF[notaId])}</textarea>`;
+  container.outerHTML = `<textarea id="vf-nota-textarea-${notaId}" class="textarea-padrao vf-foco-interno-vf" style="flex:1" onkeydown="vfTeclaTabNotaVF(event)">${escapeHtml(vfNotaTextoOriginalAntesEditarVF[notaId])}</textarea>`;
   const textarea = document.getElementById(`vf-nota-textarea-${notaId}`);
   textarea?.focus();
   // mesmo padrão do resto do app (explicação, enunciado, etc): sem botão
