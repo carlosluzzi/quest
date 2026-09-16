@@ -2065,7 +2065,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-16-052';
+const VERSAO_APP = '2026-09-16-054';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2995,7 +2995,7 @@ async function mostrarAppShell(){
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança
   document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
   iniciarRealtimeForum();
-  try{ if(souCarlos()) vfRestaurarSessaoFlashVF(); }catch(e){ console.error('Erro ao restaurar sessão do Flash:', e); } // só depois do login confirmado - nunca antes
+  try{ if(souCarlos()) Promise.resolve(vfRestaurarSessaoFlashVF()).catch(e => console.error('Erro ao restaurar sessão do Flash:', e)); }catch(e){ console.error('Erro ao restaurar sessão do Flash:', e); } // só depois do login confirmado - nunca antes. Virou assíncrona (pode ir ao banco procurar sessão órfã), por isso o catch também na promessa
 }
 
 // o ponto de quebra dos 1100px é lido pelo MESMO mecanismo que o CSS usa
@@ -11575,6 +11575,33 @@ function vfReajustarAlturaPainelSessaoVF(){
   });
 })();
 
+// procura uma sessão em aberto no banco: a última sessão finalizada
+// marca o corte, e qualquer resposta depois dela pertence a uma sessão
+// que ficou sem fechar. Devolve um objeto de sessão pausada, com o
+// início na primeira dessas respostas e o tempo aproximado pelo intervalo
+// entre a primeira e a última (não dá pra saber o tempo ativo real de uma
+// sessão que se perdeu - melhor aproximar do que jogar fora)
+async function vfSessaoOrfaNoBancoVF(){
+  if(!usuarioAtual) return null;
+  const {data: ultimaSessao} = await sb.from('sessoes_vf')
+    .select('finalizado_em').eq('usuario_id', usuarioAtual.id)
+    .order('finalizado_em', {ascending: false}).limit(1).maybeSingle();
+  let q = sb.from('log_respostas_vf').select('respondida_em, tempo_ms')
+    .eq('usuario_id', usuarioAtual.id).order('respondida_em', {ascending: true});
+  if(ultimaSessao?.finalizado_em) q = q.gt('respondida_em', ultimaSessao.finalizado_em);
+  const {data, error} = await q;
+  if(error || !data || !data.length) return null;
+  const inicioMs = new Date(data[0].respondida_em).getTime();
+  const fimMs = new Date(data[data.length - 1].respondida_em).getTime();
+  return {
+    iniciadoEm: inicioMs,
+    pausado: true,
+    tempoAcumuladoMs: Math.max(0, fimMs - inicioMs),
+    ultimoResumeEm: fimMs,
+    recarregada: true // conta pelo banco ao finalizar, não pelo histórico de memória
+  };
+}
+
 // restaura a sessão do Flash se havia uma ativa quando o app foi fechado -
 // chamada de dentro de mostrarAppShell(), NUNCA automaticamente na carga
 // do script (isso causava o balão aparecer até na tela de login, antes
@@ -11584,9 +11611,17 @@ function vfReajustarAlturaPainelSessaoVF(){
 // propósito. NÃO mostra o balão sozinho - fica esperando o Carlos entrar
 // na aba Flash e decidir "Retomar" ou "Finalizar" explicitamente (nada
 // acontece automaticamente, mesma filosofia do resto desse sistema)
-function vfRestaurarSessaoFlashVF(){
-  const salva = vfCarregarSessaoDoStorageVF();
-  if(!salva) return;
+async function vfRestaurarSessaoFlashVF(){
+  let salva = vfCarregarSessaoDoStorageVF();
+  // nada salvo aqui, mas pode haver uma sessão em aberto no banco:
+  // respostas registradas DEPOIS da última sessão finalizada são, por
+  // definição, de uma sessão que nunca foi fechada. Acontece quando o
+  // localStorage se perde (endereço diferente, storage limpo) - sem isso
+  // a sessão zerava e aquelas respostas ficavam órfãs, fora da contagem
+  if(!salva){
+    salva = await vfSessaoOrfaNoBancoVF();
+    if(!salva) return;
+  }
   const agora = Date.now();
   if(!salva.pausado){
     salva.tempoAcumuladoMs += (agora - salva.ultimoResumeEm);
@@ -11722,8 +11757,35 @@ function vfPersistirEstadoSessaoVF(){
 // busca o conteúdo completo de cada questão já respondida (mesmo select
 // usado em vfBuscarConteudoEmLoteVF) e devolve um objeto pronto pra
 // sobrescrever os campos correspondentes do estadoVF recém-criado
+// rede de segurança: remonta o histórico da sessão a partir do BANCO,
+// quando o resumo salvo no localStorage não existe. Cada resposta já é
+// gravada em log_respostas_vf na hora, então o que a sessão precisa pra
+// se reconstruir sempre esteve lá - o localStorage é só o atalho rápido.
+// Isso cobre app aberto de outro endereço, storage limpo pelo navegador,
+// modo privado, cota estourada: a sessão volta com as questões certas em
+// vez de zerar. O único campo que o log não tem é a resposta escolhida
+// (V ou F), mas ela sai de acertou + o gabarito da afirmação
+async function vfResumoSessaoDoBancoVF(iniciadoEmMs){
+  if(!iniciadoEmMs || !usuarioAtual) return null;
+  const {data, error} = await sb.from('log_respostas_vf')
+    .select('questao_vf_id, acertou, tempo_ms, estado_antes, respondida_em')
+    .eq('usuario_id', usuarioAtual.id)
+    .gte('respondida_em', new Date(iniciadoEmMs).toISOString())
+    .order('respondida_em', {ascending: true});
+  if(error || !data || !data.length) return null;
+  return data.map(r => ({
+    id: r.questao_vf_id, resposta: null, acertou: r.acertou,
+    estadoAntesDeResponder: r.estado_antes, tempoAtivoMs: r.tempo_ms || 0, excluidaVF: false
+  }));
+}
+
 async function vfReconstruirHistoricoDaSessaoVF(){
-  const resumo = vfSessaoAtivaVF?.historicoResumido;
+  let resumo = vfSessaoAtivaVF?.historicoResumido;
+  let veioDoBanco = false;
+  if((!resumo || !resumo.length) && vfSessaoAtivaVF?.iniciadoEm){
+    resumo = await vfResumoSessaoDoBancoVF(vfSessaoAtivaVF.iniciadoEm);
+    veioDoBanco = !!(resumo && resumo.length);
+  }
   if(!resumo || !resumo.length) return null;
   const ids = resumo.map(r => r.id);
   const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('*, inconsistencias_vf(*)', {count: 'exact'}).in('id', ids).order('id'));
@@ -11733,14 +11795,17 @@ async function vfReconstruirHistoricoDaSessaoVF(){
   const historico = resumo.map(r => {
     const item = porId.get(r.id);
     if(!item) return null; // questão pode ter sido excluída/anulada entre uma sessão e outra - pula sem quebrar o resto
-    return {item, resposta: r.resposta, acertou: r.acertou, estadoAntesDeResponder: r.estadoAntesDeResponder, tempoAtivoMs: r.tempoAtivoMs||0, ativoDesdeMs: null, apareceuEmMs: Date.now(), excluidaVF: !!r.excluidaVF};
+    // resposta dada: vem do resumo local quando existe; remontando pelo
+    // banco, sai do gabarito (acertou = respondeu igual ao gabarito)
+    const respostaDada = (r.resposta === true || r.resposta === false) ? r.resposta : (r.acertou ? item.resposta : !item.resposta);
+    return {item, resposta: respostaDada, acertou: r.acertou, estadoAntesDeResponder: r.estadoAntesDeResponder, tempoAtivoMs: r.tempoAtivoMs||0, ativoDesdeMs: null, apareceuEmMs: Date.now(), excluidaVF: !!r.excluidaVF};
   }).filter(Boolean);
   if(!historico.length) return null;
   return {
     historico,
     posicao: historico.length - 1,
-    acertosSessao: vfSessaoAtivaVF.acertosSessao || 0,
-    respondidasSessao: vfSessaoAtivaVF.respondidasSessao || 0,
+    acertosSessao: veioDoBanco ? historico.filter(h => h.acertou).length : (vfSessaoAtivaVF.acertosSessao || 0),
+    respondidasSessao: veioDoBanco ? historico.length : (vfSessaoAtivaVF.respondidasSessao || 0),
     // sementeSessao NÃO é restaurada de propósito - fica com a nova gerada
     // em vfCarregarPoolInicialVF. Era a causa real de "sempre a mesma
     // questão": com a mesma semente pra sempre (restaurada aqui antes),
@@ -22567,7 +22632,7 @@ async function abrirRevisaoRascunhoVF(){
     const autorNome = itens[0].usuarios?.nome || 'Alguém';
     const opcoesModulo = modulosPscpp.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
     return `
-    <div style="border:0.5px solid #ddd;border-radius:10px;padding:14px;margin-bottom:12px">
+    <div id="${idGrupo}-card" style="border:0.5px solid #ddd;border-radius:10px;padding:14px;margin-bottom:12px">
       <div style="font-weight:600;font-size:var(--fs-e)">${escapeHtml(nomeArquivo === `sem-nome-${itens[0].id}` ? 'Upload sem nome de arquivo' : nomeArquivo)}</div>
       <div style="color:#888;font-size:var(--fs-b);margin-bottom:10px">${itens.length} ${itens.length>1?'afirmações':'afirmação'} · enviado por ${escapeHtml(autorNome)}</div>
       <details style="margin-bottom:10px">
@@ -22584,12 +22649,40 @@ async function abrirRevisaoRascunhoVF(){
         <option value="">Escolhe o módulo primeiro</option>
       </select>
       <input type="text" id="${idGrupo}-capitulo" class="filter-select" style="margin-bottom:8px" placeholder="Capítulo (opcional)" value="${escapeHtml(itens[0].capitulo || '')}">
-      <div style="display:flex;gap:8px">
-        <button class="btn-secundario" style="flex:1" onclick="descartarGrupoRascunhoVF('${nomeArquivo.replace(/'/g,"\\'")}')">Descartar</button>
+      <div id="${idGrupo}-acoes" style="display:flex;gap:8px">
+        <button class="btn-secundario" style="flex:1" onclick="descartarGrupoRascunhoVF('${nomeArquivo.replace(/'/g,"\\'")}', '${idGrupo}')">Descartar</button>
         <button class="btn-primario" style="flex:1" onclick="resolverGrupoRascunhoVF('${nomeArquivo.replace(/'/g,"\\'")}', '${idGrupo}')">Cadastrar</button>
       </div>
+      <div id="${idGrupo}-status" class="hidden" style="font-size:var(--fs-c);color:#666;line-height:1.4"></div>
     </div>`;
   }).join('');
+}
+
+// cada grupo se resolve sozinho, sem recarregar a lista inteira: o card
+// mostra o próprio andamento e some quando termina. Antes, cadastrar um
+// grupo disparava abrirRevisaoRascunhoVF() de novo, o que apagava tudo o
+// que já tinha sido escolhido nos OUTROS grupos e obrigava a esperar a
+// lista recarregar antes de mexer no próximo - com 15 pendências isso
+// virava uma fila de espera. Agora dá pra disparar um atrás do outro
+function vfStatusGrupoRascunhoVF(idGrupo, texto, cor){
+  const el = document.getElementById(idGrupo + '-status');
+  if(!el) return;
+  el.classList.remove('hidden');
+  el.style.color = cor || '#666';
+  el.textContent = texto;
+}
+function vfTravarAcoesGrupoRascunhoVF(idGrupo, travar){
+  const acoes = document.getElementById(idGrupo + '-acoes');
+  if(acoes) acoes.classList.toggle('hidden', !!travar);
+}
+function vfRemoverCardGrupoRascunhoVF(idGrupo, atraso){
+  setTimeout(() => {
+    document.getElementById(idGrupo + '-card')?.remove();
+    const container = document.getElementById('lista-rascunhos-pendentes-vf');
+    if(container && !container.querySelector('[id$="-card"]')){
+      container.innerHTML = '<p style="text-align:center;color:#888">Nenhuma pendência no momento.</p>';
+    }
+  }, atraso || 0);
 }
 
 let gruposRascunhoVFEmProcessamento = new Set();
@@ -22604,9 +22697,11 @@ async function resolverGrupoRascunhoVF(nomeArquivo, idGrupo){
     const bibEscolhida = bibliografiaId ? bibliografiaCache.find(b => b.id === bibliografiaId) : null;
     const capituloEhAutomatico = ehFonteCapituloUnico(bibEscolhida?.titulo);
     if(!modulo || !bibliografiaId || (!capituloDigitado && !capituloEhAutomatico)){
-      alert('Escolhe o módulo, a publicação e o capítulo antes de cadastrar – capítulo é obrigatório.');
+      vfStatusGrupoRascunhoVF(idGrupo, 'Escolhe o módulo, a publicação e o capítulo antes de cadastrar – capítulo é obrigatório.', '#B00020');
       return;
     }
+    vfTravarAcoesGrupoRascunhoVF(idGrupo, true);
+    vfStatusGrupoRascunhoVF(idGrupo, 'Cadastrando… pode ir preenchendo o próximo.');
 
     // paginado, mesmo motivo do fluxo do Quest
     const montarQueryGrupoRascunhoVF = () => {
@@ -22629,7 +22724,11 @@ async function resolverGrupoRascunhoVF(nomeArquivo, idGrupo){
         });
         if(!bateComAlgum){
           const confirmar = confirm(`Nenhuma afirmação desse grupo menciona termos esperados de "${bibEscolhida.titulo}" (ex: ${termosValidos.slice(0,3).join(', ')}). Confirma que essa é a publicação certa mesmo assim?`);
-          if(!confirmar) return;
+          if(!confirmar){
+            vfTravarAcoesGrupoRascunhoVF(idGrupo, false);
+            vfStatusGrupoRascunhoVF(idGrupo, 'Cadastro cancelado - confere a publicação.', '#B00020');
+            return;
+          }
         }
       }
     }
@@ -22690,26 +22789,40 @@ async function resolverGrupoRascunhoVF(nomeArquivo, idGrupo){
       }
     }));
 
-    if(falhas.length || quantasDuplicadas){
-      const textoDuplicadas = quantasDuplicadas ? `${quantasDuplicadas} já existia${quantasDuplicadas>1?'m':''} igual e ${quantasDuplicadas>1?'foram puladas':'foi pulada'}. ` : '';
-      const textoFalhas = falhas.length ? `${falhas.length} tiveram problema:\n\n${falhas.slice(0,5).join('\n')}${falhas.length>5?'\n...':''}` : '';
-      alert(`${itens.length - falhas.length - quantasDuplicadas} de ${itens.length} afirmações cadastradas. ${textoDuplicadas}${textoFalhas}`);
+    const cadastradas = itens.length - falhas.length - quantasDuplicadas;
+    const textoDuplicadas = quantasDuplicadas ? ` ${quantasDuplicadas} já existia${quantasDuplicadas>1?'m':''} igual e ${quantasDuplicadas>1?'foram puladas':'foi pulada'}.` : '';
+    if(falhas.length){
+      // com falha o card FICA na tela: os rascunhos que deram erro não
+      // foram apagados, dá pra corrigir a escolha e tentar de novo
+      vfTravarAcoesGrupoRascunhoVF(idGrupo, false);
+      vfStatusGrupoRascunhoVF(idGrupo, `${cadastradas} de ${itens.length} cadastradas.${textoDuplicadas} ${falhas.length} com problema: ${falhas.slice(0,2).join(' | ')}`, '#B00020');
+    }else{
+      vfStatusGrupoRascunhoVF(idGrupo, `✓ ${cadastradas} de ${itens.length} cadastradas.${textoDuplicadas}`, '#3B6D11');
+      vfRemoverCardGrupoRascunhoVF(idGrupo, 1800); // deixa ler o resultado antes de sumir
     }
-
-    await abrirRevisaoRascunhoVF(); // recarrega a lista
-    await atualizarNotificacoesOrdenadas();
+    atualizarNotificacoesOrdenadas(); // sem await: o contador se atualiza sozinho, não é pra segurar o próximo grupo
   }finally{
     gruposRascunhoVFEmProcessamento.delete(chave);
   }
 }
 
-async function descartarGrupoRascunhoVF(nomeArquivo){
+async function descartarGrupoRascunhoVF(nomeArquivo, idGrupo){
   if(!confirm('Descartar essas afirmações de vez? Isso não pode ser desfeito.')) return;
+  if(idGrupo){
+    vfTravarAcoesGrupoRascunhoVF(idGrupo, true);
+    vfStatusGrupoRascunhoVF(idGrupo, 'Descartando…');
+  }
   let query = sb.from('questoes_vf_rascunho').delete().eq('nome_arquivo_origem', nomeArquivo);
   if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
-  await query;
-  await abrirRevisaoRascunhoVF();
-  await atualizarNotificacoesOrdenadas();
+  const {error} = await query;
+  if(error && idGrupo){
+    vfTravarAcoesGrupoRascunhoVF(idGrupo, false);
+    vfStatusGrupoRascunhoVF(idGrupo, 'Não consegui descartar. Tenta de novo.', '#B00020');
+    return;
+  }
+  if(idGrupo) vfRemoverCardGrupoRascunhoVF(idGrupo);
+  else await abrirRevisaoRascunhoVF();
+  atualizarNotificacoesOrdenadas();
 }
 
 async function baixarModeloPlanilha(){
