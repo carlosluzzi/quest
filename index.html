@@ -2065,7 +2065,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-16-054';
+const VERSAO_APP = '2026-09-16-055';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -22353,7 +22353,7 @@ async function abrirRevisaoRascunho(){
     const autorNome = itens[0].usuarios?.nome || 'Alguém';
     const opcoesModulo = modulosPscpp.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
     return `
-    <div style="border:0.5px solid #ddd;border-radius:10px;padding:14px;margin-bottom:12px">
+    <div id="${idGrupo}-card" style="border:0.5px solid #ddd;border-radius:10px;padding:14px;margin-bottom:12px">
       <div style="font-weight:600;font-size:var(--fs-e)">${escapeHtml(nomeArquivo === `sem-nome-${itens[0].id}` ? 'Upload sem nome de arquivo' : nomeArquivo)}</div>
       <div style="color:#888;font-size:var(--fs-b);margin-bottom:10px">${itens.length} ${itens.length>1?'questões':'questão'} · enviado por ${escapeHtml(autorNome)}</div>
       <details style="margin-bottom:10px">
@@ -22379,10 +22379,11 @@ async function abrirRevisaoRascunho(){
         <input type="text" id="${idGrupo}-concurso" class="filter-select" placeholder="Concurso (ex: PSCPP, EFOMM)" list="lista-concursos-existentes">
         <input type="number" id="${idGrupo}-ano" class="filter-select" placeholder="Ano da prova">
       </div>` : ''}
-      <div style="display:flex;gap:8px">
-        <button class="btn-secundario" style="flex:1" onclick="descartarGrupoRascunho('${nomeArquivo.replace(/'/g,"\\'")}')">Descartar</button>
+      <div id="${idGrupo}-acoes" style="display:flex;gap:8px">
+        <button class="btn-secundario" style="flex:1" onclick="descartarGrupoRascunho('${nomeArquivo.replace(/'/g,"\\'")}', '${idGrupo}')">Descartar</button>
         <button class="btn-primario" style="flex:1" onclick="resolverGrupoRascunho('${nomeArquivo.replace(/'/g,"\\'")}', '${idGrupo}')">Cadastrar</button>
       </div>
+      <div id="${idGrupo}-status" class="hidden" style="font-size:var(--fs-c);color:#666;line-height:1.4"></div>
     </div>`;
   }).join('');
 }
@@ -22436,9 +22437,11 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
   const concursoOrigem = marcadoComoMarinha ? (document.getElementById(idGrupo+'-concurso').value.trim() || null) : null;
   const anoProva = marcadoComoMarinha ? (parseInt(document.getElementById(idGrupo+'-ano').value, 10) || null) : null;
   if(!modulo || !bibliografiaId || (!capituloDigitado && !capituloEhAutomatico)){
-    alert('Escolhe o módulo, a publicação e o capítulo antes de cadastrar – capítulo é obrigatório.');
+    vfStatusGrupoRascunhoVF(idGrupo, 'Escolhe o módulo, a publicação e o capítulo antes de cadastrar – capítulo é obrigatório.', '#B00020');
     return;
   }
+  vfTravarAcoesGrupoRascunhoVF(idGrupo, true);
+  vfStatusGrupoRascunhoVF(idGrupo, 'Cadastrando… pode ir preenchendo o próximo.');
 
   // paginado: um PDF com mais de 1000 questoes cadastraria so as 1000
   // primeiras e deixaria o resto pra tras em silencio
@@ -22467,7 +22470,11 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
       });
       if(!bateComAlgum){
         const confirmar = confirm(`Nenhuma questão desse grupo menciona termos esperados de "${bibEscolhida.titulo}" (ex: ${termosValidos.slice(0,3).join(', ')}). Confirma que essa é a publicação certa mesmo assim?`);
-        if(!confirmar) return;
+        if(!confirmar){
+          vfTravarAcoesGrupoRascunhoVF(idGrupo, false);
+          vfStatusGrupoRascunhoVF(idGrupo, 'Cadastro cancelado - confere a publicação.', '#B00020');
+          return;
+        }
       }
     }
   }
@@ -22573,26 +22580,40 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
     }
   }));
 
-  if(falhas.length || quantasDuplicadas){
-    const textoDuplicadas = quantasDuplicadas ? `${quantasDuplicadas} já existia${quantasDuplicadas>1?'m':''} igual e ${quantasDuplicadas>1?'foram puladas':'foi pulada'}. ` : '';
-    const textoFalhas = falhas.length ? `${falhas.length} tiveram problema:\n\n${falhas.slice(0,5).join('\n')}${falhas.length>5?'\n...':''}` : '';
-    alert(`${itens.length - falhas.length - quantasDuplicadas} de ${itens.length} questões cadastradas. ${textoDuplicadas}${textoFalhas}`);
+  const cadastradas = itens.length - falhas.length - quantasDuplicadas;
+  const textoDuplicadas = quantasDuplicadas ? ` ${quantasDuplicadas} já existia${quantasDuplicadas>1?'m':''} igual e ${quantasDuplicadas>1?'foram puladas':'foi pulada'}.` : '';
+  if(falhas.length){
+    // com falha o card FICA: os rascunhos com erro não foram apagados,
+    // dá pra corrigir a escolha e tentar de novo sem perder nada
+    vfTravarAcoesGrupoRascunhoVF(idGrupo, false);
+    vfStatusGrupoRascunhoVF(idGrupo, `${cadastradas} de ${itens.length} cadastradas.${textoDuplicadas} ${falhas.length} com problema: ${falhas.slice(0,2).join(' | ')}`, '#B00020');
+  }else{
+    vfStatusGrupoRascunhoVF(idGrupo, `✓ ${cadastradas} de ${itens.length} cadastradas.${textoDuplicadas}`, '#3B6D11');
+    vfRemoverCardGrupoRascunhoVF(idGrupo, 1800);
   }
-
-  await abrirRevisaoRascunho(); // recarrega a lista
-  await atualizarNotificacoesOrdenadas();
+  atualizarNotificacoesOrdenadas(); // sem await: não segura o próximo grupo
   }finally{
     gruposRascunhoEmProcessamento.delete(chave);
   }
 }
 
-async function descartarGrupoRascunho(nomeArquivo){
+async function descartarGrupoRascunho(nomeArquivo, idGrupo){
   if(!confirm('Descartar essas questões de vez? Isso não pode ser desfeito.')) return;
+  if(idGrupo){
+    vfTravarAcoesGrupoRascunhoVF(idGrupo, true);
+    vfStatusGrupoRascunhoVF(idGrupo, 'Descartando…');
+  }
   let query = sb.from('questoes_rascunho').delete().eq('nome_arquivo_origem', nomeArquivo);
   if(!usuarioAtual.is_admin) query = query.eq('autor_id', usuarioAtual.id);
-  await query;
-  await abrirRevisaoRascunho();
-  await atualizarNotificacoesOrdenadas();
+  const {error} = await query;
+  if(error && idGrupo){
+    vfTravarAcoesGrupoRascunhoVF(idGrupo, false);
+    vfStatusGrupoRascunhoVF(idGrupo, 'Não consegui descartar. Tenta de novo.', '#B00020');
+    return;
+  }
+  if(idGrupo) vfRemoverCardGrupoRascunhoVF(idGrupo);
+  else await abrirRevisaoRascunho();
+  atualizarNotificacoesOrdenadas();
 }
 
 // ---- mesmo padrão acima, adaptado pro rascunho do V/F (texto/resposta
@@ -22677,8 +22698,9 @@ function vfTravarAcoesGrupoRascunhoVF(idGrupo, travar){
 }
 function vfRemoverCardGrupoRascunhoVF(idGrupo, atraso){
   setTimeout(() => {
-    document.getElementById(idGrupo + '-card')?.remove();
-    const container = document.getElementById('lista-rascunhos-pendentes-vf');
+    const card = document.getElementById(idGrupo + '-card');
+    const container = card?.parentElement; // serve às duas telas de rascunho (Quest e V/F), sem saber o id de nenhuma
+    card?.remove();
     if(container && !container.querySelector('[id$="-card"]')){
       container.innerHTML = '<p style="text-align:center;color:#888">Nenhuma pendência no momento.</p>';
     }
