@@ -2065,7 +2065,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-16-055';
+const VERSAO_APP = '2026-09-16-056';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -14920,6 +14920,7 @@ function vfMontarPreviewNotasVF(container, notas, questaoVfId){
     const temTabela = /\\begin\{array\}/.test(n.texto);
     const classeCard = temTabela ? '' : 'card-questao';
     vfNotasCorCacheVF[n.id] = n.cor || null;
+    vfNotasTextoBrutoCacheVF[n.id] = n.texto; // edição na própria página precisa do texto com **negrito** e LaTeX intactos
     const estiloCor = vfEstiloCorNotaVF(n.cor) + (temTabela && n.cor ? 'padding-left:10px;border-radius:6px;' : '');
     const alinhamento = n.alinhamento || 'esquerda';
     const alinhamentoCss = alinhamento === 'centro' ? 'center' : alinhamento === 'direita' ? 'right' : 'left';
@@ -15014,6 +15015,23 @@ function vfMostrarBotoesAlinhamentoNotaVF(card, notaId){
     vfAplicarCorNoCardNotaVF(card, cor);
     vfSalvarCorNotaVF(notaId, cor, card.closest('#vf-preview-notas-container')?.dataset.questaoId);
   }));
+  // lápis: editar a nota SEM abrir o popup de notas. Antes, mexer no
+  // texto de uma nota fixada obrigava a entrar em Notas e achar ela na
+  // lista - mesmo ela estando ali na cara, na página da questão
+  const separadorEditar = document.createElement('div');
+  separadorEditar.style.cssText = 'width:1px;height:20px;background:#ddd;margin:0 4px';
+  barra.appendChild(separadorEditar);
+  const btnEditar = document.createElement('button');
+  btnEditar.style.cssText = 'width:28px;height:28px;border:none;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:transparent;color:#666';
+  btnEditar.title = 'Editar essa nota aqui mesmo';
+  btnEditar.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+  btnEditar.onclick = (e) => {
+    e.stopPropagation();
+    barra.remove();
+    vfEditarNotaNaPaginaVF(card, notaId);
+  };
+  barra.appendChild(btnEditar);
+
   card.appendChild(barra);
   const esconderSeTocarFora = (e) => {
     if(e && e.target && e.target.closest('.vf-tabela-alinhamento')) return;
@@ -15025,6 +15043,52 @@ function vfMostrarBotoesAlinhamentoNotaVF(card, notaId){
     document.addEventListener('touchstart', esconderSeTocarFora);
     document.addEventListener('mousedown', esconderSeTocarFora);
   }, 0);
+}
+
+// troca a nota fixada por uma caixa de texto ali mesmo na página, sem
+// popup nenhum. Perder o foco salva - mesmo padrão do enunciado, da
+// explicação e da lista de notas. Os botõezinhos de recuo vêm junto,
+// porque no iPad o Tab do teclado da tela não serve
+function vfEditarNotaNaPaginaVF(card, notaId){
+  const item = card.closest('.vf-nota-preview-item');
+  const container = document.getElementById('vf-preview-notas-container');
+  if(!item || !container) return;
+  const textoOriginal = vfNotasTextoBrutoCacheVF[notaId] ?? '';
+  const idCampo = `vf-nota-pagina-textarea-${notaId}`;
+  item.innerHTML = `<div class="card-questao" style="margin-bottom:0">
+      <textarea id="${idCampo}" class="textarea-padrao vf-foco-interno-vf" style="width:100%;min-height:120px;box-sizing:border-box" onkeydown="vfTeclaTabNotaVF(event)"></textarea>
+      <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:4px">
+        <button type="button" title="Tirar recuo da linha" onpointerdown="vfBotaoRecuoNotaVF(event,true,'${idCampo}')" style="width:34px;height:28px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent">⇤</button>
+        <button type="button" title="Recuar a linha" onpointerdown="vfBotaoRecuoNotaVF(event,false,'${idCampo}')" style="width:34px;height:28px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent">⇥</button>
+      </div>
+    </div>`;
+  const textarea = document.getElementById(idCampo);
+  if(!textarea) return;
+  textarea.value = textoOriginal; // por valor, não no HTML: texto de nota pode ter < e & e LaTeX
+  textarea.focus();
+  textarea.addEventListener('blur', () => vfSalvarNotaEditadaNaPaginaVF(notaId, textoOriginal));
+  vfReposicionarNotasPreviewVF(container); // a caixa de texto tem outra altura - reposiciona as vizinhas
+}
+
+async function vfSalvarNotaEditadaNaPaginaVF(notaId, textoOriginal){
+  const textarea = document.getElementById(`vf-nota-pagina-textarea-${notaId}`);
+  if(!textarea) return;
+  const container = document.getElementById('vf-preview-notas-container');
+  const questaoId = container?.dataset.questaoId;
+  const textoNovo = textarea.value.trim();
+  const repintar = () => {
+    if(container && questaoId) vfMontarPreviewNotasVF(container, vfNotaPreviewCacheVF.get(questaoId) || [], questaoId);
+  };
+  if(!textoNovo || textoNovo === textoOriginal){ repintar(); return; } // nota vazia não é válida - volta como estava
+  const {error} = await sb.from('notas_vf').update({texto: textoNovo}).eq('id', notaId);
+  if(error){ vfMostrarAvisoVF('Não consegui salvar a nota. Tenta de novo.'); repintar(); return; }
+  const lista = vfNotaPreviewCacheVF.get(questaoId) || [];
+  const nota = lista.find(n => n.id === notaId);
+  if(nota) nota.texto = textoNovo;
+  vfNotasTextoBrutoCacheVF[notaId] = textoNovo;
+  vfListaNotasCacheVF.delete(questaoId);   // a lista do popup precisa buscar de novo
+  vfNotasBibliotecaCacheVF = null;         // e a biblioteca de notas também
+  repintar();
 }
 
 // salva o alinhamento no banco e atualiza o cache local direto (mesmo
