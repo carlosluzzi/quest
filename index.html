@@ -1,4 +1,4 @@
-\<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -364,6 +364,14 @@ na CLASSE, nunca inline: vfAjustarLarguraTabelaVF zera
 td.style.whiteSpace (ou põe nowrap nas células curtas), e um valor
 inline seria apagado nessa hora - na classe, o "" volta pra cá */
 .vf-tabela-celula{white-space:pre-wrap}
+/* respiro entre o fim da questão e o que vem anexado embaixo. Quem
+   dava esse espaço antes era o botão "Desanexar" flutuando em cima do
+   anexo; ele saiu (virou o x na barrinha de ajuste) e a tabela ficou
+   colada no texto. Agora o espaço é do próprio container, então vale
+   pra qualquer tipo de conteúdo anexado - tabela, desenho, texto - e
+   o :not(:empty) garante que ele não sobre espaço em branco quando a
+   questão não tem anexo nenhum */
+#vf-elementos-html-anexados:not(:empty),#vf-complementar-local:not(:empty){margin-top:28px} /* o dobro dos 14px de antes - pedido do Carlos */
 /* sobrescrito/subscrito sem esticar a linha: vertical-align:super (o
    padrão do navegador pro <sup>) empurra a caixa da linha pra cima e a
    linha inteira fica mais alta que as vizinhas - numa tabela, a linha
@@ -2057,7 +2065,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-16-051';
+const VERSAO_APP = '2026-09-16-052';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -16326,7 +16334,7 @@ function vfRenderizarComplementarLocalVF(item){
   const cabecalho = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px">
     <button style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="vfEditarComplementarLocalVF('${item.id}')">Editar</button>
   </div>`;
-  container.innerHTML = `<div style="margin-top:14px">${cabecalho}${(() => {
+  container.innerHTML = `<div>${cabecalho}${(() => {
     vfContextoRenderizacaoSvgVF = {tipo: 'campo-vf', questaoId: item.id, campo: 'complementar_local'};
     const html = formatarTextoItemVF(item.complementar_local);
     vfContextoRenderizacaoSvgVF = null;
@@ -16453,7 +16461,7 @@ function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
   if(!container) return;
   vfLigacoesAnexadasVF = new Map((ligacoes||[]).map(l => [l.elemento_html_id, l.id]));
   if(!ligacoes || !ligacoes.length){ container.innerHTML = ''; return; }
-  const blocos = ligacoes.map(ligacao => {
+  const blocos = ligacoes.map((ligacao, indiceBloco) => {
     const elemento = ligacao.elementos_html_vf;
     if(!elemento) return '';
     const mapaAnotacoes = new Map((elemento.anotacoes_elemento_html_vf||[]).map(a => [a.identificador, a.texto_explicacao]));
@@ -16465,7 +16473,7 @@ function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
     vfContextoRenderizacaoSvgVF = {tipo: 'elemento-html', elementoId: elemento.id};
     const conteudoFormatado = formatarTextoItemVF(elemento.latex_fonte);
     vfContextoRenderizacaoSvgVF = null;
-    return `<div style="margin-top:14px"><div id="${idBloco}" class="vf-elemento-html-bloco" data-elemento-id="${elemento.id}" data-ligacao-id="${ligacao.id}" data-questao-vf-id="${questaoVfId}" data-mapa-anotacoes='${escapeHtml(JSON.stringify([...mapaAnotacoes]))}'>${conteudoFormatado}</div></div>`;
+    return `<div style="margin-top:${indiceBloco === 0 ? 0 : 18}px"><div id="${idBloco}" class="vf-elemento-html-bloco" data-elemento-id="${elemento.id}" data-ligacao-id="${ligacao.id}" data-questao-vf-id="${questaoVfId}" data-mapa-anotacoes='${escapeHtml(JSON.stringify([...mapaAnotacoes]))}'>${conteudoFormatado}</div></div>`;
   });
   container.innerHTML = blocos.join('');
   // aplica as anotações já salvas em cada bloco recém-inserido - depois
