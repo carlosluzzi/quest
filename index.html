@@ -837,6 +837,10 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         <svg viewBox="0 0 24 24" width="18" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         <span id="rascunho-livre-texto-voltar">Rascunho</span>
       </button>
+      <button onclick="vfColarNoRascunhoVF()" title="Colar o que está na área de transferência" style="display:flex;align-items:center;gap:6px;color:#444;font-size:var(--fs-c);background:none;padding:6px 10px;border-radius:8px;margin-left:auto;margin-right:4px">
+        <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+        Colar
+      </button>
       <button onclick="vfLimparRascunhoLivreVF()" title="Apagar tudo" style="display:flex;align-items:center;gap:6px;color:#999;font-size:var(--fs-c);background:none;padding:6px 10px;border-radius:8px">
         <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         Limpar folha
@@ -844,6 +848,10 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     </div>
     <div id="rascunho-livre-papel" style="flex:1;position:relative;overflow:hidden;background:#fff;background-image:radial-gradient(circle, #E3E0D2 1.1px, transparent 1.1px);background-size:22px 22px;background-position:34px 14px">
       <div style="position:absolute;top:0;bottom:0;left:0;width:34px;background:repeating-linear-gradient(to bottom, transparent, transparent 21px, #C9A876 21px, #C9A876 22px);opacity:0.3;border-right:1px dashed #C9A876;pointer-events:none"></div>
+      <!-- camada das caixinhas de texto coladas: acima do canvas de
+           desenho (z-index 280), mas sem capturar toque nenhum fora das
+           próprias caixas - a caneta continua desenhando na folha toda -->
+      <div id="rascunho-livre-textos" style="position:absolute;inset:0;z-index:300;pointer-events:none"></div>
       <div style="position:absolute;bottom:14px;right:18px;text-align:right;pointer-events:none">
         <div style="font-family:ui-monospace,monospace;font-size:10px;color:#8A8375;opacity:0.65;line-height:1.5;border-top:1px solid #C9A876;padding-top:5px">
           <b style="color:#2B2620;opacity:0.85">Pilotquest</b> · Rascunho pessoal<br>não salvo no seu histórico de questões
@@ -2065,7 +2073,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-16-056';
+const VERSAO_APP = '2026-09-16-057';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -18919,10 +18927,21 @@ function abrirRascunhoLivreVF(){
   inicializarCanvasDesenhoVF(); // mede o canvas já com o tamanho certo dessa tela nova
   mostrarBarraDesenhoVF(); // aparece direto, sem precisar tocar primeiro pra "descobrir" que dá pra desenhar
   vfRestaurarRascunhoLivreVF();
+  const papelRascunho = document.getElementById('rascunho-livre-papel');
+  if(papelRascunho && !papelRascunho.dataset.segurarLigado){
+    papelRascunho.addEventListener('touchstart', vfIniciarSegurarRascunhoVF, {passive: true});
+    papelRascunho.addEventListener('touchmove', vfCancelarSegurarRascunhoVF, {passive: true});
+    papelRascunho.addEventListener('touchend', vfCancelarSegurarRascunhoVF, {passive: true});
+    papelRascunho.addEventListener('mousedown', vfIniciarSegurarRascunhoVF);
+    papelRascunho.addEventListener('mouseup', vfCancelarSegurarRascunhoVF);
+    papelRascunho.addEventListener('mouseleave', vfCancelarSegurarRascunhoVF);
+    papelRascunho.dataset.segurarLigado = '1';
+  }
   document.querySelectorAll('#bottom-nav .nav-item').forEach(item => item.classList.remove('active'));
 }
 
 function fecharRascunhoLivreVF(){
+  vfFecharMenuColarRascunhoVF();
   vfSalvarRascunhoLivreVF();
   limparCanvasDesenhoVF(); // esconde barra/painéis e limpa o canvas visualmente antes de trocar de tela
   document.getElementById('aba-rascunho-livre-vf').classList.add('hidden');
@@ -18948,13 +18967,16 @@ function fecharRascunhoLivreVF(){
 
 function vfSalvarRascunhoLivreVF(){
   const canvas = document.getElementById('vf-canvas-desenho');
-  if(!canvas || typeof vfIndiceHistoricoVF === 'undefined' || vfIndiceHistoricoVF < 0) return; // nada desenhado, nada a guardar
   const papel = document.getElementById('rascunho-livre-papel');
+  const caixas = vfCaixasTextoRascunhoVF();
+  const temDesenho = canvas && typeof vfIndiceHistoricoVF !== 'undefined' && vfIndiceHistoricoVF >= 0;
+  if(!temDesenho && !caixas.length) return; // folha em branco, nada a guardar
   try{
     localStorage.setItem('pscpp_rascunho_livre_vf', JSON.stringify({
-      dataUrl: canvas.toDataURL(),
+      dataUrl: temDesenho ? canvas.toDataURL() : null,
       largura: papel ? papel.clientWidth : null,
-      altura: papel ? papel.clientHeight : null
+      altura: papel ? papel.clientHeight : null,
+      caixas // as caixinhas de texto coladas, com a posição de cada uma
     }));
   }catch(e){} // localStorage cheio ou indisponível - não quebra o resto do app
 }
@@ -18969,6 +18991,16 @@ function vfRestaurarRascunhoLivreVF(){
   }catch(e){ return; }
   const canvas = document.getElementById('vf-canvas-desenho');
   const papel = document.getElementById('rascunho-livre-papel');
+  // caixinhas de texto primeiro: não dependem do canvas e a posição é
+  // reescalada junto com a folha, igual o desenho
+  const camadaTextos = vfCamadaTextosRascunhoVF();
+  if(camadaTextos){
+    camadaTextos.querySelectorAll('.rascunho-texto-box').forEach(c => c.remove());
+    const escalaX = (papel && salvo.largura) ? papel.clientWidth / salvo.largura : 1;
+    const escalaY = (papel && salvo.altura) ? papel.clientHeight / salvo.altura : 1;
+    (salvo.caixas || []).forEach(c => vfCriarCaixaTextoRascunhoVF(c.x * escalaX, c.y * escalaY, c.texto));
+  }
+  if(!salvo.dataUrl) return;
   const dpr = (window.devicePixelRatio || 1) * 1.5;
   const img = new Image();
   img.onload = () => {
@@ -18986,7 +19018,143 @@ function vfRestaurarRascunhoLivreVF(){
   img.src = salvo.dataUrl;
 }
 
+// ---- caixinhas de texto na folha de rascunho ----
+// segurar o DEDO em qualquer ponto vazio da folha oferece "Colar aqui";
+// o texto vira uma caixinha que dá pra arrastar pra onde quiser e editar
+// batendo nela. Fica por cima do desenho, mas só as caixas capturam
+// toque - a caneta continua riscando a folha inteira normalmente
+const VF_DURACAO_SEGURAR_RASCUNHO_MS = 450;
+let vfTimerSegurarRascunhoVF = null;
+let vfPontoSegurarRascunhoVF = null;
+
+function vfPapelRascunhoVF(){ return document.getElementById('rascunho-livre-papel'); }
+function vfCamadaTextosRascunhoVF(){ return document.getElementById('rascunho-livre-textos'); }
+
+function vfIniciarSegurarRascunhoVF(evento){
+  const papel = vfPapelRascunhoVF();
+  if(!papel || papel.closest('.hidden')) return;
+  const toque = evento.touches ? evento.touches[0] : evento;
+  if(!toque) return;
+  if(evento.touches && vfEhToqueDeCaneta(toque)) return; // caneta é pra desenhar, nunca pra colar
+  if(evento.target.closest('.rascunho-texto-box, #rascunho-menu-colar')) return; // já tocando numa caixa - não cria outra
+  vfFecharMenuColarRascunhoVF();
+  const rect = papel.getBoundingClientRect();
+  vfPontoSegurarRascunhoVF = {x: toque.clientX, y: toque.clientY, ex: toque.clientX - rect.left, ey: toque.clientY - rect.top};
+  clearTimeout(vfTimerSegurarRascunhoVF);
+  vfTimerSegurarRascunhoVF = setTimeout(() => {
+    vfTimerSegurarRascunhoVF = null;
+    vfMostrarMenuColarRascunhoVF(vfPontoSegurarRascunhoVF.ex, vfPontoSegurarRascunhoVF.ey);
+  }, VF_DURACAO_SEGURAR_RASCUNHO_MS);
+}
+function vfCancelarSegurarRascunhoVF(evento){
+  if(evento && vfPontoSegurarRascunhoVF){
+    const toque = evento.touches ? evento.touches[0] : evento;
+    if(toque && Math.hypot(toque.clientX - vfPontoSegurarRascunhoVF.x, toque.clientY - vfPontoSegurarRascunhoVF.y) < 20) return; // tremor do dedo não cancela
+  }
+  clearTimeout(vfTimerSegurarRascunhoVF);
+  vfTimerSegurarRascunhoVF = null;
+}
+
+// o botão existe porque ler a área de transferência exige um toque
+// DIRETO do usuário: fazer isso no fim de um temporizador de "segurar"
+// não conta como gesto pro Safari, e a colagem seria recusada em silêncio
+function vfMostrarMenuColarRascunhoVF(x, y){
+  const camada = vfCamadaTextosRascunhoVF();
+  if(!camada) return;
+  vfFecharMenuColarRascunhoVF();
+  const menu = document.createElement('button');
+  menu.id = 'rascunho-menu-colar';
+  menu.type = 'button';
+  menu.textContent = 'Colar aqui';
+  menu.style.cssText = `position:absolute;left:${x}px;top:${y}px;transform:translate(-50%,-140%);pointer-events:auto;background:#111;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:var(--fs-c);font-weight:600;font-family:inherit;box-shadow:0 2px 10px rgba(0,0,0,0.25);cursor:pointer;-webkit-tap-highlight-color:transparent`;
+  menu.onclick = (e) => { e.stopPropagation(); vfFecharMenuColarRascunhoVF(); vfColarNoRascunhoVF(x, y); };
+  camada.appendChild(menu);
+  setTimeout(vfFecharMenuColarRascunhoVF, 5000); // some sozinho se ele desistir
+}
+function vfFecharMenuColarRascunhoVF(){ document.getElementById('rascunho-menu-colar')?.remove(); }
+
+async function vfColarNoRascunhoVF(x, y){
+  const papel = vfPapelRascunhoVF();
+  if(!papel) return;
+  // sem ponto (veio do botão do cabeçalho): cola num canto de cima, com
+  // um degrau por caixa já existente, pra não empilhar uma sobre a outra
+  if(x === undefined || y === undefined){
+    const quantas = vfCamadaTextosRascunhoVF()?.querySelectorAll('.rascunho-texto-box').length || 0;
+    x = 60 + (quantas % 5) * 18;
+    y = 40 + (quantas % 5) * 24;
+  }
+  let texto = '';
+  try{ texto = (await navigator.clipboard.readText()) || ''; }catch(e){ texto = ''; } // recusado/indisponível: cria vazia pra colar na mão
+  const caixa = vfCriarCaixaTextoRascunhoVF(x, y, texto.trim());
+  if(!texto.trim()) caixa?.querySelector('.rascunho-texto-corpo')?.focus();
+  vfSalvarRascunhoLivreVF();
+}
+
+function vfCriarCaixaTextoRascunhoVF(x, y, texto){
+  const camada = vfCamadaTextosRascunhoVF();
+  if(!camada) return null;
+  const caixa = document.createElement('div');
+  caixa.className = 'rascunho-texto-box';
+  caixa.style.cssText = `position:absolute;left:${Math.round(x)}px;top:${Math.round(y)}px;max-width:min(72%,460px);pointer-events:auto;background:#FFFDF5;border:1px solid #E6DFC8;border-radius:9px;box-shadow:0 1px 5px rgba(0,0,0,0.08)`;
+  caixa.innerHTML = `
+    <div class="rascunho-texto-alca" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 7px 3px;cursor:move;touch-action:none">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#bbb" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg>
+      <button type="button" title="Tirar essa caixinha" style="width:22px;height:22px;border:none;background:none;color:#B23A34;font-size:var(--fs-d);line-height:1;cursor:pointer;padding:0">✕</button>
+    </div>
+    <div class="rascunho-texto-corpo" contenteditable="true" style="padding:2px 11px 9px;font-size:var(--fs-d);line-height:1.45;color:#111;white-space:pre-wrap;outline:none;min-width:70px;min-height:1.2em"></div>`;
+  caixa.querySelector('.rascunho-texto-corpo').textContent = texto || ''; // por textContent: o que vem da área de transferência é texto puro, nunca HTML
+  caixa.querySelector('button').onclick = (e) => { e.stopPropagation(); caixa.remove(); vfSalvarRascunhoLivreVF(); };
+  caixa.querySelector('.rascunho-texto-corpo').addEventListener('blur', vfSalvarRascunhoLivreVF);
+  const alca = caixa.querySelector('.rascunho-texto-alca');
+  alca.addEventListener('pointerdown', (e) => vfIniciarArrastoCaixaRascunhoVF(e, caixa));
+  camada.appendChild(caixa);
+  return caixa;
+}
+
+function vfIniciarArrastoCaixaRascunhoVF(evento, caixa){
+  if(evento.target.closest('button')) return; // o ✕ não arrasta
+  evento.preventDefault();
+  evento.stopPropagation();
+  const papel = vfPapelRascunhoVF();
+  if(!papel) return;
+  const rectPapel = papel.getBoundingClientRect();
+  const rectCaixa = caixa.getBoundingClientRect();
+  const deslocX = evento.clientX - rectCaixa.left;
+  const deslocY = evento.clientY - rectCaixa.top;
+  caixa.style.opacity = '0.85';
+  const mover = (e) => {
+    // presa dentro da folha: soltar a caixa metade pra fora seria só um
+    // jeito de perder o texto de vista
+    const x = Math.max(0, Math.min(rectPapel.width - rectCaixa.width, e.clientX - rectPapel.left - deslocX));
+    const y = Math.max(0, Math.min(rectPapel.height - rectCaixa.height, e.clientY - rectPapel.top - deslocY));
+    caixa.style.left = Math.round(x) + 'px';
+    caixa.style.top = Math.round(y) + 'px';
+  };
+  const soltar = () => {
+    caixa.style.opacity = '';
+    document.removeEventListener('pointermove', mover);
+    document.removeEventListener('pointerup', soltar);
+    document.removeEventListener('pointercancel', soltar);
+    vfSalvarRascunhoLivreVF();
+  };
+  document.addEventListener('pointermove', mover);
+  document.addEventListener('pointerup', soltar);
+  document.addEventListener('pointercancel', soltar);
+}
+
+function vfCaixasTextoRascunhoVF(){
+  const camada = vfCamadaTextosRascunhoVF();
+  if(!camada) return [];
+  return Array.from(camada.querySelectorAll('.rascunho-texto-box')).map(c => ({
+    texto: c.querySelector('.rascunho-texto-corpo')?.textContent || '',
+    x: parseFloat(c.style.left) || 0,
+    y: parseFloat(c.style.top) || 0
+  })).filter(c => c.texto.trim());
+}
+
 function vfLimparRascunhoLivreVF(){
+  vfFecharMenuColarRascunhoVF();
+  vfCamadaTextosRascunhoVF()?.querySelectorAll('.rascunho-texto-box').forEach(c => c.remove());
   limparCanvasDesenhoVF();
   mostrarBarraDesenhoVF(); // limparCanvasDesenhoVF esconde a barra - like o rascunho continua aberto, ela deve continuar visível
   try{ localStorage.removeItem('pscpp_rascunho_livre_vf'); }catch(e){}
