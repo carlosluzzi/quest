@@ -2020,7 +2020,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-15-037';
+const VERSAO_APP = '2026-09-15-039';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9207,7 +9207,9 @@ function vfColetarSegmentosRecursivoVF(elemento, inicio, fim, cursorRef, segment
   }
 }
 
-function vfCriarSpanMarcaVF(tipo, cor, range){
+// monta o span da marca (só o estilo - quem envolve o texto é
+// vfCriarSpanMarcaVF)
+function vfMontarSpanMarcaVF(tipo, cor){
   const span = document.createElement('span');
   span.className = 'vf-marcacao-texto-sessao';
   span.dataset.tipoMarca = tipo;
@@ -9230,25 +9232,63 @@ function vfCriarSpanMarcaVF(tipo, cor, range){
     span.style.textDecorationColor = cor;
     span.style.textDecorationThickness = '2.5px';
   }
-  // achado real (confirmado em vídeo): o caminho de reserva que existia
-  // aqui antes (extractContents + insertNode, usado quando surroundContents
-  // falhava) causava dano PERMANENTE na estrutura do DOM em itens com
-  // layout complexo (como os itens numerados I/II/III, que têm um <div>
-  // flex com sub-elementos internos) - e esse dano não desfazia nem
-  // removendo a marcação depois. Prefere não aplicar a marcação nesse
-  // segmento a arriscar quebrar o layout permanentemente
-  try{
-    range.surroundContents(span);
-  }catch(e){
-    return; // não consegue marcar esse segmento com segurança - melhor pular do que arriscar dano permanente
+  return span;
+}
+
+// ACHADO REAL: surroundContents só aceita um trecho que começa e termina
+// DENTRO DO MESMO nó de texto. Qualquer seleção que atravesse uma
+// fronteira - uma palavra em negrito, um <br>, um item de lista, um
+// trecho colorido - estourava, e o código antigo desistia em silêncio: o
+// grifo simplesmente não acontecia, sem aviso nenhum. Era o caso da
+// CORREÇÃO, que costuma ter negrito/cor no meio (por isso "só funcionava
+// na parte de cima").
+// A saída é marcar nó a nó: cada pedaço vira uma operação simples e
+// válida. Não é o extractContents+insertNode antigo, que quebrava o
+// layout de forma permanente - aqui cada nó de texto é envolvido
+// inteiro, sem nunca mexer na estrutura dos elementos em volta
+function vfPedacosDeTextoDoRangeVF(range){
+  if(range.startContainer === range.endContainer && range.startContainer.nodeType === 3){
+    return [{no: range.startContainer, inicio: range.startOffset, fim: range.endOffset}];
   }
-  // limpeza: surroundContents em texto com aninhamento (outro tipo de
-  // marca já dentro do range) às vezes deixa um span vazio residual pra
-  // trás - some visualmente (sem conteúdo, nada renderiza), mas é lixo
-  // desnecessário no HTML se não limpar
-  const pai = span.parentNode;
-  if(pai){
-    [...pai.querySelectorAll('.vf-marcacao-texto-sessao')].forEach(s => {
+  const raizBruta = range.commonAncestorContainer;
+  const raiz = raizBruta.nodeType === 3 ? raizBruta.parentNode : raizBruta;
+  if(!raiz) return [];
+  const pedacos = [];
+  const caminhante = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT, null);
+  let no;
+  while((no = caminhante.nextNode())){
+    if(!range.intersectsNode(no)) continue;
+    const inicio = (no === range.startContainer) ? range.startOffset : 0;
+    const fim = (no === range.endContainer) ? range.endOffset : no.nodeValue.length;
+    if(fim > inicio) pedacos.push({no, inicio, fim});
+  }
+  return pedacos;
+}
+
+function vfCriarSpanMarcaVF(tipo, cor, range){
+  const pedacos = vfPedacosDeTextoDoRangeVF(range);
+  if(!pedacos.length) return;
+  let ultimoPai = null;
+  // de trás pra frente: envolver um nó de texto não mexe nos anteriores,
+  // então os offsets já coletados continuam valendo
+  for(let i = pedacos.length - 1; i >= 0; i--){
+    const {no, inicio, fim} = pedacos[i];
+    const trecho = document.createRange();
+    try{
+      trecho.setStart(no, inicio);
+      trecho.setEnd(no, fim);
+      trecho.surroundContents(vfMontarSpanMarcaVF(tipo, cor));
+      ultimoPai = no.parentNode || ultimoPai;
+    }catch(e){
+      continue; // esse pedaço não deu - pula ele, os outros seguem
+    }
+  }
+  // limpeza: envolver texto com aninhamento (outra marca já dentro do
+  // trecho) às vezes deixa um span vazio residual pra trás - some
+  // visualmente, mas é lixo desnecessário no HTML se não limpar
+  const raizLimpeza = ultimoPai && ultimoPai.closest ? ultimoPai.closest('#vf-enunciado-atual, #vf-correcao-atual, #quest-enunciado-atual') || ultimoPai : ultimoPai;
+  if(raizLimpeza && raizLimpeza.querySelectorAll){
+    [...raizLimpeza.querySelectorAll('.vf-marcacao-texto-sessao')].forEach(s => {
       if(!s.textContent) s.remove();
     });
   }
@@ -14270,7 +14310,10 @@ async function vfAdicionarTagVF(){
 
   const jaTemEssaTag = (vfTagsPorQuestaoVF.get(vfQuestaoIdTagsAtualVF) || []).some(t => t.nome.toLowerCase() === nomeDigitado.toLowerCase());
   if(jaTemEssaTag){
-    statusEl.innerHTML = '<span style="color:#B00020">Essa questão já tem essa tag.</span>';
+    // não é erro, é informação: a tag já está na questão. Vermelho dava a
+    // impressão de que alguma coisa tinha dado errado
+    statusEl.innerHTML = '<span style="color:#888">Essa questão já tem essa tag.</span>';
+    input.value = '';
     return;
   }
 
@@ -14289,7 +14332,8 @@ async function vfAdicionarTagVF(){
         if(tagJaExistente) tag = tagJaExistente;
       }
       if(!tag){
-        statusEl.innerHTML = '<span style="color:#B00020">Não consegui criar a tag. Tenta de novo.</span>';
+        console.error('erro ao criar tag:', erroCriar);
+        statusEl.innerHTML = `<span style="color:#B00020">Não consegui criar a tag: ${escapeHtml(erroCriar.message || erroCriar.code || 'erro desconhecido')}</span>`;
         return;
       }
     }else{
@@ -14313,7 +14357,8 @@ async function vfAdicionarTagVF(){
     vfTagsPorQuestaoVF.set(questaoId, lista.filter(t => t.id !== tag.id));
     vfRenderizarListaTagsAtualVF();
     renderizarItemVF();
-    statusEl.innerHTML = '<span style="color:#B00020">Não consegui salvar. Tenta de novo.</span>';
+    console.error('erro ao ligar a tag na questão:', error, {tag, questaoId});
+    statusEl.innerHTML = `<span style="color:#B00020">Não consegui salvar a tag: ${escapeHtml(error.message || error.code || 'erro desconhecido')}</span>`;
   }
 }
 
