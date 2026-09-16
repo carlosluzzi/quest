@@ -1026,6 +1026,12 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
   sem responder nenhuma. Mesma busca do filtro de palavra-chave do Flash,
   com o glossário português/inglês por trás -->
   <div class="view-aba hidden" id="aba-biblioteca">
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button id="vf-biblioteca-secao-afirmacoes" class="btn-secundario active" style="flex:1" onclick="vfMudarSecaoBibliotecaVF('afirmacoes')">Afirmações</button>
+      <button id="vf-biblioteca-secao-notas" class="btn-secundario" style="flex:1" onclick="vfMudarSecaoBibliotecaVF('notas')">Notas</button>
+    </div>
+    <div id="vf-biblioteca-conteudo-notas" class="hidden"></div>
+    <div id="vf-biblioteca-conteudo-afirmacoes">
     <select id="vf-biblioteca-filtro-modulo" class="filter-select" style="margin-bottom:8px" onchange="vfBibliotecaMudarModuloVF()">
       <option value="">Todos os módulos</option>
     </select>
@@ -1045,6 +1051,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     </label>
     <p id="vf-biblioteca-resumo" style="font-size:var(--fs-c);color:#888;margin:10px 0 0 0;min-height:1.3em;line-height:1.4"></p>
     <div id="vf-biblioteca-lista" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"></div>
+    </div>
   </div>
 
   <div class="view-aba hidden" id="aba-adicionar">
@@ -1719,10 +1726,17 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 
 <div class="modal-overlay hidden" id="modal-nota-vf" onclick="if(event.target===this) fecharModalNotaVF()">
   <div class="modal-conteudo popup-formulario">
-    <h3 class="config-title">Suas notas nessa questão</h3>
-    <div id="lista-notas-vf" style="transition:max-height 0.25s ease;overflow:hidden;max-height:0"></div>
-    <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:140px"></textarea>
-    <button class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
+    <h3 class="config-title">Notas</h3>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button id="vf-nota-aba-questao" class="btn-secundario active" style="flex:1" onclick="vfMudarAbaNotaVF('questao')">Nessa questão</button>
+      <button id="vf-nota-aba-biblioteca" class="btn-secundario" style="flex:1" onclick="vfMudarAbaNotaVF('biblioteca')">Todas as notas</button>
+    </div>
+    <div id="vf-nota-conteudo-questao">
+      <div id="lista-notas-vf" style="transition:max-height 0.25s ease;overflow:hidden;max-height:0"></div>
+      <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:140px"></textarea>
+      <button class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
+    </div>
+    <div id="vf-nota-conteudo-biblioteca" class="hidden"></div>
     <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModalNotaVF()">Fechar</button>
   </div>
 </div>
@@ -2020,7 +2034,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-16-040';
+const VERSAO_APP = '2026-09-16-043';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4679,6 +4693,27 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, la
 //    modo a alça de arrastar coluna some (não há proporção pra ajustar)
 // Roda de novo sozinha quando o card muda de largura (girar o iPad,
 // abrir um modal que estava escondido, etc)
+// depois que as larguras finais já estão aplicadas, decide célula por
+// célula quem pode continuar numa linha só. Antes a regra era "não coube
+// na largura pedida? libera a quebra em TODAS as células" - o efeito era
+// que apertar a tabela (arrastando a borda direita, por exemplo) fazia
+// quebrar em duas linhas até o que cabia folgado na coluna, porque a
+// permissão era global. Agora só quebra quem de fato transborda a
+// própria coluna: o resto continua numa linha só, que é o ponto de
+// deixar as colunas curtinhas
+function vfLiberarQuebraSoNoQueNaoCabeVF(tabela){
+  tabela.querySelectorAll('td').forEach(td => {
+    if(td.style.whiteSpace !== 'nowrap') return; // já pode quebrar
+    if(td.scrollWidth > td.clientWidth + 1) td.style.whiteSpace = '';
+  });
+}
+// proporção de coluna com uma casa decimal. Com número inteiro, o
+// arredondamento de cada coluna (até meio ponto percentual) somava e
+// mexia na largura real da tabela ao soltar o dedo - o bastante pra uma
+// célula justa quebrar sozinha logo depois do arrasto
+function vfPctColunaVF(px, soma){
+  return Math.max(0.5, Math.round(px / (soma || 1) * 1000) / 10);
+}
 const VF_LIMIAR_TABELA_CHEIA_VF = 0.8;
 const VF_MAX_CHARS_CELULA_CURTA_VF = 24;
 function vfAjustarLarguraTabelaVF(bloco){
@@ -4721,10 +4756,10 @@ function vfAjustarLarguraTabelaVF(bloco){
     const total = Math.round(container * larguraTotal / 100);
     const proporcoes = largurasOk || celulas.map(td => td.getBoundingClientRect().width);
     const soma = proporcoes.reduce((a,b) => a+b, 0) || 1;
-    if(natural > total + 1) tabela.querySelectorAll('td').forEach(td => { td.style.whiteSpace = ''; }); // não cabe sem quebrar - libera a quebra
     tabela.style.tableLayout = 'fixed';
     tabela.style.width = total + 'px';
     celulas.forEach((td, i) => { td.style.width = (proporcoes[i]/soma*100).toFixed(2) + '%'; });
+    vfLiberarQuebraSoNoQueNaoCabeVF(tabela);
     if(larguraTotal >= 100){ bloco.style.width = '100%'; cartao.style.width = '100%'; tabela.style.width = '100%'; }
     alcas.forEach(a => { a.style.display = ''; });
     bloco.dataset.modoLargura = 'fixa';
@@ -4736,12 +4771,12 @@ function vfAjustarLarguraTabelaVF(bloco){
     // libera a quebra de linha - senão o texto vazava pra fora da célula
     const proporcoesCheia = largurasOk || celulas.map(td => td.getBoundingClientRect().width);
     const somaCheia = proporcoesCheia.reduce((a,b) => a+b, 0) || 1;
-    if(natural > container + 1) tabela.querySelectorAll('td').forEach(td => { td.style.whiteSpace = ''; });
     bloco.style.width = '100%';
     cartao.style.width = '100%';
     tabela.style.width = '100%';
     tabela.style.tableLayout = 'fixed';
     celulas.forEach((td, i) => { td.style.width = (proporcoesCheia[i]/somaCheia*100).toFixed(2) + '%'; });
+    vfLiberarQuebraSoNoQueNaoCabeVF(tabela);
     alcas.forEach(a => { a.style.display = ''; });
     bloco.dataset.modoLargura = 'cheia';
   }else{
@@ -4756,10 +4791,10 @@ function vfAjustarLarguraTabelaVF(bloco){
     // celula larga e que passa a ocupar mais de uma linha
     const totalDesejado = Math.ceil(maiorColuna * n) + 2;
     const total = Math.min(totalDesejado, container);
-    if(totalDesejado > container) tabela.querySelectorAll('td').forEach(td => { td.style.whiteSpace = ''; });
     tabela.style.tableLayout = 'fixed';
     tabela.style.width = total + 'px';
     celulas.forEach(td => { td.style.width = (100/n).toFixed(2) + '%'; });
+    vfLiberarQuebraSoNoQueNaoCabeVF(tabela);
     alcas.forEach(a => { a.style.display = 'none'; });
     bloco.dataset.modoLargura = 'igual';
   }
@@ -5002,7 +5037,7 @@ function vfProcessarArrayLatexVF(texto){
     // quebradas ("larguras:15", "42", "43") em vez de uma só
     let opcoesSemLarguras = opcoesStr || '';
     let larguras = null;
-    const matchLarguras = opcoesSemLarguras.match(/larguras:([\d,]+)/);
+    const matchLarguras = opcoesSemLarguras.match(/larguras:([\d.,]+)/);
     if(matchLarguras){
       larguras = matchLarguras[1].split(',').map(Number).filter(n => n > 0);
       opcoesSemLarguras = opcoesSemLarguras.replace(matchLarguras[0], '');
@@ -5010,10 +5045,10 @@ function vfProcessarArrayLatexVF(texto){
     // largura:NN - largura TOTAL da tabela em % do card (definida pela
     // alça da borda direita). Com ela, a regra dos 80% não decide mais
     let larguraTotal = null;
-    const matchLarguraTotal = opcoesSemLarguras.match(/(?:^|,)\s*largura:(\d{1,3})/);
+    const matchLarguraTotal = opcoesSemLarguras.match(/(?:^|,)\s*largura:(\d{1,3}(?:\.\d+)?)/);
     if(matchLarguraTotal){
       larguraTotal = Math.max(10, Math.min(100, Number(matchLarguraTotal[1])));
-      opcoesSemLarguras = opcoesSemLarguras.replace(/largura:\d{1,3}/, '');
+      opcoesSemLarguras = opcoesSemLarguras.replace(/largura:\d{1,3}(?:\.\d+)?/, '');
     }
     const opcoes = opcoesSemLarguras.split(',').map(o => o.trim()).filter(Boolean);
     const alinhamentoFinal = opcoes.includes('centro') ? 'centro' : opcoes.includes('direita') ? 'direita' : 'esquerda';
@@ -12927,6 +12962,7 @@ function vfMostrarAlcaRedimensionarSvgVF(bloco){
     };
     barra.appendChild(btn);
   });
+  vfAdicionarBotaoRemoverAnexoVF(barra, bloco);
   bloco.appendChild(barra);
 
   // clicar fora esconde a alça e a barra sem mudar nada - verifica o
@@ -13185,7 +13221,7 @@ function vfIniciarArrastoColunaVF(evento){
     // completo (\begin{array}[larguras:N,N,N]{...})
     const largurasFinaisPx = celulas.map(c => c.getBoundingClientRect().width);
     const somaPx = largurasFinaisPx.reduce((a,b) => a+b, 0);
-    const largurasFinais = largurasFinaisPx.map(px => Math.max(1, Math.round(px / somaPx * 100)));
+    const largurasFinais = largurasFinaisPx.map(px => vfPctColunaVF(px, somaPx));
     tabela.dataset.larguras = largurasFinais.join(','); // pra um reajuste futuro (girar a tela) respeitar o arrasto
     const opcoes = {larguras: largurasFinais};
     // tabela pequena (modo "igual") tem as colunas forçadas iguais a cada
@@ -13210,6 +13246,29 @@ function vfIniciarArrastoColunaVF(evento){
   document.addEventListener('mouseup', finalizar);
   document.addEventListener('touchmove', onMove, {passive: false});
   document.addEventListener('touchend', finalizar);
+}
+
+// "x" de tirar o complementar da questão, na ponta direita da barrinha
+// de ajuste (alinhar / cabeçalho / desfazer). Só aparece quando o bloco
+// está DENTRO de um elemento anexado da biblioteca - substituiu o botão
+// "Desanexar" que ficava flutuando acima do anexo, gastando uma linha
+// inteira da página só pra isso
+function vfAdicionarBotaoRemoverAnexoVF(barra, bloco){
+  const anexo = bloco.closest?.('.vf-elemento-html-bloco');
+  if(!anexo || !anexo.dataset.ligacaoId || !anexo.dataset.questaoVfId) return;
+  const separador = document.createElement('div');
+  separador.style.cssText = 'width:1px;height:20px;background:#e0e0e0;margin:0 2px';
+  barra.appendChild(separador);
+  const btn = document.createElement('button');
+  btn.style.cssText = 'width:28px;height:28px;border:none;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:transparent;color:#B23A34';
+  btn.title = 'Tirar esse complementar da questão';
+  btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>`;
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    barra.remove();
+    vfDesanexarElementoVF(anexo.dataset.ligacaoId, anexo.dataset.questaoVfId);
+  };
+  barra.appendChild(btn);
 }
 
 function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
@@ -13293,6 +13352,8 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
     };
     barra.appendChild(btnDesfazer);
   }
+
+  vfAdicionarBotaoRemoverAnexoVF(barra, bloco);
 
   bloco.appendChild(barra);
   vfMostrarDivisoresTabelaVF(bloco); // linhas verticais arrastáveis (modo "cheia")
@@ -13599,14 +13660,14 @@ function vfIniciarArrastoBordaTabelaVF(evento){
     document.removeEventListener('mouseup', finalizar);
     document.removeEventListener('touchmove', onMove);
     document.removeEventListener('touchend', finalizar);
-    let pct = Math.round(larguraAtual / container * 100);
+    let pct = Math.round(larguraAtual / container * 1000) / 10; // uma casa decimal: arredondar pro inteiro encolhia a tabela alguns pixels ao soltar, e isso sozinho já quebrava célula justa
     if(pct >= 98) pct = 100;
     tabela.dataset.larguraTotal = String(pct);
     // guarda também as proporções atuais das colunas, senão o reajuste
     // (girar a tela etc.) voltaria pra colunas iguais
     const largurasPx = celulas.map(c => c.getBoundingClientRect().width);
     const somaPx = largurasPx.reduce((a,b) => a+b, 0);
-    const larguras = largurasPx.map(px => Math.max(1, Math.round(px / somaPx * 100)));
+    const larguras = largurasPx.map(px => vfPctColunaVF(px, somaPx));
     tabela.dataset.larguras = larguras.join(',');
     vfAjustarLarguraTabelaVF(bloco);
     vfReposicionarDivisoresTabelaVF(bloco);
@@ -16272,13 +16333,14 @@ function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
     if(!elemento) return '';
     const mapaAnotacoes = new Map((elemento.anotacoes_elemento_html_vf||[]).map(a => [a.identificador, a.texto_explicacao]));
     const idBloco = `vf-elemento-html-${ligacao.id}`;
-    const cabecalho = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px">
-      <button style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="vfDesanexarElementoVF('${ligacao.id}', '${questaoVfId}')">Desanexar</button>
-    </div>`;
+    // sem barra de "Desanexar" em cima: tirar o anexo agora é o "x" na
+    // ponta direita da mesma barrinha de ajuste que já tem alinhar,
+    // cabeçalho e desfazer (ver vfAdicionarBotaoRemoverAnexoVF). Os ids
+    // ficam no próprio bloco pra essa barrinha saber o que desanexar
     vfContextoRenderizacaoSvgVF = {tipo: 'elemento-html', elementoId: elemento.id};
     const conteudoFormatado = formatarTextoItemVF(elemento.latex_fonte);
     vfContextoRenderizacaoSvgVF = null;
-    return `<div style="margin-top:14px">${cabecalho}<div id="${idBloco}" class="vf-elemento-html-bloco" data-elemento-id="${elemento.id}" data-mapa-anotacoes='${escapeHtml(JSON.stringify([...mapaAnotacoes]))}'>${conteudoFormatado}</div></div>`;
+    return `<div style="margin-top:14px"><div id="${idBloco}" class="vf-elemento-html-bloco" data-elemento-id="${elemento.id}" data-ligacao-id="${ligacao.id}" data-questao-vf-id="${questaoVfId}" data-mapa-anotacoes='${escapeHtml(JSON.stringify([...mapaAnotacoes]))}'>${conteudoFormatado}</div></div>`;
   });
   container.innerHTML = blocos.join('');
   // aplica as anotações já salvas em cada bloco recém-inserido - depois
@@ -16286,6 +16348,17 @@ function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
   container.querySelectorAll('.vf-elemento-html-bloco').forEach(bloco => {
     const mapa = new Map(JSON.parse(bloco.dataset.mapaAnotacoes || '[]'));
     vfAplicarIdentificadoresECliquesVF(bloco, mapa, bloco.dataset.elementoId);
+    // o "x" de tirar o anexo mora na barrinha de ajuste, que só existe
+    // pra tabela e pra desenho. Anexo que não é nem um nem outro (texto
+    // solto) ficaria sem saída nenhuma - esse aqui mantém o botãozinho
+    // antigo, só nesse caso
+    if(!bloco.querySelector('.vf-tabela-bloco') && !bloco.querySelector('svg')){
+      const saida = document.createElement('div');
+      saida.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:6px';
+      saida.innerHTML = `<button style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;-webkit-tap-highlight-color:transparent">Desanexar</button>`;
+      saida.firstChild.onclick = () => vfDesanexarElementoVF(bloco.dataset.ligacaoId, bloco.dataset.questaoVfId);
+      bloco.parentElement?.insertBefore(saida, bloco);
+    }
   });
 }
 // query com join aninhado de dois níveis - traz elemento + anotações
@@ -16450,10 +16523,277 @@ async function vfDesanexarElementoVF(ligacaoId, questaoVfId){
   });
 }
 
+// ==================== Biblioteca de notas ====================
+// Mesma ideia da biblioteca do complementar, mas pras notas: ver TUDO
+// que já foi anotado sem precisar caçar questão por questão, filtrando
+// por módulo/publicação, buscando por palavra (no texto da nota E no da
+// afirmação) e separando fixadas e mnemônicos. Mora em DOIS lugares - a
+// aba Biblioteca (tela cheia) e uma aba dentro do popup de Notas -, por
+// isso todo id de elemento leva um prefixo: as duas cópias podem existir
+// ao mesmo tempo no DOM sem brigar por id
+let vfNotasBibliotecaCacheVF = null;
+let vfNotaLibConfirmandoExclusaoVF = {}; // notaId -> timer do "toca de novo pra excluir"
+
+function vfHtmlBibliotecaNotasVF(pref){
+  const alturaLista = pref === 'modal' ? ';max-height:50vh;overflow-y:auto' : '';
+  return `
+    <select id="vf-notas-lib-modulo-${pref}" class="filter-select" style="margin-bottom:8px" onchange="vfMudarModuloNotasBibliotecaVF('${pref}')">
+      <option value="">Todos os módulos</option>
+    </select>
+    <select id="vf-notas-lib-pub-${pref}" class="filter-select" style="margin-bottom:8px" onchange="vfFiltrarNotasBibliotecaVF('${pref}')" disabled>
+      <option value="">Todas as publicações</option>
+    </select>
+    <input id="vf-notas-lib-busca-${pref}" type="search" class="filter-select" placeholder="Buscar nas notas" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-bottom:10px" oninput="vfFiltrarNotasBibliotecaVF('${pref}')">
+    <div style="display:flex;gap:18px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#333;cursor:pointer">
+        <input type="checkbox" id="vf-notas-lib-fixadas-${pref}" style="width:18px;height:18px;flex-shrink:0;accent-color:#B23A34" onchange="vfFiltrarNotasBibliotecaVF('${pref}')">
+        Só as fixadas
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-d);color:#333;cursor:pointer">
+        <input type="checkbox" id="vf-notas-lib-mnemonicos-${pref}" style="width:18px;height:18px;flex-shrink:0;accent-color:#B23A34" onchange="vfFiltrarNotasBibliotecaVF('${pref}')">
+        Só os mnemônicos
+      </label>
+    </div>
+    <p id="vf-notas-lib-resumo-${pref}" style="font-size:var(--fs-c);color:#888;margin:10px 0 0;min-height:1.3em;line-height:1.4"></p>
+    <div id="vf-notas-lib-lista-${pref}" style="margin-top:12px${alturaLista}"></div>`;
+}
+
+// monta (uma vez) e preenche a biblioteca dentro do container pedido.
+// forcar=true refaz a consulta - é o caso das duas portas de entrada,
+// que sempre abrem com o que está no banco AGORA (notas novas escritas
+// no meio do caminho aparecem sem precisar recarregar o app)
+async function vfAbrirBibliotecaNotasVF(pref, containerId, forcar){
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  if(container.dataset.montado !== '1'){
+    container.innerHTML = vfHtmlBibliotecaNotasVF(pref);
+    container.dataset.montado = '1';
+  }
+  const lista = document.getElementById(`vf-notas-lib-lista-${pref}`);
+  if(lista && !vfNotasBibliotecaCacheVF) lista.innerHTML = '<p style="color:#888;text-align:center;padding:20px;margin:0">Carregando...</p>';
+  await vfCarregarNotasBibliotecaVF(forcar);
+  vfPopularModulosNotasBibliotecaVF(pref);
+  vfFiltrarNotasBibliotecaVF(pref);
+}
+
+async function vfCarregarNotasBibliotecaVF(forcar){
+  if(vfNotasBibliotecaCacheVF && !forcar) return vfNotasBibliotecaCacheVF;
+  await vfCarregarBibliografiaCacheVF();
+  // join aninhado: cada nota já vem com a afirmação dona dela (texto pro
+  // contexto na tela e pra busca, bibliografia/capítulo pros filtros) -
+  // uma consulta só, em vez de uma por questão
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('notas_vf')
+    .select('id, texto, criado_em, fixada, eh_mnemonico, cor, questao_vf_id, questoes_vf(texto, bibliografia_id, capitulo)', {count: 'exact'})
+    .eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending: false}).order('id'));
+  if(error) vfMostrarAvisoVF('Não consegui carregar suas notas. Tenta de novo.');
+  vfNotasBibliotecaCacheVF = (!error && data) ? data : [];
+  return vfNotasBibliotecaCacheVF;
+}
+
+function vfBibDaNotaVF(nota){
+  const bibId = nota?.questoes_vf?.bibliografia_id;
+  return bibId ? vfBibliografiaCache.get(bibId) : null;
+}
+
+// só módulos que realmente têm nota - listar módulo vazio nesse filtro
+// não ajudaria em nada (mesma regra da biblioteca do complementar)
+function vfPopularModulosNotasBibliotecaVF(pref){
+  const el = document.getElementById(`vf-notas-lib-modulo-${pref}`);
+  if(!el) return;
+  const valorAtual = el.value;
+  const modulos = new Set();
+  (vfNotasBibliotecaCacheVF || []).forEach(n => { const b = vfBibDaNotaVF(n); if(b?.modulo_pscpp) modulos.add(b.modulo_pscpp); });
+  const ordenados = Array.from(modulos).sort((a,b) => a.localeCompare(b,'pt'));
+  el.innerHTML = '<option value="">Todos os módulos</option>' + ordenados.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+  el.value = ordenados.includes(valorAtual) ? valorAtual : '';
+  vfMudarModuloNotasBibliotecaVF(pref, true);
+}
+
+function vfMudarModuloNotasBibliotecaVF(pref, semFiltrar){
+  const modulo = document.getElementById(`vf-notas-lib-modulo-${pref}`)?.value || '';
+  const elPub = document.getElementById(`vf-notas-lib-pub-${pref}`);
+  if(!elPub) return;
+  if(!modulo){
+    elPub.innerHTML = '<option value="">Todas as publicações</option>';
+    elPub.disabled = true;
+  }else{
+    // publicação vem das próprias notas (id + nome), não da bibliografia
+    // inteira: o filtro só oferece o que de fato tem nota escrita
+    const pubs = new Map();
+    (vfNotasBibliotecaCacheVF || []).forEach(n => {
+      const b = vfBibDaNotaVF(n);
+      const id = n.questoes_vf?.bibliografia_id;
+      if(b?.modulo_pscpp === modulo && id) pubs.set(id, b.titulo || 'Sem título');
+    });
+    const ordenadas = Array.from(pubs.entries()).sort((a,b) => a[1].localeCompare(b[1],'pt'));
+    elPub.innerHTML = '<option value="">Todas as publicações</option>' + ordenadas.map(([id, nome]) => `<option value="${id}">${escapeHtml(nome)}</option>`).join('');
+    elPub.disabled = false;
+  }
+  if(!semFiltrar) vfFiltrarNotasBibliotecaVF(pref);
+}
+
+function vfFiltrarNotasBibliotecaVF(pref){
+  const termo = (document.getElementById(`vf-notas-lib-busca-${pref}`)?.value || '').trim().toLowerCase();
+  const modulo = document.getElementById(`vf-notas-lib-modulo-${pref}`)?.value || '';
+  const publicacao = document.getElementById(`vf-notas-lib-pub-${pref}`)?.value || '';
+  const soFixadas = !!document.getElementById(`vf-notas-lib-fixadas-${pref}`)?.checked;
+  const soMnemonicos = !!document.getElementById(`vf-notas-lib-mnemonicos-${pref}`)?.checked;
+  const filtradas = (vfNotasBibliotecaCacheVF || []).filter(n => {
+    if(soFixadas && !n.fixada) return false;
+    if(soMnemonicos && !n.eh_mnemonico) return false;
+    if(modulo && vfBibDaNotaVF(n)?.modulo_pscpp !== modulo) return false;
+    if(publicacao && n.questoes_vf?.bibliografia_id !== publicacao) return false;
+    // a busca pega o texto da nota E o da afirmação - lembrar "aquela
+    // nota da questão de squat" é tão comum quanto lembrar a palavra que
+    // você escreveu nela
+    if(termo && !((n.texto || '') + ' ' + (n.questoes_vf?.texto || '')).toLowerCase().includes(termo)) return false;
+    return true;
+  });
+  vfRenderizarBibliotecaNotasVF(pref, filtradas);
+}
+
+function vfRenderizarBibliotecaNotasVF(pref, lista){
+  const el = document.getElementById(`vf-notas-lib-lista-${pref}`);
+  const resumo = document.getElementById(`vf-notas-lib-resumo-${pref}`);
+  if(!el) return;
+  const total = (vfNotasBibliotecaCacheVF || []).length;
+  if(resumo) resumo.textContent = !total ? '' : (lista.length === total ? `${total} nota${total > 1 ? 's' : ''}` : `${lista.length} de ${total} notas`);
+  if(!lista.length){
+    el.innerHTML = `<p style="color:#888;text-align:center;padding:20px;margin:0">${total ? 'Nenhuma nota com esses filtros.' : 'Você ainda não escreveu nenhuma nota.'}</p>`;
+    return;
+  }
+  el.innerHTML = lista.map(n => vfHtmlCardNotaBibliotecaVF(n, pref)).join('');
+}
+
+function vfHtmlCardNotaBibliotecaVF(n, pref){
+  // mesmo cache de texto bruto da lista de notas da questão: a edição
+  // precisa do texto COM a marcação (**negrito**), não do texto já
+  // formatado que está na tela
+  vfNotasTextoBrutoCacheVF[n.id] = n.texto;
+  const b = vfBibDaNotaVF(n);
+  const nomePub = b?.titulo || 'Sem publicação';
+  const cap = n.questoes_vf?.capitulo;
+  const rotuloCap = (cap && cap !== 'Único') ? ` · ${escapeHtml(b?.rotulo_capitulo || 'Capítulo')} ${escapeHtml(cap)}` : '';
+  const selos = [];
+  if(n.fixada) selos.push('fixada');
+  if(n.eh_mnemonico) selos.push('mnemônico');
+  const afirmacao = (n.questoes_vf?.texto || '').trim();
+  const trecho = afirmacao.length > 160 ? afirmacao.slice(0, 160) + '…' : afirmacao;
+  const botao = 'width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid #ddd;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center';
+  return `
+    <div id="vf-notalib-item-${pref}-${n.id}" style="border:0.5px solid #eee;border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <div id="vf-notalib-texto-${pref}-${n.id}" style="flex:1;font-size:var(--fs-d);color:#111;padding:6px 8px;border-radius:6px;${vfEstiloCorNotaVF(n.cor)}">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>
+        <button style="${botao};color:#888" title="Editar nota" onclick="vfEditarNotaBibliotecaVF('${n.id}','${pref}')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        <button id="vf-notalib-excluir-${pref}-${n.id}" style="${botao};color:#B23A34;font-size:var(--fs-c);white-space:nowrap" title="Excluir nota" onclick="vfExcluirNotaBibliotecaVF('${n.id}','${pref}')">✕</button>
+      </div>
+      <div style="margin-top:8px;font-size:var(--fs-b);color:#999;line-height:1.4">
+        ${escapeHtml(nomePub)}${rotuloCap}${selos.length ? ' · ' + selos.join(' · ') : ''}
+        ${trecho ? `<div style="margin-top:3px;color:#aaa">${escapeHtml(trecho)}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+// edição inline, igual à da lista de notas da questão: vira textarea,
+// perder o foco salva. Sem botão "Salvar" pra não destoar do resto do app
+function vfEditarNotaBibliotecaVF(notaId, pref){
+  const container = document.getElementById(`vf-notalib-texto-${pref}-${notaId}`);
+  if(!container) return;
+  const original = vfNotasTextoBrutoCacheVF[notaId] ?? container.textContent;
+  container.outerHTML = `<textarea id="vf-notalib-textarea-${pref}-${notaId}" class="textarea-padrao vf-foco-interno-vf" style="flex:1;min-height:120px">${escapeHtml(original)}</textarea>`;
+  const textarea = document.getElementById(`vf-notalib-textarea-${pref}-${notaId}`);
+  textarea?.focus();
+  textarea?.addEventListener('blur', () => vfSalvarEdicaoNotaBibliotecaVF(notaId, pref, original));
+}
+
+async function vfSalvarEdicaoNotaBibliotecaVF(notaId, pref, textoOriginal){
+  const textarea = document.getElementById(`vf-notalib-textarea-${pref}-${notaId}`);
+  if(!textarea) return;
+  const textoNovo = textarea.value.trim();
+  if(!textoNovo || textoNovo === textoOriginal){ vfFiltrarNotasBibliotecaVF(pref); return; } // nota vazia não é válida - volta como estava
+  const {error} = await sb.from('notas_vf').update({texto: textoNovo}).eq('id', notaId);
+  if(error){ vfMostrarAvisoVF('Não consegui salvar a nota. Tenta de novo.'); vfFiltrarNotasBibliotecaVF(pref); return; }
+  const nota = (vfNotasBibliotecaCacheVF || []).find(x => x.id === notaId);
+  if(nota) nota.texto = textoNovo;
+  vfNotasTextoBrutoCacheVF[notaId] = textoNovo;
+  vfSincronizarQuestaoDaNotaVF(nota?.questao_vf_id, pref);
+  vfFiltrarNotasBibliotecaVF(pref);
+}
+
+// excluir daqui não pode abrir o modal de confirmação: abrirModal fecha
+// qualquer outro modal aberto, e dentro do popup de Notas isso fecharia
+// a própria tela onde a lista está. Então a confirmação é no botão
+// mesmo - primeiro toque arma ("Excluir?"), segundo apaga, e sozinho
+// desarma em 4 segundos
+function vfExcluirNotaBibliotecaVF(notaId, pref){
+  const btn = document.getElementById(`vf-notalib-excluir-${pref}-${notaId}`);
+  if(btn && !vfNotaLibConfirmandoExclusaoVF[notaId]){
+    btn.textContent = 'Excluir?';
+    btn.style.width = 'auto';
+    btn.style.padding = '0 10px';
+    btn.style.background = '#B23A34';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#B23A34';
+    vfNotaLibConfirmandoExclusaoVF[notaId] = setTimeout(() => {
+      delete vfNotaLibConfirmandoExclusaoVF[notaId];
+      vfFiltrarNotasBibliotecaVF(pref);
+    }, 4000);
+    return;
+  }
+  clearTimeout(vfNotaLibConfirmandoExclusaoVF[notaId]);
+  delete vfNotaLibConfirmandoExclusaoVF[notaId];
+  vfConfirmarExclusaoNotaBibliotecaVF(notaId, pref);
+}
+
+async function vfConfirmarExclusaoNotaBibliotecaVF(notaId, pref){
+  const nota = (vfNotasBibliotecaCacheVF || []).find(x => x.id === notaId);
+  const {error} = await sb.from('notas_vf').delete().eq('id', notaId);
+  if(error){ vfMostrarAvisoVF('Não consegui excluir a nota. Tenta de novo.'); vfFiltrarNotasBibliotecaVF(pref); return; }
+  vfNotasBibliotecaCacheVF = (vfNotasBibliotecaCacheVF || []).filter(x => x.id !== notaId);
+  vfSincronizarQuestaoDaNotaVF(nota?.questao_vf_id, pref);
+  vfFiltrarNotasBibliotecaVF(pref);
+}
+
+// mexer numa nota por aqui tem que refletir na questão dela: os caches
+// que alimentam a lista do popup e as notas fixadas na página ficariam
+// desatualizados, e os Sets que desenham o indicador de "tem nota" no
+// flash idem. Se a questão mexida for justamente a que está na tela,
+// redesenha na hora
+function vfSincronizarQuestaoDaNotaVF(questaoId, pref){
+  if(!questaoId) return;
+  vfListaNotasCacheVF.delete(questaoId);
+  vfNotaPreviewCacheVF.delete(questaoId);
+  const daQuestao = (vfNotasBibliotecaCacheVF || []).filter(n => n.questao_vf_id === questaoId);
+  if(daQuestao.length) notasVF.add(questaoId); else notasVF.delete(questaoId);
+  if(daQuestao.some(n => n.fixada)) notasFixadasVF.add(questaoId); else notasFixadasVF.delete(questaoId);
+  // a aba "Nessa questão" do mesmo popup fica com a lista antiga na tela
+  // se a nota mexida for de lá - refaz ela também
+  if(pref === 'modal' && questaoId === questaoNotaVfAtual && typeof renderizarListaNotasVF === 'function') renderizarListaNotasVF();
+  const naTela = estadoVF?.historico?.[estadoVF.posicao]?.item?.id;
+  if(naTela === questaoId && typeof renderizarItemVF === 'function') renderizarItemVF();
+}
+
+function vfMudarAbaNotaVF(aba){
+  document.getElementById('vf-nota-conteudo-questao').classList.toggle('hidden', aba !== 'questao');
+  document.getElementById('vf-nota-conteudo-biblioteca').classList.toggle('hidden', aba !== 'biblioteca');
+  document.getElementById('vf-nota-aba-questao').classList.toggle('active', aba === 'questao');
+  document.getElementById('vf-nota-aba-biblioteca').classList.toggle('active', aba === 'biblioteca');
+  if(aba === 'biblioteca') vfAbrirBibliotecaNotasVF('modal', 'vf-nota-conteudo-biblioteca', true);
+}
+
+function vfMudarSecaoBibliotecaVF(secao){
+  document.getElementById('vf-biblioteca-conteudo-afirmacoes').classList.toggle('hidden', secao !== 'afirmacoes');
+  document.getElementById('vf-biblioteca-conteudo-notas').classList.toggle('hidden', secao !== 'notas');
+  document.getElementById('vf-biblioteca-secao-afirmacoes').classList.toggle('active', secao === 'afirmacoes');
+  document.getElementById('vf-biblioteca-secao-notas').classList.toggle('active', secao === 'notas');
+  if(secao === 'notas') vfAbrirBibliotecaNotasVF('aba', 'vf-biblioteca-conteudo-notas', true);
+}
+
 async function abrirNotaVF(questaoVfId){
   pausarTimerVF(); // abrir Notas/Excluir com questão pendente conta como sair da tela — você está escrevendo, não lendo a afirmação
   questaoNotaVfAtual = questaoVfId;
   document.getElementById('texto-nota-vf').value = '';
+  vfMudarAbaNotaVF('questao'); // sempre abre onde ele vai escrever, nunca na biblioteca
   abrirModal('modal-nota-vf');
   // se já tem a lista completa em cache (pré-buscada junto com o resto do
   // conteúdo da questão), renderiza na hora, sem esperar o banco - só
@@ -16751,6 +17091,7 @@ async function vfCopiarExplicacaoParaClaude(botao){
 }
 
 async function adicionarNotaVF(){
+  vfNotasBibliotecaCacheVF = null; // biblioteca de notas recarrega na próxima abertura
   const campo = document.getElementById('texto-nota-vf');
   const texto = campo.value.trim();
   if(!texto) return;
@@ -16794,6 +17135,7 @@ async function adicionarNotaVF(){
 }
 
 async function excluirNotaVF(notaId){
+  vfNotasBibliotecaCacheVF = null; // idem: a biblioteca de notas não pode continuar mostrando o que foi apagado
   const itemEl = document.getElementById(`vf-nota-item-${notaId}`);
   if(!itemEl) return;
   // guarda tudo que precisa pra reverter em caso de erro - o HTML do
