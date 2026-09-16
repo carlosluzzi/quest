@@ -2079,7 +2079,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-16-062';
+const VERSAO_APP = '2026-09-16-065';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7671,12 +7671,16 @@ function vfSalvarEstadoHistoricoVF(opcoes){
   // pra não converter a imagem inteira a cada risquinho). Assim o
   // desenho não depende mais de sair por um caminho específico pra ser
   // salvo - seta de voltar, menu, fechar o app, dá tudo no mesmo
-  if(!naExplicacao && !document.getElementById('aba-rascunho-livre-vf')?.classList.contains('hidden')){
+  if(!naExplicacao && vfRascunhoProntoVF && !document.getElementById('aba-rascunho-livre-vf')?.classList.contains('hidden')){
     clearTimeout(vfTimerAutoSalvarRascunhoVF);
     vfTimerAutoSalvarRascunhoVF = setTimeout(() => { try{ vfSalvarRascunhoLivreVF(); }catch(e){} }, 1200);
   }
 }
 let vfTimerAutoSalvarRascunhoVF = null;
+// true só depois que a folha terminou de abrir e restaurar - antes disso
+// o que estiver no canvas ainda pode ser resto da tela anterior, e salvar
+// isso gravaria os traços do Flash dentro do rascunho
+let vfRascunhoProntoVF = false;
 
 // aplica um lado de uma entrada ('antes' pra desfazer, 'depois' pra refazer)
 let vfSequenciaRestauracaoVF = 0;
@@ -18989,16 +18993,33 @@ function abrirRascunhoLivreVF(){
   document.getElementById('vf-barra-fixa')?.classList.add('hidden');
   document.getElementById('aba-rascunho-livre-vf').classList.remove('hidden');
   vfAtualizarVisibilidadeCanvasVF();
-  limparCanvasDesenhoVF(); // qualquer traço da tela anterior nunca deveria "vazar" pra cá
+  // o canvas de desenho é UM só, compartilhado com o Flash e o Quest. Ao
+  // entrar na folha, o que estava rabiscado na tela anterior tem que
+  // morrer aqui - e não basta limpar uma vez: a troca de tela dispara
+  // redimensionamentos que rodam DEPOIS desta função e restauram o
+  // conteúdo anterior a partir do snapshot/histórico, fazendo os traços
+  // do Flash "subirem" pra folha (e, pior, serem salvos nela). Limpa
+  // agora, limpa de novo no quadro seguinte (quando o layout já assentou)
+  // e só então restaura o que é de fato do rascunho
+  vfRascunhoProntoVF = false; // trava o auto-salvamento até a folha estar montada de verdade
+  limparCanvasDesenhoVF();
   inicializarCanvasDesenhoVF(); // mede o canvas já com o tamanho certo dessa tela nova
-  mostrarBarraDesenhoVF(); // aparece direto, sem precisar tocar primeiro pra "descobrir" que dá pra desenhar
-  vfRestaurarRascunhoLivreVF();
+  requestAnimationFrame(() => {
+    if(document.getElementById('aba-rascunho-livre-vf')?.classList.contains('hidden')) return; // saiu antes de terminar de abrir
+    limparCanvasDesenhoVF();
+    inicializarCanvasDesenhoVF();
+    mostrarBarraDesenhoVF(); // aparece direto, sem precisar tocar primeiro pra "descobrir" que dá pra desenhar
+    vfRestaurarRascunhoLivreVF();
+    vfRascunhoProntoVF = true;
+  });
   const papelRascunho = document.getElementById('rascunho-livre-papel');
   if(papelRascunho && !papelRascunho.dataset.segurarLigado){
     papelRascunho.addEventListener('touchstart', vfIniciarSegurarRascunhoVF, {passive: true});
-    papelRascunho.addEventListener('touchmove', vfCancelarSegurarRascunhoVF, {passive: true});
+    papelRascunho.addEventListener('touchmove', vfMoverSegurarRascunhoVF, {passive: true});
     papelRascunho.addEventListener('touchend', vfCancelarSegurarRascunhoVF, {passive: true});
+    papelRascunho.addEventListener('touchcancel', vfCancelarSegurarRascunhoVF, {passive: true});
     papelRascunho.addEventListener('mousedown', vfIniciarSegurarRascunhoVF);
+    papelRascunho.addEventListener('mousemove', vfMoverSegurarRascunhoVF);
     papelRascunho.addEventListener('mouseup', vfCancelarSegurarRascunhoVF);
     papelRascunho.addEventListener('mouseleave', vfCancelarSegurarRascunhoVF);
     papelRascunho.dataset.segurarLigado = '1';
@@ -19009,6 +19030,7 @@ function abrirRascunhoLivreVF(){
 function fecharRascunhoLivreVF(){
   vfFecharMenuColarRascunhoVF();
   vfSalvarRascunhoLivreVF();
+  vfRascunhoProntoVF = false;
   limparCanvasDesenhoVF(); // esconde barra/painéis e limpa o canvas visualmente antes de trocar de tela
   document.getElementById('aba-rascunho-livre-vf').classList.add('hidden');
   const idVolta = vfAbaAnteriorAoRascunhoVF || 'aba-inicio';
@@ -19032,6 +19054,7 @@ function fecharRascunhoLivreVF(){
 }
 
 function vfSalvarRascunhoLivreVF(){
+  if(!vfRascunhoProntoVF) return; // folha ainda abrindo (ou já fechada): o canvas pode ter resto de outra tela
   const canvas = document.getElementById('vf-canvas-desenho');
   const papel = document.getElementById('rascunho-livre-papel');
   const caixas = vfCaixasTextoRascunhoVF();
@@ -19064,7 +19087,7 @@ function vfRestaurarRascunhoLivreVF(){
     camadaTextos.querySelectorAll('.rascunho-texto-box').forEach(c => c.remove());
     const escalaX = (papel && salvo.largura) ? papel.clientWidth / salvo.largura : 1;
     const escalaY = (papel && salvo.altura) ? papel.clientHeight / salvo.altura : 1;
-    (salvo.caixas || []).forEach(c => vfCriarCaixaTextoRascunhoVF(c.x * escalaX, c.y * escalaY, c.texto));
+    (salvo.caixas || []).forEach(c => vfCriarCaixaTextoRascunhoVF(c.x * escalaX, c.y * escalaY, c.texto, c.l ? c.l * escalaX : null, c.a ? c.a * escalaY : null));
   }
   if(!salvo.dataUrl) return;
   const dpr = (window.devicePixelRatio || 1) * 1.5;
@@ -19108,7 +19131,7 @@ function vfRestaurarRascunhoLivreVF(){
 // o texto vira uma caixinha que dá pra arrastar pra onde quiser e editar
 // batendo nela. Fica por cima do desenho, mas só as caixas capturam
 // toque - a caneta continua riscando a folha inteira normalmente
-const VF_DURACAO_SEGURAR_RASCUNHO_MS = 450;
+const VF_DURACAO_SEGURAR_RASCUNHO_MS = 600; // segurar de propósito, não encostar
 let vfTimerSegurarRascunhoVF = null;
 let vfPontoSegurarRascunhoVF = null;
 
@@ -19131,13 +19154,23 @@ function vfIniciarSegurarRascunhoVF(evento){
     vfMostrarMenuColarRascunhoVF(vfPontoSegurarRascunhoVF.ex, vfPontoSegurarRascunhoVF.ey);
   }, VF_DURACAO_SEGURAR_RASCUNHO_MS);
 }
-function vfCancelarSegurarRascunhoVF(evento){
-  if(evento && vfPontoSegurarRascunhoVF){
-    const toque = evento.touches ? evento.touches[0] : evento;
-    if(toque && Math.hypot(toque.clientX - vfPontoSegurarRascunhoVF.x, toque.clientY - vfPontoSegurarRascunhoVF.y) < 20) return; // tremor do dedo não cancela
-  }
+// soltar SEMPRE cancela: se o dedo saiu antes dos 450ms, foi toque, não
+// "segurar". Antes essa função servia pros dois casos (mover e soltar) e
+// media a distância em ambos - no soltar do mouse a distância é zero, ou
+// seja, ela nunca cancelava, e qualquer clique rápido acabava abrindo o
+// "Colar aqui" meio segundo depois
+function vfCancelarSegurarRascunhoVF(){
   clearTimeout(vfTimerSegurarRascunhoVF);
   vfTimerSegurarRascunhoVF = null;
+  vfPontoSegurarRascunhoVF = null;
+}
+// mover só cancela se sair da tolerância - tremor de dedo parado não conta
+function vfMoverSegurarRascunhoVF(evento){
+  if(!vfTimerSegurarRascunhoVF || !vfPontoSegurarRascunhoVF) return;
+  const toque = evento.touches ? evento.touches[0] : evento;
+  if(!toque) return;
+  if(Math.hypot(toque.clientX - vfPontoSegurarRascunhoVF.x, toque.clientY - vfPontoSegurarRascunhoVF.y) < 20) return;
+  vfCancelarSegurarRascunhoVF();
 }
 
 // o botão existe porque ler a área de transferência exige um toque
@@ -19175,49 +19208,99 @@ async function vfColarNoRascunhoVF(x, y){
   vfSalvarRascunhoLivreVF();
 }
 
-function vfCriarCaixaTextoRascunhoVF(x, y, texto){
+function vfCriarCaixaTextoRascunhoVF(x, y, texto, largura, altura){
   const camada = vfCamadaTextosRascunhoVF();
   if(!camada) return null;
   // sem fundo, sem borda, sem alça: na folha é só o texto, como se
-  // estivesse escrito ali. A alça de arrastar saiu porque ocupava uma
-  // linha inteira em cima do texto - agora arrasta-se o próprio texto, e
-  // um toque parado nele é que abre a edição (mesma ideia do toque x
-  // traço da caneta: quem decide é o movimento)
+  // estivesse escrito ali. Arrasta-se o próprio texto, e um toque parado
+  // nele é que abre a edição (mesma ideia do toque x traço da caneta:
+  // quem decide é o movimento)
   const caixa = document.createElement('div');
   caixa.className = 'rascunho-texto-box';
-  caixa.style.cssText = `position:absolute;left:${Math.round(x)}px;top:${Math.round(y)}px;max-width:min(72%,460px);pointer-events:auto;touch-action:none;cursor:move`;
+  const tamanho = (largura && altura) ? `width:${Math.round(largura)}px;height:${Math.round(altura)}px;` : 'max-width:min(72%,460px);';
+  caixa.style.cssText = `position:absolute;left:${Math.round(x)}px;top:${Math.round(y)}px;${tamanho}pointer-events:auto;touch-action:none;cursor:move`;
   const corpo = document.createElement('div');
   corpo.className = 'rascunho-texto-corpo';
   corpo.contentEditable = 'true';
-  corpo.style.cssText = 'font-size:var(--fs-d);line-height:1.45;color:#111;white-space:pre-wrap;outline:none;min-width:44px;min-height:1.2em;padding:1px 3px;border-radius:4px';
+  corpo.style.cssText = 'font-size:var(--fs-d);line-height:1.45;color:#111;white-space:pre-wrap;outline:none;min-width:44px;min-height:1.2em;padding:1px 3px;border-radius:4px;height:100%;box-sizing:border-box;overflow:hidden';
   corpo.textContent = texto || ''; // texto puro: o que vem da área de transferência nunca entra como HTML
+
   const botaoX = document.createElement('button');
   botaoX.type = 'button';
   botaoX.className = 'rascunho-texto-x';
   botaoX.title = 'Tirar esse texto da folha';
   botaoX.textContent = '✕';
-  botaoX.style.cssText = 'position:absolute;top:-11px;right:-15px;display:none;width:22px;height:22px;border-radius:50%;border:0.5px solid #E0DACA;background:#fff;color:#B23A34;font-size:var(--fs-b);line-height:1;cursor:pointer;padding:0;box-shadow:0 1px 3px rgba(0,0,0,0.12)';
+  // encostado no canto, com a mesma sobra dos dois lados - antes ele
+  // ficava jogado pra fora, desalinhado com a caixa
+  botaoX.style.cssText = 'position:absolute;top:-9px;right:-9px;display:none;width:20px;height:20px;border-radius:50%;border:0.5px solid #E0DACA;background:#fff;color:#B23A34;font-size:var(--fs-a);line-height:1;cursor:pointer;padding:0;box-shadow:0 1px 3px rgba(0,0,0,0.12);align-items:center;justify-content:center';
   botaoX.onclick = (e) => { e.stopPropagation(); caixa.remove(); vfSalvarRascunhoLivreVF(); };
-  // o ✕ só aparece enquanto o texto está sendo editado - fora disso a
-  // folha fica limpa, só com o texto
+
+  // alcinha de tamanho, no canto de baixo à direita - mesma simetria do ✕
+  const alcaTamanho = document.createElement('div');
+  alcaTamanho.className = 'rascunho-texto-tamanho';
+  alcaTamanho.title = 'Arrastar pra mudar o tamanho';
+  alcaTamanho.style.cssText = 'position:absolute;bottom:-9px;right:-9px;display:none;width:20px;height:20px;border-radius:50%;border:0.5px solid #E0DACA;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.12);cursor:nwse-resize;touch-action:none;align-items:center;justify-content:center';
+  alcaTamanho.innerHTML = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#999" stroke-width="2.4" stroke-linecap="round"><path d="M20 10 10 20"/><path d="M20 16l-4 4"/></svg>';
+  alcaTamanho.addEventListener('pointerdown', (e) => vfIniciarRedimensionarCaixaRascunhoVF(e, caixa));
+
+  // os dois controles só aparecem enquanto o texto está em edição - fora
+  // disso a folha fica limpa, só com o texto
   corpo.addEventListener('focus', () => {
-    botaoX.style.display = 'block';
+    botaoX.style.display = 'flex';
+    alcaTamanho.style.display = 'flex';
     corpo.style.background = 'rgba(255,255,255,0.75)';
     corpo.style.boxShadow = '0 0 0 1px #DCD3BC';
   });
   corpo.addEventListener('blur', () => {
     botaoX.style.display = 'none';
+    alcaTamanho.style.display = 'none';
     corpo.style.background = '';
     corpo.style.boxShadow = '';
-    // esvaziou e saiu: o texto deixou de existir, a caixa vai junto
-    if(!corpo.textContent.trim()) caixa.remove();
+    if(!corpo.textContent.trim()) caixa.remove(); // esvaziou e saiu: o texto deixou de existir, a caixa vai junto
     vfSalvarRascunhoLivreVF();
   });
+
   caixa.appendChild(corpo);
   caixa.appendChild(botaoX);
+  caixa.appendChild(alcaTamanho);
   caixa.addEventListener('pointerdown', (e) => vfIniciarArrastoCaixaRascunhoVF(e, caixa));
   camada.appendChild(caixa);
   return caixa;
+}
+
+// largura e altura na mão, arrastando o canto de baixo à direita. A
+// partir do primeiro ajuste a caixa passa a ter tamanho fixo (sai do
+// "cresce conforme o texto"), que é justamente o ponto: caber onde ele
+// quer na folha
+function vfIniciarRedimensionarCaixaRascunhoVF(evento, caixa){
+  evento.preventDefault();
+  evento.stopPropagation();
+  const papel = vfPapelRascunhoVF();
+  if(!papel) return;
+  const rectPapel = papel.getBoundingClientRect();
+  const rectCaixa = caixa.getBoundingClientRect();
+  const larguraInicial = rectCaixa.width, alturaInicial = rectCaixa.height;
+  const xInicial = evento.clientX, yInicial = evento.clientY;
+  const esquerda = rectCaixa.left - rectPapel.left, topo = rectCaixa.top - rectPapel.top;
+  const corpo = caixa.querySelector('.rascunho-texto-corpo');
+  caixa.style.maxWidth = 'none';
+  const mover = (e) => {
+    if(e.cancelable) e.preventDefault();
+    const larg = Math.max(60, Math.min(rectPapel.width - esquerda, larguraInicial + (e.clientX - xInicial)));
+    const alt = Math.max(26, Math.min(rectPapel.height - topo, alturaInicial + (e.clientY - yInicial)));
+    caixa.style.width = Math.round(larg) + 'px';
+    caixa.style.height = Math.round(alt) + 'px';
+  };
+  const soltar = () => {
+    document.removeEventListener('pointermove', mover);
+    document.removeEventListener('pointerup', soltar);
+    document.removeEventListener('pointercancel', soltar);
+    corpo?.focus(); // continua em edição, com os controles à vista
+    vfSalvarRascunhoLivreVF();
+  };
+  document.addEventListener('pointermove', mover);
+  document.addEventListener('pointerup', soltar);
+  document.addEventListener('pointercancel', soltar);
 }
 
 // decide entre MOVER e EDITAR pelo que o dedo faz: passou de 6px, é
@@ -19225,7 +19308,7 @@ function vfCriarCaixaTextoRascunhoVF(x, y, texto){
 // toque não arrasta nada - é seleção de texto normal, senão não daria
 // pra posicionar o cursor no meio de uma frase
 function vfIniciarArrastoCaixaRascunhoVF(evento, caixa){
-  if(evento.target.closest('.rascunho-texto-x')) return;
+  if(evento.target.closest('.rascunho-texto-x, .rascunho-texto-tamanho')) return;
   const corpo = caixa.querySelector('.rascunho-texto-corpo');
   if(document.activeElement === corpo) return;
   const papel = vfPapelRascunhoVF();
@@ -19269,7 +19352,9 @@ function vfCaixasTextoRascunhoVF(){
   return Array.from(camada.querySelectorAll('.rascunho-texto-box')).map(c => ({
     texto: c.querySelector('.rascunho-texto-corpo')?.textContent || '',
     x: parseFloat(c.style.left) || 0,
-    y: parseFloat(c.style.top) || 0
+    y: parseFloat(c.style.top) || 0,
+    l: parseFloat(c.style.width) || null, // só quem foi redimensionada na mão tem tamanho fixo
+    a: parseFloat(c.style.height) || null
   })).filter(c => c.texto.trim());
 }
 
