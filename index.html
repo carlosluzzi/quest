@@ -2020,7 +2020,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-15-039';
+const VERSAO_APP = '2026-09-16-040';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4296,12 +4296,16 @@ const VF_MAPA_SUBSCRITO_UNICODE = {
   'a':'ₐ','e':'ₑ','h':'ₕ','i':'ᵢ','k':'ₖ','l':'ₗ','m':'ₘ','n':'ₙ','o':'ₒ',
   'p':'ₚ','r':'ᵣ','s':'ₛ','t':'ₜ','u':'ᵤ','v':'ᵥ','x':'ₓ'
 };
+// só dígitos e sinais entram em Unicode puro. As LETRAS saíram de
+// propósito: os sobrescritos de letra vêm de blocos diferentes do
+// Unicode (ˢ é "Spacing Modifier Letters", ᵗ é "Phonetic Extensions"),
+// e nenhuma fonte desenha os dois do mesmo jeito - no "1st" da tabela
+// do MSC.137(76) o t saía certinho e o s saía menor e desalinhado, com
+// cara de outra fonte. Letra agora cai sempre no <sup>, que usa a
+// própria fonte do texto e sai uniforme. Número segue Unicode (m², 10⁻³)
 const VF_MAPA_SOBRESCRITO_UNICODE = {
   '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹',
-  '+':'⁺','-':'⁻','−':'⁻','=':'⁼','(':'⁽',')':'⁾',
-  'a':'ᵃ','b':'ᵇ','c':'ᶜ','d':'ᵈ','e':'ᵉ','f':'ᶠ','g':'ᵍ','h':'ʰ','i':'ⁱ','j':'ʲ',
-  'k':'ᵏ','l':'ˡ','m':'ᵐ','n':'ⁿ','o':'ᵒ','p':'ᵖ','r':'ʳ','s':'ˢ','t':'ᵗ','u':'ᵘ',
-  'v':'ᵛ','w':'ʷ','x':'ˣ','y':'ʸ','z':'ᶻ'
+  '+':'⁺','-':'⁻','−':'⁻','=':'⁼','(':'⁽',')':'⁾'
 };
 // tenta converter o conteúdo inteiro pra Unicode puro (só se TODOS os
 // caracteres tiverem equivalente) - senão, cai no <sub>/<sup> normal
@@ -4742,7 +4746,17 @@ function vfAjustarLarguraTabelaVF(bloco){
     bloco.dataset.modoLargura = 'cheia';
   }else{
     const maiorColuna = Math.max(...celulas.map(td => td.getBoundingClientRect().width));
-    const total = Math.min(Math.ceil(maiorColuna * n) + 2, container);
+    // todas as colunas iguais à mais larga só cabem se n x essa largura
+    // couber no card. Quando UMA coluna e muito maior que as outras (texto
+    // longo ao lado de celulas de uma palavra), n x ela estoura o card e a
+    // largura de cada coluna cai pra container/n - MENOR que o conteudo da
+    // celula larga. Com o nowrap das celulas curtas ainda ligado, esse
+    // texto vazava por cima da coluna vizinha (aparecia tudo sobreposto).
+    // Nesse caso libera a quebra: as colunas continuam todas iguais, a
+    // celula larga e que passa a ocupar mais de uma linha
+    const totalDesejado = Math.ceil(maiorColuna * n) + 2;
+    const total = Math.min(totalDesejado, container);
+    if(totalDesejado > container) tabela.querySelectorAll('td').forEach(td => { td.style.whiteSpace = ''; });
     tabela.style.tableLayout = 'fixed';
     tabela.style.width = total + 'px';
     celulas.forEach(td => { td.style.width = (100/n).toFixed(2) + '%'; });
