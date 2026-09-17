@@ -1802,17 +1802,17 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       </div>
       <div id="vf-complementar-filtros-fixos">
         <div style="display:flex;gap:8px;margin-bottom:10px">
-          <select id="vf-complementar-filtro-modulo" class="filter-select" style="flex:1" onchange="vfMudarModuloFiltroBibliotecaVF()">
+          <select id="vf-complementar-filtro-modulo" class="filter-select" style="flex:1;height:34px;box-sizing:border-box;margin-bottom:0" onchange="vfMudarModuloFiltroBibliotecaVF()">
             <option value="">Todos os módulos</option>
           </select>
-          <select id="vf-complementar-filtro-publicacao" class="filter-select" style="flex:1" onchange="vfFiltrarBibliotecaComplementarVF()" disabled>
+          <select id="vf-complementar-filtro-publicacao" class="filter-select" style="flex:1;height:34px;box-sizing:border-box;margin-bottom:0" onchange="vfFiltrarBibliotecaComplementarVF()" disabled>
             <option value="">Todas as publicações</option>
           </select>
         </div>
-        <input id="vf-complementar-busca" class="textarea-padrao" placeholder="Buscar na biblioteca..." style="margin-bottom:14px;min-height:auto" oninput="vfFiltrarBibliotecaComplementarVF()">
+        <input id="vf-complementar-busca" class="textarea-padrao" placeholder="Buscar na biblioteca..." style="margin:0 0 12px;min-height:auto;height:34px;box-sizing:border-box;padding:0 10px;border-radius:6px;font-size:16px" oninput="vfFiltrarBibliotecaComplementarVF()">
       </div>
     </div>
-    <div style="flex:1;min-height:0;overflow-y:auto;padding:6px 20px 0">
+    <div id="vf-complementar-corpo" style="flex:1;min-height:0;overflow:hidden;padding:6px 20px 0">
       <div id="vf-complementar-conteudo-biblioteca">
         <div id="vf-complementar-lista-biblioteca" style="padding-bottom:10px"></div>
       </div>
@@ -2079,7 +2079,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-16-066';
+const VERSAO_APP = '2026-09-17-070';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5649,7 +5649,7 @@ function vfProcessarListasNotaVF(texto, aceitarNumeracao){
       itens = itens || [];
       // marcador e texto em colunas: a linha que quebra alinha embaixo do
       // TEXTO, não embaixo do número - é o que faz a lista parecer lista
-      itens.push(`<li style="display:flex;gap:8px;margin:2px 0;${estiloRecuo}"><span style="flex-shrink:0;min-width:1.8em">${numerada[1]}</span><span style="min-width:0">${numerada[2]}</span></li>`);
+      itens.push(`<li style="display:flex;gap:5px;margin:2px 0;${estiloRecuo}"><span style="flex-shrink:0;min-width:1.05em">${numerada[1]}</span><span style="min-width:0">${numerada[2]}</span></li>`);
     }else{
       fechar();
       blocos.push(estiloRecuo ? `<span style="display:inline-block;${estiloRecuo}">${linha}</span>` : linha);
@@ -10680,7 +10680,7 @@ async function vfBuscarNotasEmLoteVF(questaoIds){
   // já que os dados vêm juntos de qualquer forma
   const pendentes = questaoIds.filter(id => notasVF.has(id) && !vfListaNotasCacheVF.has(id));
   if(!pendentes.length) return;
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, questao_vf_id, texto, criado_em, fixada, eh_mnemonico, ordem_fixacao, alinhamento, cor', {count: 'exact'})
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, questao_vf_id, texto, criado_em, fixada, eh_mnemonico, ordem_fixacao, alinhamento, cor, origem_nota_id', {count: 'exact'})
     .eq('usuario_id', usuarioAtual.id).in('questao_vf_id', pendentes).order('criado_em', {ascending:false}).order('id'));
   if(error) return;
   pendentes.forEach(id => { vfListaNotasCacheVF.set(id, []); vfNotaPreviewCacheVF.set(id, []); }); // marca como "já buscou" mesmo se não achar nada, evita rebuscar
@@ -14959,7 +14959,7 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
     vfMontarPreviewNotasVF(container, vfNotaPreviewCacheVF.get(questaoVfId), questaoVfId);
     return;
   }
-  const {data} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, texto, ordem_fixacao, alinhamento, cor', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).eq('fixada', true).order('ordem_fixacao', {ascending: true}).order('id'));
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, texto, ordem_fixacao, alinhamento, cor, origem_nota_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).eq('fixada', true).order('ordem_fixacao', {ascending: true}).order('id'));
   const notas = data || [];
   vfNotaPreviewCacheVF.set(questaoVfId, notas);
   // reconfere o elemento depois do await - se a pessoa já avançou pra
@@ -16281,6 +16281,12 @@ function vfUsarTabelaGeradaVF(){
 }
 
 function vfMudarAbaComplementarVF(aba){
+  // um scroll só dentro do modal: na biblioteca quem rola é a própria
+  // lista (tem altura própria e rola no lugar certo); na aba de criar,
+  // que não tem lista, quem rola é o corpo do modal. Ter os dois ao
+  // mesmo tempo dava a sensação de "uma rolagem dentro da outra"
+  const corpoModal = document.getElementById('vf-complementar-corpo');
+  if(corpoModal) corpoModal.style.overflowY = (aba === 'criar') ? 'auto' : 'hidden';
   document.getElementById('vf-complementar-conteudo-biblioteca').classList.toggle('hidden', aba !== 'biblioteca');
   document.getElementById('vf-complementar-conteudo-criar').classList.toggle('hidden', aba !== 'criar');
   document.getElementById('vf-complementar-filtros-fixos').classList.toggle('hidden', aba !== 'biblioteca');
@@ -16373,11 +16379,11 @@ function vfFiltrarBibliotecaComplementarVF(){
 function vfRenderizarListaBibliotecaComplementarVF(lista){
   const el = document.getElementById('vf-complementar-lista-biblioteca');
   if(!lista.length){
-    el.style.cssText = 'min-height:300px;max-height:50vh;overflow-y:auto;display:flex;align-items:center;justify-content:center';
+    el.style.cssText = 'min-height:160px;max-height:50vh;overflow-y:auto;display:flex;align-items:center;justify-content:center';
     el.innerHTML = `<p style="color:#888;text-align:center;padding:20px;margin:0">${vfBibliotecaComplementarCacheVF.length ? 'Nada encontrado.' : 'Sua biblioteca ainda está vazia. Crie um elemento novo na outra aba.'}</p>`;
     return;
   }
-  el.style.cssText = 'min-height:300px;max-height:50vh;overflow-y:auto';
+  el.style.cssText = 'min-height:160px;max-height:50vh;overflow-y:auto';
   el.innerHTML = lista.map(item => {
     const ligacaoId = vfLigacoesAnexadasVF.get(item.id);
     const fixado = !!ligacaoId;
@@ -17273,9 +17279,10 @@ async function vfCarregarNotasIrmasVF(questaoVfId){
   // não oferece o que já está escrito igualzinho aqui - senão viraria
   // duplicata na mesma questão
   const jaAqui = new Set(Object.values(vfNotasTextoBrutoCacheVF || {}).map(t => (t || '').trim()));
-  const daLista = (vfListaNotasCacheVF.get(questaoVfId) || []).map(n => (n.texto || '').trim());
-  daLista.forEach(t => jaAqui.add(t));
-  vfNotasIrmasAtuaisVF = data.filter(n => !jaAqui.has((n.texto || '').trim()));
+  const listaDaqui = vfListaNotasCacheVF.get(questaoVfId) || [];
+  listaDaqui.forEach(n => jaAqui.add((n.texto || '').trim()));
+  const jaTrazidas = new Set(listaDaqui.map(n => n.origem_nota_id).filter(Boolean)); // ver origem_nota_id em vfCarregarNotasFixadasIrmasVF
+  vfNotasIrmasAtuaisVF = data.filter(n => !jaAqui.has((n.texto || '').trim()) && !jaTrazidas.has(n.id));
   if(!vfNotasIrmasAtuaisVF.length) return;
   vfRenderizarNotasIrmasVF();
 }
@@ -17308,7 +17315,8 @@ async function vfCopiarNotaDaIrmaVF(notaId){
     questao_vf_id: destino,
     texto: origem.texto,
     cor: origem.cor || null,
-    eh_mnemonico: !!origem.eh_mnemonico
+    eh_mnemonico: !!origem.eh_mnemonico,
+    origem_nota_id: origem.id // só pra não reoferecer a mesma nota - a cópia é independente
   });
   if(error){
     vfNotasIrmasAtuaisVF.push(origem);
@@ -17348,8 +17356,14 @@ async function vfCarregarNotasFixadasIrmasVF(questaoVfId){
   if(error || !data || !data.length) return;
   // se a tela já trocou de questão enquanto isso, não pinta nada
   if(estadoVF?.historico?.[estadoVF.posicao]?.item?.id !== questaoVfId) return;
-  const jaAqui = new Set((vfNotaPreviewCacheVF.get(questaoVfId) || []).map(n => (n.texto || '').trim()));
-  vfNotasFixadasIrmasVF = data.filter(n => !jaAqui.has((n.texto || '').trim()));
+  const fixadasDaqui = vfNotaPreviewCacheVF.get(questaoVfId) || [];
+  const jaAqui = new Set(fixadasDaqui.map(n => (n.texto || '').trim()));
+  // origem_nota_id: a cópia é uma nota INDEPENDENTE (apagar ou editar uma
+  // nunca mexe na outra), mas guarda de qual nota da irmã ela veio. Sem
+  // isso, bastava editar a cópia aqui pra a oferta da irmã voltar a
+  // aparecer, já que a comparação era só pelo texto
+  const jaTrazidas = new Set(fixadasDaqui.map(n => n.origem_nota_id).filter(Boolean));
+  vfNotasFixadasIrmasVF = data.filter(n => !jaAqui.has((n.texto || '').trim()) && !jaTrazidas.has(n.id));
   if(!vfNotasFixadasIrmasVF.length) return;
   const atual = document.getElementById('vf-preview-notas-irmas-container');
   if(!atual) return;
@@ -17365,9 +17379,8 @@ async function vfCarregarNotasFixadasIrmasVF(questaoVfId){
       <div id="vf-nota-irma-card-${n.id}" style="margin-bottom:10px">
         <div class="${temTabela ? '' : 'card-questao'}" style="position:relative;margin-bottom:0;border-style:dashed;${vfEstiloCorNotaVF(n.cor)}">
           <div style="opacity:0.45">${conteudo}</div>
-          <button onclick="vfAdicionarNotaFixadaDaIrmaVF('${n.id}')" title="Adicionar essa nota nessa afirmação também" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;border:0.5px solid #DDD;background:#fff;color:#777;font-size:var(--fs-g);font-weight:300;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.10);-webkit-tap-highlight-color:transparent">+</button>
+          <button onclick="vfAdicionarNotaFixadaDaIrmaVF('${n.id}')" title="Adicionar essa nota nessa afirmação também" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:36px;height:36px;border-radius:9px;border:0.5px solid #DDD;background:#fff;color:#777;font-size:var(--fs-g);font-weight:300;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.10);-webkit-tap-highlight-color:transparent">+</button>
         </div>
-        <div style="font-size:var(--fs-a);color:#aaa;margin:3px 0 0 4px">nota de uma irmã dessa afirmação</div>
       </div>`;
   }).join('');
   atual.classList.remove('hidden');
@@ -17388,7 +17401,7 @@ async function vfAdicionarNotaFixadaDaIrmaVF(notaId){
 
   const fixadasAtuais = vfNotaPreviewCacheVF.get(destino) || [];
   const idProvisorio = 'nova-' + Date.now();
-  const notaLocal = {id: idProvisorio, texto: origem.texto, ordem_fixacao: fixadasAtuais.length, alinhamento: origem.alinhamento || null, cor: origem.cor || null};
+  const notaLocal = {id: idProvisorio, texto: origem.texto, ordem_fixacao: fixadasAtuais.length, alinhamento: origem.alinhamento || null, cor: origem.cor || null, origem_nota_id: origem.id};
   const listaNova = [...fixadasAtuais, notaLocal];
   vfNotaPreviewCacheVF.set(destino, listaNova);
   notasVF.add(destino);
@@ -17415,8 +17428,9 @@ async function vfAdicionarNotaFixadaDaIrmaVF(notaId){
     alinhamento: origem.alinhamento || null,
     eh_mnemonico: !!origem.eh_mnemonico,
     fixada: true,
-    ordem_fixacao: fixadasAtuais.length
-  }).select('id, texto, ordem_fixacao, alinhamento, cor').single();
+    ordem_fixacao: fixadasAtuais.length,
+    origem_nota_id: origem.id // só pra não reoferecer a mesma nota - a cópia é independente
+  }).select('id, texto, ordem_fixacao, alinhamento, cor, origem_nota_id').single();
 
   if(error || !data){
     // desfaz o otimismo: tira a nota da pilha e devolve a oferta
