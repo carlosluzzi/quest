@@ -2098,7 +2098,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-093';
+const VERSAO_APP = '2026-09-17-094';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -12677,7 +12677,7 @@ function vfRenderizarBotoesFiltrosCapituloVF(){
   // "Geral" = afirmações do capítulo sem nenhum recorte - também é um
   // botão de três estados (pedido do Carlos: "✓ Geral + ✓ Mercante" numa
   // sessão, "só Mercante" na outra). Id sintético 'geral'
-  ordenados.push({id: 'geral', nome: 'Geral', pai_id: null, sintetico: true});
+  ordenados.unshift({id: 'geral', nome: 'Geral', pai_id: null, sintetico: true}); // Geral primeiro, à esquerda
   cont.innerHTML = ordenados.map(f => {
     const ehFilho = !!(f.pai_id && filtros.some(p => p.id === f.pai_id));
     const tooltip = ehFilho ? ` title="Subconjunto de ${escapeHtml(nomeDe(f.pai_id))} — para ver ${escapeHtml(nomeDe(f.pai_id))} sem ${escapeHtml(f.nome)}, marque ✓ ${escapeHtml(nomeDe(f.pai_id))} e ✗ ${escapeHtml(f.nome)}"` : '';
