@@ -2098,7 +2098,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-094';
+const VERSAO_APP = '2026-09-17-095';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -13438,7 +13438,7 @@ function renderizarItemVF(){
   // cinza, só leitura, ao lado das tags. Não são tags
   const recortesDaQuestao = (item.questoes_vf_filtros || []).map(x => x.filtros_capitulo_vf).filter(Boolean);
   const recortesHtml = recortesDaQuestao.map(r =>
-    `<span title="Recorte deste capítulo" style="color:#666;font-weight:600;font-size:var(--fs-a);border:1.5px solid #bbb;border-radius:4px;padding:1.5px 7.5px;white-space:nowrap;display:inline-flex;align-items:center">${escapeHtml(r.nome)}</span>`
+    `<span title="Recorte deste capítulo" style="color:#666;font-weight:600;font-size:var(--fs-a);border:1.5px solid #bbb;border-radius:4px;padding:1.5px 7.5px;white-space:nowrap;display:inline-flex;align-items:center;text-transform:uppercase;letter-spacing:0.03em">${escapeHtml(r.nome)}</span>`
   ).join('');
   const tagsCustomizadasHtml = tagsDaQuestao.map(t =>
     `<span onclick="vfAbrirPopupTagsVF('${item.id}')" style="color:#B23A34;font-weight:600;font-size:var(--fs-a);border:1.5px solid #B23A34;border-radius:4px;padding:1.5px 7.5px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center">${escapeHtml(t.nome)}</span>`
@@ -15553,6 +15553,11 @@ const VF_CORES_NOTA_VF = {
 // serve pra fixar/desafixar e pra barra de cor saber o estado atual sem
 // reler o banco
 let vfNotasCorCacheVF = {};
+// idem pra marcação de mnemônico (id -> true/false) - achado real: fixar
+// uma nota já marcada como mnemônico montava a entrada do preview sem o
+// campo eh_mnemonico, e o selo MNEMÔNICO só aparecia no card depois de
+// recarregar a questão do banco (o "às vezes não aparece")
+let vfNotasMnemonicoCacheVF = {};
 // CSS inline do card colorido (vazio quando sem cor)
 function vfEstiloCorNotaVF(cor){
   const c = cor && VF_CORES_NOTA_VF[cor];
@@ -15682,6 +15687,7 @@ function vfMontarPreviewNotasVF(container, notas, questaoVfId){
     const temTabela = /\\begin\{array\}/.test(n.texto);
     const classeCard = temTabela ? '' : 'card-questao';
     vfNotasCorCacheVF[n.id] = n.cor || null;
+    vfNotasMnemonicoCacheVF[n.id] = !!n.eh_mnemonico;
     vfNotasTextoBrutoCacheVF[n.id] = n.texto; // edição na própria página precisa do texto com **negrito** e LaTeX intactos
     const estiloCor = vfEstiloCorNotaVF(n.cor) + (temTabela && n.cor ? 'padding-left:10px;border-radius:6px;' : '');
     const alinhamento = n.alinhamento || 'esquerda';
@@ -18128,6 +18134,7 @@ let vfTimerPressionarNotaVF = null;
 let vfPosicaoInicialPressionarNotaVF = null;
 function vfHtmlItemNotaVF(n){
   vfNotasTextoBrutoCacheVF[n.id] = n.texto;
+  vfNotasMnemonicoCacheVF[n.id] = !!n.eh_mnemonico;
   vfNotasCorCacheVF[n.id] = n.cor || null;
   const corBolinha = n.cor && VF_CORES_NOTA_VF[n.cor] ? VF_CORES_NOTA_VF[n.cor].borda : '#fff';
   return `
@@ -18524,7 +18531,7 @@ async function vfAlternarFixarNotaVF(notaId, fixadaAtual){
     // fixadas dessa questão) - some no cache já com esse valor, sem
     // precisar buscar de volta do banco
     ordemFixacao = listaAtual.length ? Math.max(...listaAtual.map(n => n.ordem_fixacao || 0)) + 1 : 0;
-    vfNotaPreviewCacheVF.set(questaoNotaVfAtual, [...listaAtual, {id: notaId, texto: textoDaNota, ordem_fixacao: ordemFixacao, cor: vfNotasCorCacheVF[notaId] || null}]);
+    vfNotaPreviewCacheVF.set(questaoNotaVfAtual, [...listaAtual, {id: notaId, texto: textoDaNota, ordem_fixacao: ordemFixacao, cor: vfNotasCorCacheVF[notaId] || null, eh_mnemonico: !!vfNotasMnemonicoCacheVF[notaId]}]);
     notasFixadasVF.add(questaoNotaVfAtual);
   }else{
     const novaLista = listaAtual.filter(n => n.id !== notaId);
@@ -18547,6 +18554,7 @@ async function vfAlternarFixarNotaVF(notaId, fixadaAtual){
 // mnemônico salvo, ou ver todos os mnemônicos numa lista só
 async function vfAlternarMnemonicoNotaVF(notaId, mnemonicoAtual){
   const novoValor = !mnemonicoAtual;
+  vfNotasMnemonicoCacheVF[notaId] = novoValor;
   const btn = document.getElementById(`vf-nota-btn-mnemonico-${notaId}`);
   if(btn){
     btn.style.borderColor = novoValor ? '#B23A34' : '#ddd';
