@@ -2079,7 +2079,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-071';
+const VERSAO_APP = '2026-09-17-072';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -14985,10 +14985,10 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
 // continua preto - de propósito não usa o vermelho sólido (#B23A34 com
 // letra branca), que já é a cara do botão de mnemônico/fixar
 const VF_CORES_NOTA_VF = {
-  vermelho: {fundo: '#FCEBEB', borda: '#B23A34', texto: '#A32D2D', nome: 'Vermelho'},
-  ambar:    {fundo: '#FAEEDA', borda: '#EF9F27', texto: '#854F0B', nome: 'Âmbar'},
-  verde:    {fundo: '#EAF3DE', borda: '#639922', texto: '#3B6D11', nome: 'Verde'},
-  azul:     {fundo: '#E6F1FB', borda: '#2F6FB3', texto: '#0C447C', nome: 'Azul'}
+  vermelho: {fundo: '#FDF3F2', borda: '#C9736C', texto: '#A32D2D', nome: 'Vermelho'},
+  ambar:    {fundo: '#FDF6EA', borda: '#E3A44F', texto: '#854F0B', nome: 'Âmbar'},
+  verde:    {fundo: '#F2F8EA', borda: '#8FB85C', texto: '#3B6D11', nome: 'Verde'},
+  azul:     {fundo: '#F0F6FC', borda: '#6E9BC9', texto: '#0C447C', nome: 'Azul'}
 };
 // cor conhecida de cada nota (id -> cor), preenchida por quem renderiza -
 // serve pra fixar/desafixar e pra barra de cor saber o estado atual sem
@@ -14998,12 +14998,14 @@ let vfNotasCorCacheVF = {};
 function vfEstiloCorNotaVF(cor){
   const c = cor && VF_CORES_NOTA_VF[cor];
   if(!c) return '';
-  return `background:${c.fundo};border-left:4px solid ${c.borda};`;
+  return `background:${c.fundo};box-shadow:inset 3px 0 0 ${c.borda};`;
 }
 // bolinhas de cor (4 cores + "sem cor") - usadas na barra de segurar da
 // nota fixada (página) e no botão de cor da lista do modal
+const VF_ANEL_COR_NOTA_VF = '0 0 0 2px #fff, 0 0 0 3.5px #333'; // anel de "escolhida"
 function vfCriarBotoesCorNotaVF(corAtual, aoEscolher){
-  const frag = document.createDocumentFragment();
+  const frag = document.createElement('div');
+  frag.style.cssText = 'display:flex;align-items:center;gap:11px;padding:0 4px'; // 11px = 3.5 do anel de um + 3.5 do outro + 4 de folga real
   const opcoes = [null, ...Object.keys(VF_CORES_NOTA_VF)];
   opcoes.forEach(cor => {
     const btn = document.createElement('button');
@@ -15012,12 +15014,12 @@ function vfCriarBotoesCorNotaVF(corAtual, aoEscolher){
     const ativo = (corAtual || '') === (cor || '');
     const fundo = cor ? VF_CORES_NOTA_VF[cor].borda : '#fff';
     btn.title = cor ? VF_CORES_NOTA_VF[cor].nome : 'Sem cor';
-    btn.style.cssText = `width:22px;height:22px;border-radius:50%;padding:0;cursor:pointer;flex-shrink:0;background:${fundo};border:${cor ? '2px solid ' + fundo : '1.5px solid #bbb'};box-shadow:${ativo ? '0 0 0 2px #fff, 0 0 0 4px #111' : 'none'};display:flex;align-items:center;justify-content:center;color:#888;font-size:12px;line-height:1`;
+    btn.style.cssText = `width:22px;height:22px;border-radius:50%;padding:0;cursor:pointer;flex-shrink:0;background:${fundo};border:${cor ? '2px solid ' + fundo : '1.5px solid #bbb'};box-shadow:${ativo ? VF_ANEL_COR_NOTA_VF : 'none'};display:flex;align-items:center;justify-content:center;color:#888;font-size:12px;line-height:1`;
     if(!cor) btn.textContent = '×';
     btn.onclick = (e) => {
       e.stopPropagation();
       btn.parentElement.querySelectorAll('.vf-nota-cor-btn').forEach(b => { b.style.boxShadow = 'none'; });
-      btn.style.boxShadow = '0 0 0 2px #fff, 0 0 0 4px #111';
+      btn.style.boxShadow = VF_ANEL_COR_NOTA_VF;
       aoEscolher(cor);
     };
     frag.appendChild(btn);
@@ -15044,7 +15046,8 @@ function vfAplicarCorNoCardNotaVF(el, cor){
   if(!el) return;
   const c = cor && VF_CORES_NOTA_VF[cor];
   el.style.background = c ? c.fundo : '';
-  el.style.borderLeft = c ? `4px solid ${c.borda}` : '';
+  el.style.borderLeft = ''; // nota antiga pode ter nascido com a faixa em border-left (ver vfEstiloCorNotaVF)
+  el.style.boxShadow = c ? `inset 3px 0 0 ${c.borda}` : '';
   el.dataset.corNota = cor || '';
 }
 // botão de cor na lista do modal: toca, abre a barrinha de bolinhas
@@ -15314,7 +15317,13 @@ async function vfSalvarAlinhamentoNotaVF(notaId, alinhamento, questaoVfId){
 let vfAcabouDeArrastarNotaPreviewVF = false;
 function vfCliqueNotaPreviewVF(evento, questaoVfId){
   if(vfAcabouDeArrastarNotaPreviewVF){ vfAcabouDeArrastarNotaPreviewVF = false; return; }
-  abrirNotaVF(questaoVfId);
+  // copia só o texto da nota: o alvo é o div de conteúdo, nunca o card
+  // inteiro (que carrega a alça de arrastar junto). vfCopiarComProtecao...
+  // é o mesmo caminho do enunciado - inclusive a regra de que traço de
+  // caneta em cima da nota desenha, não copia
+  const card = evento.currentTarget;
+  const alvo = card.querySelector(':scope > div:not(.vf-alca-nota-preview):not(.vf-tabela-alinhamento)') || card;
+  vfCopiarComProtecaoDuploToqueVF(alvo, evento);
 }
 
 // posição de repouso de cada nota, na ordem atual do array em cache -
