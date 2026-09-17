@@ -2079,7 +2079,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-070';
+const VERSAO_APP = '2026-09-17-071';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5613,6 +5613,15 @@ function vfReinserirTabelasVF(texto, tabelas){
 // corretas"), e ali nada pode mudar. O espaço depois do marcador é
 // obrigatório, senão "1.5 m" viraria lista
 const VF_MARCADOR_LISTA_NUMERADA_VF = /^\s*((?:\d{1,2}|[a-zA-Z]|[IVXLivxl]{1,5})[.)])\s+(.+)$/;
+// marcador LIVRE: "#C_1# é o coeficiente..." usa o que estiver entre as
+// cerquilhas como marcador da lista, no lugar do número. Serve pra
+// listas cujo "bullet" é um símbolo do próprio conteúdo (C_1, C_2, Fnh,
+// h/T...) - o que vai na coluna da esquerda passa pela formatação normal
+// depois, então subscrito, grega e negrito funcionam ali dentro. Vale em
+// qualquer texto formatado (nota, explicação, complementar), inclusive
+// onde a lista numerada automática está desligada: as cerquilhas são
+// explícitas, não tem como disparar sem querer
+const VF_MARCADOR_LISTA_LIVRE_VF = /^#([^#\n]{1,24})#\s*(.+)$/;
 function vfProcessarListasNotaVF(texto, aceitarNumeracao){
   const linhas = texto.split('\n');
   const blocos = [];
@@ -5637,7 +5646,9 @@ function vfProcessarListasNotaVF(texto, aceitarNumeracao){
     const linha = partes[2];
     const estiloRecuo = nivelRecuo ? `margin-left:${nivelRecuo * 20}px;` : '';
     const simples = linha.match(/^(?:[*\-•]|--)\s+(.+)$/); // "- ", "-- ", "* " ou "• " no começo da linha viram item de lista (espaço obrigatório - "-5 m" não é lista)
-    const numerada = !simples && aceitarNumeracao ? linha.match(VF_MARCADOR_LISTA_NUMERADA_VF) : null;
+    const livre = linha.match(VF_MARCADOR_LISTA_LIVRE_VF);
+    const numeradaAuto = !simples && !livre && aceitarNumeracao ? linha.match(VF_MARCADOR_LISTA_NUMERADA_VF) : null;
+    const numerada = livre || numeradaAuto; // mesmo desenho de duas colunas nos dois casos
     if(simples){
       if(tipoAtual !== 'simples') fechar();
       tipoAtual = 'simples';
