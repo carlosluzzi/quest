@@ -385,6 +385,7 @@ inline seria apagado nessa hora - na classe, o "" volta pra cá */
    A tabela continua declarando a própria fonte, então nada muda nela;
    o que muda é o texto que mora em volta */
 .vf-elemento-html-bloco,.vf-complementar-conteudo{font-family:'Charter','Iowan Old Style',Georgia,'Times New Roman',serif}
+.vf-selo-mnemonico-icone svg{width:10px;height:10px}
 /* sobrescrito/subscrito sem esticar a linha: vertical-align:super (o
    padrão do navegador pro <sup>) empurra a caixa da linha pra cima e a
    linha inteira fica mais alta que as vizinhas - numa tabela, a linha
@@ -1028,19 +1029,19 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         Flash. Ordem pedida pelo Carlos: Tipo, Novas, e Varredura por
         último -->
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee;border-top:0;margin-top:0;padding-top:0">
-          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0;min-width:80px">Tipo</span>
-          <span style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;flex:1;min-width:0">
-            <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Número</button>
-            <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Lista</button>
-            <button id="vf-filtro-inconsistente" onclick="toggleFiltroTagVF('inconsistente')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Inconsist.</button>
+          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Tipo</span>
+          <span style="display:flex;justify-content:flex-end;gap:6px;flex:1;min-width:0">
+            <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Número</button>
+            <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Lista</button>
+            <button id="vf-filtro-inconsistente" onclick="toggleFiltroTagVF('inconsistente')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Inconsistente</button>
           </span>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
-          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0;min-width:80px">Novas <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-nova-a-cada-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
-          <span style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;flex:1;min-width:0">
-            <button id="vf-nova-a-cada-3" onclick="vfTrocarNovaACadaVF(3)" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">1 a cada 3</button>
-            <button id="vf-nova-a-cada-2" onclick="vfTrocarNovaACadaVF(2)" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">1 a cada 2</button>
-            <button id="vf-nova-a-cada-1.5" onclick="vfTrocarNovaACadaVF(1.5)" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">2 a cada 3</button>
+          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Novas <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-nova-a-cada-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
+          <span style="display:flex;justify-content:flex-end;gap:6px;flex:1;min-width:0">
+            <button id="vf-nova-a-cada-3" onclick="vfTrocarNovaACadaVF(3)" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">1 a cada 3</button>
+            <button id="vf-nova-a-cada-2" onclick="vfTrocarNovaACadaVF(2)" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">1 a cada 2</button>
+            <button id="vf-nova-a-cada-1.5" onclick="vfTrocarNovaACadaVF(1.5)" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">2 a cada 3</button>
           </span>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
@@ -2086,7 +2087,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-080';
+const VERSAO_APP = '2026-09-17-082';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -12440,8 +12441,26 @@ function vfPintarBotoesFiltroTipoVF(){
     btn.style.borderColor = ativo ? '#B23A34' : '#ddd';
   });
 }
-if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', vfPintarBotoesFiltroTipoVF);
-else vfPintarBotoesFiltroTipoVF();
+// os seis botões do filtro (Tipo e Novas) com a MESMA largura: a do
+// maior deles escrito por extenso, que hoje é o "Inconsistente". Medido
+// de verdade, não chutado em px - o tamanho da letra muda por tamanho de
+// tela, e um valor fixo ou cortaria o texto ou sobraria espaço
+function vfIgualarLarguraBotoesFiltroVF(){
+  const botoes = document.querySelectorAll('.vf-btn-filtro-tipo');
+  if(!botoes.length) return;
+  botoes.forEach(b => { b.style.width = ''; }); // solta pra medir a largura natural de cada um
+  let maior = 0;
+  botoes.forEach(b => { maior = Math.max(maior, b.getBoundingClientRect().width); });
+  if(maior < 2) return; // aba do Flash escondida (largura zero) - tenta de novo na próxima vez
+  botoes.forEach(b => { b.style.width = Math.ceil(maior) + 'px'; });
+}
+let vfTimerLarguraFiltroVF = null;
+window.addEventListener('resize', () => {
+  clearTimeout(vfTimerLarguraFiltroVF);
+  vfTimerLarguraFiltroVF = setTimeout(vfIgualarLarguraBotoesFiltroVF, 200); // girar a tela muda o tamanho da letra
+});
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { vfPintarBotoesFiltroTipoVF(); vfIgualarLarguraBotoesFiltroVF(); });
+else { vfPintarBotoesFiltroTipoVF(); vfIgualarLarguraBotoesFiltroVF(); }
 
 // filtro por palavra-chave (pt/en) - digitar recarrega o pool sozinho
 // depois de 400ms sem digitar (mesmo padrão de debounce já usado em
@@ -12780,6 +12799,7 @@ function vfAtualizarVisualNovaACadaVF(){
 // animação) disparava um artefato visual de 1 frame do Safari (uma
 // linha escura bem abaixo do cabeçalho), visível só durante a transição
 function alternarFiltrosVF(){
+  vfIgualarLarguraBotoesFiltroVF(); // se o Flash ainda não tinha aparecido, é aqui que dá pra medir
   const conteudo = document.getElementById('vf-filtros-conteudo');
   const chevron = document.getElementById('vf-chevron-filtros');
   const abrindo = conteudo.classList.contains('vf-filtros-fechado');
@@ -15173,16 +15193,12 @@ function vfMontarPreviewNotasVF(container, notas, questaoVfId){
     // padding simétrico quando centralizado - senão o espaço reservado
     // à direita pra alça (32px) puxava o texto visualmente pra esquerda,
     // mesmo com text-align:center
-    // espaço reservado à direita: a alça de arrastar (e o selo de
-    // mnemônico, quando tem) moram nesse canto - sem a reserva o texto
-    // passaria por baixo deles
-    const reservaDireita = n.eh_mnemonico ? 58 : 32;
-    const paddingTexto = alinhamento === 'centro' ? `padding:0 ${reservaDireita}px` : `padding-right:${reservaDireita}px`;
+    const paddingTexto = alinhamento === 'centro' ? 'padding:0 32px' : 'padding-right:32px';
     const conteudoInterno = temTabela
       ? formatarTextoItemVF(n.texto, {listaNumerada: true})
       : `<div style="color:#333;line-height:1.4;text-align:${alinhamentoCss};${paddingTexto}">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>`;
     el.innerHTML = `<div class="${classeCard}" data-alinhamento-nota="${alinhamento}" data-cor-nota="${n.cor || ''}" style="position:relative;cursor:pointer;margin-bottom:0;${estiloCor}" ontouchstart="vfIniciarPressionarNotaPreviewVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaPreviewSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaPreviewSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaPreviewVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaPreviewSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaPreviewSilenciosoVF()" onclick="vfCliqueNotaPreviewVF(event,'${questaoVfId}')">${conteudoInterno}
-      ${n.eh_mnemonico ? `<span title="Mnemônico" style="position:absolute;right:36px;top:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:#C9736C;pointer-events:none">${VF_ICONE_MNEMONICO_VF}</span>` : ''}
+      ${n.eh_mnemonico ? `<span title="Mnemônico" style="position:absolute;left:14px;top:-8px;z-index:2;display:flex;align-items:center;gap:5px;background:#fff;border:0.5px solid #EADFC9;border-radius:999px;padding:1px 8px 1px 6px;color:#C9736C;font-size:var(--fs-a);font-weight:600;letter-spacing:0.03em;line-height:1.4;pointer-events:none"><span class="vf-selo-mnemonico-icone" style="display:flex">${VF_ICONE_MNEMONICO_VF}</span><span style="color:#9a8f7d">MNEMÔNICO</span></span>` : ''}
       <div class="vf-alca-nota-preview" data-nota-id="${n.id}" ontouchstart="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" onmousedown="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" style="position:absolute;right:6px;top:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#bbb;cursor:grab;touch-action:none">${VF_ICONE_ALCA_ARRASTO_VF}</div>
     </div>`;
     container.appendChild(el);
