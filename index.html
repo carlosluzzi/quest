@@ -1044,7 +1044,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         <!-- recortes de capítulo: só aparece quando a publicação/capítulo
         selecionado tem linhas em filtros_capitulo_vf (ver vfAtualizarFiltrosCapituloVF) -->
         <div id="vf-recortes-grupo" class="hidden" style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
-          <span style="display:flex;flex-direction:column;gap:2px;font-size:var(--fs-d);color:#333;flex-shrink:0;padding-top:6px">Recortes<span id="vf-recortes-geral" style="font-size:var(--fs-a);color:#aaa;white-space:nowrap" title="Afirmações do capítulo sem nenhum recorte (conteúdo geral)"></span></span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0;padding-top:6px;white-space:nowrap">Recortes<span id="vf-recortes-geral" style="font-size:var(--fs-d);color:#333" title="Afirmações do capítulo sem nenhum recorte (conteúdo geral)"></span></span>
           <span id="vf-filtros-capitulo-botoes" style="display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px 6px;flex:1;min-width:0"></span>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
@@ -2098,7 +2098,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-089';
+const VERSAO_APP = '2026-09-17-090';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -12612,8 +12612,9 @@ async function vfAtualizarContagensRecortesVF(){
   if(error || vfChaveEscopoFiltrosCapituloVF() !== chave) return;
   vfContagensRecortesVF = new Map((data || []).map(r => [r.filtro_id || 'geral', Number(r.total) || 0]));
   vfPintarBotoesFiltrosCapituloVF();
+  vfIgualarLarguraBotoesFiltroVF();
   const geral = document.getElementById('vf-recortes-geral');
-  if(geral) geral.textContent = vfContagensRecortesVF.has('geral') ? `geral · ${vfContagensRecortesVF.get('geral')}` : '';
+  if(geral) geral.textContent = vfContagensRecortesVF.has('geral') ? `· Geral (${vfContagensRecortesVF.get('geral')})` : '';
 }
 // pais na ordem do campo "ordem"; cada filho (pai_id) logo abaixo do pai,
 // recuado e com traço de ligação. Botão de filho leva tooltip explicando
@@ -12636,7 +12637,7 @@ function vfRenderizarBotoesFiltrosCapituloVF(){
   cont.innerHTML = ordenados.map(f => {
     const ehFilho = !!(f.pai_id && filtros.some(p => p.id === f.pai_id));
     const tooltip = ehFilho ? ` title="Subconjunto de ${escapeHtml(nomeDe(f.pai_id))} — para ver ${escapeHtml(nomeDe(f.pai_id))} sem ${escapeHtml(f.nome)}, marque ✓ ${escapeHtml(nomeDe(f.pai_id))} e ✗ ${escapeHtml(f.nome)}"` : '';
-    return `<span class="vf-btn-recorte-wrap"><button class="vf-btn-filtro-tipo vf-btn-recorte" data-filtro-id="${f.id}" data-nome="${escapeHtml(f.nome)}" data-filho="${ehFilho ? '1' : '0'}" onclick="vfCiclarFiltroCapituloVF('${f.id}')"${tooltip} style="border-radius:6px;border:0.5px ${ehFilho ? 'dashed' : 'solid'} #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">${escapeHtml(f.nome)}</button><span class="vf-btn-recorte-n" data-filtro-id="${f.id}"></span></span>`;
+    return `<button class="vf-btn-filtro-tipo vf-btn-recorte" data-filtro-id="${f.id}" data-nome="${escapeHtml(f.nome)}" data-filho="${ehFilho ? '1' : '0'}" onclick="vfCiclarFiltroCapituloVF('${f.id}')"${tooltip} style="border-radius:6px;border:0.5px ${ehFilho ? 'dashed' : 'solid'} #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">${escapeHtml(f.nome)}</button>`;
   }).join('');
   vfPintarBotoesFiltrosCapituloVF();
   vfIgualarLarguraBotoesFiltroVF();
@@ -12657,13 +12658,10 @@ function vfCiclarFiltroCapituloVF(id){
   vfRecarregarPoolComDebounceVF();
 }
 function vfPintarBotoesFiltrosCapituloVF(){
-  document.querySelectorAll('.vf-btn-recorte-n').forEach(el => {
-    const n = vfContagensRecortesVF.get(el.dataset.filtroId);
-    el.textContent = typeof n === 'number' ? String(n) : '';
-  });
   document.querySelectorAll('.vf-btn-recorte').forEach(btn => {
     const estado = vfEstadoFiltroCapituloVF(btn.dataset.filtroId);
-    const nome = btn.dataset.nome || '';
+    const n = vfContagensRecortesVF.get(btn.dataset.filtroId);
+    const nome = (btn.dataset.nome || '') + (typeof n === 'number' ? ` (${n})` : '');
     if(estado === 'inc'){
       btn.style.background = '#B23A34'; btn.style.color = '#fff'; btn.style.borderColor = '#B23A34';
       btn.textContent = '✓ ' + nome;
