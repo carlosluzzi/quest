@@ -1021,19 +1021,19 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         Flash. Ordem pedida pelo Carlos: Tipo, Novas, e Varredura por
         último -->
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee;border-top:0;margin-top:0;padding-top:0">
-          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Tipo</span>
-          <span style="display:flex;gap:6px;min-width:0">
-            <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 9px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">Número</button>
-            <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 9px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">Lista</button>
-            <button id="vf-filtro-inconsistente" onclick="toggleFiltroTagVF('inconsistente')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 9px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">Inconsist.</button>
+          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0;min-width:80px">Tipo</span>
+          <span style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;flex:1;min-width:0">
+            <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Número</button>
+            <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Lista</button>
+            <button id="vf-filtro-inconsistente" onclick="toggleFiltroTagVF('inconsistente')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Inconsist.</button>
           </span>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
-          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Novas <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-nova-a-cada-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
-          <span style="display:flex;gap:6px;min-width:0">
-            <button id="vf-nova-a-cada-3" onclick="vfTrocarNovaACadaVF(3)" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 9px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">1/3</button>
-            <button id="vf-nova-a-cada-2" onclick="vfTrocarNovaACadaVF(2)" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 9px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">1/2</button>
-            <button id="vf-nova-a-cada-1.5" onclick="vfTrocarNovaACadaVF(1.5)" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 9px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap">2/3</button>
+          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0;min-width:80px">Novas <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-nova-a-cada-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
+          <span style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;flex:1;min-width:0">
+            <button id="vf-nova-a-cada-3" onclick="vfTrocarNovaACadaVF(3)" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">1 a cada 3</button>
+            <button id="vf-nova-a-cada-2" onclick="vfTrocarNovaACadaVF(2)" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">1 a cada 2</button>
+            <button id="vf-nova-a-cada-1.5" onclick="vfTrocarNovaACadaVF(1.5)" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 4px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">2 a cada 3</button>
           </span>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
@@ -2079,7 +2079,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-072';
+const VERSAO_APP = '2026-09-17-074';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -17060,7 +17060,7 @@ async function vfCarregarNotasBibliotecaVF(forcar){
   // contexto na tela e pra busca, bibliografia/capítulo pros filtros) -
   // uma consulta só, em vez de uma por questão
   const {data, error} = await buscarTudoPaginadoVF(() => sb.from('notas_vf')
-    .select('id, texto, criado_em, fixada, eh_mnemonico, cor, questao_vf_id, questoes_vf(texto, bibliografia_id, capitulo)', {count: 'exact'})
+    .select('id, texto, criado_em, fixada, eh_mnemonico, cor, questao_vf_id, origem_nota_id, questoes_vf(texto, bibliografia_id, capitulo)', {count: 'exact'})
     .eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending: false}).order('id'));
   if(error) vfMostrarAvisoVF('Não consegui carregar suas notas. Tenta de novo.');
   vfNotasBibliotecaCacheVF = (!error && data) ? data : [];
@@ -17147,28 +17147,61 @@ function vfHtmlCardNotaBibliotecaVF(n, pref){
   // precisa do texto COM a marcação (**negrito**), não do texto já
   // formatado que está na tela
   vfNotasTextoBrutoCacheVF[n.id] = n.texto;
-  const b = vfBibDaNotaVF(n);
-  const nomePub = b?.titulo || 'Sem publicação';
-  const cap = n.questoes_vf?.capitulo;
-  const rotuloCap = (cap && cap !== 'Único') ? ` · ${escapeHtml(b?.rotulo_capitulo || 'Capítulo')} ${escapeHtml(cap)}` : '';
-  const selos = [];
-  if(n.fixada) selos.push('fixada');
-  if(n.eh_mnemonico) selos.push('mnemônico');
-  const afirmacao = (n.questoes_vf?.texto || '').trim();
-  const trecho = afirmacao.length > 160 ? afirmacao.slice(0, 160) + '…' : afirmacao;
   const botao = 'width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid #ddd;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center';
+  // o card mostra SÓ a nota: publicação, capítulo, selos e o trecho da
+  // afirmação de origem saíram daqui. Quem procura nota quer ler a nota -
+  // de onde ela veio já é o que os filtros de cima fazem
+  const podeTrazer = vfPodeTrazerNotaDaBibliotecaVF(n, pref);
   return `
     <div id="vf-notalib-item-${pref}-${n.id}" style="border:0.5px solid #eee;border-radius:10px;padding:12px;margin-bottom:10px">
       <div style="display:flex;gap:8px;align-items:flex-start">
         <div id="vf-notalib-texto-${pref}-${n.id}" style="flex:1;font-size:var(--fs-d);color:#111;padding:6px 8px;border-radius:6px;${vfEstiloCorNotaVF(n.cor)}">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>
+        ${podeTrazer ? `<button id="vf-notalib-add-${pref}-${n.id}" style="${botao};color:#B23A34;font-size:var(--fs-e);line-height:1" title="Usar essa nota nesta afirmação" onclick="vfTrazerNotaDaBibliotecaVF('${n.id}','${pref}')">+</button>` : ''}
         <button style="${botao};color:#888" title="Editar nota" onclick="vfEditarNotaBibliotecaVF('${n.id}','${pref}')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
         <button id="vf-notalib-excluir-${pref}-${n.id}" style="${botao};color:#B23A34;font-size:var(--fs-c);white-space:nowrap" title="Excluir nota" onclick="vfExcluirNotaBibliotecaVF('${n.id}','${pref}')">✕</button>
       </div>
-      <div style="margin-top:8px;font-size:var(--fs-b);color:#999;line-height:1.4">
-        ${escapeHtml(nomePub)}${rotuloCap}${selos.length ? ' · ' + selos.join(' · ') : ''}
-        ${trecho ? `<div style="margin-top:3px;color:#aaa">${escapeHtml(trecho)}</div>` : ''}
-      </div>
     </div>`;
+}
+
+// o "+" só faz sentido na biblioteca aberta DE DENTRO do pop-up de notas
+// (pref 'modal'), onde existe uma afirmação aberta pra receber a cópia -
+// na aba Biblioteca não há questão nenhuma na tela. Some também quando a
+// nota já é dessa afirmação ou já foi trazida antes
+function vfPodeTrazerNotaDaBibliotecaVF(n, pref){
+  if(pref !== 'modal' || !questaoNotaVfAtual) return false;
+  if(n.questao_vf_id === questaoNotaVfAtual) return false;
+  return !(vfNotasBibliotecaCacheVF || []).some(x => x.questao_vf_id === questaoNotaVfAtual && x.origem_nota_id === n.id);
+}
+
+// traz a nota da biblioteca pra afirmação aberta: nasce uma nota NOVA,
+// independente (editar ou apagar uma nunca mexe na outra), guardando só
+// de qual nota ela veio, pra não oferecer a mesma duas vezes. Não nasce
+// fixada de propósito - aparecer na página é decisão desta afirmação
+async function vfTrazerNotaDaBibliotecaVF(notaId, pref){
+  const origem = (vfNotasBibliotecaCacheVF || []).find(x => x.id === notaId);
+  const destino = questaoNotaVfAtual;
+  if(!origem || !destino) return;
+  const btn = document.getElementById(`vf-notalib-add-${pref}-${notaId}`);
+  if(btn){ btn.disabled = true; btn.textContent = '✓'; btn.style.color = '#639922'; }
+  const {data, error} = await sb.from('notas_vf').insert({
+    usuario_id: usuarioAtual.id,
+    questao_vf_id: destino,
+    texto: origem.texto,
+    cor: origem.cor || null,
+    eh_mnemonico: !!origem.eh_mnemonico,
+    origem_nota_id: origem.id
+  }).select('id, texto, criado_em, fixada, eh_mnemonico, cor, questao_vf_id, origem_nota_id').single();
+  if(error || !data){
+    if(btn){ btn.disabled = false; btn.textContent = '+'; btn.style.color = '#B23A34'; }
+    vfMostrarAvisoVF('Não consegui trazer a nota. Tenta de novo.');
+    return;
+  }
+  // entra no cache da biblioteca sem redesenhar a lista - ele está lendo
+  // ela agora, a lista pular embaixo do dedo seria pior que o proveito
+  if(vfNotasBibliotecaCacheVF) vfNotasBibliotecaCacheVF.unshift({...data, questoes_vf: null});
+  notasVF.add(destino);
+  vfListaNotasCacheVF.delete(destino);
+  if(questaoNotaVfAtual === destino) await renderizarListaNotasVF();
 }
 
 // edição inline, igual à da lista de notas da questão: vira textarea,
