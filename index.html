@@ -1016,11 +1016,13 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
           <option value="">Todos os capítulos</option>
         </select>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
-          <div style="position:relative;flex:1">
+          <div style="position:relative;flex:1;min-width:0">
+            <span id="vf-chip-tag-filtro" class="hidden" style="position:absolute;left:5px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:5px;background:#F2F1EC;border:0.5px solid #E0DED4;border-radius:999px;padding:2px 6px 2px 9px;font-size:var(--fs-b);color:#44443F;white-space:nowrap;max-width:60%;overflow:hidden"></span>
             <input id="vf-filtro-termo" type="search" placeholder="Palavra-chave…" autocomplete="off" autocapitalize="off" spellcheck="false" class="filter-select" style="width:100%;margin-bottom:0;padding-right:30px" oninput="vfOnInputFiltroTermoVF()">
             <button id="vf-filtro-termo-limpar" class="hidden" onclick="vfLimparFiltroTermoVF()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:#888;cursor:pointer;padding:4px;display:flex" title="Limpar"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           </div>
           <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-filtro-termo')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
+          <button id="vf-btn-tags-filtro" onclick="vfAbrirMenuTagsFiltroVF(event)" style="flex-shrink:0;display:flex;align-items:center;gap:5px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 10px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>Tags</button>
         </div>
         <div id="vf-filtro-termo-expansao" style="font-size:var(--fs-c);color:#888;margin-bottom:8px"></div>
         <!-- cada controle em UMA linha: rótulo à esquerda, botões à direita.
@@ -2087,7 +2089,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-082';
+const VERSAO_APP = '2026-09-17-083';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6353,7 +6355,7 @@ let filtroVF = (function(){
     const salvo = localStorage.getItem('pscpp_vf_filtro');
     if(salvo) return JSON.parse(salvo);
   }catch(e){}
-  return {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false, inconsistente: false, termo: null};
+  return {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false, inconsistente: false, termo: null, tagId: null, tagNome: null};
 })();
 function vfSalvarFiltroNoStorageVF(){
   try{ localStorage.setItem('pscpp_vf_filtro', JSON.stringify(filtroVF)); }catch(e){}
@@ -10980,6 +10982,9 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     // precisam respeitar o termo, senão questão fora do termo "vazava"
     // de volta pro pool assim que a página seguinte chegasse
     if(vfIdsTermoParaCallbackVF) processadas = processadas.filter(q => vfIdsTermoParaCallbackVF.has(q.id));
+    // mesma coisa pra tag: sem isso, questão sem a tag voltava pro pool
+    // assim que a página seguinte chegasse
+    if(filtroVF.tagId) processadas = processadas.filter(q => (vfTagsPorQuestaoVF.get(q.id) || []).some(t => t.id === filtroVF.tagId));
     if(processadas.length){
       estadoVF.pool = estadoVF.pool.concat(processadas);
       vfCalcularFamiliasNoPoolVF(estadoVF.pool); // recalcula pro pool inteiro - as recém-chegadas podem formar família com quem já estava lá
@@ -11071,6 +11076,10 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   }else{
     vfIdsTermoParaCallbackVF = null;
   }
+  // interseção por TAG temática - em memória, pelo mesmo mapa que já veio
+  // junto com o pool. Como roda DEPOIS de vfProcessarQuestoesCruasVF, as
+  // exclusões do usuário já foram aplicadas, igual acontece com o termo
+  if(filtroVF.tagId) poolPronto = poolPronto.filter(q => (vfTagsPorQuestaoVF.get(q.id) || []).some(t => t.id === filtroVF.tagId));
   resolverTermoProntoVF(); // libera as páginas seguintes que ficaram esperando a interseção
   vfCalcularFamiliasNoPoolVF(poolPronto);
   // anexa os dados de entrada como propriedades extras no próprio array
@@ -11685,6 +11694,7 @@ function vfMontarPlaceholderPanoramaVF(){
     nomePublicacao ? `<div class="vf-filtro-linha"><span style="flex-shrink:0">Publicação</span><span class="vf-filtro-valor" style="font-size:var(--fs-d);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(nomePublicacao)}">${escapeHtml(nomePublicacao)}</span></div>` : '',
     filtroVF.capitulo ? `<div class="vf-filtro-linha"><span>Capítulo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.capitulo)}</span></div>` : '',
     tipoTexto ? `<div class="vf-filtro-linha"><span>Tipo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(tipoTexto)}</span></div>` : '',
+    filtroVF.tagId ? `<div class="vf-filtro-linha"><span>Tag</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.tagNome || '—')}</span></div>` : '',
     filtroVF.termo ? `<div class="vf-filtro-linha"><span>Palavra-chave</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">"${escapeHtml(filtroVF.termo)}"${vfFiltroTermoIgnoradoVF ? ' <span style="color:#B23A34">(ignorada - erro de rede)</span>' : ''}</span></div>` : ''
   ].filter(Boolean).join('');
   const tituloSecao = linhasFiltro ? 'Panorama desse filtro (todo o banco)' : 'Panorama geral (todo o banco)';
@@ -12467,6 +12477,108 @@ else { vfPintarBotoesFiltroTipoVF(); vfIgualarLarguraBotoesFiltroVF(); }
 // módulo/publicação). A interseção de verdade acontece dentro de
 // carregarPoolVF via a RPC buscar_questoes_por_termo_vf
 let vfTimerDebounceFiltroTermoVF = null;
+// ---- filtro por TAG temática (DATA, BIZU, NUVENS...) ----
+// as tags e o mapa questão->tags já chegam junto com o pool (ver
+// carregarPoolVF), então o menu e a contagem saem da memória, sem ida
+// nova ao banco. A lista de nomes ainda é reconferida no banco ao abrir
+// o menu: tag criada direto lá aparece aqui sem precisar de versão nova
+// do app, mesmo antes de ter qualquer questão ligada a ela
+function vfContagemPorTagVF(){
+  const contagem = new Map();
+  vfTagsPorQuestaoVF.forEach(tags => tags.forEach(t => contagem.set(t.id, (contagem.get(t.id) || 0) + 1)));
+  return contagem;
+}
+function vfFecharMenuTagsFiltroVF(){
+  document.getElementById('vf-menu-tags-filtro')?.remove();
+  document.removeEventListener('click', vfFecharMenuTagsFiltroVF);
+}
+function vfHtmlLinhasMenuTagsVF(tags){
+  if(!tags.length) return '<p style="margin:0;padding:12px 10px;color:#aaa;font-size:var(--fs-c);text-align:center">Nenhuma tag cadastrada ainda.</p>';
+  const contagem = vfContagemPorTagVF();
+  return tags.map(t => {
+    const ativa = filtroVF.tagId === t.id;
+    return `<button onclick="vfEscolherTagFiltroVF('${t.id}')" style="display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;padding:7px 10px;border:none;border-radius:7px;background:${ativa ? '#F2F1EC' : 'transparent'};color:#333;font-family:inherit;font-size:var(--fs-c);font-weight:${ativa ? '600' : '500'};cursor:pointer;text-align:left">
+      <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.nome)}</span>
+      <span style="color:#aaa;flex-shrink:0;font-weight:500">${contagem.get(t.id) || 0}</span>
+    </button>`;
+  }).join('');
+}
+function vfTagsOrdenadasVF(){
+  return (vfTodasTagsCacheVF || []).slice().sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
+}
+async function vfAbrirMenuTagsFiltroVF(evento){
+  evento?.stopPropagation();
+  if(document.getElementById('vf-menu-tags-filtro')){ vfFecharMenuTagsFiltroVF(); return; }
+  const botao = document.getElementById('vf-btn-tags-filtro');
+  if(!botao) return;
+  const menu = document.createElement('div');
+  menu.id = 'vf-menu-tags-filtro';
+  menu.style.cssText = 'position:fixed;z-index:500;background:#fff;border:0.5px solid #E6E6E3;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.16);padding:6px;max-height:min(50vh,340px);overflow-y:auto;min-width:190px;-webkit-overflow-scrolling:touch';
+  menu.onclick = (e) => e.stopPropagation(); // clicar DENTRO não fecha (o fechamento é pelo clique de fora)
+  menu.innerHTML = vfHtmlLinhasMenuTagsVF(vfTagsOrdenadasVF());
+  document.body.appendChild(menu);
+  vfPosicionarMenuTagsVF(menu, botao);
+  setTimeout(() => document.addEventListener('click', vfFecharMenuTagsFiltroVF), 0); // fecha ao tocar fora - no setTimeout pra não pegar o próprio clique que abriu
+  // reconfere a lista no banco (barato: só id e nome) - se mudou, redesenha
+  const {data, error} = await sb.from('tags_vf').select('id, nome').order('nome');
+  if(error || !data || !document.getElementById('vf-menu-tags-filtro')) return;
+  const mudou = data.length !== (vfTodasTagsCacheVF || []).length || data.some(t => !(vfTodasTagsCacheVF || []).some(c => c.id === t.id));
+  if(!mudou) return;
+  vfTodasTagsCacheVF = data;
+  menu.innerHTML = vfHtmlLinhasMenuTagsVF(vfTagsOrdenadasVF());
+  vfPosicionarMenuTagsVF(menu, botao);
+}
+// abaixo do botão e alinhado pela direita dele; se não couber embaixo,
+// sobe pra cima do botão (mesma regra da barrinha de cor das notas)
+function vfPosicionarMenuTagsVF(menu, botao){
+  const r = botao.getBoundingClientRect();
+  const m = menu.getBoundingClientRect();
+  let top = r.bottom + 6;
+  if(top + m.height > window.innerHeight - 8) top = Math.max(8, r.top - m.height - 6);
+  let left = Math.min(r.right - m.width, window.innerWidth - m.width - 8);
+  menu.style.top = top + 'px';
+  menu.style.left = Math.max(8, left) + 'px';
+}
+function vfEscolherTagFiltroVF(tagId){
+  vfFecharMenuTagsFiltroVF();
+  const tag = (vfTodasTagsCacheVF || []).find(t => t.id === tagId);
+  // uma tag por vez: escolher outra substitui a anterior
+  filtroVF.tagId = tagId;
+  filtroVF.tagNome = tag ? tag.nome : null;
+  vfSalvarFiltroNoStorageVF();
+  vfAtualizarChipTagFiltroVF();
+  vfRecarregarPoolComDebounceVF();
+}
+function vfRemoverTagFiltroVF(evento){
+  evento?.stopPropagation();
+  filtroVF.tagId = null;
+  filtroVF.tagNome = null;
+  vfSalvarFiltroNoStorageVF();
+  vfAtualizarChipTagFiltroVF();
+  vfRecarregarPoolComDebounceVF();
+}
+// o chip mora DENTRO do campo de palavra-chave (absolute), e o campo
+// ganha um recuo à esquerda do tamanho exato dele - assim dá pra
+// continuar digitando texto livre ao lado da tag, e os dois filtros
+// valem juntos
+function vfAtualizarChipTagFiltroVF(){
+  const chip = document.getElementById('vf-chip-tag-filtro');
+  const campo = document.getElementById('vf-filtro-termo');
+  if(!chip || !campo) return;
+  if(!filtroVF.tagId){
+    chip.classList.add('hidden');
+    chip.innerHTML = '';
+    campo.style.paddingLeft = '';
+    return;
+  }
+  chip.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis">${escapeHtml(filtroVF.tagNome || 'tag')}</span><span onclick="vfRemoverTagFiltroVF(event)" title="Tirar essa tag do filtro" style="cursor:pointer;color:#8a8a80;font-size:var(--fs-d);line-height:1;padding:0 2px;-webkit-tap-highlight-color:transparent">×</span>`;
+  chip.classList.remove('hidden');
+  const largura = chip.getBoundingClientRect().width;
+  campo.style.paddingLeft = (largura > 2 ? Math.ceil(largura) + 12 : 110) + 'px';
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', vfAtualizarChipTagFiltroVF);
+else vfAtualizarChipTagFiltroVF();
+
 function vfOnInputFiltroTermoVF(){
   const valor = document.getElementById('vf-filtro-termo').value;
   document.getElementById('vf-filtro-termo-limpar').classList.toggle('hidden', !valor.trim());
