@@ -1044,7 +1044,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         <!-- recortes de capítulo: só aparece quando a publicação/capítulo
         selecionado tem linhas em filtros_capitulo_vf (ver vfAtualizarFiltrosCapituloVF) -->
         <div id="vf-recortes-grupo" class="hidden" style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
-          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0;padding-top:6px;white-space:nowrap">Recortes<span id="vf-recortes-geral" style="font-size:var(--fs-d);color:#333" title="Afirmações do capítulo sem nenhum recorte (conteúdo geral)"></span></span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0;padding-top:6px;white-space:nowrap">Recortes</span>
           <span id="vf-filtros-capitulo-botoes" style="display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px 6px;flex:1;min-width:0"></span>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
@@ -2098,7 +2098,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-090';
+const VERSAO_APP = '2026-09-17-093';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -11841,8 +11841,11 @@ async function vfCarregarPanoramaFiltroVF(){
     p_numero: !!filtroVF.numero,
     p_lista: !!filtroVF.lista,
     p_inconsistente: !!filtroVF.inconsistente,
-    p_filtros_inc: (filtroVF.filtrosInc && filtroVF.filtrosInc.length) ? filtroVF.filtrosInc : null,
-    p_filtros_exc: (filtroVF.filtrosExc && filtroVF.filtrosExc.length) ? filtroVF.filtrosExc : null
+    p_filtros_inc: (filtroVF.filtrosInc || []).filter(id => id !== 'geral').length ? (filtroVF.filtrosInc || []).filter(id => id !== 'geral') : null,
+    p_filtros_exc: (filtroVF.filtrosExc || []).filter(id => id !== 'geral').length ? (filtroVF.filtrosExc || []).filter(id => id !== 'geral') : null,
+    p_filtros_escopo: (vfEscopoFiltrosCapituloVF.filtros || []).length ? vfEscopoFiltrosCapituloVF.filtros.map(f => f.id) : null,
+    p_inc_geral: (filtroVF.filtrosInc || []).includes('geral'),
+    p_exc_geral: (filtroVF.filtrosExc || []).includes('geral')
   });
   const totalFiltro = panorama?.[0]?.total || 0;
   const jaVistas = panorama?.[0]?.ja_vistas || 0;
@@ -11948,10 +11951,21 @@ async function vfSessaoOrfaNoBancoVF(){
   if(error || !data || !data.length) return null;
   const inicioMs = new Date(data[0].respondida_em).getTime();
   const fimMs = new Date(data[data.length - 1].respondida_em).getTime();
+  // tempo estudado ≠ relógio de parede: entre uma resposta e outra pode
+  // ter havido um intervalo longo (app em segundo plano). Soma os
+  // intervalos entre respostas consecutivas, cada um limitado a 5 min -
+  // mais que isso é pausa, não estudo
+  const LIMITE_INTERVALO_MS = 5 * 60 * 1000;
+  let tempoEstudadoMs = 0;
+  for(let i = 1; i < data.length; i++){
+    const gap = new Date(data[i].respondida_em).getTime() - new Date(data[i-1].respondida_em).getTime();
+    tempoEstudadoMs += Math.min(Math.max(0, gap), LIMITE_INTERVALO_MS);
+  }
+  tempoEstudadoMs += Math.min(Number(data[0].tempo_ms) || 0, LIMITE_INTERVALO_MS); // a primeira resposta também levou tempo
   return {
     iniciadoEm: inicioMs,
     pausado: true,
-    tempoAcumuladoMs: Math.max(0, fimMs - inicioMs),
+    tempoAcumuladoMs: tempoEstudadoMs,
     ultimoResumeEm: fimMs,
     recarregada: true // conta pelo banco ao finalizar, não pelo histórico de memória
   };
@@ -12013,6 +12027,34 @@ window.addEventListener('pagehide', () => {
     vfSessaoAtivaVF.tempoAcumuladoMs += (agora - vfSessaoAtivaVF.ultimoResumeEm);
     vfSessaoAtivaVF.pausado = true;
     vfSalvarSessaoNoStorageVF();
+  }
+});
+// achado real (17/09): no iPad, trocar de app, bloquear a tela ou deixar o
+// Pilotquest em segundo plano NÃO dispara pagehide - a página fica na
+// memória. Ao voltar, o cronômetro somava todo o tempo fora (Carlos abriu
+// o app com 3h+ de sessão sem ter estudado isso). Regra: ao esconder,
+// guarda o instante; ao voltar, se ficou fora mais que 2 min, esse tempo
+// não conta (a sessão continua rodando, sem precisar retomar). Menos que
+// isso é troca rápida de app e conta normal, como antes
+const VF_TOLERANCIA_SEGUNDO_PLANO_MS = 2 * 60 * 1000;
+let vfSessaoEscondidaEmVF = null;
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden){
+    vfSessaoEscondidaEmVF = Date.now();
+    vfSalvarSessaoNoStorageVF(); // o que já acumulou fica gravado, caso o iPad descarregue a página
+    return;
+  }
+  if(!vfSessaoEscondidaEmVF) return;
+  const escondidoEm = vfSessaoEscondidaEmVF;
+  vfSessaoEscondidaEmVF = null;
+  if(!vfSessaoAtivaVF || vfSessaoAtivaVF.pausado) return;
+  const agora = Date.now();
+  if(agora - escondidoEm > VF_TOLERANCIA_SEGUNDO_PLANO_MS){
+    // conta só até o momento em que saiu; recomeça a contar agora
+    vfSessaoAtivaVF.tempoAcumuladoMs += Math.max(0, escondidoEm - vfSessaoAtivaVF.ultimoResumeEm);
+    vfSessaoAtivaVF.ultimoResumeEm = agora;
+    vfSalvarSessaoNoStorageVF();
+    if(typeof vfAtualizarDisplayBalaoSessaoVF === 'function') vfAtualizarDisplayBalaoSessaoVF();
   }
 });
 
@@ -12590,8 +12632,8 @@ async function vfAtualizarFiltrosCapituloVF(opcoes){
   if(vfChaveEscopoFiltrosCapituloVF() !== chave) return; // mudou de novo enquanto buscava
   vfEscopoFiltrosCapituloVF.filtros = filtros;
   const ids = new Set(filtros.map(f => f.id));
-  filtroVF.filtrosInc = (filtroVF.filtrosInc || []).filter(id => ids.has(id));
-  filtroVF.filtrosExc = (filtroVF.filtrosExc || []).filter(id => ids.has(id));
+  filtroVF.filtrosInc = (filtroVF.filtrosInc || []).filter(id => id === 'geral' || ids.has(id));
+  filtroVF.filtrosExc = (filtroVF.filtrosExc || []).filter(id => id === 'geral' || ids.has(id));
   vfRenderizarBotoesFiltrosCapituloVF();
   vfAtualizarContagensRecortesVF(); // contagens chegam depois, sem segurar os botões
 }
@@ -12613,8 +12655,6 @@ async function vfAtualizarContagensRecortesVF(){
   vfContagensRecortesVF = new Map((data || []).map(r => [r.filtro_id || 'geral', Number(r.total) || 0]));
   vfPintarBotoesFiltrosCapituloVF();
   vfIgualarLarguraBotoesFiltroVF();
-  const geral = document.getElementById('vf-recortes-geral');
-  if(geral) geral.textContent = vfContagensRecortesVF.has('geral') ? `· Geral (${vfContagensRecortesVF.get('geral')})` : '';
 }
 // pais na ordem do campo "ordem"; cada filho (pai_id) logo abaixo do pai,
 // recuado e com traço de ligação. Botão de filho leva tooltip explicando
@@ -12634,6 +12674,10 @@ function vfRenderizarBotoesFiltrosCapituloVF(){
   const nomeDe = id => filtros.find(f => f.id === id)?.nome || '';
   const ordenados = [];
   raiz.forEach(pai => { ordenados.push(pai); (porPai.get(pai.id) || []).forEach(filho => ordenados.push(filho)); });
+  // "Geral" = afirmações do capítulo sem nenhum recorte - também é um
+  // botão de três estados (pedido do Carlos: "✓ Geral + ✓ Mercante" numa
+  // sessão, "só Mercante" na outra). Id sintético 'geral'
+  ordenados.push({id: 'geral', nome: 'Geral', pai_id: null, sintetico: true});
   cont.innerHTML = ordenados.map(f => {
     const ehFilho = !!(f.pai_id && filtros.some(p => p.id === f.pai_id));
     const tooltip = ehFilho ? ` title="Subconjunto de ${escapeHtml(nomeDe(f.pai_id))} — para ver ${escapeHtml(nomeDe(f.pai_id))} sem ${escapeHtml(f.nome)}, marque ✓ ${escapeHtml(nomeDe(f.pai_id))} e ✗ ${escapeHtml(f.nome)}"` : '';
@@ -12692,15 +12736,19 @@ async function vfCarregarMapaFiltrosCapituloVF(){
 }
 function vfPassaFiltrosCapituloVF(questaoId, mapa){
   if(!mapa) return true;
-  const inc = filtroVF.filtrosInc || [], exc = filtroVF.filtrosExc || [];
-  const tem = mapa.get(questaoId);
-  if(inc.length && !(tem && inc.some(id => tem.has(id)))) return false;
+  const incTudo = filtroVF.filtrosInc || [], excTudo = filtroVF.filtrosExc || [];
+  const inc = incTudo.filter(id => id !== 'geral'), exc = excTudo.filter(id => id !== 'geral');
+  const incGeral = incTudo.includes('geral'), excGeral = excTudo.includes('geral');
+  const tem = mapa.get(questaoId); // undefined = sem nenhum recorte do escopo (conteúdo geral)
+  const ehGeral = !tem || tem.size === 0;
+  if((inc.length || incGeral) && !((tem && inc.some(id => tem.has(id))) || (incGeral && ehGeral))) return false;
   if(exc.length && tem && exc.some(id => tem.has(id))) return false;
+  if(excGeral && ehGeral) return false;
   return true;
 }
 function vfNomesFiltrosCapituloVF(ids){
   const filtros = vfEscopoFiltrosCapituloVF.filtros || [];
-  return (ids || []).map(id => filtros.find(f => f.id === id)?.nome).filter(Boolean);
+  return (ids || []).map(id => id === 'geral' ? 'Geral' : filtros.find(f => f.id === id)?.nome).filter(Boolean);
 }
 
 const VF_FILTROS_TIPO_VF = ['numero', 'lista', 'inconsistente'];
@@ -12732,10 +12780,19 @@ function vfIgualarLarguraBotoesFiltroVF(){
   const botoes = document.querySelectorAll('.vf-btn-filtro-tipo');
   if(!botoes.length) return;
   botoes.forEach(b => { b.style.width = ''; }); // solta pra medir a largura natural de cada um
+  // recortes: mede com o rótulo no estado mais largo ("✗ Mercante (107)") -
+  // achado real: medir só o nome deixava o botão curto demais quando o
+  // ✓/✗ entrava, e o texto saía cortado
+  const recortes = Array.from(botoes).filter(b => b.classList.contains('vf-btn-recorte'));
+  recortes.forEach(b => {
+    const n = (typeof vfContagensRecortesVF !== 'undefined') ? vfContagensRecortesVF.get(b.dataset.filtroId) : undefined;
+    b.textContent = '✗ ' + (b.dataset.nome || '') + (typeof n === 'number' ? ` (${n})` : '');
+  });
   let maior = 0;
   botoes.forEach(b => { maior = Math.max(maior, b.getBoundingClientRect().width); });
+  if(recortes.length && typeof vfPintarBotoesFiltrosCapituloVF === 'function') vfPintarBotoesFiltrosCapituloVF(); // devolve o rótulo do estado real
   if(maior < 2) return; // aba do Flash escondida (largura zero) - tenta de novo na próxima vez
-  botoes.forEach(b => { b.style.width = Math.ceil(maior) + 'px'; });
+  botoes.forEach(b => { b.style.width = Math.ceil(maior) + 2 + 'px'; });
 }
 let vfTimerLarguraFiltroVF = null;
 window.addEventListener('resize', () => {
