@@ -378,6 +378,13 @@ inline seria apagado nessa hora - na classe, o "" volta pra cá */
    o :not(:empty) garante que ele não sobre espaço em branco quando a
    questão não tem anexo nenhum */
 #vf-elementos-html-anexados:not(:empty),#vf-complementar-local:not(:empty){margin-top:28px} /* o dobro dos 14px de antes - pedido do Carlos */
+/* TUDO que é complementar usa a mesma letra da tabela (ver
+   VF_FONTE_TABELA) - antes só o \begin{array} levava a serifa, e um
+   texto escrito solto ali do lado (um complemento, uma observação que
+   não é legenda) saía na fonte do app, destoando da tabela logo acima.
+   A tabela continua declarando a própria fonte, então nada muda nela;
+   o que muda é o texto que mora em volta */
+.vf-elemento-html-bloco,.vf-complementar-conteudo{font-family:'Charter','Iowan Old Style',Georgia,'Times New Roman',serif}
 /* sobrescrito/subscrito sem esticar a linha: vertical-align:super (o
    padrão do navegador pro <sup>) empurra a caixa da linha pra cima e a
    linha inteira fica mais alta que as vizinhas - numa tabela, a linha
@@ -2079,7 +2086,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-077';
+const VERSAO_APP = '2026-09-17-080';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -15006,7 +15013,7 @@ async function vfCarregarPreviewNotaVF(questaoVfId){
     vfMontarPreviewNotasVF(container, vfNotaPreviewCacheVF.get(questaoVfId), questaoVfId);
     return;
   }
-  const {data} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, texto, ordem_fixacao, alinhamento, cor, origem_nota_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).eq('fixada', true).order('ordem_fixacao', {ascending: true}).order('id'));
+  const {data} = await buscarTudoPaginadoVF(() => sb.from('notas_vf').select('id, texto, ordem_fixacao, alinhamento, cor, origem_nota_id, eh_mnemonico', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).eq('fixada', true).order('ordem_fixacao', {ascending: true}).order('id'));
   const notas = data || [];
   vfNotaPreviewCacheVF.set(questaoVfId, notas);
   // reconfere o elemento depois do await - se a pessoa já avançou pra
@@ -15166,12 +15173,17 @@ function vfMontarPreviewNotasVF(container, notas, questaoVfId){
     // padding simétrico quando centralizado - senão o espaço reservado
     // à direita pra alça (32px) puxava o texto visualmente pra esquerda,
     // mesmo com text-align:center
-    const paddingTexto = alinhamento === 'centro' ? 'padding:0 32px' : 'padding-right:32px';
+    // espaço reservado à direita: a alça de arrastar (e o selo de
+    // mnemônico, quando tem) moram nesse canto - sem a reserva o texto
+    // passaria por baixo deles
+    const reservaDireita = n.eh_mnemonico ? 58 : 32;
+    const paddingTexto = alinhamento === 'centro' ? `padding:0 ${reservaDireita}px` : `padding-right:${reservaDireita}px`;
     const conteudoInterno = temTabela
       ? formatarTextoItemVF(n.texto, {listaNumerada: true})
       : `<div style="color:#333;line-height:1.4;text-align:${alinhamentoCss};${paddingTexto}">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>`;
     el.innerHTML = `<div class="${classeCard}" data-alinhamento-nota="${alinhamento}" data-cor-nota="${n.cor || ''}" style="position:relative;cursor:pointer;margin-bottom:0;${estiloCor}" ontouchstart="vfIniciarPressionarNotaPreviewVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaPreviewSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaPreviewSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaPreviewVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaPreviewSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaPreviewSilenciosoVF()" onclick="vfCliqueNotaPreviewVF(event,'${questaoVfId}')">${conteudoInterno}
-      <div class="vf-alca-nota-preview" data-nota-id="${n.id}" ontouchstart="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" onmousedown="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#bbb;cursor:grab;touch-action:none">${VF_ICONE_ALCA_ARRASTO_VF}</div>
+      ${n.eh_mnemonico ? `<span title="Mnemônico" style="position:absolute;right:36px;top:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:#C9736C;pointer-events:none">${VF_ICONE_MNEMONICO_VF}</span>` : ''}
+      <div class="vf-alca-nota-preview" data-nota-id="${n.id}" ontouchstart="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" onmousedown="vfIniciarArrastoNotaPreviewVF(event,'${n.id}')" style="position:absolute;right:6px;top:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#bbb;cursor:grab;touch-action:none">${VF_ICONE_ALCA_ARRASTO_VF}</div>
     </div>`;
     container.appendChild(el);
   });
@@ -15593,7 +15605,7 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   const textoLimpo = (texto || '').trim();
   // mesma formatação das notas: **negrito**, *itálico*, linhas com "- "
   // viram lista, quebras de linha preservadas, símbolos matemáticos
-  span.innerHTML = formatarTextoItemVF(textoLimpo);
+  span.innerHTML = formatarTextoItemVF(textoLimpo, {listaNumerada: true});
   balao.style.whiteSpace = 'normal'; // o HTML já traz as quebras (<br>) - com pre-line elas dobrariam
   // largura conforme a quantidade de texto: pouca informação continua no
   // balão estreito; muita informação ganha um balão mais largo (menos
@@ -16322,7 +16334,7 @@ function vfEditorGerarCodigoVF(){
 function vfEditorAtualizarPreviewVF(){
   const preview = document.getElementById('vf-gerador-tabela-preview');
   const codigo = vfEditorGerarCodigoVF();
-  preview.innerHTML = codigo.trim() ? formatarTextoItemVF(codigo) : '<p style="color:#bbb;text-align:center;padding:20px 0">Adicione um bloco pra ver a prévia aqui</p>';
+  preview.innerHTML = codigo.trim() ? formatarTextoItemVF(codigo, {listaNumerada: true}) : '<p style="color:#bbb;text-align:center;padding:20px 0">Adicione um bloco pra ver a prévia aqui</p>';
 }
 
 async function vfCopiarCodigoGeradorTabelaVF(botao){
@@ -16460,7 +16472,7 @@ function vfRenderizarListaBibliotecaComplementarVF(lista){
           <button style="width:auto;padding:6px 10px;font-size:var(--fs-c);border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#B23A34;cursor:pointer" onclick="vfExcluirElementoBibliotecaVF('${item.id}')" title="Excluir da biblioteca">✕</button>
         </div>
       </div>
-      <div id="vf-preview-biblioteca-${item.id}" class="hidden" style="margin-top:10px">${formatarTextoItemVF(item.latex_fonte)}</div>
+      <div id="vf-preview-biblioteca-${item.id}" class="hidden vf-complementar-conteudo" style="margin-top:10px">${formatarTextoItemVF(item.latex_fonte, {listaNumerada: true})}</div>
     </div>`;
   }).join('');
 }
@@ -16721,12 +16733,12 @@ function vfRenderizarComplementarLocalVF(item){
   const cabecalho = `<div style="display:flex;justify-content:flex-end;margin-bottom:6px">
     <button style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="vfEditarComplementarLocalVF('${item.id}')">Editar</button>
   </div>`;
-  container.innerHTML = `<div>${cabecalho}${(() => {
+  container.innerHTML = `<div>${cabecalho}<div class="vf-complementar-conteudo">${(() => {
     vfContextoRenderizacaoSvgVF = {tipo: 'campo-vf', questaoId: item.id, campo: 'complementar_local'};
-    const html = formatarTextoItemVF(item.complementar_local);
+    const html = formatarTextoItemVF(item.complementar_local, {listaNumerada: true});
     vfContextoRenderizacaoSvgVF = null;
     return html;
-  })()}</div>`;
+  })()}</div></div>`;
 }
 
 // reabre o modal Complementar já com o conteúdo local atual preenchido
@@ -16858,7 +16870,7 @@ function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
     // cabeçalho e desfazer (ver vfAdicionarBotaoRemoverAnexoVF). Os ids
     // ficam no próprio bloco pra essa barrinha saber o que desanexar
     vfContextoRenderizacaoSvgVF = {tipo: 'elemento-html', elementoId: elemento.id};
-    const conteudoFormatado = formatarTextoItemVF(elemento.latex_fonte);
+    const conteudoFormatado = formatarTextoItemVF(elemento.latex_fonte, {listaNumerada: true});
     vfContextoRenderizacaoSvgVF = null;
     return `<div style="margin-top:${indiceBloco === 0 ? 0 : 18}px"><div id="${idBloco}" class="vf-elemento-html-bloco" data-elemento-id="${elemento.id}" data-ligacao-id="${ligacao.id}" data-questao-vf-id="${questaoVfId}" data-mapa-anotacoes='${escapeHtml(JSON.stringify([...mapaAnotacoes]))}'>${conteudoFormatado}</div></div>`;
   });
@@ -17513,7 +17525,7 @@ async function vfAdicionarNotaFixadaDaIrmaVF(notaId){
 
   const fixadasAtuais = vfNotaPreviewCacheVF.get(destino) || [];
   const idProvisorio = 'nova-' + Date.now();
-  const notaLocal = {id: idProvisorio, texto: origem.texto, ordem_fixacao: fixadasAtuais.length, alinhamento: origem.alinhamento || null, cor: origem.cor || null, origem_nota_id: origem.id};
+  const notaLocal = {id: idProvisorio, texto: origem.texto, ordem_fixacao: fixadasAtuais.length, alinhamento: origem.alinhamento || null, cor: origem.cor || null, origem_nota_id: origem.id, eh_mnemonico: !!origem.eh_mnemonico};
   const listaNova = [...fixadasAtuais, notaLocal];
   vfNotaPreviewCacheVF.set(destino, listaNova);
   notasVF.add(destino);
@@ -17542,7 +17554,7 @@ async function vfAdicionarNotaFixadaDaIrmaVF(notaId){
     fixada: true,
     ordem_fixacao: fixadasAtuais.length,
     origem_nota_id: origem.id // só pra não reoferecer a mesma nota - a cópia é independente
-  }).select('id, texto, ordem_fixacao, alinhamento, cor, origem_nota_id').single();
+  }).select('id, texto, ordem_fixacao, alinhamento, cor, origem_nota_id, eh_mnemonico').single();
 
   if(error || !data){
     // desfaz o otimismo: tira a nota da pilha e devolve a oferta
@@ -18032,6 +18044,16 @@ async function vfAlternarMnemonicoNotaVF(notaId, mnemonicoAtual){
     btn.setAttribute('onclick', `vfAlternarMnemonicoNotaVF('${notaId}', ${novoValor})`);
   }
   vfListaNotasCacheVF.delete(questaoNotaVfAtual); // invalida - o campo "eh_mnemonico" mudou dentro da lista completa também
+  // o card da página mostra o selo de mnemônico: atualiza o que já está
+  // em memória e remonta a pilha, senão o selo só apareceria na próxima
+  // vez que a questão fosse montada do zero
+  const fixadas = vfNotaPreviewCacheVF.get(questaoNotaVfAtual);
+  const naPilha = fixadas?.find(x => x.id === notaId);
+  if(naPilha){
+    naPilha.eh_mnemonico = novoValor;
+    const container = document.getElementById('vf-preview-notas-container');
+    if(container && container.dataset.questaoId === questaoNotaVfAtual) vfMontarPreviewNotasVF(container, fixadas, questaoNotaVfAtual);
+  }
   await sb.from('notas_vf').update({eh_mnemonico: novoValor}).eq('id', notaId);
 }
 
