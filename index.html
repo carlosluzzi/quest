@@ -2089,7 +2089,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-083';
+const VERSAO_APP = '2026-09-17-084';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6521,6 +6521,29 @@ let vfGeracaoCanvasVF = 0;
 // desenho da tela de trás guardado enquanto a folha de rascunho está
 // aberta - o que estava riscado no Flash/Quest volta pra lá ao fechar
 let vfDesenhoGuardadoTelaAnteriorVF = null;
+// pilha de desfazer de cada tela, guardada ao sair dela e devolvida ao
+// voltar - achado real: ao voltar do rascunho pro Flash (ou o contrário),
+// o desenho voltava como UMA entrada só no histórico, e "Desfazer"
+// apagava tudo de uma vez. As entradas por região só valem se o canvas
+// voltar com o mesmo tamanho em pixels; se mudou (girou a tela no meio),
+// cai no comportamento antigo (entrada única)
+let vfHistoricoGuardadoPorTelaVF = {};
+function vfGuardarHistoricoDaTelaVF(tela){
+  const canvas = document.getElementById('vf-canvas-desenho');
+  if(!canvas || !tela) return;
+  vfHistoricoGuardadoPorTelaVF[tela] = {historico: vfHistoricoDesenho.slice(), indice: vfIndiceHistoricoVF, w: canvas.width, h: canvas.height};
+}
+// devolve true se conseguiu reaproveitar a pilha guardada (canvas do mesmo tamanho)
+function vfDevolverHistoricoDaTelaVF(tela){
+  const canvas = document.getElementById('vf-canvas-desenho');
+  const guardado = vfHistoricoGuardadoPorTelaVF[tela];
+  delete vfHistoricoGuardadoPorTelaVF[tela];
+  if(!canvas || !guardado || guardado.w !== canvas.width || guardado.h !== canvas.height) return false;
+  vfHistoricoDesenho = guardado.historico;
+  vfIndiceHistoricoVF = guardado.indice;
+  vfAtualizarBotoesHistoricoVF();
+  return true;
+}
 function vfGuardarDesenhoDaTelaAnteriorVF(){
   vfDesenhoGuardadoTelaAnteriorVF = null;
   const canvas = document.getElementById('vf-canvas-desenho');
@@ -6535,6 +6558,7 @@ function vfGuardarDesenhoDaTelaAnteriorVF(){
       largura: content ? content.clientWidth : null,
       altura: parseFloat(canvas.style.height) || null
     };
+    vfGuardarHistoricoDaTelaVF(tela);
   }catch(e){ vfDesenhoGuardadoTelaAnteriorVF = null; }
 }
 function vfRestaurarDesenhoDaTelaAnteriorVF(){
@@ -6560,7 +6584,7 @@ function vfRestaurarDesenhoDaTelaAnteriorVF(){
     }
     vfCtxDesenho.drawImage(img, 0, 0, larguraDestino, alturaDestino);
     vfCanvasPodeTerConteudoVF = true;
-    vfSalvarEstadoHistoricoVF(); // entra no desfazer da tela de volta
+    if(!vfDevolverHistoricoDaTelaVF(guardado.tela)) vfSalvarEstadoHistoricoVF(); // pilha traço a traço de volta; senão, entrada única
     mostrarBarraDesenhoVF();
   };
   img.src = guardado.dataUrl;
@@ -6755,7 +6779,23 @@ function vfRedimensionarCanvasDesenhoInternoVF(){
   // filtro, por exemplo) - achado real: isso deixava até interações
   // sem nada a ver com a caneta com uma sensação de travamento
   const tinhaConteudoAntes = vfCanvasPodeTerConteudoVF && larguraAntiga > 0 && alturaAntiga > 0;
-  const snapshotAntesDoResize = tinhaConteudoAntes ? canvas.toDataURL() : null;
+  // cópia SÍNCRONA canvas→canvas (não toDataURL + Image): o redesenho
+  // acontece no mesmo quadro em que o canvas é redimensionado, sem
+  // nenhum instante em branco no meio. Achado real: com a imagem
+  // assíncrona, cada redimensionamento (abrir a folha de rascunho,
+  // voltar pro Flash, barra de desenho aparecendo) apagava o canvas e
+  // só repintava quando a imagem carregava - era o "piscar", e como
+  // vários redimensionamentos se encadeiam na troca de tela, piscava
+  // várias vezes seguidas
+  let copiaAntesDoResize = null;
+  if(tinhaConteudoAntes){
+    try{
+      copiaAntesDoResize = document.createElement('canvas');
+      copiaAntesDoResize.width = larguraAntiga; copiaAntesDoResize.height = alturaAntiga;
+      copiaAntesDoResize.getContext('2d').drawImage(canvas, 0, 0);
+    }catch(e){ copiaAntesDoResize = null; }
+  }
+  const snapshotAntesDoResize = null; // caminho antigo (dataUrl) mantido só como fallback pelo histórico
   const noRascunhoAgora = !document.getElementById('aba-rascunho-livre-vf')?.classList.contains('hidden');
   const larguraConteudoAntes = noRascunhoAgora ? window.innerWidth : (content ? content.clientWidth : null);
   const alturaConteudoAntes = noRascunhoAgora ? window.innerHeight : (content ? Math.min(Math.max(content.scrollHeight, content.offsetHeight), window.innerHeight * 8) : null);
@@ -6789,9 +6829,24 @@ function vfRedimensionarCanvasDesenhoInternoVF(){
   // desenho mais novo em vez de preservar. Cai no histórico só quando não
   // há snapshot disponível (ex: canvas ainda não tinha nada, como ao abrir
   // a questão pela primeira vez, mas girar a tela trouxe um resize)
-  const origemRestauracao = snapshotAntesDoResize
+  if(copiaAntesDoResize){
+    // redesenha AGORA, no mesmo quadro, com o fator de escala entre o
+    // conteúdo de antes e o de agora (mesma régua do caminho assíncrono)
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    let larguraDestino = copiaAntesDoResize.width/dpr, alturaDestino = copiaAntesDoResize.height/dpr;
+    if(content && larguraConteudoAntes && alturaConteudoAntes){
+      const noRascunhoDepois = !document.getElementById('aba-rascunho-livre-vf')?.classList.contains('hidden');
+      const novaLargura = noRascunhoDepois ? window.innerWidth : content.clientWidth;
+      const novaAltura = noRascunhoDepois ? window.innerHeight : Math.min(Math.max(content.scrollHeight, content.offsetHeight), window.innerHeight * 8);
+      larguraDestino = (copiaAntesDoResize.width/dpr) * (novaLargura / larguraConteudoAntes);
+      alturaDestino = (copiaAntesDoResize.height/dpr) * (novaAltura / alturaConteudoAntes);
+    }
+    ctx.drawImage(copiaAntesDoResize, 0, 0, larguraDestino, alturaDestino);
+  }
+  const origemRestauracao = copiaAntesDoResize ? null : (snapshotAntesDoResize
     ? {dataUrl: snapshotAntesDoResize, larguraConteudo: larguraConteudoAntes, alturaConteudo: alturaConteudoAntes}
-    : (typeof vfIndiceHistoricoVF !== 'undefined' && vfIndiceHistoricoVF >= 0 && vfHistoricoDesenho[vfIndiceHistoricoVF]) || null;
+    : (typeof vfIndiceHistoricoVF !== 'undefined' && vfIndiceHistoricoVF >= 0 && vfHistoricoDesenho[vfIndiceHistoricoVF]) || null);
   if(origemRestauracao){
     // ver vfGeracaoCanvasVF: se a tela mudar (ou o canvas for limpo de
     // propósito) entre o pedido e a chegada da imagem, essa restauração
@@ -19484,6 +19539,7 @@ function fecharRascunhoLivreVF(){
 
 function vfSalvarRascunhoLivreVF(){
   if(!vfRascunhoProntoVF) return; // folha ainda abrindo (ou já fechada): o canvas pode ter resto de outra tela
+  vfGuardarHistoricoDaTelaVF('rascunho'); // a pilha de desfazer da folha volta com ela na próxima abertura (mesma sessão)
   const canvas = document.getElementById('vf-canvas-desenho');
   const papel = document.getElementById('rascunho-livre-papel');
   const caixas = vfCaixasTextoRascunhoVF();
@@ -19533,28 +19589,12 @@ function vfRestaurarRascunhoLivreVF(){
     }
     vfCtxDesenho.drawImage(img, 0, 0, larguraDestino, alturaDestino);
     vfCanvasPodeTerConteudoVF = true; // mesma proteção do outro caminho de restauração
-    vfSalvarEstadoHistoricoVF(); // entra no histórico de desfazer, senão "Desfazer" não teria o que desfazer
+    if(!vfDevolverHistoricoDaTelaVF('rascunho')) vfSalvarEstadoHistoricoVF(); // pilha traço a traço de volta; senão, entrada única
   };
-  // seguro: a folha nasce e o layout ainda se ajusta por alguns quadros
-  // (barra de desenho aparecendo, teclado sumindo, giro de tela). Se um
-  // desses ajustes redimensionar o canvas, ele é zerado - redesenhar uma
-  // vez depois que tudo assentou devolve a folha sem custo nenhum
-  setTimeout(() => {
-    if(document.getElementById('aba-rascunho-livre-vf')?.classList.contains('hidden')) return;
-    if(geracaoRestauroVF !== vfGeracaoCanvasVF) return; // a folha foi limpa/trocada nesse meio tempo
-    if(!vfCtxDesenho || !img.complete) return;
-    const papelAgora = document.getElementById('rascunho-livre-papel');
-    const dprAgora = (window.devicePixelRatio || 1) * 1.5;
-    let lDest = img.width/dprAgora, aDest = img.height/dprAgora;
-    if(papelAgora && salvo.largura && salvo.altura){
-      lDest = (img.width/dprAgora) * (papelAgora.clientWidth / salvo.largura);
-      aDest = (img.height/dprAgora) * (papelAgora.clientHeight / salvo.altura);
-    }
-    vfCtxDesenho.globalCompositeOperation = 'source-over';
-    vfCtxDesenho.globalAlpha = 1;
-    vfCtxDesenho.drawImage(img, 0, 0, lDest, aDest);
-    vfCanvasPodeTerConteudoVF = true;
-  }, 400);
+  // o redesenho "de segurança" 400ms depois foi removido: o
+  // redimensionamento do canvas agora preserva o conteúdo no mesmo quadro
+  // (cópia canvas→canvas), então não há mais o que repintar - e repintar
+  // por cima duplicava a tinta dos traços translúcidos (destaque)
   img.src = salvo.dataUrl;
 }
 
