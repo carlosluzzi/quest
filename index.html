@@ -1032,12 +1032,20 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         último -->
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee;border-top:0;margin-top:0;padding-top:0">
           <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Tipo</span>
-          <span style="display:flex;justify-content:flex-end;gap:6px;flex:1;min-width:0;flex-wrap:wrap">
+          <span style="display:flex;justify-content:flex-end;gap:6px;flex:1;min-width:0">
             <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Número</button>
             <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Lista</button>
             <button id="vf-filtro-inconsistente" onclick="toggleFiltroTagVF('inconsistente')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Inconsistente</button>
-            <span id="vf-filtros-capitulo-botoes" style="display:contents"></span>
           </span>
+        </div>
+        <!-- recortes de capítulo: só aparece quando a publicação/capítulo
+        selecionado tem linhas em filtros_capitulo_vf (ver vfAtualizarFiltrosCapituloVF) -->
+        <div id="vf-recortes-grupo" class="hidden" style="margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <span style="font-size:var(--fs-b);color:#888">Recortes deste capítulo</span>
+            <span id="vf-recortes-geral" style="font-size:var(--fs-b);color:#888;white-space:nowrap" title="Afirmações do capítulo sem nenhum recorte (conteúdo geral)"></span>
+          </div>
+          <div id="vf-filtros-capitulo-botoes" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:6px"></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
           <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Novas <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-nova-a-cada-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
@@ -2090,7 +2098,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-087';
+const VERSAO_APP = '2026-09-17-088';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6963,7 +6971,8 @@ function vfTocouNaBarra(target){
 // tela, continua funcionando como sempre
 let vfUltimaAtividadeCanetaMs = 0;
 const VF_JANELA_PALMA_MS = 800;
-const VF_RAIO_MAXIMO_DEDO_PX = 22;
+const VF_RAIO_MAXIMO_DEDO_PX = 40;     // achado real: o iPad reporta raio 20-30px pra ponta do dedo - 22 barrava toque normal em Anterior/Próxima
+const VF_JANELA_PALMA_RAIO_MS = 3000;  // o raio só conta como palma se a caneta esteve ativa há pouco
 document.addEventListener('touchstart', (e) => {
   const t = e.changedTouches && e.changedTouches[0];
   if(!t) return;
@@ -6971,8 +6980,12 @@ document.addEventListener('touchstart', (e) => {
   const naBarra = e.target.closest?.('#vf-barra-fixa, #vf-barra-desenho, #vf-painel-caneta, #vf-painel-borracha, #vf-painel-destaque');
   if(!naBarra) return;
   const raio = Math.max(t.radiusX || 0, t.radiusY || 0);
-  const canetaAtiva = (typeof vfDesenhandoAgora !== 'undefined' && vfDesenhandoAgora) || (Date.now() - vfUltimaAtividadeCanetaMs) < VF_JANELA_PALMA_MS;
-  if(canetaAtiva || raio > VF_RAIO_MAXIMO_DEDO_PX){
+  const desdeCaneta = Date.now() - vfUltimaAtividadeCanetaMs;
+  // "desenhando agora" só vale se a caneta de fato reportou algo há pouco -
+  // uma flag presa (traço nunca fechado) não pode travar os botões pra sempre
+  const canetaAtiva = ((typeof vfDesenhandoAgora !== 'undefined' && vfDesenhandoAgora) && desdeCaneta < VF_JANELA_PALMA_RAIO_MS) || desdeCaneta < VF_JANELA_PALMA_MS;
+  const parecePalma = raio > VF_RAIO_MAXIMO_DEDO_PX && desdeCaneta < VF_JANELA_PALMA_RAIO_MS;
+  if(canetaAtiva || parecePalma){
     if(e.cancelable) e.preventDefault(); // sem clique sintético depois
     e.stopImmediatePropagation();       // sem os handlers próprios dos botões (segurar Salvar/Favoritar etc)
   }
@@ -8910,7 +8923,7 @@ async function vfIrParaQuestaoSalvaVF(questaoVfId){
   const posicaoOriginal = estadoVF.posicao;
   document.getElementById('vf-conteudo').innerHTML = `<div style="padding:60px 20px;text-align:center;color:#999">Carregando...</div>`;
   const [{data: questao, error: erroQuestao}, {data: ultimaResposta}] = await Promise.all([
-    sb.from('questoes_vf').select('*, inconsistencias_vf(*)').eq('id', questaoVfId).single(),
+    sb.from('questoes_vf').select('*, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', questaoVfId).single(),
     sb.from('log_respostas_vf').select('acertou, criado_em').eq('questao_vf_id', questaoVfId).eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending: false}).limit(1).maybeSingle()
   ]);
   if(erroQuestao || !questao){
@@ -10792,7 +10805,7 @@ async function vfGarantirConteudoCompletoVF(item){
   if(item.explicacao !== undefined) return; // já carregado nesse próprio objeto (explicacao é o sinal certo agora - texto já vem preenchido desde o pool leve, por causa da Regra 2/família)
   const emCache = vfConteudoCompletoCache.get(item.id);
   if(emCache){ Object.assign(item, emCache); return; }
-  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, inconsistencias_vf(*)').eq('id', item.id).single();
+  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', item.id).single();
   if(error || !data) return;
   vfRegistrarInconsistenciaVF(data);
   vfConteudoCompletoCache.set(item.id, data);
@@ -10844,7 +10857,7 @@ async function vfBuscarConteudoEmLoteVF(itens){
   const pendentes = itens.filter(item => item.explicacao === undefined && !vfConteudoCompletoCache.has(item.id));
   if(!pendentes.length) return;
   const ids = pendentes.map(item => item.id);
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, inconsistencias_vf(*)', {count: 'exact'}).in('id', ids).order('id'));
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
   if(error || !data) return;
   data.forEach(vfRegistrarInconsistenciaVF);
   const porId = new Map(data.map(d => [d.id, d]));
@@ -12137,7 +12150,7 @@ async function vfReconstruirHistoricoDaSessaoVF(){
   }
   if(!resumo || !resumo.length) return null;
   const ids = resumo.map(r => r.id);
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('*, inconsistencias_vf(*)', {count: 'exact'}).in('id', ids).order('id'));
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('*, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
   if(error || !data) return null;
   data.forEach(vfRegistrarInconsistenciaVF);
   const porId = new Map(data.map(d => [d.id, d]));
@@ -12548,7 +12561,7 @@ async function vfCarregarEscopoFiltrosCapituloVF(){
   const chave = vfChaveEscopoFiltrosCapituloVF();
   if(!chave) return [];
   if(vfEscopoFiltrosCapituloCacheVF.has(chave)) return vfEscopoFiltrosCapituloCacheVF.get(chave);
-  let q = sb.from('filtros_capitulo_vf').select('id, nome, capitulo, ordem').eq('bibliografia_id', filtroVF.publicacao);
+  let q = sb.from('filtros_capitulo_vf').select('id, nome, capitulo, ordem, pai_id').eq('bibliografia_id', filtroVF.publicacao);
   // capitulo is null = filtro do livro inteiro (ex: NORMAM-701, sem capítulos)
   q = filtroVF.capitulo ? q.or(`capitulo.is.null,capitulo.eq."${String(filtroVF.capitulo).replace(/"/g, '')}"`) : q.is('capitulo', null);
   const {data, error} = await q.order('ordem').order('nome');
@@ -12566,9 +12579,11 @@ async function vfAtualizarFiltrosCapituloVF(opcoes){
   if(escopoMudou && !(opcoes && opcoes.manterEstado)){ filtroVF.filtrosInc = []; filtroVF.filtrosExc = []; }
   vfEscopoFiltrosCapituloVF.chave = chave;
   const cont = document.getElementById('vf-filtros-capitulo-botoes');
+  const grupo = document.getElementById('vf-recortes-grupo');
   if(!chave){
     vfEscopoFiltrosCapituloVF.filtros = [];
     if(cont) cont.innerHTML = '';
+    if(grupo) grupo.classList.add('hidden');
     return;
   }
   const filtros = await vfCarregarEscopoFiltrosCapituloVF();
@@ -12578,14 +12593,54 @@ async function vfAtualizarFiltrosCapituloVF(opcoes){
   filtroVF.filtrosInc = (filtroVF.filtrosInc || []).filter(id => ids.has(id));
   filtroVF.filtrosExc = (filtroVF.filtrosExc || []).filter(id => ids.has(id));
   vfRenderizarBotoesFiltrosCapituloVF();
+  vfAtualizarContagensRecortesVF(); // contagens chegam depois, sem segurar os botões
 }
+// contagem por recorte + "Geral" (sem nenhum recorte), respeitando os
+// demais filtros ativos (Tipo/Inconsistente) - RPC contar_recortes_capitulo_vf.
+// Não desconta exclusões do usuário (mesma régua do "total" do panorama)
+let vfContagensRecortesVF = new Map(); // filtro_id (ou 'geral') -> total
+async function vfAtualizarContagensRecortesVF(){
+  const chave = vfChaveEscopoFiltrosCapituloVF();
+  if(!chave || !(vfEscopoFiltrosCapituloVF.filtros || []).length) return;
+  const {data, error} = await sb.rpc('contar_recortes_capitulo_vf', {
+    p_bibliografia_id: filtroVF.publicacao,
+    p_capitulo: filtroVF.capitulo || null,
+    p_numero: !!filtroVF.numero,
+    p_lista: !!filtroVF.lista,
+    p_inconsistente: !!filtroVF.inconsistente
+  });
+  if(error || vfChaveEscopoFiltrosCapituloVF() !== chave) return;
+  vfContagensRecortesVF = new Map((data || []).map(r => [r.filtro_id || 'geral', Number(r.total) || 0]));
+  vfPintarBotoesFiltrosCapituloVF();
+  const geral = document.getElementById('vf-recortes-geral');
+  if(geral) geral.textContent = vfContagensRecortesVF.has('geral') ? `Geral (${vfContagensRecortesVF.get('geral')})` : '';
+}
+// pais na ordem do campo "ordem"; cada filho (pai_id) logo abaixo do pai,
+// recuado e com traço de ligação. Botão de filho leva tooltip explicando
+// que é subconjunto (pra "Guerra sem Submarino": ✓ Guerra + ✗ Submarino)
 function vfRenderizarBotoesFiltrosCapituloVF(){
   const cont = document.getElementById('vf-filtros-capitulo-botoes');
+  const grupo = document.getElementById('vf-recortes-grupo');
   if(!cont) return;
-  const filtros = vfEscopoFiltrosCapituloVF.filtros || [];
-  cont.innerHTML = filtros.map(f => `<button class="vf-btn-filtro-tipo vf-btn-filtro-capitulo" data-filtro-id="${f.id}" data-nome="${escapeHtml(f.nome)}" onclick="vfCiclarFiltroCapituloVF('${f.id}')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">${escapeHtml(f.nome)}</button>`).join('');
+  const filtros = (vfEscopoFiltrosCapituloVF.filtros || []).slice().sort((a,b) => (a.ordem||0) - (b.ordem||0) || String(a.nome).localeCompare(String(b.nome), 'pt'));
+  if(!filtros.length){ cont.innerHTML = ''; if(grupo) grupo.classList.add('hidden'); return; }
+  if(grupo) grupo.classList.remove('hidden');
+  const porPai = new Map();
+  filtros.forEach(f => { const k = f.pai_id || null; if(!porPai.has(k)) porPai.set(k, []); porPai.get(k).push(f); });
+  const nomeDe = id => filtros.find(f => f.id === id)?.nome || '';
+  const botao = (f) => `<button class="vf-btn-recorte" data-filtro-id="${f.id}" data-nome="${escapeHtml(f.nome)}" onclick="vfCiclarFiltroCapituloVF('${f.id}')" ${f.pai_id ? `title="Subconjunto de ${escapeHtml(nomeDe(f.pai_id))} — para ver ${escapeHtml(nomeDe(f.pai_id))} sem ${escapeHtml(f.nome)}, marque ✓ ${escapeHtml(nomeDe(f.pai_id))} e ✗ ${escapeHtml(f.nome)}"` : ''} style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 10px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">${escapeHtml(f.nome)}</button>`;
+  const linhas = [];
+  const raiz = porPai.get(null) || [];
+  // filhos cujo pai não está no escopo (dado inconsistente) aparecem como raiz
+  filtros.forEach(f => { if(f.pai_id && !filtros.some(p => p.id === f.pai_id) && !raiz.includes(f)) raiz.push(f); });
+  raiz.forEach(pai => {
+    linhas.push(`<div style="display:flex;align-items:center;gap:6px">${botao(pai)}</div>`);
+    (porPai.get(pai.id) || []).forEach(filho => {
+      linhas.push(`<div style="display:flex;align-items:center;gap:6px;margin-left:14px"><span style="color:#bbb;font-size:var(--fs-c);line-height:1">└</span>${botao(filho)}</div>`);
+    });
+  });
+  cont.innerHTML = linhas.join('');
   vfPintarBotoesFiltrosCapituloVF();
-  vfIgualarLarguraBotoesFiltroVF();
 }
 function vfEstadoFiltroCapituloVF(id){
   if((filtroVF.filtrosInc || []).includes(id)) return 'inc';
@@ -12600,13 +12655,13 @@ function vfCiclarFiltroCapituloVF(id){
   else if(estado === 'inc') filtroVF.filtrosExc.push(id);
   vfSalvarFiltroNoStorageVF();
   vfPintarBotoesFiltrosCapituloVF();
-  vfIgualarLarguraBotoesFiltroVF();
   vfRecarregarPoolComDebounceVF();
 }
 function vfPintarBotoesFiltrosCapituloVF(){
-  document.querySelectorAll('.vf-btn-filtro-capitulo').forEach(btn => {
+  document.querySelectorAll('.vf-btn-recorte').forEach(btn => {
     const estado = vfEstadoFiltroCapituloVF(btn.dataset.filtroId);
-    const nome = btn.dataset.nome || '';
+    const n = vfContagensRecortesVF.get(btn.dataset.filtroId);
+    const nome = (btn.dataset.nome || '') + (typeof n === 'number' ? ` (${n})` : '');
     if(estado === 'inc'){
       btn.style.background = '#B23A34'; btn.style.color = '#fff'; btn.style.borderColor = '#B23A34';
       btn.textContent = '✓ ' + nome;
@@ -12652,6 +12707,7 @@ function toggleFiltroTagVF(tipo){
   if(!VF_FILTROS_TIPO_VF.includes(tipo)) return;
   filtroVF[tipo] = !filtroVF[tipo];
   vfPintarBotoesFiltroTipoVF();
+  vfAtualizarContagensRecortesVF(); // as contagens dos recortes respeitam Tipo/Inconsistente
   vfRecarregarPoolComDebounceVF();
 }
 // pinta os três botões a partir do estado - chamado no toggle e também
@@ -13320,6 +13376,12 @@ function renderizarItemVF(){
   // automática do sistema como NÚMERO/LISTA, que tem fundo sólido).
   // Clicar em qualquer uma abre o popup de gerenciar
   const tagsDaQuestao = vfTagsPorQuestaoVF.get(item.id) || [];
+  // recortes de capítulo da questão (filtros_capitulo_vf) - chips em contorno
+  // cinza, só leitura, ao lado das tags. Não são tags
+  const recortesDaQuestao = (item.questoes_vf_filtros || []).map(x => x.filtros_capitulo_vf).filter(Boolean);
+  const recortesHtml = recortesDaQuestao.map(r =>
+    `<span title="Recorte deste capítulo" style="color:#666;font-weight:600;font-size:var(--fs-a);border:1.5px solid #bbb;border-radius:4px;padding:1.5px 7.5px;white-space:nowrap;display:inline-flex;align-items:center">${escapeHtml(r.nome)}</span>`
+  ).join('');
   const tagsCustomizadasHtml = tagsDaQuestao.map(t =>
     `<span onclick="vfAbrirPopupTagsVF('${item.id}')" style="color:#B23A34;font-weight:600;font-size:var(--fs-a);border:1.5px solid #B23A34;border-radius:4px;padding:1.5px 7.5px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center">${escapeHtml(t.nome)}</span>`
   ).join('');
@@ -13360,6 +13422,7 @@ function renderizarItemVF(){
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center;flex-shrink:0;max-width:60%">
           ${tagsPublicacao}
+          ${recortesHtml}
           ${tagsCustomizadasHtml}
           ${iconeTagAdicionar}
         </div>
