@@ -1032,10 +1032,11 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         último -->
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee;border-top:0;margin-top:0;padding-top:0">
           <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Tipo</span>
-          <span style="display:flex;justify-content:flex-end;gap:6px;flex:1;min-width:0">
+          <span style="display:flex;justify-content:flex-end;gap:6px;flex:1;min-width:0;flex-wrap:wrap">
             <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Número</button>
             <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Lista</button>
             <button id="vf-filtro-inconsistente" onclick="toggleFiltroTagVF('inconsistente')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Inconsistente</button>
+            <span id="vf-filtros-capitulo-botoes" style="display:contents"></span>
           </span>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
@@ -2089,7 +2090,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-084';
+const VERSAO_APP = '2026-09-17-087';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6952,6 +6953,34 @@ function vfTocouNaBarra(target){
             (painelMarcacaoTexto && (painelMarcacaoTexto === target || painelMarcacaoTexto.contains(target))));
 }
 
+// ---- rejeição de palma nas barras de botões ----
+// Escrevendo com a caneta, a lateral da mão/dedo encosta na barra fixa
+// (Salvar, Favoritar, Anterior...) e dispara o botão. Um toque de DEDO
+// nas barras é ignorado quando: (a) tem um traço de caneta em andamento,
+// (b) a caneta esteve ativa há menos de 800ms (a mão ainda está apoiada
+// escrevendo), ou (c) a área do toque é grande demais pra ser a ponta de
+// um dedo (palma/lateral). Toque de dedo normal, com a mão longe da
+// tela, continua funcionando como sempre
+let vfUltimaAtividadeCanetaMs = 0;
+const VF_JANELA_PALMA_MS = 800;
+const VF_RAIO_MAXIMO_DEDO_PX = 22;
+document.addEventListener('touchstart', (e) => {
+  const t = e.changedTouches && e.changedTouches[0];
+  if(!t) return;
+  if(t.touchType === 'stylus'){ vfUltimaAtividadeCanetaMs = Date.now(); return; }
+  const naBarra = e.target.closest?.('#vf-barra-fixa, #vf-barra-desenho, #vf-painel-caneta, #vf-painel-borracha, #vf-painel-destaque');
+  if(!naBarra) return;
+  const raio = Math.max(t.radiusX || 0, t.radiusY || 0);
+  const canetaAtiva = (typeof vfDesenhandoAgora !== 'undefined' && vfDesenhandoAgora) || (Date.now() - vfUltimaAtividadeCanetaMs) < VF_JANELA_PALMA_MS;
+  if(canetaAtiva || raio > VF_RAIO_MAXIMO_DEDO_PX){
+    if(e.cancelable) e.preventDefault(); // sem clique sintético depois
+    e.stopImmediatePropagation();       // sem os handlers próprios dos botões (segurar Salvar/Favoritar etc)
+  }
+}, {capture: true, passive: false});
+document.addEventListener('touchmove', (e) => {
+  const t = e.changedTouches && e.changedTouches[0];
+  if(t && t.touchType === 'stylus') vfUltimaAtividadeCanetaMs = Date.now();
+}, {capture: true, passive: true});
 function vfEhToqueDeCaneta(touch){
   // touchType é a API certa do Safari pra isso: 'stylus' = Apple Pencil,
   // 'direct' = dedo. Em navegadores sem esse campo (não-Safari), cai pra
@@ -11009,6 +11038,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   // mesma técnica de closure - null significa "sem termo ativo" (não
   // filtra nada), preenchido depois que o Promise.all principal resolver
   let vfIdsTermoParaCallbackVF = null;
+  let vfMapaFiltrosCapituloParaCallbackVF = null; // idem pros filtros de capítulo (✓/✗)
   // sinal "interseção por termo já decidida" - resolvido logo depois do
   // bloco que preenche vfIdsTermoParaCallbackVF (ou em qualquer saída por
   // erro, pra nunca deixar o callback pendurado)
@@ -11040,6 +11070,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     // mesma coisa pra tag: sem isso, questão sem a tag voltava pro pool
     // assim que a página seguinte chegasse
     if(filtroVF.tagId) processadas = processadas.filter(q => (vfTagsPorQuestaoVF.get(q.id) || []).some(t => t.id === filtroVF.tagId));
+    if(vfMapaFiltrosCapituloParaCallbackVF) processadas = processadas.filter(q => vfPassaFiltrosCapituloVF(q.id, vfMapaFiltrosCapituloParaCallbackVF)); // mesma regra ✓/✗ nas páginas seguintes
     if(processadas.length){
       estadoVF.pool = estadoVF.pool.concat(processadas);
       vfCalcularFamiliasNoPoolVF(estadoVF.pool); // recalcula pro pool inteiro - as recém-chegadas podem formar família com quem já estava lá
@@ -11056,7 +11087,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     ? sb.rpc('buscar_questoes_por_termo_vf', {p_termo: filtroVF.termo})
     : Promise.resolve({data: null, error: null});
 
-  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, {data: todasTagsData}, {data: questoesTagsData}, , {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, ...resultadosEntradaVF] = await Promise.all([
+  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, {data: todasTagsData}, {data: questoesTagsData}, , {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, mapaFiltrosCapituloVF, ...resultadosEntradaVF] = await Promise.all([
     buscarTudoPaginadoVF(montarQueryQuestoesVF, aoCarregarRestanteQuestoesVF),
     buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     buscarTudoPaginadoVF(() => sb.from('exclusoes_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
@@ -11071,8 +11102,10 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     // ANTES de responder se vale a pena pré-buscar o conteúdo completo
     // (P1 - evita ida ao servidor pras questões sem nada anexado)
     buscarTudoPaginadoVF(() => sb.from('questao_elemento_html_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
+    vfCarregarMapaFiltrosCapituloVF(), // null quando nenhum ✓/✗ está marcado (não custa nada)
     ...consultasEntradaVF
   ]);
+  vfMapaFiltrosCapituloParaCallbackVF = mapaFiltrosCapituloVF;
   // se a busca do progresso (estado de cada questão) falhar, NUNCA degrada
   // silenciosamente pra "todas são novas" - isso faria uma resposta
   // subsequente gravar por cima do progresso real que já existia no
@@ -11135,6 +11168,8 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   // junto com o pool. Como roda DEPOIS de vfProcessarQuestoesCruasVF, as
   // exclusões do usuário já foram aplicadas, igual acontece com o termo
   if(filtroVF.tagId) poolPronto = poolPronto.filter(q => (vfTagsPorQuestaoVF.get(q.id) || []).some(t => t.id === filtroVF.tagId));
+  // filtros de capítulo (✓/✗) - em memória, pelo mapa que veio junto
+  if(mapaFiltrosCapituloVF) poolPronto = poolPronto.filter(q => vfPassaFiltrosCapituloVF(q.id, mapaFiltrosCapituloVF));
   resolverTermoProntoVF(); // libera as páginas seguintes que ficaram esperando a interseção
   vfCalcularFamiliasNoPoolVF(poolPronto);
   // anexa os dados de entrada como propriedades extras no próprio array
@@ -11231,6 +11266,7 @@ function vfLimparFiltroVF(){
   if(elModulo) elModulo.value = '';
   if(elPub){ elPub.innerHTML = '<option value="">Todas as publicações</option>'; elPub.disabled = true; }
   if(elCap){ elCap.innerHTML = '<option value="">Todos os capítulos</option>'; elCap.disabled = true; }
+  vfAtualizarFiltrosCapituloVF(); // sem publicação = sem botões contextuais
   ['numero', 'lista'].forEach(tipo => {
     const btn = document.getElementById('vf-filtro-'+tipo);
     if(!btn) return;
@@ -11719,7 +11755,7 @@ async function vfRenderizarConteudoPainelSessaoVF(){
 // trocar de filtro permite o aviso repetir quando o mesmo momento
 // chegar nele
 function vfChaveFiltroAtualVF(){
-  return JSON.stringify({m: filtroVF.modulo, p: filtroVF.publicacao, c: filtroVF.capitulo, n: filtroVF.numero, l: filtroVF.lista, i: filtroVF.inconsistente, t: filtroVF.termo});
+  return JSON.stringify({m: filtroVF.modulo, p: filtroVF.publicacao, c: filtroVF.capitulo, n: filtroVF.numero, l: filtroVF.lista, i: filtroVF.inconsistente, fi: filtroVF.filtrosInc || [], fe: filtroVF.filtrosExc || [], t: filtroVF.termo});
 }
 let vfAvisosRodeiTudoMostradosVF = new Set();
 
@@ -11749,6 +11785,8 @@ function vfMontarPlaceholderPanoramaVF(){
     nomePublicacao ? `<div class="vf-filtro-linha"><span style="flex-shrink:0">Publicação</span><span class="vf-filtro-valor" style="font-size:var(--fs-d);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(nomePublicacao)}">${escapeHtml(nomePublicacao)}</span></div>` : '',
     filtroVF.capitulo ? `<div class="vf-filtro-linha"><span>Capítulo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.capitulo)}</span></div>` : '',
     tipoTexto ? `<div class="vf-filtro-linha"><span>Tipo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(tipoTexto)}</span></div>` : '',
+    (filtroVF.filtrosInc||[]).length ? `<div class="vf-filtro-linha"><span>Só</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(vfNomesFiltrosCapituloVF(filtroVF.filtrosInc).join(' ou '))}</span></div>` : '',
+    (filtroVF.filtrosExc||[]).length ? `<div class="vf-filtro-linha"><span>Sem</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(vfNomesFiltrosCapituloVF(filtroVF.filtrosExc).join(', '))}</span></div>` : '',
     filtroVF.tagId ? `<div class="vf-filtro-linha"><span>Tag</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.tagNome || '—')}</span></div>` : '',
     filtroVF.termo ? `<div class="vf-filtro-linha"><span>Palavra-chave</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">"${escapeHtml(filtroVF.termo)}"${vfFiltroTermoIgnoradoVF ? ' <span style="color:#B23A34">(ignorada - erro de rede)</span>' : ''}</span></div>` : ''
   ].filter(Boolean).join('');
@@ -11789,7 +11827,9 @@ async function vfCarregarPanoramaFiltroVF(){
     p_capitulo: filtroVF.capitulo || null,
     p_numero: !!filtroVF.numero,
     p_lista: !!filtroVF.lista,
-    p_inconsistente: !!filtroVF.inconsistente
+    p_inconsistente: !!filtroVF.inconsistente,
+    p_filtros_inc: (filtroVF.filtrosInc && filtroVF.filtrosInc.length) ? filtroVF.filtrosInc : null,
+    p_filtros_exc: (filtroVF.filtrosExc && filtroVF.filtrosExc.length) ? filtroVF.filtrosExc : null
   });
   const totalFiltro = panorama?.[0]?.total || 0;
   const jaVistas = panorama?.[0]?.ja_vistas || 0;
@@ -12483,7 +12523,128 @@ function vfRecarregarPoolComDebounceVF(){
 function mudarFiltroVF(){
   filtroVF.publicacao = document.getElementById('vf-filtro-publicacao').value || null;
   filtroVF.capitulo = document.getElementById('vf-filtro-capitulo').value || null;
+  vfAtualizarFiltrosCapituloVF(); // botões contextuais do escopo novo (zera ✓/✗ se o escopo mudou)
   vfRecarregarPoolComDebounceVF();
+}
+
+// ---- filtros de capítulo (botões contextuais ao lado de Tipo) ----
+// Tabelas só de leitura pelo app: filtros_capitulo_vf (escopo = bibliografia
+// + capítulo, ou só bibliografia quando capitulo é null) e
+// questoes_vf_filtros (quais afirmações têm cada filtro). NÃO são tags -
+// não aparecem no botão/lista "Tags". Novos recortes entram direto no
+// banco e aparecem sem deploy.
+// Cada botão cicla neutro → ✓ (incluir) → ✗ (excluir) → neutro:
+//   ✓: só afirmações com ALGUM dos ✓ (OR) - o conteúdo geral não entra
+//   ✗: tira as afirmações com QUALQUER ✗ - o geral entra
+//   os dois juntos: tem algum ✓ AND não tem nenhum ✗
+// Estado em filtroVF.filtrosInc / filtroVF.filtrosExc (ids). Trocar a
+// publicação/capítulo troca o escopo: botões somem e o estado zera
+let vfEscopoFiltrosCapituloVF = {chave: null, filtros: []};
+let vfEscopoFiltrosCapituloCacheVF = new Map(); // chave -> linhas de filtros_capitulo_vf
+function vfChaveEscopoFiltrosCapituloVF(){
+  return filtroVF.publicacao ? `${filtroVF.publicacao}|${filtroVF.capitulo || ''}` : null;
+}
+async function vfCarregarEscopoFiltrosCapituloVF(){
+  const chave = vfChaveEscopoFiltrosCapituloVF();
+  if(!chave) return [];
+  if(vfEscopoFiltrosCapituloCacheVF.has(chave)) return vfEscopoFiltrosCapituloCacheVF.get(chave);
+  let q = sb.from('filtros_capitulo_vf').select('id, nome, capitulo, ordem').eq('bibliografia_id', filtroVF.publicacao);
+  // capitulo is null = filtro do livro inteiro (ex: NORMAM-701, sem capítulos)
+  q = filtroVF.capitulo ? q.or(`capitulo.is.null,capitulo.eq."${String(filtroVF.capitulo).replace(/"/g, '')}"`) : q.is('capitulo', null);
+  const {data, error} = await q.order('ordem').order('nome');
+  if(error){ console.warn('filtros_capitulo_vf:', error.message); return []; }
+  const linhas = data || [];
+  vfEscopoFiltrosCapituloCacheVF.set(chave, linhas);
+  return linhas;
+}
+// chamada a cada mudança de publicação/capítulo (e na restauração da UI).
+// manterEstado=true só na restauração: o filtro salvo no aparelho volta
+// com os ✓/✗ que tinha, desde que os ids ainda existam no escopo
+async function vfAtualizarFiltrosCapituloVF(opcoes){
+  const chave = vfChaveEscopoFiltrosCapituloVF();
+  const escopoMudou = chave !== vfEscopoFiltrosCapituloVF.chave;
+  if(escopoMudou && !(opcoes && opcoes.manterEstado)){ filtroVF.filtrosInc = []; filtroVF.filtrosExc = []; }
+  vfEscopoFiltrosCapituloVF.chave = chave;
+  const cont = document.getElementById('vf-filtros-capitulo-botoes');
+  if(!chave){
+    vfEscopoFiltrosCapituloVF.filtros = [];
+    if(cont) cont.innerHTML = '';
+    return;
+  }
+  const filtros = await vfCarregarEscopoFiltrosCapituloVF();
+  if(vfChaveEscopoFiltrosCapituloVF() !== chave) return; // mudou de novo enquanto buscava
+  vfEscopoFiltrosCapituloVF.filtros = filtros;
+  const ids = new Set(filtros.map(f => f.id));
+  filtroVF.filtrosInc = (filtroVF.filtrosInc || []).filter(id => ids.has(id));
+  filtroVF.filtrosExc = (filtroVF.filtrosExc || []).filter(id => ids.has(id));
+  vfRenderizarBotoesFiltrosCapituloVF();
+}
+function vfRenderizarBotoesFiltrosCapituloVF(){
+  const cont = document.getElementById('vf-filtros-capitulo-botoes');
+  if(!cont) return;
+  const filtros = vfEscopoFiltrosCapituloVF.filtros || [];
+  cont.innerHTML = filtros.map(f => `<button class="vf-btn-filtro-tipo vf-btn-filtro-capitulo" data-filtro-id="${f.id}" data-nome="${escapeHtml(f.nome)}" onclick="vfCiclarFiltroCapituloVF('${f.id}')" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">${escapeHtml(f.nome)}</button>`).join('');
+  vfPintarBotoesFiltrosCapituloVF();
+  vfIgualarLarguraBotoesFiltroVF();
+}
+function vfEstadoFiltroCapituloVF(id){
+  if((filtroVF.filtrosInc || []).includes(id)) return 'inc';
+  if((filtroVF.filtrosExc || []).includes(id)) return 'exc';
+  return null;
+}
+function vfCiclarFiltroCapituloVF(id){
+  const estado = vfEstadoFiltroCapituloVF(id);
+  filtroVF.filtrosInc = (filtroVF.filtrosInc || []).filter(x => x !== id);
+  filtroVF.filtrosExc = (filtroVF.filtrosExc || []).filter(x => x !== id);
+  if(estado === null) filtroVF.filtrosInc.push(id);
+  else if(estado === 'inc') filtroVF.filtrosExc.push(id);
+  vfSalvarFiltroNoStorageVF();
+  vfPintarBotoesFiltrosCapituloVF();
+  vfIgualarLarguraBotoesFiltroVF();
+  vfRecarregarPoolComDebounceVF();
+}
+function vfPintarBotoesFiltrosCapituloVF(){
+  document.querySelectorAll('.vf-btn-filtro-capitulo').forEach(btn => {
+    const estado = vfEstadoFiltroCapituloVF(btn.dataset.filtroId);
+    const nome = btn.dataset.nome || '';
+    if(estado === 'inc'){
+      btn.style.background = '#B23A34'; btn.style.color = '#fff'; btn.style.borderColor = '#B23A34';
+      btn.textContent = '✓ ' + nome;
+    }else if(estado === 'exc'){
+      btn.style.background = '#FCEBEB'; btn.style.color = '#A32D2D'; btn.style.borderColor = '#B23A34';
+      btn.textContent = '✗ ' + nome;
+    }else{
+      btn.style.background = '#fff'; btn.style.color = '#888'; btn.style.borderColor = '#ddd';
+      btn.textContent = nome;
+    }
+  });
+}
+// mapa questão -> conjunto de filtros (só do escopo atual), usado pra
+// aplicar ✓/✗ em memória no pool - uma consulta leve (ids), só quando há
+// algum botão marcado
+async function vfCarregarMapaFiltrosCapituloVF(){
+  const inc = filtroVF.filtrosInc || [], exc = filtroVF.filtrosExc || [];
+  if(!filtroVF.publicacao || (!inc.length && !exc.length)) return null;
+  const escopo = await vfCarregarEscopoFiltrosCapituloVF();
+  const idsEscopo = escopo.map(f => f.id);
+  if(!idsEscopo.length) return null;
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf_filtros').select('questao_vf_id, filtro_id', {count: 'exact'}).in('filtro_id', idsEscopo).order('questao_vf_id').order('filtro_id'));
+  if(error) return null;
+  const mapa = new Map();
+  (data || []).forEach(r => { if(!mapa.has(r.questao_vf_id)) mapa.set(r.questao_vf_id, new Set()); mapa.get(r.questao_vf_id).add(r.filtro_id); });
+  return mapa;
+}
+function vfPassaFiltrosCapituloVF(questaoId, mapa){
+  if(!mapa) return true;
+  const inc = filtroVF.filtrosInc || [], exc = filtroVF.filtrosExc || [];
+  const tem = mapa.get(questaoId);
+  if(inc.length && !(tem && inc.some(id => tem.has(id)))) return false;
+  if(exc.length && tem && exc.some(id => tem.has(id))) return false;
+  return true;
+}
+function vfNomesFiltrosCapituloVF(ids){
+  const filtros = vfEscopoFiltrosCapituloVF.filtros || [];
+  return (ids || []).map(id => filtros.find(f => f.id === id)?.nome).filter(Boolean);
 }
 
 const VF_FILTROS_TIPO_VF = ['numero', 'lista', 'inconsistente'];
@@ -13062,6 +13223,7 @@ async function vfRestaurarUIFiltroVF(){
     document.getElementById('vf-filtro-termo-limpar').classList.remove('hidden');
     vfCarregarExpansaoTermoVF(); // não espera - roda em paralelo, só preenche o texto de "buscando também por" quando chegar
   }
+  vfAtualizarFiltrosCapituloVF({manterEstado: true}); // botões do escopo salvo, com os ✓/✗ que tinha
   // o chevron sempre começa fechado, independente de ter filtro ativo ou
   // não - decisão do Carlos: nova sessão sem filtro, ou retomando uma
   // sessão com filtro já aplicado, os dois casos vêm com a caixinha
@@ -13447,12 +13609,58 @@ function vfCopiarComProtecaoDuploToqueVF(elemento, evento){
   vfCopiarTextoElementoVF(elemento);
 }
 
+// textContent puro cola TUDO numa linha só: uma nota escrita como
+//   Como submarino GIA
+//   - GPS
+//   - Inercial
+// virava "Como submarino GIAGPSInercial" ao copiar, porque as quebras da
+// tela são <br>/<li>/<div>, não caracteres de texto. Aqui a estrutura
+// visual é traduzida de volta pra texto: <br> vira quebra, cada bloco
+// termina com quebra, célula de tabela é separada por tabulação (cola
+// direito no Excel/Notion), e o marcador de lista ganha um espaço antes
+// do texto do item
+function vfTextoParaCopiaVF(elemento){
+  const clone = elemento.cloneNode(true);
+  // nada que é botão/enfeite da tela entra no que vai pra área de transferência
+  clone.querySelectorAll('.vf-selinho-copiado, .vf-alca-nota-preview, .vf-tabela-alinhamento, .vf-nota-cor-barra, button').forEach(el => el.remove());
+  clone.querySelectorAll('li > span:first-child').forEach(sp => sp.after(' ')); // marcador ("1.", "C_1") + espaço + texto do item
+  // lista de bolinha volta a sair com "- " na frente: assim o texto
+  // copiado, colado numa outra nota, vira lista de novo em vez de virar
+  // três linhas soltas (a lista de marcador próprio já tem o marcador no
+  // span, por isso só as de bolinha entram aqui)
+  clone.querySelectorAll('ul:not([style*="list-style:none"]) > li').forEach(li => li.prepend('- '));
+  // percorre a árvore emitindo quebra ao ENTRAR e ao SAIR de cada bloco,
+  // mas só quando ainda não tem uma quebra ali - assim uma lista dentro
+  // de um div não vira duas linhas em branco, e um <br><br> de propósito
+  // continua valendo como parágrafo
+  const BLOCOS_VF = new Set(['DIV','P','LI','UL','OL','TR','TABLE','H1','H2','H3','BLOCKQUOTE','PRE','SECTION','ARTICLE']);
+  let saida = '';
+  const quebrar = () => { if(saida && !saida.endsWith('\n')) saida += '\n'; };
+  (function andarVF(no){
+    no.childNodes.forEach(filho => {
+      if(filho.nodeType === 3){ saida += filho.nodeValue; return; } // texto puro
+      if(filho.nodeType !== 1) return;
+      const tag = filho.tagName;
+      if(tag === 'BR'){ saida += '\n'; return; }
+      const ehBloco = BLOCOS_VF.has(tag);
+      if(ehBloco) quebrar();
+      andarVF(filho);
+      if(tag === 'TD' || tag === 'TH') saida += '\t'; // célula de tabela: tabulação cola certo em planilha
+      if(ehBloco) quebrar();
+    });
+  })(clone);
+  return saida
+    .replace(/\t\n/g, '\n')      // tabulação sobrando no fim da linha da tabela
+    .replace(/[ \t]+\n/g, '\n')   // espaço sobrando no fim de cada linha
+    .replace(/\n{3,}/g, '\n\n')   // no máximo uma linha em branco seguida
+    .trim();
+}
 async function vfCopiarTextoElementoVF(elemento){
   // remove qualquer selinho "Copiado" que ainda esteja lá (de um clique
   // duplo rápido, antes do anterior sumir) ANTES de ler o texto - senão
   // o textContent incluía a palavra "Copiado" junto no texto copiado
   elemento.querySelector(':scope > .vf-selinho-copiado')?.remove();
-  const texto = elemento.textContent;
+  const texto = vfTextoParaCopiaVF(elemento);
   try{
     await navigator.clipboard.writeText(texto.trim());
     vfMostrarSelinhoCopiadoVF(elemento);
