@@ -2079,7 +2079,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-074';
+const VERSAO_APP = '2026-09-17-077';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5717,6 +5717,35 @@ function vfAplicarRecuoNotaVF(ta, remover){
   ta.selectionStart = Math.max(inicioBloco, ini + deltaPrimeira);
   ta.selectionEnd = Math.max(inicioBloco, fim + deltaTotal);
 }
+// \centro{...}, \esquerda{...} e \direita{...} - alinham só AQUELE
+// trecho. O alinhamento que a barrinha de segurar define é da nota
+// inteira; isso aqui é pra quando uma linha só precisa de outro
+// alinhamento - centralizar a fórmula e deixar a explicação embaixo à
+// esquerda, por exemplo. Roda no fim da cadeia: o miolo já é HTML
+// pronto (fração, subscrito, negrito, \nota{}{}), só falta envolver
+const VF_ALINHAMENTOS_TRECHO_VF = {centro: 'center', esquerda: 'left', direita: 'right'};
+function vfProcessarAlinhamentoTrechoVF(texto){
+  let resultado = '';
+  let pos = 0;
+  const regexInicio = /\\(centro|esquerda|direita)\s*\{/g;
+  let match;
+  while((match = regexInicio.exec(texto))){
+    const grupo = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+    if(!grupo){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    resultado += texto.slice(pos, match.index);
+    resultado += `<div style="text-align:${VF_ALINHAMENTOS_TRECHO_VF[match[1]]};margin:2px 0">${grupo.conteudo}</div>`;
+    pos = grupo.fimPos + 1;
+    // o <div> já quebra linha por conta própria: os <br> colados logo
+    // depois (a linha em branco que a pessoa escreveu) só empilhariam
+    // espaço vazio embaixo do trecho alinhado
+    let comidos = 0;
+    while(comidos < 2 && texto.slice(pos, pos + 4) === '<br>'){ pos += 4; comidos++; }
+    regexInicio.lastIndex = pos;
+  }
+  resultado += texto.slice(pos);
+  return resultado;
+}
+
 function formatarTextoItemVF(texto, opcoes){
   if(!texto) return '';
   texto = vfLimparApostrofoUnderscoreVF(texto);
@@ -5754,7 +5783,7 @@ function formatarTextoItemVF(texto, opcoes){
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/([)\]])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
-  return vfReinserirTabelasVF(resultado, tabelas);
+  return vfReinserirTabelasVF(vfProcessarAlinhamentoTrechoVF(resultado), tabelas);
 }
 
 // ============================================================
@@ -7493,10 +7522,17 @@ function vfFinalizarTracoDesenho(e){
   // scroll nativo, também suprime o clique sintético) - dispara manual
   if(vfBotaoPendenteToqueInfo && vfBotaoPendenteToqueInfo.elemento){
     const elementoParaClicar = vfBotaoPendenteToqueInfo.elemento;
+    const xToque = vfBotaoPendenteToqueInfo.x, yToque = vfBotaoPendenteToqueInfo.y;
     vfBotaoPendenteToqueInfo = null;
     document.body.classList.remove('vf-tracando-agora'); // tinha sido suprimido no toque (só pra caneta) - se confirmou que foi clique de verdade (não virou traço), libera de novo
     if(e && e.preventDefault) e.preventDefault();
-    elementoParaClicar.click();
+    // NÃO usar elemento.click(): ele dispara um clique sem posição
+    // nenhuma (clientX/clientY = 0). Quem só executa uma ação não nota
+    // diferença, mas quem se posiciona pelo toque - o balão do \nota{}{}
+    // e das anotações de célula - abria lá no canto superior esquerdo
+    // quando o toque vinha da caneta, enquanto com o dedo (clique nativo,
+    // com posição de verdade) caía no lugar certo
+    elementoParaClicar.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, view: window, clientX: xToque, clientY: yToque}));
   }else{
     vfBotaoPendenteToqueInfo = null;
   }
@@ -15579,8 +15615,15 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   // silêncio dentro do requestAnimationFrame e deixando o balão preso na
   // posição padrão do CSS (sem left/top definidos - canto superior
   // esquerdo). Checar o comprimento, não só a existência, resolve
-  const ponto = (evento.touches && evento.touches.length > 0) ? evento.touches[0] : evento;
+  let ponto = (evento.touches && evento.touches.length > 0) ? evento.touches[0] : evento;
   const ancora = (evento.currentTarget && evento.currentTarget.getBoundingClientRect) ? evento.currentTarget : (evento.target?.closest?.('td, span, div') || null);
+  // clique sem posição (clientX/clientY = 0): acontece quando o clique foi
+  // disparado por código, não pelo dedo. Em vez de mandar o balão pro
+  // canto da tela, abre embaixo do próprio elemento tocado
+  if(ancora && ponto && !ponto.clientX && !ponto.clientY){
+    const r = ancora.getBoundingClientRect();
+    ponto = {clientX: r.left + Math.min(r.width / 2, 40), clientY: r.bottom};
+  }
   // o balão mora DENTRO do container que rola (#content) quando a âncora
   // está lá: position:absolute, rola junto com o conteúdo de forma nativa
   // (sem reposicionar a cada evento de scroll, que era o que dava os
@@ -17126,14 +17169,30 @@ function vfFiltrarNotasBibliotecaVF(pref){
     if(termo && !((n.texto || '') + ' ' + (n.questoes_vf?.texto || '')).toLowerCase().includes(termo)) return false;
     return true;
   });
-  vfRenderizarBibliotecaNotasVF(pref, filtradas);
+  vfRenderizarBibliotecaNotasVF(pref, vfSemCopiasNotasVF(filtradas));
+}
+
+// a MESMA nota escrita em afirmações diferentes (irmãs, quase sempre)
+// vira um card só na biblioteca - ela continua existindo em cada
+// afirmação, o que não faz sentido é ler a mesma coisa duas vezes numa
+// lista de consulta. Some assim que os textos deixam de ser idênticos
+// (editou uma das duas): aí são notas diferentes de verdade. Prefere
+// mostrar a original (a que não veio de nenhuma outra)
+function vfSemCopiasNotasVF(lista){
+  const porTexto = new Map();
+  lista.forEach(n => {
+    const chave = (n.texto || '').trim();
+    const atual = porTexto.get(chave);
+    if(!atual || (atual.origem_nota_id && !n.origem_nota_id)) porTexto.set(chave, n);
+  });
+  return lista.filter(n => porTexto.get((n.texto || '').trim()) === n);
 }
 
 function vfRenderizarBibliotecaNotasVF(pref, lista){
   const el = document.getElementById(`vf-notas-lib-lista-${pref}`);
   const resumo = document.getElementById(`vf-notas-lib-resumo-${pref}`);
   if(!el) return;
-  const total = (vfNotasBibliotecaCacheVF || []).length;
+  const total = vfSemCopiasNotasVF(vfNotasBibliotecaCacheVF || []).length;
   if(resumo) resumo.textContent = !total ? '' : (lista.length === total ? `${total} nota${total > 1 ? 's' : ''}` : `${lista.length} de ${total} notas`);
   if(!lista.length){
     el.innerHTML = `<p style="color:#888;text-align:center;padding:20px;margin:0">${total ? 'Nenhuma nota com esses filtros.' : 'Você ainda não escreveu nenhuma nota.'}</p>`;
