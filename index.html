@@ -354,6 +354,9 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-tabela-alinhamento,.vf-tabela-alinhamento *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .vf-tabela-bloco,.vf-tabela-bloco *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .vf-tabela-ajustando td{box-shadow:inset 0 0 0 0.5px #CFCFCA}
+#vf-recortes-grupo.hidden{display:none !important}
+.vf-btn-recorte-wrap{display:flex;flex-direction:column;align-items:center;gap:1px}
+.vf-btn-recorte-n{font-size:var(--fs-a);color:#aaa;line-height:1}
 .vf-painel-inconsistencia{background:#fff;border:0.5px solid #E6E6E3;box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:16px 18px;box-sizing:border-box;font-family:inherit}
 .vf-painel-inconsistencia.popover{position:absolute;z-index:145;border-radius:14px}
 .vf-painel-inconsistencia.sheet{position:fixed;left:0;right:0;bottom:0;z-index:320;border-radius:16px 16px 0 0;max-height:72vh;overflow-y:auto;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
@@ -1040,12 +1043,9 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
         </div>
         <!-- recortes de capítulo: só aparece quando a publicação/capítulo
         selecionado tem linhas em filtros_capitulo_vf (ver vfAtualizarFiltrosCapituloVF) -->
-        <div id="vf-recortes-grupo" class="hidden" style="margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-            <span style="font-size:var(--fs-b);color:#888">Recortes deste capítulo</span>
-            <span id="vf-recortes-geral" style="font-size:var(--fs-b);color:#888;white-space:nowrap" title="Afirmações do capítulo sem nenhum recorte (conteúdo geral)"></span>
-          </div>
-          <div id="vf-filtros-capitulo-botoes" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:6px"></div>
+        <div id="vf-recortes-grupo" class="hidden" style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
+          <span style="display:flex;flex-direction:column;gap:2px;font-size:var(--fs-d);color:#333;flex-shrink:0;padding-top:6px">Recortes<span id="vf-recortes-geral" style="font-size:var(--fs-a);color:#aaa;white-space:nowrap" title="Afirmações do capítulo sem nenhum recorte (conteúdo geral)"></span></span>
+          <span id="vf-filtros-capitulo-botoes" style="display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px 6px;flex:1;min-width:0"></span>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
           <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Novas <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-nova-a-cada-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
@@ -2098,7 +2098,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-088';
+const VERSAO_APP = '2026-09-17-089';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -12613,7 +12613,7 @@ async function vfAtualizarContagensRecortesVF(){
   vfContagensRecortesVF = new Map((data || []).map(r => [r.filtro_id || 'geral', Number(r.total) || 0]));
   vfPintarBotoesFiltrosCapituloVF();
   const geral = document.getElementById('vf-recortes-geral');
-  if(geral) geral.textContent = vfContagensRecortesVF.has('geral') ? `Geral (${vfContagensRecortesVF.get('geral')})` : '';
+  if(geral) geral.textContent = vfContagensRecortesVF.has('geral') ? `geral · ${vfContagensRecortesVF.get('geral')}` : '';
 }
 // pais na ordem do campo "ordem"; cada filho (pai_id) logo abaixo do pai,
 // recuado e com traço de ligação. Botão de filho leva tooltip explicando
@@ -12625,22 +12625,21 @@ function vfRenderizarBotoesFiltrosCapituloVF(){
   const filtros = (vfEscopoFiltrosCapituloVF.filtros || []).slice().sort((a,b) => (a.ordem||0) - (b.ordem||0) || String(a.nome).localeCompare(String(b.nome), 'pt'));
   if(!filtros.length){ cont.innerHTML = ''; if(grupo) grupo.classList.add('hidden'); return; }
   if(grupo) grupo.classList.remove('hidden');
+  // ordem de exibição: cada pai seguido dos seus filhos (subconjuntos)
   const porPai = new Map();
   filtros.forEach(f => { const k = f.pai_id || null; if(!porPai.has(k)) porPai.set(k, []); porPai.get(k).push(f); });
-  const nomeDe = id => filtros.find(f => f.id === id)?.nome || '';
-  const botao = (f) => `<button class="vf-btn-recorte" data-filtro-id="${f.id}" data-nome="${escapeHtml(f.nome)}" onclick="vfCiclarFiltroCapituloVF('${f.id}')" ${f.pai_id ? `title="Subconjunto de ${escapeHtml(nomeDe(f.pai_id))} — para ver ${escapeHtml(nomeDe(f.pai_id))} sem ${escapeHtml(f.nome)}, marque ✓ ${escapeHtml(nomeDe(f.pai_id))} e ✗ ${escapeHtml(f.nome)}"` : ''} style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 10px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">${escapeHtml(f.nome)}</button>`;
-  const linhas = [];
-  const raiz = porPai.get(null) || [];
-  // filhos cujo pai não está no escopo (dado inconsistente) aparecem como raiz
+  const raiz = (porPai.get(null) || []).slice();
   filtros.forEach(f => { if(f.pai_id && !filtros.some(p => p.id === f.pai_id) && !raiz.includes(f)) raiz.push(f); });
-  raiz.forEach(pai => {
-    linhas.push(`<div style="display:flex;align-items:center;gap:6px">${botao(pai)}</div>`);
-    (porPai.get(pai.id) || []).forEach(filho => {
-      linhas.push(`<div style="display:flex;align-items:center;gap:6px;margin-left:14px"><span style="color:#bbb;font-size:var(--fs-c);line-height:1">└</span>${botao(filho)}</div>`);
-    });
-  });
-  cont.innerHTML = linhas.join('');
+  const nomeDe = id => filtros.find(f => f.id === id)?.nome || '';
+  const ordenados = [];
+  raiz.forEach(pai => { ordenados.push(pai); (porPai.get(pai.id) || []).forEach(filho => ordenados.push(filho)); });
+  cont.innerHTML = ordenados.map(f => {
+    const ehFilho = !!(f.pai_id && filtros.some(p => p.id === f.pai_id));
+    const tooltip = ehFilho ? ` title="Subconjunto de ${escapeHtml(nomeDe(f.pai_id))} — para ver ${escapeHtml(nomeDe(f.pai_id))} sem ${escapeHtml(f.nome)}, marque ✓ ${escapeHtml(nomeDe(f.pai_id))} e ✗ ${escapeHtml(f.nome)}"` : '';
+    return `<span class="vf-btn-recorte-wrap"><button class="vf-btn-filtro-tipo vf-btn-recorte" data-filtro-id="${f.id}" data-nome="${escapeHtml(f.nome)}" data-filho="${ehFilho ? '1' : '0'}" onclick="vfCiclarFiltroCapituloVF('${f.id}')"${tooltip} style="border-radius:6px;border:0.5px ${ehFilho ? 'dashed' : 'solid'} #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">${escapeHtml(f.nome)}</button><span class="vf-btn-recorte-n" data-filtro-id="${f.id}"></span></span>`;
+  }).join('');
   vfPintarBotoesFiltrosCapituloVF();
+  vfIgualarLarguraBotoesFiltroVF();
 }
 function vfEstadoFiltroCapituloVF(id){
   if((filtroVF.filtrosInc || []).includes(id)) return 'inc';
@@ -12658,10 +12657,13 @@ function vfCiclarFiltroCapituloVF(id){
   vfRecarregarPoolComDebounceVF();
 }
 function vfPintarBotoesFiltrosCapituloVF(){
+  document.querySelectorAll('.vf-btn-recorte-n').forEach(el => {
+    const n = vfContagensRecortesVF.get(el.dataset.filtroId);
+    el.textContent = typeof n === 'number' ? String(n) : '';
+  });
   document.querySelectorAll('.vf-btn-recorte').forEach(btn => {
     const estado = vfEstadoFiltroCapituloVF(btn.dataset.filtroId);
-    const n = vfContagensRecortesVF.get(btn.dataset.filtroId);
-    const nome = (btn.dataset.nome || '') + (typeof n === 'number' ? ` (${n})` : '');
+    const nome = btn.dataset.nome || '';
     if(estado === 'inc'){
       btn.style.background = '#B23A34'; btn.style.color = '#fff'; btn.style.borderColor = '#B23A34';
       btn.textContent = '✓ ' + nome;
@@ -12672,6 +12674,7 @@ function vfPintarBotoesFiltrosCapituloVF(){
       btn.style.background = '#fff'; btn.style.color = '#888'; btn.style.borderColor = '#ddd';
       btn.textContent = nome;
     }
+    btn.style.borderStyle = btn.dataset.filho === '1' ? 'dashed' : 'solid'; // filho (subconjunto) sempre tracejado
   });
 }
 // mapa questão -> conjunto de filtros (só do escopo atual), usado pra
