@@ -2137,7 +2137,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-18-101';
+const VERSAO_APP = '2026-09-18-102';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5879,15 +5879,22 @@ async function buscarTudoPaginadoVF(queryBuilder, aoCarregarRestanteVF){
   if(typeof totalReal === 'number' && totalReal > 0){
     const totalPaginas = Math.ceil(totalReal / TAMANHO_PAGINA);
     const buscarPaginasRestantesVF = async () => {
-      const promessas = [];
-      for(let pagina = 1; pagina < totalPaginas; pagina++){
-        promessas.push(queryBuilder().range(pagina * TAMANHO_PAGINA, (pagina+1) * TAMANHO_PAGINA - 1));
-      }
-      const resultados = await Promise.all(promessas);
+      // no máximo 3 páginas em voo por vez - achado real (18/09): disparar
+      // todas de uma vez (24 páginas de questoes_vf) saturava o banco e
+      // cada página levava de 5 a 17 s; em lotes pequenos cada uma volta
+      // em ~100 ms e o total cai
+      const LOTE_PAGINAS_VF = 3;
       let extras = [];
-      for(const {data, error} of resultados){
-        if(error) return null;
-        extras = extras.concat(data || []);
+      for(let pagina = 1; pagina < totalPaginas; pagina += LOTE_PAGINAS_VF){
+        const promessas = [];
+        for(let p = pagina; p < Math.min(pagina + LOTE_PAGINAS_VF, totalPaginas); p++){
+          promessas.push(queryBuilder().range(p * TAMANHO_PAGINA, (p+1) * TAMANHO_PAGINA - 1));
+        }
+        const resultados = await Promise.all(promessas);
+        for(const {data, error} of resultados){
+          if(error) return null;
+          extras = extras.concat(data || []);
+        }
       }
       return extras;
     };
@@ -11405,6 +11412,38 @@ function vfProcessarQuestoesCruasVF(questoesCruas, estadoPorId, idsExcluidos){
 
 async function carregarPoolVF(incluirDadosEntradaVF){
   const tokenDestaCargaVF = ++vfTokenGeracaoPoolVF;
+  // v102 (18/09): o pool vem de UMA chamada à RPC pool_questoes_vf, em
+  // formato compacto (array de arrays), em vez de 24 páginas de 1000 linhas
+  // disparadas em paralelo (que saturavam o banco: 5 a 17 s por página no
+  // log). Mesmos campos, mesma ordem por id. Na entrada, duas chamadas:
+  // as primeiras 1000 (primeira questão aparece) e o resto por trás, pelo
+  // mesmo callback de sempre; fora da entrada, tudo de uma vez.
+  // Módulo continua sendo filtrado no aparelho (como sempre foi), mas
+  // quando há módulo sem publicação a lista de ids do módulo já vai pra
+  // RPC - menos linhas trafegando, mesmo resultado
+  const vfMontarParamsPoolVF = () => {
+    const idsBib = filtroVF.publicacao ? [filtroVF.publicacao]
+      : (filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null);
+    return {p_ids_bibliografia: idsBib && idsBib.length ? idsBib : null, p_capitulo: filtroVF.capitulo || null,
+      p_numero: !!filtroVF.numero, p_lista: !!filtroVF.lista, p_inconsistente: !!filtroVF.inconsistente};
+  };
+  const vfLinhaCompactaParaObjetoVF = l => ({id: l[0], eh_numero: l[1], eh_lista: l[2], inconsistente: l[3], capitulo: l[4], n_palavras: l[5], bibliografia_id: l[6], chave_familia_trecho: l[7], chave_familia_texto: l[8], anulada: false});
+  const vfBuscarQuestoesPoolVF = async (aoCarregarRestante) => {
+    const params = vfMontarParamsPoolVF();
+    const PRIMEIRA_LEVA_VF = 1000;
+    const {data, error} = await sb.rpc('pool_questoes_vf', aoCarregarRestante ? {...params, p_limite: PRIMEIRA_LEVA_VF, p_offset: 0} : params);
+    if(error) return {data: null, error};
+    const linhas = (data && data.linhas) || [];
+    const total = (data && data.total) || linhas.length;
+    if(aoCarregarRestante && total > linhas.length){
+      // resto em segundo plano - mesma entrega progressiva de antes
+      sb.rpc('pool_questoes_vf', {...params, p_limite: null, p_offset: PRIMEIRA_LEVA_VF}).then(({data: d2, error: e2}) => {
+        if(e2 || !d2 || !d2.linhas){ console.error('pool_questoes_vf (resto):', e2); return; }
+        aoCarregarRestante(d2.linhas.map(vfLinhaCompactaParaObjetoVF));
+      });
+    }
+    return {data: linhas.map(vfLinhaCompactaParaObjetoVF), error: null, count: total};
+  };
   const montarQueryQuestoesVF = () => {
     // só os campos que o ALGORITMO precisa pra escolher a próxima questão -
     // nada de texto/explicação/correção aqui. Isso é ~95% menos dados
@@ -11513,7 +11552,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     : Promise.resolve({data: null, error: null});
 
   const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: todasTagsData}, {data: questoesTagsData}, , {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, mapaFiltrosCapituloVF, ...resultadosEntradaVF] = await Promise.all([
-    buscarTudoPaginadoVF(montarQueryQuestoesVF, aoCarregarRestanteQuestoesVF),
+    vfBuscarQuestoesPoolVF(aoCarregarRestanteQuestoesVF), // era buscarTudoPaginadoVF(montarQueryQuestoesVF, ...) - ver comentário da RPC acima
     buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     buscarTudoPaginadoVF(() => sb.from('exclusoes_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     buscarTudoPaginadoVF(() => sb.from('favoritos_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
