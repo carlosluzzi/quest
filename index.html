@@ -2137,7 +2137,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-18-100';
+const VERSAO_APP = '2026-09-18-101';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9037,7 +9037,9 @@ function vfAbrirProgressoVF(){
   if(!vfFiltroAtualTemEscopoVF()) vfProgressoVF.escopo = 'banco';
   document.getElementById('pagina-progresso-vf').classList.remove('hidden');
   vfPintarCabecalhoProgressoVF();
-  vfRenderizarProgressoVF(null); // esqueleto síncrono - os números entram depois, sem pular
+  // esqueleto só quando não há NADA em cache pra esse período/escopo -
+  // se há (mesmo velho), vfCarregarProgressoVF mostra na hora e atualiza por trás
+  if(!vfProgressoCacheVF.has(vfChaveProgressoVF())) vfRenderizarProgressoVF(null);
   vfCarregarProgressoVF();
 }
 function vfDestruirGraficosProgressoVF(){
@@ -9103,36 +9105,57 @@ function vfParametrosProgressoVF(){
   if(vfProgressoVF.escopo === 'filtro' && vfFiltroAtualTemEscopoVF()) return {...vfParametrosPanoramaFiltroVF(), ...base};
   return base;
 }
+function vfChaveProgressoVF(params){
+  return vfProgressoVF.periodo + '|' + JSON.stringify(params || vfParametrosProgressoVF());
+}
+// "mostra o que tem, atualiza por trás": qualquer dado em cache (mesmo
+// vencido) vai pra tela na hora; se passou do prazo (60 s) ou foi pedido
+// à força, busca de novo em segundo plano e troca os números quando chegar
 async function vfCarregarProgressoVF(opcoes){
   const forcar = !!(opcoes && opcoes.forcar);
+  const silencioso = !!(opcoes && opcoes.silencioso); // pré-aquecimento: só enche o cache, não mexe na tela
   if(!usuarioAtual) return;
   const params = vfParametrosProgressoVF();
-  const chave = vfProgressoVF.periodo + '|' + JSON.stringify(params);
+  const chave = vfChaveProgressoVF(params);
   const emCache = vfProgressoCacheVF.get(chave);
-  if(!forcar && emCache && (Date.now() - emCache.em) < VF_PROGRESSO_CACHE_MS){
-    vfProgressoVF.dados = emCache.dados; vfRenderizarProgressoVF(emCache.dados); return;
-  }
+  const fresco = emCache && (Date.now() - emCache.em) < VF_PROGRESSO_CACHE_MS;
+  if(emCache && !silencioso){ vfProgressoVF.dados = emCache.dados; vfRenderizarProgressoVF(emCache.dados); }
+  if(fresco && !forcar) return;
   const req = ++vfProgressoVF.requisicao; // uma em andamento por vez: resposta velha é descartada
-  vfMarcarAtualizandoProgressoVF();
+  if(!silencioso) vfMarcarAtualizandoProgressoVF();
   try{
     const {data, error} = await sb.rpc('progresso_vf', params);
-    if(req !== vfProgressoVF.requisicao) return;
     if(error) throw error;
     vfProgressoCacheVF.set(chave, {dados: data, em: Date.now()});
-    vfProgressoVF.dados = data;
+    if(req !== vfProgressoVF.requisicao) return;
+    if(silencioso) return;
     if(document.getElementById('pagina-progresso-vf').classList.contains('hidden')) return; // fechou enquanto carregava
+    if(vfChaveProgressoVF() !== chave) return; // trocou de chip enquanto carregava
+    vfProgressoVF.dados = data;
     vfRenderizarProgressoVF(data);
   }catch(e){
-    if(req !== vfProgressoVF.requisicao) return;
     console.error('progresso_vf:', e);
+    if(silencioso || req !== vfProgressoVF.requisicao) return;
     const el = document.getElementById('vf-prog-rodape-texto');
     if(el) el.textContent = 'Não consegui atualizar · toque pra tentar de novo';
     vfMostrarAvisoVF('Não consegui atualizar o progresso agora.');
   }
 }
+// pré-aquecimento: ao entrar no Flash, busca em segundo plano o período
+// que a pessoa usa (escopo "todo o banco") - o primeiro toque em Progresso
+// abre com os números já na tela. Uma chamada por entrada, só isso
+function vfPreaquecerProgressoVF(){
+  if(!usuarioAtual) return;
+  try{ const salvo = localStorage.getItem('pscpp_vf_progresso_periodo'); if(['hoje','ontem','7d','30d','tudo'].includes(salvo)) vfProgressoVF.periodo = salvo; }catch(e){}
+  if(vfProgressoVF.periodo === 'custom') vfProgressoVF.periodo = 'hoje';
+  const escopoAntes = vfProgressoVF.escopo;
+  vfProgressoVF.escopo = 'banco';
+  vfCarregarProgressoVF({silencioso: true});
+  vfProgressoVF.escopo = escopoAntes;
+}
 function vfMarcarAtualizandoProgressoVF(){
   const el = document.getElementById('vf-prog-rodape-texto');
-  if(el) el.textContent = 'Atualizando…';
+  if(el) el.textContent = (vfProgressoVF.dados ? el.textContent.replace(' · toque pra atualizar', '') + ' · atualizando…' : 'Carregando…');
 }
 
 // ---- preenchimento de buracos na série (a RPC só devolve pontos com resposta) ----
@@ -12707,6 +12730,7 @@ async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
     vfTotalAfirmacoesNoBanco = totalGeralQuestoesVF ?? null;
   }
   vfRecalcularAutoVF(); // v4 - ritmo Auto acompanha o filtro carregado
+  if(ehEntradaInicialVF) vfPreaquecerProgressoVF(); // painel de Progresso já com números no primeiro toque
   if(!pool.length){
     vfLimparOverlayCargaFiltroVF(el);
     if(filtroVF.termo){
