@@ -325,7 +325,8 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
   #nav-item-adicionar .nav-label{white-space:nowrap}
   #wrapper-barra-adicionar{display:none}
   #view-topico-detalhe{left:250px !important;width:calc(100% - 250px) !important}
-  #pagina-flash-salvos-vf{left:250px !important;width:calc(100% - 250px) !important}
+  #pagina-progresso-vf{left:250px !important;width:calc(100% - 250px) !important}
+  .vf-prog-2col{grid-template-columns:1fr 1fr}
   #pagina-favoritos-vf{left:250px !important;width:calc(100% - 250px) !important}
   .nav-icon{width:24px;height:24px}
   .badge-notificacao{top:3px;left:30px;right:auto}
@@ -1053,8 +1054,11 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
             <button id="vf-nova-a-cada-3" onclick="vfTrocarNovaACadaVF(3)" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">1 a cada 3</button>
             <button id="vf-nova-a-cada-2" onclick="vfTrocarNovaACadaVF(2)" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">1 a cada 2</button>
             <button id="vf-nova-a-cada-1.5" onclick="vfTrocarNovaACadaVF(1.5)" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">2 a cada 3</button>
+            <button id="vf-nova-a-cada-auto" onclick="vfTrocarNovaACadaVF('auto')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Auto</button>
           </span>
         </div>
+        <!-- v4 (D8): a consequência do ritmo escolhido, no passo real dos últimos 14 dias -->
+        <div id="vf-nova-projecao" style="font-size:var(--fs-c);color:#888;line-height:1.4;margin-top:6px;text-align:right"></div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
           <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Varredura (sem repetir) <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-varredura-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
           <button id="vf-toggle-varredura" onclick="vfToggleVarreduraVF()" style="width:44px;height:26px;border-radius:13px;border:none;background:#ddd;position:relative;cursor:pointer;flex-shrink:0;transition:background 0.2s"><span id="vf-toggle-varredura-bolinha" style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:transform 0.2s"></span></button>
@@ -1535,7 +1539,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-info-nova-a-cada-vf">
   <div class="modal-conteudo">
     <h3 class="config-title">Novas</h3>
-    <p>Quantas das próximas respostas serão questões nunca vistas. Revisão vencida há mais de 3× o intervalo passa na frente mesmo assim.</p>
+    <p>Quantas das próximas respostas serão questões nunca vistas. O ritmo só decide a quantidade; dentro da repetição, favoritas, erros repetidos e a escada continuam na frente. Auto: o app escolhe pelo tamanho da fila urgente, nunca abaixo de 1 a cada 3.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-nova-a-cada-vf')">Fechar</button>
   </div>
 </div>
@@ -1608,21 +1612,6 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="modal-escolha-motivo-salvar-vf" onclick="if(event.target===this) vfFecharModalMotivoSalvarVF()">
-  <div class="modal-conteudo">
-    <h3 class="config-title">Salvar esse Flash</h3>
-    <input type="hidden" id="vf-escolha-motivo-questao-id">
-    <button class="btn-secundario" style="width:100%;text-align:left;display:flex;align-items:center;gap:10px" onclick="vfSalvarFlashComMotivoVF('estudar')">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      Estudar depois
-    </button>
-    <button class="btn-secundario" style="width:100%;text-align:left;display:flex;align-items:center;gap:10px;margin-top:16px" onclick="vfSalvarFlashComMotivoVF('corrigir')">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
-      Corrigir depois
-    </button>
-  </div>
-</div>
-
 <div id="pagina-favoritos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden">
   <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
     <h2 style="margin:0;font-size:var(--fs-f);font-weight:700;color:#111">Flashes favoritos</h2>
@@ -1645,14 +1634,59 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   <div id="vf-lista-favoritos" style="flex:1;overflow-y:auto;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px"></div>
 </div>
 
-<div id="pagina-flash-salvos-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden">
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px 20px;border-bottom:0.5px solid rgba(224,224,224,0.6);flex-shrink:0;background:#FBFBFA">
-    <h2 style="margin:0;font-size:var(--fs-f);font-weight:700;color:#111">Flashes salvos</h2>
-    <button onclick="vfFecharFlashSalvosVF()" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
+<!-- Painel de Progresso do Flash (substituiu a página "Flashes salvos" em 18/09/2026) -->
+<div id="pagina-progresso-vf" class="hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;width:100%;bottom:0;background:#FBFBFA;z-index:200;display:flex;flex-direction:column;overflow:hidden">
+  <div style="flex-shrink:0;background:#FBFBFA;border-bottom:0.5px solid rgba(224,224,224,0.6);padding:14px 20px 10px 20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h2 style="margin:0;font-size:var(--fs-f);font-weight:700;color:#111">Progresso</h2>
+      <button onclick="vfFecharProgressoVF()" style="background:none;border:none;padding:6px;display:flex;color:#888;cursor:pointer;-webkit-appearance:none;appearance:none" title="Fechar">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="vf-prog-chips" style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px">
+      <button class="filter-btn" data-periodo="hoje" onclick="vfTrocarPeriodoProgressoVF('hoje')" style="margin:0;flex:1 1 auto;white-space:nowrap">Hoje</button>
+      <button class="filter-btn" data-periodo="ontem" onclick="vfTrocarPeriodoProgressoVF('ontem')" style="margin:0;flex:1 1 auto;white-space:nowrap">Ontem</button>
+      <button class="filter-btn" data-periodo="7d" onclick="vfTrocarPeriodoProgressoVF('7d')" style="margin:0;flex:1 1 auto;white-space:nowrap">7 dias</button>
+      <button class="filter-btn" data-periodo="30d" onclick="vfTrocarPeriodoProgressoVF('30d')" style="margin:0;flex:1 1 auto;white-space:nowrap">30 dias</button>
+      <button class="filter-btn" data-periodo="tudo" onclick="vfTrocarPeriodoProgressoVF('tudo')" style="margin:0;flex:1 1 auto;white-space:nowrap">Tudo</button>
+      <button class="filter-btn" data-periodo="custom" onclick="vfTrocarPeriodoProgressoVF('custom')" title="Escolher datas" style="margin:0;flex-shrink:0">📅</button>
+    </div>
+    <div id="vf-prog-datas" class="hidden" style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <input type="date" id="vf-prog-data-inicio" class="filter-select" style="margin-bottom:0;flex:1;min-width:120px" onchange="vfAplicarDatasProgressoVF()">
+      <span style="color:#888;font-size:var(--fs-c)">até</span>
+      <input type="date" id="vf-prog-data-fim" class="filter-select" style="margin-bottom:0;flex:1;min-width:120px" onchange="vfAplicarDatasProgressoVF()">
+      <button class="filter-btn" style="margin:0" onclick="vfTrocarPeriodoProgressoVF('hoje')">Redefinir</button>
+    </div>
+    <div id="vf-prog-escopo" class="hidden" style="margin-top:8px">
+      <div style="display:flex;gap:6px">
+        <button class="filter-btn" data-escopo="banco" onclick="vfTrocarEscopoProgressoVF('banco')" style="margin:0;flex:1">Todo o banco</button>
+        <button class="filter-btn" data-escopo="filtro" onclick="vfTrocarEscopoProgressoVF('filtro')" style="margin:0;flex:1">Filtro atual</button>
+      </div>
+      <div id="vf-prog-escopo-linhas" style="margin-top:6px"></div>
+    </div>
   </div>
-  <div id="vf-lista-flash-salvos" style="flex:1;overflow-y:auto;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px"></div>
+  <div id="vf-prog-corpo" style="flex:1;overflow-y:auto;padding:14px 20px 40px 20px;box-sizing:border-box;-webkit-overflow-scrolling:touch"></div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-info-progresso-vf" onclick="if(event.target===this) fecharModal('modal-info-progresso-vf')">
+  <div class="modal-conteudo" style="max-height:80vh;overflow-y:auto">
+    <h3 class="config-title">Definições</h3>
+    <div style="font-size:var(--fs-c);color:#333;line-height:1.5;display:flex;flex-direction:column;gap:8px">
+      <p style="margin:0"><b>Nova</b>: a afirmação nunca tinha aparecido pra você antes dessa resposta.</p>
+      <p style="margin:0"><b>Repetida</b>: escada (afirmação recém-errada/recém-vista, ainda subindo os degraus) ou revisão (já saiu da escada e volta em intervalos crescentes).</p>
+      <p style="margin:0"><b>Acerto</b>: respostas certas ÷ respostas. O de novas é o que mais diz sobre leitura; o de revisões, sobre retenção.</p>
+      <p style="margin:0"><b>Tempo ativo</b>: soma dos intervalos entre uma resposta e a seguinte. Pausa acima de 5 minutos não conta (conta só o tempo da própria resposta, no máximo 5 min). Não usa o cronômetro de sessão de propósito: sessão pausada e esquecida gerava horas falsas (05/09: 82 h de "sessão" para 5 respostas).</p>
+      <p style="margin:0"><b>Ritmo</b>: respostas por hora de tempo ativo.</p>
+      <p style="margin:0"><b>Sequência</b>: dias seguidos com pelo menos uma resposta, contando até hoje (ou até ontem, se hoje ainda não respondeu nada).</p>
+      <p style="margin:0"><b>Vistas</b>: afirmações ativas (não excluídas) que já apareceram pelo menos uma vez.</p>
+      <p style="margin:0"><b>Na escada / Jovem / Consolidada / Firme</b>: aprendendo; revisão com intervalo &lt; 7 dias; entre 7 e 30; 30 ou mais. Quanto mais à esquerda da barra, mais firme.</p>
+      <p style="margin:0"><b>Vencida</b>: revisão cujo prazo já passou. Vencida não é atrasada de verdade — o algoritmo v4 aceita fila vencida como estado permanente e escolhe pela importância.</p>
+      <p style="margin:0"><b>Leech</b>: 4 ou mais erros acumulados.</p>
+      <p style="margin:0"><b>Seu passo</b>: média de novas por dia, contando só os dias em que você estudou, nos últimos 7 dias-calendário.</p>
+      <p style="margin:0"><b>Acabam em</b>: novas restantes ÷ seu passo. Muda todo dia; é um termômetro, não uma promessa.</p>
+    </div>
+    <button class="btn-secundario" style="width:100%;margin-top:16px" onclick="fecharModal('modal-info-progresso-vf')">Fechar</button>
+  </div>
 </div>
 
 
@@ -2098,7 +2132,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-17-095';
+const VERSAO_APP = '2026-09-18-097';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3430,7 +3464,7 @@ function trocarAba(nome, pularContadorQuest){
   // .view-aba), mesma correção
   fecharViewTopico();
   document.getElementById('pagina-favoritos-vf')?.classList.add('hidden');
-  document.getElementById('pagina-flash-salvos-vf')?.classList.add('hidden');
+  document.getElementById('pagina-progresso-vf')?.classList.add('hidden');
 
   document.querySelectorAll('.view-aba').forEach(el=>el.classList.add('hidden'));
   document.getElementById('aba-'+nome).classList.remove('hidden');
@@ -5907,11 +5941,19 @@ const VF_ALGO = {
   BONUS_MIN: 0.6, BONUS_MAX: 1.5,
   DEGRAUS_NOVA: [60], DEGRAUS_QUEDA: [40], TMIN_DEGRAU_MIN: [60], ESCAPE_H: [12], // inalterados
   TETO_H: 4320,               // era 2160 - 180 dias; a prova é em 14 meses e cartão bem sabido não precisa voltar a cada 3 meses
-  FUZZ: 0.05, JITTER_FILA: 0.02, BOOST_FAVORITO: 1.25,
-  NOVA_A_CADA: 2,             // PADRÃO agora 2 (50%); configurável na UI entre 3, 2 e 1.5 (ver vfNovaACadaAtualVF)
+  FUZZ: 0.05, JITTER_FILA: 0.02,
+  BOOST_FAVORITO: 1.5,        // v4 (era 1.25) - multiplica a PRIORIDADE da favorita na fila de repetição (D3)
+  NOVA_A_CADA: 1.5,           // v4 - padrão 2 a cada 3 (67%); configurável na UI entre 3, 2, 1.5 e 'auto' (ver vfNovaACadaAtualVF)
   RAZAO_MINIMA_REVISAO: 0.5,
-  RAZAO_FURA_NOVA: 3.0,       // NOVO - no turno da nova, só revisão com >= 300% do intervalo vencido passa na frente (dados: acerto cai de 88% pra 80% só acima disso)
+  // RAZAO_FURA_NOVA removido no v4 - "muito vencida fura 1 em 2" não existe mais: ritmo é orçamento, ninguém fura (D1)
   LEECH_ERROS: 4,
+  // v4 - fila única de repetição: prioridade = urgência × importância × dificuldade × jitter (D3/D4)
+  URGENCIA_ESCADA: 4.0,       // escada elegível entra na fila com urgência fixa 4 (equivale a razão 4)
+  BOOST_LEECH: 1.3,           // >= LEECH_ERROS erros
+  DIFIC_PESO: 0.5, DIFIC_MIN: 0.8, DIFIC_MAX: 1.8, DIFIC_JANELA: 5, // dificuldade = clamp(1 + 0.5*soma/janela, 0.8, 1.8); E=1 (2º E na janela em diante = 2), L=0.5, A=0
+  FATOR_FAVORITO_INTERVALO: 0.8, // favorita agenda com intervalo 20% menor - volta mais vezes, não só sobe na fila (D5)
+  REP_ANTIGUIDADE_A_CADA: 4,  // 1 em cada 4 vagas de repetição vai pela antiguidade (mais horas vencida em absoluto), não pela prioridade (D6)
+  AUTO_ALTA_PRIO_LIMITES: [20, 60], AUTO_FRACOES: [1.5, 2, 3], AUTO_RECALC_A_CADA: 10, // ritmo Auto (D7): fila urgente < 20 → 1.5; 20–60 → 2; > 60 → 3
   // NOVO - multiplicador do PRIMEIRO intervalo (e do GRADUA_NOVA_H) por módulo, calibrado no acerto medido por módulo. Recalibrado mensalmente
   MULT_MODULO: {'Legislação': 0.5, 'Arte Naval': 0.6, 'Navegação em Águas Restritas': 0.7, 'Manobrabilidade': 1.0, 'Meteorologia e Oceanografia': 1.0, 'Comunicações': 0.7, 'Conhecimentos Gerais': 0.7},
   // NOVO - consciência da prova
@@ -5945,7 +5987,10 @@ function vfAplicarConscienciaDaProvaVF(intervaloHoras, agoraMs){
 // ao registrar uma resposta: recebe o estado ATUAL da questão pra esse
 // usuário e devolve o NOVO estado. Não mexe no banco — quem chama decide
 // persistir (ver responderVF)
-function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraMs, contadorGlobal, respondidaAdiantada){
+function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraMs, contadorGlobal, respondidaAdiantada, favoritos){
+  // v4 - favorita agenda com intervalo 20% menor (D5). favoritos entra por
+  // parâmetro pra função continuar pura/testável; sem ele, usa o Set global
+  const ehFavorita = (favoritos || favoritosVF).has(estadoAnterior.id);
   const tempo_s = clampVF(tempoSRaw, 0.3, 180);
   const nPalavras = estadoAnterior.n_palavras || 10;
   const v = tempo_s / esperadoSegundosVF(nPalavras);
@@ -5975,7 +6020,7 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
   if(q.estado === 'nova'){
     if(acertou){
       q.estado = 'revisao';
-      q.intervalo_horas = vfAplicarConscienciaDaProvaVF(VF_ALGO.PRIMEIRO_ACERTO_H * bonus * mult, agoraMs);
+      q.intervalo_horas = vfAplicarConscienciaDaProvaVF(VF_ALGO.PRIMEIRO_ACERTO_H * bonus * mult * (ehFavorita ? VF_ALGO.FATOR_FAVORITO_INTERVALO : 1), agoraMs);
       if(v < 0.8) q.fator = Math.min(VF_ALGO.FATOR_MAX, q.fator + 0.1);
     }else{
       // um acerto gradua (total_degraus=1) - o segundo degrau da escada
@@ -6029,6 +6074,7 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
       // respondida exatamente na data prevista
       const base = Math.max(decorridoH, q.intervalo_horas);
       let novo = Math.max(q.intervalo_horas, base * q.fator * bonus);
+      if(ehFavorita) novo *= VF_ALGO.FATOR_FAVORITO_INTERVALO; // v4 (D5) - antes do fuzz e da consciência da prova
       if(r >= 0.5){
         const delta = v < 0.8 ? 0.1 : (v > 1.5 ? -0.05 : 0);
         q.fator = clampVF(q.fator + delta, VF_ALGO.FATOR_MIN, VF_ALGO.FATOR_MAX);
@@ -6053,6 +6099,11 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
     }
   }
 
+  // v4 - histórico recente (D4): 1 char por resposta, mais recente à
+  // direita, no máximo DIFIC_JANELA. E = erro, L = acerto lento (bonus <
+  // 0.8), A = acerto rápido. Atualizado em TODA resposta, escada inclusive
+  const marcaHistoricoVF = !acertou ? 'E' : (bonus < 0.8 ? 'L' : 'A');
+  q.historico_recente = ((q.historico_recente || '') + marcaHistoricoVF).slice(-VF_ALGO.DIFIC_JANELA);
   q.ultima_resposta_em = new Date(momentoRegistroMs).toISOString();
   q.marca_contador = contadorGlobal;
   q.total_respostas = (q.total_respostas || 0) + 1;
@@ -6078,6 +6129,22 @@ function elegibilidadeAprendendoVF(q, agoraMs, contadorGlobal, tamanhoPool){
   const decH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
   const i = Math.min(q.degrau, degraus.length - 1);
   return (outras >= K_eff && decH >= VF_ALGO.TMIN_DEGRAU_MIN[i] / 60) || decH >= VF_ALGO.ESCAPE_H[i];
+}
+
+// v4 (D4) - dificuldade pela janela das últimas respostas da questão
+// (historico_recente): erro pesa mais que lentidão, e erro repetido pesa
+// em dobro. E = 1 (do segundo E na janela em diante, cada E = 2), L = 0.5,
+// A = 0. dificuldade = clamp(1 + 0.5 × soma/5, 0.8, 1.8); sem histórico = 1.
+// Exemplos: 'EE' → 1.3; 'EL' → 1.15; 'EEL' → 1.35; 'AAAAA' → 1.0
+function dificuldadeVF(item){
+  const h = item.historico_recente || '';
+  if(!h) return 1;
+  let soma = 0, erros = 0;
+  for(const c of h){
+    if(c === 'E'){ erros++; soma += erros >= 2 ? 2 : 1; }
+    else if(c === 'L') soma += 0.5;
+  }
+  return clampVF(1 + VF_ALGO.DIFIC_PESO * soma / VF_ALGO.DIFIC_JANELA, VF_ALGO.DIFIC_MIN, VF_ALGO.DIFIC_MAX);
 }
 
 // gerador determinístico simples, semeado por sessão+id — jitter estável
@@ -6129,135 +6196,125 @@ function vfCalcularFamiliasNoPoolVF(pool){
 }
 
 // escolhe a próxima questão do pool (modo normal - ver
-// vfEscolherProximaVarreduraVF pro modo varredura, que é bem diferente)
-function escolherProximaVF(pool, agoraMs, contadorGlobal, anteriorVeioDeAprendizado, sementeSessao, creditoNovaVF, respostasDesdeUltimaNova, ultimoTurnoNovaFuradoVF){
-  const aprendendo = pool.filter(q => q.estado === 'aprendendo' && elegibilidadeAprendendoVF(q, agoraMs, contadorGlobal, pool.length));
-  aprendendo.sort((a,b) => (a.marca_contador||0) - (b.marca_contador||0));
-  // v3.2 - fallback final antes de esgotar: aprendendo NÃO elegível ainda,
-  // guardado à parte com o tempo que falta até a elegibilidade garantida
-  // (ESCAPE_H), pra poder ordenar do mais perto de ficar pronto
-  const aprendendoNaoElegivel = pool.filter(q => q.estado === 'aprendendo' && !elegibilidadeAprendendoVF(q, agoraMs, contadorGlobal, pool.length)).map(q => {
-    const decH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
-    const i = Math.min(q.degrau||0, VF_ALGO.ESCAPE_H.length - 1);
-    return {item: q, faltamH: VF_ALGO.ESCAPE_H[i] - decH};
-  });
-  aprendendoNaoElegivel.sort((a,b) => a.faltamH - b.faltamH);
-
-  const rn = [];
+// vfEscolherProximaVarreduraVF pro modo varredura, que é bem diferente).
+//
+// v4 - "avançar por orçamento, repetir por prioridade":
+// - O ritmo de novas é um ORÇAMENTO nas duas direções (creditoNovaVF e
+//   creditoRepVF crescem a cada resposta, 1/cadaN e 1-1/cadaN). Na
+//   escolha: se creditoNovaVF >= creditoRepVF e há nova → nova; senão, se
+//   há repetição elegível → repetição. Ninguém fura. Fallback cruzado: sem
+//   nova, a vaga vai pra repetição (e desconta do crédito da nova); sem
+//   repetição, vai pra nova (e desconta do crédito da repetição).
+// - Toda repetição (escada elegível, revisão com razão >= 0.5, leech,
+//   favorita) entra numa FILA ÚNICA, por prioridade = urgência ×
+//   importância × dificuldade × jitter. Escada = urgência fixa 4; revisão =
+//   razão (decorrido/intervalo), sem teto. Favorita ×1.5, leech ×1.3.
+// - Porta da antiguidade: 1 em cada REP_ANTIGUIDADE_A_CADA vagas de
+//   repetição vai pra revisão vencida há mais horas ABSOLUTAS, ignorando a
+//   prioridade - é a porta da "bem sabida", que senão nunca voltaria.
+// Função pura: estado da sessão (créditos, contador de repetições,
+// favoritos) entra por parâmetro e o retorno leva `fatia` ('nova'/'rep')
+// pra quem chama descontar do crédito certo e `repeticao` pra incrementar
+// contadorRepVF. Nada aqui muta estadoVF.
+function escolherProximaVF(pool, agoraMs, contadorGlobal, sementeSessao, creditoNovaVF, creditoRepVF, contadorRepVF, favoritos){
+  favoritos = favoritos || favoritosVF;
+  const rep = [];                 // fila única de repetição
   const novas = [];
   const novasEnterradas = [];
-  const revisoesNaoVencidas = []; // v3.2 - fallback final: razão < RAZAO_MINIMA_REVISAO
+  const revisoesNaoVencidas = []; // fallback final (v3.2): razão < RAZAO_MINIMA_REVISAO
+  const aprendendoNaoElegivel = []; // fallback final (v3.2): escada ainda não elegível
   pool.forEach(q => {
-    if(q.estado === 'revisao'){
+    if(q.estado === 'aprendendo'){
+      // fila de aprendizado ignora a família DE PROPÓSITO - questão
+      // voltando pelos degraus é o mesmo cartão se reforçando, isso é
+      // intencional e não pode ser bloqueado pelo enterro de irmãs
+      if(elegibilidadeAprendendoVF(q, agoraMs, contadorGlobal, pool.length)){
+        rep.push({item: q, urg: VF_ALGO.URGENCIA_ESCADA, atrasoH: 0, escada: true});
+      }else{
+        const decH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
+        const i = Math.min(q.degrau||0, VF_ALGO.ESCAPE_H.length - 1);
+        aprendendoNaoElegivel.push({item: q, faltamH: VF_ALGO.ESCAPE_H[i] - decH});
+      }
+    }else if(q.estado === 'revisao'){
       const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
-      // favorita "vence" a fila mais cedo - multiplica a razão ANTES do
-      // jitter, não depois (a ordem importa: isso desloca quando ela passa
-      // a competir de verdade, o jitter só embaralha um pouco por cima)
-      const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
-      const razao = (decorridoH / q.intervalo_horas) * boost;
-      // piso: revisão só entra na disputa com pelo menos metade do
-      // intervalo vencido - servir uma revisão a 1% do prazo (visto nos
-      // dados reais) não ensina nada, só rouba o lugar de uma nova.
-      // Abaixo do piso, guarda à parte pro fallback final (v3.2) em vez
-      // de simplesmente descartar
+      const razao = decorridoH / q.intervalo_horas;
+      // piso: revisão só entra na fila com pelo menos metade do intervalo
+      // vencido - servir uma revisão a 1% do prazo não ensina nada.
+      // Abaixo do piso, guarda à parte pro fallback final
       if(razao < VF_ALGO.RAZAO_MINIMA_REVISAO){
-        const proximoEmMs = new Date(q.ultima_resposta_em).getTime() + q.intervalo_horas*3600000;
-        revisoesNaoVencidas.push({item: q, proximoEmMs});
+        revisoesNaoVencidas.push({item: q, proximoEmMs: new Date(q.ultima_resposta_em).getTime() + q.intervalo_horas*3600000});
         return;
       }
-      const jitter = 1 + (pseudoAleatorioVF(sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
-      rn.push({score: razao * jitter, razao, item: q});
+      rep.push({item: q, urg: razao, atrasoH: decorridoH - q.intervalo_horas, escada: false});
     }else if(!q.estado || q.estado === 'nova'){
       // nova cuja família já foi respondida hoje - o enterro é uma
-      // PREFERÊNCIA (evita que a irmã tome o lugar de uma nova de outra
-      // família), não um bloqueio: ela fica de fora da disputa normal,
-      // mas é guardada à parte (novasEnterradas) pra ser usada como
-      // último recurso mais abaixo, quando não sobra mais nada
+      // PREFERÊNCIA, não um bloqueio: fica fora da disputa normal, mas é
+      // guardada à parte pra ser usada quando não sobra mais nada
       if(vfFamiliaEnterradaHojeVF(q.familiaId, agoraMs)){
         novasEnterradas.push({item: q, msEnterro: vfMomentoEnterroVF(q.familiaId)});
         return;
       }
-      // favorita nova fica em 1.0 normal (na prática nem acontece, só dá
-      // pra favoritar o que já foi visto) - sem boost aqui de propósito
       const jitter = 1 + (pseudoAleatorioVF(sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
-      const entrada = {score: 1.0 * jitter, item: q};
-      rn.push(entrada);
-      novas.push(entrada);
+      novas.push({score: jitter, item: q});
     }
   });
-  rn.sort((a,b) => b.score - a.score);
+
+  // prioridade da fila de repetição (D3). Jitter determinístico por
+  // sessão+id (pseudoAleatorioVF), não Math.random - a ordem não muda se
+  // trocar de aba e voltar sem responder
+  rep.forEach(r => {
+    const imp = (favoritos.has(r.item.id) ? VF_ALGO.BOOST_FAVORITO : 1) * ((r.item.total_erros || 0) >= VF_ALGO.LEECH_ERROS ? VF_ALGO.BOOST_LEECH : 1);
+    const jitter = 1 + (pseudoAleatorioVF(sementeSessao, r.item.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
+    r.prio = r.urg * imp * dificuldadeVF(r.item) * jitter;
+  });
+  // empate exato de prioridade: escada antes de revisão (é o cartão que
+  // acabou de errar), depois quem respondeu há mais tempo
+  rep.sort((a,b) => (b.prio - a.prio) || ((b.escada?1:0) - (a.escada?1:0)) || ((a.item.marca_contador||0) - (b.item.marca_contador||0)));
   novas.sort((a,b) => b.score - a.score);
-  // mais antiga enterrada primeiro (desempate útil: prioriza quem está
-  // "esperando" há mais tempo entre as irmãs represadas)
-  novasEnterradas.sort((a,b) => a.msEnterro - b.msEnterro);
-  // mais próxima de vencer primeiro (menor proximo_em)
-  revisoesNaoVencidas.sort((a,b) => a.proximoEmMs - b.proximoEmMs);
+  novasEnterradas.sort((a,b) => a.msEnterro - b.msEnterro); // esperando há mais tempo primeiro
+  revisoesNaoVencidas.sort((a,b) => a.proximoEmMs - b.proximoEmMs); // mais perto de vencer primeiro
+  aprendendoNaoElegivel.sort((a,b) => a.faltamH - b.faltamH);
 
-  if(aprendendo.length && !(anteriorVeioDeAprendizado && rn.length)){
-    // fila de aprendizado ignora a família DE PROPÓSITO - questão
-    // voltando pelos degraus é o mesmo cartão se reforçando, isso é
-    // intencional e não pode ser bloqueado pelo enterro de irmãs
-    return {item: aprendendo[0], veioDeAprendizado: true, furou: ultimoTurnoNovaFuradoVF};
+  // porta da antiguidade (D6): a cada REP_ANTIGUIDADE_A_CADA repetições
+  // servidas, uma vai pela revisão mais vencida em horas absolutas,
+  // ignorando prioridade. Só revisão entra por essa porta (escada não tem
+  // "atraso" absoluto) - se não houver revisão na fila, cai na prioridade
+  const A = VF_ALGO.REP_ANTIGUIDADE_A_CADA;
+  const porAntiguidade = (contadorRepVF % A) === A - 1;
+  let escolhaRep = rep[0] || null;
+  if(porAntiguidade && rep.length){
+    let maisVelha = null;
+    rep.forEach(r => { if(!r.escada && (!maisVelha || r.atrasoH > maisVelha.atrasoH)) maisVelha = r; });
+    if(maisVelha) escolhaRep = maisVelha;
   }
 
-  // Regra 1 (fluxo garantido de novas): crédito acumulado (v3) reproduz
-  // exatamente a proporção escolhida (33/50/67%), em vez de comparar
-  // "respostas desde a última nova" com um limiar fixo - substitui
-  // respostasDesdeUltimaNova na decisão (mantido como parâmetro só por
-  // compatibilidade do estado de sessão já salvo). Usa novasEnterradas
-  // como fallback quando não há nova livre - mantém o ritmo mesmo quando
-  // só sobraram irmãs represadas (o enterro é preferência, não bloqueio)
-  if(creditoNovaVF >= 1 && (novas.length || novasEnterradas.length)){
-    // exceção: revisão MUITO vencida (razão >= RAZAO_FURA_NOVA) passa na
-    // frente da nova garantida - é o que está prestes a ser esquecido de
-    // verdade. Mas fura no MÁXIMO 1 turno de nova a cada 2 (alternância
-    // estrita via furou/ultimoTurnoNovaFuradoVF) - sem esse limite, um
-    // backlog de centenas de "muito vencidas" (caso real depois de vários
-    // dias sem estudar) zerava as novas por um dia inteiro, o oposto do
-    // objetivo da v3. Com o backlog crítico esvaziando (cada uma
-    // acertada pula pra dias/semanas pelo crédito integral), a exceção
-    // some sozinha e o ritmo configurado volta a valer
-    const muitoVencida = rn.find(c => c.item.estado === 'revisao' && c.razao >= VF_ALGO.RAZAO_FURA_NOVA);
-    if(muitoVencida && !ultimoTurnoNovaFuradoVF){
-      return {item: muitoVencida.item, veioDeAprendizado: false, furou: true};
-    }
-    const proximaNova = novas.length ? novas[0].item : novasEnterradas[0].item;
-    return {item: proximaNova, veioDeAprendizado: false, furou: false};
-  }
+  const servirNova = fatia => ({item: novas.length ? novas[0].item : novasEnterradas[0].item, veioDeAprendizado: false, fatia, repeticao: false});
+  const servirRep = fatia => ({item: escolhaRep.item, veioDeAprendizado: !!escolhaRep.escada, fatia, repeticao: true, porAntiguidade: porAntiguidade && !escolhaRep.escada});
 
-  // rn já mistura revisões (com razão >= 0.5) e novas (não enterradas),
-  // ordenadas por score - pega a melhor das duas categorias juntas
-  if(rn.length){
-    return {item: rn[0].item, veioDeAprendizado: false, furou: ultimoTurnoNovaFuradoVF};
-  }
-
-  // último recurso antes de esgotado: o enterro de irmãs é uma
-  // PREFERÊNCIA (evita que a irmã tome o lugar de uma nova de outra
-  // família enquanto há opção), não um bloqueio - se não sobrou mais
-  // nada além de irmãs represadas, elas vêm. É muito melhor que "pare
-  // por aqui" quando há dezenas de questões nunca vistas esperando só
-  // porque a família foi vista mais cedo hoje. Prioriza a enterrada há
-  // mais tempo (novasEnterradas já vem ordenada assim)
-  if(novasEnterradas.length){
-    return {item: novasEnterradas[0].item, veioDeAprendizado: false, furou: ultimoTurnoNovaFuradoVF};
-  }
+  // orçamento (D1)
+  const temNova = novas.length || novasEnterradas.length;
+  const vezDaNova = creditoNovaVF >= creditoRepVF;
+  if(vezDaNova && temNova) return servirNova('nova');
+  if(!vezDaNova && rep.length) return servirRep('rep');
+  // fallback cruzado - a vaga vazia vai pro outro lado, descontando do
+  // crédito da vaga que estava aberta (senão acumula crédito fantasma)
+  if(rep.length) return servirRep('nova');
+  if(temNova) return servirNova('rep');
 
   // v3.2 - esgotar não pode parar a sessão: antes de desistir, serve
   // revisões ainda não vencidas (mais perto de vencer primeiro) - conta
   // como resposta "adiantada", tratada com cuidado especial em
   // registrarRespostaAlgoritmoVF pra não dar crédito de avanço indevido
-  // (ver ALGORITMO_REPETICAO_VF.md, seção 5)
+  const fatiaAberta = vezDaNova ? 'nova' : 'rep';
   if(revisoesNaoVencidas.length){
-    return {item: revisoesNaoVencidas[0].item, veioDeAprendizado: false, furou: ultimoTurnoNovaFuradoVF, adiantada: true};
+    return {item: revisoesNaoVencidas[0].item, veioDeAprendizado: false, fatia: fatiaAberta, repeticao: true, adiantada: true};
   }
-
   // mesma lógica pro aprendendo ainda não elegível - também adiantada
   if(aprendendoNaoElegivel.length){
-    return {item: aprendendoNaoElegivel[0].item, veioDeAprendizado: true, furou: ultimoTurnoNovaFuradoVF, adiantada: true};
+    return {item: aprendendoNaoElegivel[0].item, veioDeAprendizado: true, fatia: fatiaAberta, repeticao: true, adiantada: true};
   }
 
-  // só chega aqui se realmente não sobrar NADA no filtro (na prática,
-  // não deveria acontecer nunca, com os dois fallbacks acima)
+  // só chega aqui se realmente não sobrar NADA no filtro
   return {esgotado: true, motivo: vfMontarMotivoEsgotadoVF(pool, agoraMs, contadorGlobal)};
 }
 
@@ -6273,7 +6330,7 @@ function vfMontarMotivoEsgotadoVF(pool, agoraMs, contadorGlobal){
   pool.forEach(q => {
     if(q.estado !== 'revisao') return;
     const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
-    const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
+    const boost = 1; // v4 - favorita não altera mais a razão (o ×1.5 é na prioridade da fila, não no piso de entrada)
     const razao = (decorridoH / q.intervalo_horas) * boost;
     if(razao >= VF_ALGO.RAZAO_MINIMA_REVISAO) return; // essa já contaria, não é "aguardando"
     revisoesAguardando++;
@@ -6392,7 +6449,6 @@ let vfBibliografiaCache = new Map(); // id -> {titulo, modulo_pscpp}
 // nunca faz parte da busca inicial do pool inteiro
 let vfConteudoCompletoCache = new Map(); // id -> {texto, resposta, explicacao, correcao, dificuldade, inconsistente}
 let vfTotalAfirmacoesNoBanco = null; // total geral no banco, buscado uma vez só ao entrar na sessão
-let flashsSalvosVF = new Map(); // questao_vf_id -> motivo ('estudar' ou 'corrigir')
 let escritasPendentesVF = new Map(); // questao_vf_id -> estado local mais atual que o banco, enquanto o upsert está em voo
 // questao_vf_id -> promise do upsert da resposta ainda em voo. Usado pra
 // evitar corrida (C2): favoritar uma questão logo após respondê-la podia
@@ -6598,10 +6654,12 @@ function vfRestaurarDesenhoDaTelaAnteriorVF(){
   };
   img.src = guardado.dataUrl;
 }
-// controla o "modo de visualização" ao abrir uma questão salva que não é
-// da sessão atual - guarda de onde saiu pra poder voltar quando o usuário
-// clicar Próxima/Anterior/sair, em vez de continuar navegando a partir
-// da posição antiga da questão salva (que pode ser bem "pra trás")
+// controla o "modo de visualização" ao abrir uma questão favoritada (página
+// de Favoritos) que não é da sessão atual - guarda de onde saiu pra poder
+// voltar quando o usuário clicar Próxima/Anterior/sair, em vez de
+// continuar navegando a partir da posição antiga (que pode ser bem "pra
+// trás"). O nome "Salvo" é herança da antiga página "Flashes salvos",
+// removida em 18/09/2026 - a mecânica é a mesma pros favoritos
 let vfVisualizandoSalvoInfoVF = null;
 let vfSeletorCorNativoAberto = false; // true enquanto o seletor de cor nativo (roda-viva) está aberto
 // checagem GERAL - qualquer pop-up (modal de anotação, notas, explicação,
@@ -6614,8 +6672,8 @@ function vfAlgumModalAbertoVF(){
   // Carlos, pra poder escrever sobre a explicação), diferente de todos
   // os outros modais/popups, que continuam bloqueando normalmente
   if(document.querySelector('.modal-overlay:not(.hidden):not(#modal-explicacao-vf)')) return true;
-  const paginaSalvos = document.getElementById('pagina-flash-salvos-vf');
-  if(paginaSalvos && !paginaSalvos.classList.contains('hidden')) return true;
+  const paginaProgresso = document.getElementById('pagina-progresso-vf');
+  if(paginaProgresso && !paginaProgresso.classList.contains('hidden')) return true;
   const paginaFavoritos = document.getElementById('pagina-favoritos-vf');
   if(paginaFavoritos && !paginaFavoritos.classList.contains('hidden')) return true;
   // overlay de "retomar sessão" (aparece ao voltar pro app com uma
@@ -7081,12 +7139,13 @@ document.addEventListener('touchstart', (e) => {
   if(vfBalaoArrastoInfoVF) return; // proteção redundante - nunca desenha enquanto o balão está sendo arrastado, mesmo que o toque não esteja mais fisicamente sobre ele
   if(e.target.closest('textarea')) return; // nunca vira início de traço - dentro de qualquer textarea (edição de explicação/enunciado/correção), o toque (caneta ou dedo) precisa ficar livre pro comportamento nativo de seleção/cursor, sem competir com o sistema de desenho
   if(e.target.closest('select')) return; // qualquer <select> nativo (filtros do Flash, e futuros) - nunca vira início de traço, o dropdown nativo do Safari precisa do toque limpo
-  // Favoritar/Salvar já têm sistema PRÓPRIO completo (toque curto=clique,
-  // toque longo=abrir lista, ver vfIniciarPressionarFavoritar/Salvar) -
-  // achado real: o sistema genérico abaixo (só ativo pra caneta) competia
-  // com esse sistema próprio pela mesma caneta, quebrando os dois. Deixa
-  // esses 2 botões inteiramente por conta do próprio sistema deles
-  if(e.target.closest('[onclick^="toggleFavoritoVF"], [onclick^="vfAbrirEscolhaMotivoSalvarVF"]')) return;
+  // Favoritar já tem sistema PRÓPRIO completo (toque curto=clique, toque
+  // longo=abrir lista, ver vfIniciarPressionarFavoritar) - achado real: o
+  // sistema genérico abaixo (só ativo pra caneta) competia com esse
+  // sistema próprio pela mesma caneta, quebrando os dois. Deixa esse
+  // botão inteiramente por conta do próprio sistema dele (o antigo
+  // "Salvar", que tinha o mesmo esquema, saiu em 18/09/2026)
+  if(e.target.closest('[onclick^="toggleFavoritoVF"]')) return;
   // ícones pequenos, itens de menu (barra de baixo/sidebar), botões do
   // cabeçalho, e QUALQUER botão/link clicável na tela (alternativas do
   // Quest, Anterior/Próxima, pills de navegação, Confirmar resposta,
@@ -8848,62 +8907,9 @@ async function vfConfirmarExclusaoBibliotecaVF(id){
 }
 
 
-async function vfAbrirFlashSalvosVF(){
-  if(typeof vfForcarSalvamentoEdicaoPendenteVF === 'function') vfForcarSalvamentoEdicaoPendenteVF();
-  pausarTimerVF();
-  const el = document.getElementById('vf-lista-flash-salvos');
-  el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Carregando...</p>';
-  document.getElementById('pagina-flash-salvos-vf').classList.remove('hidden');
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('flashs_salvos_vf')
-    .select('id, motivo, criado_em, imagem_anotacao, questao_vf_id, questoes_vf(texto, bibliografia(titulo, nome_exibicao))', {count: 'exact'})
-    .eq('usuario_id', usuarioAtual.id)
-    .order('criado_em', {ascending: false}).order('id'));
-  if(error){ el.innerHTML = '<p style="color:#A32D2D;text-align:center;padding:20px 0">Erro ao carregar.</p>'; return; }
-  if(!data || !data.length){ el.innerHTML = '<p style="color:#888;text-align:center;padding:20px 0">Nenhum Flash salvo ainda. Toque o botão "Salvar" numa questão pra guardar ela aqui.</p>'; return; }
-
-  const iconeEstudar = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>';
-  const iconeCorrigir = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#B23A34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>';
-
-  function renderizarItemSalvo(s){
-    const publicacao = s.questoes_vf?.bibliografia?.nome_exibicao || s.questoes_vf?.bibliografia?.titulo || 'Publicação não identificada';
-    const dataFormatada = new Date(s.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
-    return `
-      <div style="border:0.5px solid #eee;border-radius:10px;padding:14px;cursor:pointer" onclick="vfIrParaQuestaoSalvaVF('${s.questao_vf_id}')">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-          <div>
-            <p style="font-weight:600;color:#B23A34;font-size:var(--fs-c);margin:0">${escapeHtml(publicacao)}</p>
-            <p style="color:#999;font-size:var(--fs-a);margin:2px 0 0 0">${dataFormatada}</p>
-          </div>
-          <button class="btn-icone-pequeno" onclick="event.stopPropagation();vfExcluirFlashSalvoVF('${s.id}','${s.questao_vf_id}')" title="Remover dos salvos">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-          </button>
-        </div>
-        ${s.questoes_vf?.texto ? `<div style="color:#666;font-size:var(--fs-b);margin:6px 0 0 0;line-height:1.4">${formatarTextoItemVF(s.questoes_vf.texto)}</div>` : ''}
-        ${s.imagem_anotacao ? `<img src="${s.imagem_anotacao}" style="width:100%;border-radius:8px;border:0.5px solid #eee;background:#fff;margin-top:10px" alt="O que foi marcado nessa questão">` : ''}
-      </div>`;
-  }
-
-  function renderizarSecao(titulo, icone, itens){
-    if(!itens.length) return '';
-    return `
-      <div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          ${icone}
-          <h3 style="margin:0;font-size:var(--fs-e);font-weight:700;color:#B23A34">${titulo}</h3>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:10px">${itens.map(renderizarItemSalvo).join('')}</div>
-      </div>`;
-  }
-
-  const itensEstudar = data.filter(s => s.motivo === 'estudar');
-  const itensCorrigir = data.filter(s => s.motivo === 'corrigir');
-  el.innerHTML = renderizarSecao('Estudar depois', iconeEstudar, itensEstudar) + renderizarSecao('Corrigir depois', iconeCorrigir, itensCorrigir);
-}
-
 async function vfIrParaQuestaoSalvaVF(questaoVfId){
   vfForcarSalvamentoEdicaoPendenteVF();
   pausarTimerVF(); // pausa a pendente ANTES de sair dela - senão continuava rodando escondida em background
-  document.getElementById('pagina-flash-salvos-vf').classList.add('hidden');
   document.getElementById('pagina-favoritos-vf').classList.add('hidden');
   const indiceExistente = estadoVF.historico.findIndex(h => h.item.id === questaoVfId);
   if(indiceExistente >= 0){
@@ -8959,149 +8965,510 @@ function vfSairDoModoVisualizacaoSalvoVF(){
   vfVisualizandoSalvoInfoVF = null;
 }
 
-function vfFecharFlashSalvosVF(){
-  document.getElementById('pagina-flash-salvos-vf').classList.add('hidden');
+// ==================== Painel de Progresso do Flash (18/09/2026) ====================
+// Substituiu o botão "Salvar" (e a página "Flashes salvos"). Uma chamada só
+// à RPC progresso_vf traz tudo em JSON; os gráficos são Chart.js (já
+// pré-carregado no boot pelo Placar). Cache de 60 s por período+escopo em
+// memória; os gráficos são destruídos ao fechar a página (iPad: três
+// instâncias vivas o tempo todo é peso à toa).
+const VF_DATA_PROVA = '2027-11-06';
+const VF_PROGRESSO_CACHE_MS = 60000;
+let vfProgressoVF = {periodo: 'hoje', escopo: 'banco', dataInicio: null, dataFim: null, modoGrafico: 'respostas', ordemCadernos: 'vistas', dados: null, requisicao: 0, gruposAbertos: new Set(), cadernosAbertos: new Set()};
+const vfProgressoCacheVF = new Map(); // chave -> {dados, em}
+let graficoPeriodoVF = null, graficoCoberturaVF = null;
+
+const vfProgFmtN = n => Math.round(n || 0).toLocaleString('pt-BR');
+const vfProgPct = (a, b) => b ? Math.round(100 * (a || 0) / b) + '%' : '—';
+const vfProgPct1 = (a, b) => b ? (100 * (a || 0) / b).toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%' : '—';
+function vfProgFmtTempo(min){
+  min = Math.round(min || 0);
+  if(min < 60) return min + 'min';
+  return Math.floor(min / 60) + 'h' + String(min % 60).padStart(2, '0');
+}
+function vfProgCorAcerto(a, b){
+  if(!b) return '#888';
+  const p = 100 * (a || 0) / b;
+  return p >= 85 ? '#1F6F4A' : p >= 70 ? '#854F0B' : '#A32D2D';
+}
+const VF_PROG_MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const VF_PROG_DIAS_SEMANA = ['dom','seg','ter','qua','qui','sex','sáb'];
+function vfProgDataLocal(iso){ const [y,m,d] = iso.slice(0,10).split('-').map(Number); return new Date(y, m-1, d); }
+function vfProgIsoLocal(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function vfProgFmtDataCurta(iso){ const d = vfProgDataLocal(iso); return String(d.getDate()).padStart(2,'0') + '/' + VF_PROG_MESES[d.getMonth()] + '/' + d.getFullYear(); }
+
+// período escolhido -> parâmetros da RPC (datas locais; início 00:00 do
+// dia, fim 00:00 do dia seguinte; nunca monta string com Z na mão)
+function vfPeriodoProgressoVF(){
+  const hoje = new Date(); const d0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const mais = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const p = vfProgressoVF.periodo;
+  if(p === 'hoje') return {p_inicio: d0.toISOString(), p_fim: mais(d0,1).toISOString(), p_granularidade: 'hora', ini: d0, fim: mais(d0,1)};
+  if(p === 'ontem') return {p_inicio: mais(d0,-1).toISOString(), p_fim: d0.toISOString(), p_granularidade: 'hora', ini: mais(d0,-1), fim: d0};
+  if(p === '7d') return {p_inicio: mais(d0,-6).toISOString(), p_fim: mais(d0,1).toISOString(), p_granularidade: 'dia', ini: mais(d0,-6), fim: mais(d0,1)};
+  if(p === '30d') return {p_inicio: mais(d0,-29).toISOString(), p_fim: mais(d0,1).toISOString(), p_granularidade: 'dia', ini: mais(d0,-29), fim: mais(d0,1)};
+  if(p === 'custom' && vfProgressoVF.dataInicio && vfProgressoVF.dataFim){
+    const a = vfProgDataLocal(vfProgressoVF.dataInicio), b = mais(vfProgDataLocal(vfProgressoVF.dataFim), 1);
+    const umDia = (b - a) <= 86400000 + 3600000; // 1 dia (tolerância pra virada de horário de verão)
+    return {p_inicio: a.toISOString(), p_fim: b.toISOString(), p_granularidade: umDia ? 'hora' : 'dia', ini: a, fim: b};
+  }
+  return {p_inicio: null, p_fim: null, p_granularidade: 'dia', ini: null, fim: mais(d0,1)}; // tudo (ou custom incompleto)
+}
+function vfFiltroAtualTemEscopoVF(){
+  return !!(filtroVF.publicacao || filtroVF.modulo || filtroVF.capitulo || filtroVF.numero || filtroVF.lista || filtroVF.inconsistente
+    || (filtroVF.filtrosInc||[]).length || (filtroVF.filtrosExc||[]).length);
+}
+
+function vfAbrirProgressoVF(){
+  if(typeof vfForcarSalvamentoEdicaoPendenteVF === 'function') vfForcarSalvamentoEdicaoPendenteVF();
+  pausarTimerVF();
+  try{ const salvo = localStorage.getItem('pscpp_vf_progresso_periodo'); if(['hoje','ontem','7d','30d','tudo'].includes(salvo)) vfProgressoVF.periodo = salvo; }catch(e){}
+  if(vfProgressoVF.periodo === 'custom') vfProgressoVF.periodo = 'hoje';
+  if(!vfFiltroAtualTemEscopoVF()) vfProgressoVF.escopo = 'banco';
+  document.getElementById('pagina-progresso-vf').classList.remove('hidden');
+  vfPintarCabecalhoProgressoVF();
+  vfRenderizarProgressoVF(null); // esqueleto síncrono - os números entram depois, sem pular
+  vfCarregarProgressoVF();
+}
+function vfDestruirGraficosProgressoVF(){
+  if(graficoPeriodoVF){ graficoPeriodoVF.destroy(); graficoPeriodoVF = null; }
+  if(graficoCoberturaVF){ graficoCoberturaVF.destroy(); graficoCoberturaVF = null; }
+}
+function vfFecharProgressoVF(){
+  document.getElementById('pagina-progresso-vf').classList.add('hidden');
+  vfDestruirGraficosProgressoVF();
   retomarOuDescartarPendenteVF();
 }
-
-async function vfExcluirFlashSalvoVF(salvoId, questaoVfId){
-  const {error} = await sb.from('flashs_salvos_vf').delete().eq('id', salvoId);
-  if(error){ alert('Erro ao excluir: '+error.message); return; }
-  // remove do estado em memória também - sem isso, o botão "Salvar" da
-  // questão continuava "aceso" até a página recarregar do zero, mesmo já
-  // tendo sido excluída da lista
-  flashsSalvosVF.delete(questaoVfId);
-  const entradaAtual = estadoVF?.historico[estadoVF.posicao];
-  if(entradaAtual && entradaAtual.item.id === questaoVfId){
-    const botaoSalvar = document.querySelector('.banco-acao-btn[onclick*="vfAbrirEscolhaMotivoSalvarVF"]');
-    if(botaoSalvar){
-      botaoSalvar.classList.remove('favoritada');
-      const svg = botaoSalvar.querySelector('svg');
-      if(svg) svg.setAttribute('fill', 'none');
-    }
-  }
-  vfAbrirFlashSalvosVF(); // recarrega a lista
-}
-
-// ---- toque longo no botão Salvar: abre a lista de tudo que já foi
-// salvo. Toque normal (sem segurar) salva a questão atual direto (abre a
-// escolha rápida Estudar depois / Corrigir depois). Esse botão é
-// ignorado pelo sistema genérico de toque com caneta (ver o touchstart
-// global) - fica inteiramente autossuficiente aqui, incluindo disparar o
-// clique manualmente quando necessário (só pra caneta: dedo/mouse já
-// clicam sozinhos normalmente, sem precisar de nada disso) ----
-let vfTimerPressionarSalvar = null;
-let vfFoiToqueLongoSalvar = false;
-let vfPosicaoInicialPressionarSalvarVF = null;
-function vfIniciarPressionarSalvar(evento){
-  vfFoiToqueLongoSalvar = false;
-  clearTimeout(vfTimerPressionarSalvar);
-  const ponto = evento && (evento.touches ? evento.touches[0] : evento);
-  vfPosicaoInicialPressionarSalvarVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
-  vfTimerPressionarSalvar = setTimeout(() => {
-    vfTimerPressionarSalvar = null;
-    vfFoiToqueLongoSalvar = true;
-    if(navigator.vibrate) navigator.vibrate(15); // feedback tátil de "ativou o toque longo"
-    vfAbrirFlashSalvosVF();
-  }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
-}
-// tolerância generosa pro tremor natural da Apple Pencil "parada" (mesma
-// razão documentada em VF_LIMIAR_ARRASTO_NAV_ITEM_PX) - sem isso, segurar
-// esse botão com a caneta cancelava o toque longo quase sempre antes dos
-// 500ms completarem
-function vfCancelarPressionarSalvar(evento, id){
-  // touchmove: só verifica se já moveu demais - se ainda está dentro da
-  // tolerância, não faz nada ainda (deixa o toque longo pendente rodando)
-  if(evento && evento.type === 'touchmove' && vfPosicaoInicialPressionarSalvarVF){
-    const ponto = evento.touches ? evento.touches[0] : evento;
-    if(ponto){
-      const dx = ponto.clientX - vfPosicaoInicialPressionarSalvarVF.x, dy = ponto.clientY - vfPosicaoInicialPressionarSalvarVF.y;
-      if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela nada ainda
-    }
-  }
-  // chegou aqui: ou é touchend/mouseup (toque acabou de vez), ou moveu
-  // demais no touchmove (arrasto de verdade) - cancela o toque longo pendente
-  const foiToqueLongo = vfFoiToqueLongoSalvar;
-  clearTimeout(vfTimerPressionarSalvar);
-  vfTimerPressionarSalvar = null;
-  vfPosicaoInicialPressionarSalvarVF = null;
-  // só dispara o clique manualmente se: é touchend de verdade (tem id) +
-  // não foi toque longo + foi realmente a caneta (touch-action:none nos
-  // botões do Flash suprime o clique sintético só dela, dedo/mouse
-  // continuam clicando sozinhos normalmente sem precisar disso)
-  if(id && !foiToqueLongo && evento && evento.type === 'touchend' && vfEhToqueDeCaneta(evento.changedTouches?.[0])){
-    evento.preventDefault();
-    vfAbrirEscolhaMotivoSalvarVF(id);
+function vfPintarCabecalhoProgressoVF(){
+  document.querySelectorAll('#vf-prog-chips .filter-btn').forEach(b => b.classList.toggle('active', b.dataset.periodo === vfProgressoVF.periodo));
+  document.getElementById('vf-prog-datas').classList.toggle('hidden', vfProgressoVF.periodo !== 'custom');
+  const temEscopo = vfFiltroAtualTemEscopoVF();
+  const elEscopo = document.getElementById('vf-prog-escopo');
+  elEscopo.classList.toggle('hidden', !temEscopo);
+  if(temEscopo){
+    elEscopo.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.escopo === vfProgressoVF.escopo));
+    const elLinhas = document.getElementById('vf-prog-escopo-linhas');
+    if(vfProgressoVF.escopo === 'filtro'){
+      // mesma lista de linhas que o painel de sessão monta (só as de escopo - tag/termo não entram)
+      const tmp = document.createElement('div'); tmp.innerHTML = vfMontarPlaceholderPanoramaVF();
+      const linhas = [...tmp.querySelectorAll('.vf-filtro-linha')].filter(l => /^(Módulo|Publicação|Capítulo|Tipo|Só|Sem)$/.test((l.firstElementChild?.textContent || '').trim()));
+      elLinhas.innerHTML = linhas.map(l => l.outerHTML).join('');
+    }else elLinhas.innerHTML = '';
   }
 }
-
-function vfAbrirEscolhaMotivoSalvarVF(questaoId){
-  if(vfFoiToqueLongoSalvar) return; // já virou toque longo (abriu a lista) - não também salva
-  // já está salva - toque normal "des-salva" direto, sem passar pelo
-  // modal de motivo de novo (era o bug: clicar numa já salva sempre
-  // reabria a escolha de motivo, nunca desmarcava)
-  if(flashsSalvosVF.has(questaoId)){
-    vfDessalvarFlashDiretoVF(questaoId);
+function vfTrocarPeriodoProgressoVF(periodo){
+  vfProgressoVF.periodo = periodo;
+  if(periodo !== 'custom'){ try{ localStorage.setItem('pscpp_vf_progresso_periodo', periodo); }catch(e){} }
+  vfPintarCabecalhoProgressoVF();
+  if(periodo === 'custom'){
+    const hoje = vfProgIsoLocal(new Date());
+    const elI = document.getElementById('vf-prog-data-inicio'), elF = document.getElementById('vf-prog-data-fim');
+    if(!elI.value) elI.value = hoje;
+    if(!elF.value) elF.value = hoje;
+    vfAplicarDatasProgressoVF();
     return;
   }
-  pausarTimerVF(); // a pendente continua rodando escondida atrás do modal senão
-  document.getElementById('vf-escolha-motivo-questao-id').value = questaoId;
-  abrirModal('modal-escolha-motivo-salvar-vf');
+  vfCarregarProgressoVF();
+}
+function vfAplicarDatasProgressoVF(){
+  const i = document.getElementById('vf-prog-data-inicio').value, f = document.getElementById('vf-prog-data-fim').value;
+  if(!i || !f || i > f) return;
+  vfProgressoVF.dataInicio = i; vfProgressoVF.dataFim = f;
+  vfCarregarProgressoVF();
+}
+function vfTrocarEscopoProgressoVF(escopo){
+  vfProgressoVF.escopo = escopo;
+  vfPintarCabecalhoProgressoVF();
+  vfCarregarProgressoVF();
+}
+function vfParametrosProgressoVF(){
+  const per = vfPeriodoProgressoVF();
+  const base = {p_usuario_id: usuarioAtual.id, p_inicio: per.p_inicio, p_fim: per.p_fim, p_granularidade: per.p_granularidade,
+    p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo', p_data_prova: VF_DATA_PROVA};
+  if(vfProgressoVF.escopo === 'filtro' && vfFiltroAtualTemEscopoVF()) return {...vfParametrosPanoramaFiltroVF(), ...base};
+  return base;
+}
+async function vfCarregarProgressoVF(opcoes){
+  const forcar = !!(opcoes && opcoes.forcar);
+  if(!usuarioAtual) return;
+  const params = vfParametrosProgressoVF();
+  const chave = vfProgressoVF.periodo + '|' + JSON.stringify(params);
+  const emCache = vfProgressoCacheVF.get(chave);
+  if(!forcar && emCache && (Date.now() - emCache.em) < VF_PROGRESSO_CACHE_MS){
+    vfProgressoVF.dados = emCache.dados; vfRenderizarProgressoVF(emCache.dados); return;
+  }
+  const req = ++vfProgressoVF.requisicao; // uma em andamento por vez: resposta velha é descartada
+  vfMarcarAtualizandoProgressoVF();
+  try{
+    const {data, error} = await sb.rpc('progresso_vf', params);
+    if(req !== vfProgressoVF.requisicao) return;
+    if(error) throw error;
+    vfProgressoCacheVF.set(chave, {dados: data, em: Date.now()});
+    vfProgressoVF.dados = data;
+    if(document.getElementById('pagina-progresso-vf').classList.contains('hidden')) return; // fechou enquanto carregava
+    vfRenderizarProgressoVF(data);
+  }catch(e){
+    if(req !== vfProgressoVF.requisicao) return;
+    console.error('progresso_vf:', e);
+    const el = document.getElementById('vf-prog-rodape-texto');
+    if(el) el.textContent = 'Não consegui atualizar · toque pra tentar de novo';
+    vfMostrarAvisoVF('Não consegui atualizar o progresso agora.');
+  }
+}
+function vfMarcarAtualizandoProgressoVF(){
+  const el = document.getElementById('vf-prog-rodape-texto');
+  if(el) el.textContent = 'Atualizando…';
 }
 
-// des-salva direto (sem modal, sem precisar abrir a lista) - otimista,
-// mesmo padrão de vfSalvarFlashComMotivoVF: o ícone muda já, a exclusão
-// no banco acontece em segundo plano. Deleta por usuario_id+questao_vf_id
-// (chave única, mesma usada no onConflict do upsert) em vez de precisar
-// do id da linha, que flashsSalvosVF não guarda
-function vfDessalvarFlashDiretoVF(questaoId){
-  const motivoAnterior = flashsSalvosVF.get(questaoId);
-  flashsSalvosVF.delete(questaoId);
-  renderizarItemVF();
-  sb.from('flashs_salvos_vf').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoId).then(({error}) => {
-    if(error){
-      // exclusão falhou de verdade - desfaz o otimismo
-      flashsSalvosVF.set(questaoId, motivoAnterior);
-      renderizarItemVF();
-      alert('Erro ao remover dos salvos: '+error.message);
+// ---- preenchimento de buracos na série (a RPC só devolve pontos com resposta) ----
+// serie[].t é "YYYY-MM-DDTHH:MM" já no fuso local, sem Z - parseado à mão
+function vfProgParseT(t){ const [d, h] = t.split('T'); const [y,m,dd] = d.split('-').map(Number); return new Date(y, m-1, dd, h ? parseInt(h.slice(0,2),10) : 0); }
+function vfProgSerieCompletaVF(dados, per){
+  const serie = dados.serie || [];
+  const porChave = new Map();
+  const gran = per.p_granularidade;
+  serie.forEach(pt => porChave.set(pt.t.slice(0,16), pt));
+  const vazio = t => ({t, n: 0, novas: 0, rep: 0, acertos: 0, min_ativo: 0});
+  const out = [];
+  if(gran === 'hora'){
+    if(!serie.length) return {pontos: [], gran};
+    const ini = vfProgParseT(serie[0].t), fim = vfProgParseT(serie[serie.length-1].t);
+    for(let d = new Date(ini); d <= fim; d.setHours(d.getHours()+1)){
+      const t = vfProgIsoLocal(d) + 'T' + String(d.getHours()).padStart(2,'0') + ':00';
+      out.push(porChave.get(t) || vazio(t));
     }
-  });
+    return {pontos: out, gran};
+  }
+  // dia: do início do período (ou do primeiro dia com dado, em "Tudo") até o fim
+  let ini = per.ini;
+  if(!ini){
+    const primeiro = (dados.cobertura && dados.cobertura[0] && dados.cobertura[0].dia) || (serie[0] && serie[0].t.slice(0,10));
+    if(!primeiro) return {pontos: [], gran: 'dia'};
+    ini = vfProgDataLocal(primeiro);
+  }
+  const dias = [];
+  for(let d = new Date(ini); d < per.fim; d.setDate(d.getDate()+1)){
+    const t = vfProgIsoLocal(d) + 'T00:00';
+    dias.push(porChave.get(t) || vazio(t));
+  }
+  if(vfProgressoVF.periodo === 'tudo' && dias.length > 90){
+    // agrega por semana (segunda-feira) no JS - mais barato que rechamar a RPC
+    const semanas = new Map();
+    dias.forEach(pt => {
+      const d = vfProgParseT(pt.t); const dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow);
+      const k = vfProgIsoLocal(d) + 'T00:00';
+      const acc = semanas.get(k) || vazio(k);
+      acc.n += pt.n; acc.novas += pt.novas; acc.rep += pt.rep; acc.acertos += pt.acertos; acc.min_ativo += pt.min_ativo;
+      semanas.set(k, acc);
+    });
+    return {pontos: [...semanas.values()], gran: 'semana'};
+  }
+  return {pontos: dias, gran: 'dia'};
+}
+function vfProgRotuloPontoVF(t, gran){
+  const d = vfProgParseT(t);
+  if(gran === 'hora') return String(d.getHours()).padStart(2,'0') + 'h';
+  if(gran === 'semana') return String(d.getDate()).padStart(2,'0') + '/' + VF_PROG_MESES[d.getMonth()];
+  return VF_PROG_DIAS_SEMANA[d.getDay()] + ' ' + String(d.getDate()).padStart(2,'0');
 }
 
-function vfFecharModalMotivoSalvarVF(){
-  fecharModal('modal-escolha-motivo-salvar-vf');
-  retomarOuDescartarPendenteVF(); // fechou sem escolher motivo - retoma a pendente (ou descarta se passou de 30 min)
+// ---- renderização ----
+function vfProgCardVF(rotulo, valor, sub, corValor, extra){
+  return `<div class="card-questao" style="padding:12px 10px;margin:0;min-width:0;${extra||''}">
+    <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">${rotulo}</div>
+    <div style="font-size:var(--fs-g);font-weight:700;line-height:1.2;color:${corValor||'#111'};overflow-wrap:anywhere">${valor}</div>
+    ${sub ? `<div style="font-size:var(--fs-b);color:#888;margin-top:4px;line-height:1.35">${sub}</div>` : ''}
+  </div>`;
+}
+function vfRenderizarProgressoVF(d){
+  const corpo = document.getElementById('vf-prog-corpo');
+  if(!corpo) return;
+  const per = vfPeriodoProgressoVF();
+  const ehDia = per.p_granularidade === 'hora';
+  const P = (d && d.periodo) || {}, B = (d && d.banco) || {}, PR = (d && d.projecao) || {};
+  const tr = '—';
+  const v = (x, f) => (d && x != null) ? (f ? f(x) : x) : tr;
+  const grid4 = 'display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px';
+  const grid2 = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px';
+  const ehEstreito = window.innerWidth < 600;
+  const acertoNovas = P.novas ? vfProgPct(P.acertos_novas, P.novas) : '—';
+  const acertoEscada = P.escada ? vfProgPct(P.acertos_escada, P.escada) : '—';
+  const acertoRev = P.revisoes ? vfProgPct(P.acertos_revisoes, P.revisoes) : '—';
+  const repetidas = (P.escada||0) + (P.revisoes||0);
+  const ritmo = P.min_ativo ? (P.respostas / (P.min_ativo/60)).toLocaleString('pt-BR', {maximumFractionDigits: 1}) + ' <span style="font-size:var(--fs-b);font-weight:500;color:#888">resp/h</span>' : '—';
+  const pequeno = t => `<span style="font-size:var(--fs-b);font-weight:500;color:#888">${t}</span>`;
+
+  // B - resumo
+  const cardsB = [
+    vfProgCardVF('Respostas', v(P.respostas, vfProgFmtN)),
+    vfProgCardVF('Novas', v(P.novas, vfProgFmtN), d ? `${vfProgPct(P.novas, P.respostas)} do total` : ''),
+    vfProgCardVF('Repetidas', d ? vfProgFmtN(repetidas) : tr, d ? `escada ${vfProgFmtN(P.escada)} · revisões ${vfProgFmtN(P.revisoes)}` : ''),
+    vfProgCardVF('Acerto', d ? vfProgPct(P.acertos, P.respostas) : tr, d ? `novas ${acertoNovas} · escada ${acertoEscada} · rev ${acertoRev}` : '', d ? vfProgCorAcerto(P.acertos, P.respostas) : null),
+    vfProgCardVF('Tempo ativo <span title="soma dos intervalos entre respostas; pausa acima de 5 min não conta" style="color:#bbb">ⓘ</span>', v(P.min_ativo, vfProgFmtTempo)),
+    vfProgCardVF('Ritmo', d ? ritmo : tr),
+    ehDia ? vfProgCardVF('Questões distintas', v(P.questoes_distintas, vfProgFmtN)) : vfProgCardVF('Dias com estudo', v(P.dias_com_estudo, vfProgFmtN)),
+    vfProgCardVF('Sequência', d ? `<span style="color:#D95926">🔥</span> ${vfProgFmtN(d.sequencia)}` : tr, 'dias seguidos')
+  ].join('');
+
+  // D - banco
+  const seg = [
+    {k:'rev_firme', nome:'Firmes', cor:'#1F6F4A'}, {k:'rev_consolidada', nome:'Consolidadas', cor:'#3E9A6A'}, {k:'rev_jovem', nome:'Jovens', cor:'#9CD3B3'},
+    {k:'aprendendo', nome:'Na escada', cor:'#D95926'}, {k:'nunca_vistas', nome:'Nunca vistas', cor:'#E6E4DE'}
+  ];
+  const barraBanco = d ? seg.map(sg => `<div style="width:${B.ativas ? (100*(B[sg.k]||0)/B.ativas) : 0}%;background:${sg.cor};height:100%;flex-shrink:0" title="${sg.nome}: ${vfProgFmtN(B[sg.k])}"></div>`).join('') : '';
+  const legendaBanco = seg.map(sg => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-b);color:#555"><span style="width:10px;height:10px;border-radius:2px;background:${sg.cor};display:inline-block;flex-shrink:0"></span>${sg.nome} <b style="color:#111">${d ? vfProgFmtN(B[sg.k]) : tr}</b></span>`).join('');
+  const pilula = (rotulo, valor, onclick) => `<span ${onclick ? `onclick="${onclick}" ` : ''}style="display:inline-flex;align-items:center;gap:6px;border:0.5px solid #ddd;border-radius:999px;padding:4px 10px;font-size:var(--fs-b);color:#555;background:#fff;${onclick ? 'cursor:pointer' : ''}">${rotulo} <b style="color:#111">${valor}</b>${onclick ? ' ›' : ''}</span>`;
+
+  // E - projeção
+  const passoZero = d && !(PR.novas_dia_7d > 0);
+  const atrasado = d && PR.dias_para_terminar != null && PR.dias_ate_prova != null && PR.dias_para_terminar > PR.dias_ate_prova;
+  const cardsE = [
+    vfProgCardVF('Novas restantes', v(PR.novas_restantes, vfProgFmtN)),
+    vfProgCardVF('Seu passo (7 dias)', d ? (passoZero ? '0' : vfProgFmtN(PR.novas_dia_7d) + ' ' + pequeno('novas/dia')) : tr, d ? `${vfProgFmtN(PR.respostas_dia_7d)} resp/dia · ${vfProgFmtN(PR.dias_com_estudo_7d)} de 7 dias` : ''),
+    vfProgCardVF('Acabam em', d ? (passoZero ? '—' : `${vfProgFmtN(PR.dias_para_terminar)} ${pequeno('dias')}`) : tr, d ? (passoZero ? 'sem novas nos últimos 7 dias' : (PR.data_estimada ? vfProgFmtDataCurta(PR.data_estimada) : '')) : ''),
+    vfProgCardVF('Prova', d ? `${vfProgFmtN(PR.dias_ate_prova)} ${pequeno('dias')}` : tr,
+      d ? (atrasado ? `precisa de <b style="color:#A32D2D">${vfProgFmtN(PR.novas_dia_para_prova)}</b> novas/dia` : `bastam <b style="color:#111">${vfProgFmtN(PR.novas_dia_para_prova)}</b> novas/dia`) : '',
+      atrasado ? '#A32D2D' : null, atrasado ? 'background:#FCEBEB;border-color:#F7C1C1;' : '')
+  ].join('');
+
+  const titulo = t => `<div class="vf-secao-titulo" style="margin:16px 0 8px 0">${t}</div>`;
+  const modoResp = vfProgressoVF.modoGrafico === 'respostas';
+  const segBtn = (ativo, rotulo, onclick) => `<button class="filter-btn ${ativo?'active':''}" style="margin:0" onclick="${onclick}">${rotulo}</button>`;
+  const rodape = d ? 'Atualizado às ' + new Date(d.gerado_em).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' · toque pra atualizar' : 'Carregando…';
+
+  vfDestruirGraficosProgressoVF(); // o innerHTML abaixo troca os canvases - destrói antes, senão a instância antiga fica pendurada num canvas órfão
+  corpo.innerHTML = `
+    ${titulo('Resumo do período')}
+    <div style="${ehEstreito ? grid2 : grid4}">${cardsB}</div>
+    ${titulo('Gráfico do período')}
+    <div class="card-questao" style="margin:0;padding:12px">
+      <div style="display:flex;gap:6px;margin-bottom:8px">${segBtn(modoResp, 'Respostas', "vfTrocarModoGraficoProgressoVF('respostas')")}${segBtn(!modoResp, 'Tempo', "vfTrocarModoGraficoProgressoVF('tempo')")}</div>
+      <div style="position:relative;height:220px"><canvas id="vf-prog-canvas-periodo"></canvas><div id="vf-prog-periodo-vazio" class="hidden" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#888;font-size:var(--fs-c)">Nenhuma resposta nesse período.</div></div>
+      <div id="vf-prog-legenda-periodo" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px"></div>
+    </div>
+    <div class="vf-prog-2col" style="display:grid;grid-template-columns:1fr;gap:0 16px">
+      <div>
+        ${titulo('O banco')}
+        <div class="card-questao" style="margin:0;padding:14px">
+          <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:var(--fs-b);color:#555;margin-bottom:10px">
+            <span>Total <b style="color:#111">${v(B.total, vfProgFmtN)}</b></span><span>Excluídas <b style="color:#111">${v(B.excluidas, vfProgFmtN)}</b></span><span>Ativas <b style="color:#111">${v(B.ativas, vfProgFmtN)}</b></span>
+          </div>
+          <div style="font-size:var(--fs-e);font-weight:700;color:#111;margin-bottom:8px">Vistas ${v(B.vistas, vfProgFmtN)} de ${v(B.ativas, vfProgFmtN)} · ${d ? vfProgPct1(B.vistas, B.ativas) : tr}</div>
+          <div style="display:flex;height:16px;border-radius:8px;overflow:hidden;background:#E6E4DE">${barraBanco}</div>
+          <div style="display:flex;gap:8px 14px;flex-wrap:wrap;margin-top:8px">${legendaBanco}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+            ${pilula('Vencidas agora', v(B.vencidas, vfProgFmtN))}
+            ${pilula('Leeches', v(B.leeches, vfProgFmtN), 'vfAbrirListaLeechesVF()')}
+            ${pilula('Favoritas', v(B.favoritas, vfProgFmtN))}
+          </div>
+        </div>
+      </div>
+      <div>
+        ${titulo('Quando acabo')}
+        <div style="${grid2}">${cardsE}</div>
+        <div style="font-size:var(--fs-b);color:#888;margin-top:8px;line-height:1.4">Passo = média de novas por dia com estudo nos últimos 7 dias-calendário. A projeção da barra de sessão usa 14 dias; aqui é 7 de propósito, pra reagir mais rápido ao seu ritmo atual.</div>
+      </div>
+    </div>
+    ${titulo('Curva de cobertura')}
+    <div class="card-questao" style="margin:0;padding:12px">
+      <div style="font-size:var(--fs-b);color:#888;margin-bottom:6px">Afirmações vistas ao longo do tempo</div>
+      <div style="position:relative;height:220px"><canvas id="vf-prog-canvas-cobertura"></canvas></div>
+    </div>
+    ${titulo('Por caderno')}
+    <div id="vf-prog-ordem" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      ${['vistas','acerto','vencidas','nome'].map(o => segBtn(vfProgressoVF.ordemCadernos === o, {vistas:'Vistas',acerto:'Acerto',vencidas:'Vencidas',nome:'Nome'}[o], `vfTrocarOrdemCadernosProgressoVF('${o}')`)).join('')}
+    </div>
+    <div id="vf-prog-cadernos">${d ? vfMontarCadernosProgressoVF(d) : '<div style="color:#888;font-size:var(--fs-c)">—</div>'}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:20px;flex-wrap:wrap">
+      <span id="vf-prog-rodape-texto" onclick="vfCarregarProgressoVF({forcar:true})" style="font-size:var(--fs-b);color:#888;cursor:pointer">${rodape}</span>
+      <button class="filter-btn" style="margin:0" onclick="abrirModal('modal-info-progresso-vf')">ⓘ Definições</button>
+    </div>`;
+  if(d){ vfDesenharGraficoPeriodoVF(d, per); vfDesenharGraficoCoberturaVF(d); }
+}
+function vfTrocarModoGraficoProgressoVF(modo){
+  vfProgressoVF.modoGrafico = modo;
+  if(vfProgressoVF.dados) vfRenderizarProgressoVF(vfProgressoVF.dados);
+}
+function vfTrocarOrdemCadernosProgressoVF(ordem){
+  vfProgressoVF.ordemCadernos = ordem;
+  document.querySelectorAll('#vf-prog-ordem .filter-btn').forEach((b, i) => b.classList.toggle('active', ['vistas','acerto','vencidas','nome'][i] === ordem));
+  const el = document.getElementById('vf-prog-cadernos');
+  if(el && vfProgressoVF.dados) el.innerHTML = vfMontarCadernosProgressoVF(vfProgressoVF.dados);
 }
 
-async function vfSalvarFlashComMotivoVF(motivo){
-  const questaoId = document.getElementById('vf-escolha-motivo-questao-id').value;
-  fecharModal('modal-escolha-motivo-salvar-vf');
-  retomarOuDescartarPendenteVF(); // retoma a pendente (ou descarta se passou de 30 min parada no modal)
-  if(!questaoId) return;
-  // captura o que estiver marcado (highlight + caneta, os dois vivem no
-  // mesmo canvas) - só faz sentido guardar aqui porque é uma decisão
-  // deliberada de salvar, não um rabisco de raciocínio no meio da questão
-  const canvas = document.getElementById('vf-canvas-desenho');
-  const imagemAnotacao = (canvas && vfCtxDesenho && vfIndiceHistoricoVF >= 0) ? vfRecortarAreaDesenhadaVF(canvas) : null;
-  const dadosParaSalvar = {usuario_id: usuarioAtual.id, questao_vf_id: questaoId, motivo};
-  // só inclui a imagem se tiver uma nova de verdade - senão o upsert ia
-  // sobrescrever com null uma imagem que já estava salva de um save anterior
-  if(imagemAnotacao) dadosParaSalvar.imagem_anotacao = imagemAnotacao;
-  // otimista: o ícone muda JÁ, o upsert acontece em segundo plano - "meio
-  // lento" antes era esperar o banco confirmar antes de sequer mudar o
-  // ícone na tela
-  const motivoAnterior = flashsSalvosVF.get(questaoId); // pra desfazer certo se a escrita falhar
-  flashsSalvosVF.set(questaoId, motivo);
-  renderizarItemVF(); // atualiza o ícone preenchido na hora
-  sb.from('flashs_salvos_vf').upsert(dadosParaSalvar, {onConflict: 'usuario_id,questao_vf_id'}).then(({error}) => {
-    if(error){
-      // escrita falhou de verdade - desfaz o otimismo
-      if(motivoAnterior === undefined) flashsSalvosVF.delete(questaoId);
-      else flashsSalvosVF.set(questaoId, motivoAnterior);
-      renderizarItemVF();
-      alert('Erro ao salvar: '+error.message);
+// ---- C: gráfico do período ----
+async function vfDesenharGraficoPeriodoVF(d, per){
+  const canvas = document.getElementById('vf-prog-canvas-periodo');
+  if(!canvas) return;
+  const {pontos, gran} = vfProgSerieCompletaVF(d, per);
+  const vazio = document.getElementById('vf-prog-periodo-vazio');
+  const legenda = document.getElementById('vf-prog-legenda-periodo');
+  if(!pontos.length || !pontos.some(p => p.n > 0)){ vazio.classList.remove('hidden'); canvas.classList.add('hidden'); legenda.innerHTML = ''; return; }
+  vazio.classList.add('hidden'); canvas.classList.remove('hidden');
+  const labels = pontos.map(p => vfProgRotuloPontoVF(p.t, gran));
+  const modoResp = vfProgressoVF.modoGrafico === 'respostas';
+  const itemLegenda = (cor, nome) => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-b);color:#555"><span style="width:10px;height:10px;border-radius:2px;background:${cor};display:inline-block"></span>${nome}</span>`;
+  legenda.innerHTML = modoResp ? itemLegenda('#D95926','Novas') + itemLegenda('#8A94A6','Repetidas') + itemLegenda('#202A45','Acerto %') : itemLegenda('#8A94A6','Tempo ativo (h)');
+  try{
+    await carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js', () => typeof Chart !== 'undefined');
+    if(document.getElementById('vf-prog-canvas-periodo') !== canvas) return; // página fechada/re-renderizada enquanto carregava
+    if(graficoPeriodoVF){ graficoPeriodoVF.destroy(); graficoPeriodoVF = null; }
+    const datasets = modoResp ? [
+      {type:'bar', label:'Novas', data: pontos.map(p=>p.novas), backgroundColor:'#D95926', stack:'r', yAxisID:'y', borderRadius:2},
+      {type:'bar', label:'Repetidas', data: pontos.map(p=>p.rep), backgroundColor:'#8A94A6', stack:'r', yAxisID:'y', borderRadius:2},
+      {type:'line', label:'Acerto %', data: pontos.map(p=>p.n ? Math.round(100*p.acertos/p.n) : null), borderColor:'#202A45', backgroundColor:'#202A45', yAxisID:'y1', pointRadius:2.5, borderWidth:1.5, tension:0.2, spanGaps:true}
+    ] : [
+      {type:'bar', label:'Tempo ativo (h)', data: pontos.map(p=>Math.round(p.min_ativo/6)/10), backgroundColor:'#8A94A6', yAxisID:'y', borderRadius:2}
+    ];
+    graficoPeriodoVF = new Chart(canvas, {
+      data: {labels, datasets},
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: {duration: 300},
+        interaction: {mode:'index', intersect:false},
+        plugins: {legend:{display:false}, tooltip:{callbacks:{
+          title: items => labels[items[0].dataIndex],
+          label: () => null,
+          afterBody: items => { const p = pontos[items[0].dataIndex]; return modoResp ? `${vfProgFmtN(p.novas)} novas · ${vfProgFmtN(p.rep)} repetidas · ${p.n ? Math.round(100*p.acertos/p.n) : 0}% · ${vfProgFmtTempo(p.min_ativo)}` : `${vfProgFmtTempo(p.min_ativo)} · ${vfProgFmtN(p.n)} respostas`; }
+        }}},
+        scales: {
+          x: {stacked:true, grid:{display:false}, ticks:{color:'#888', font:{size:11}, maxRotation:0, autoSkip:true}},
+          y: {stacked:true, beginAtZero:true, ticks:{color:'#888', font:{size:11}}, grid:{color:'#eee'}},
+          y1: {display: modoResp, position:'right', min:0, max:100, grid:{drawOnChartArea:false}, ticks:{color:'#888', font:{size:11}, callback: v => v + '%'}}
+        }
+      }
+    });
+  }catch(e){ console.error('gráfico do período:', e); }
+}
+
+// ---- F: curva de cobertura (histórico inteiro, ignora o período, respeita o escopo) ----
+async function vfDesenharGraficoCoberturaVF(d){
+  const canvas = document.getElementById('vf-prog-canvas-cobertura');
+  if(!canvas) return;
+  const cob = d.cobertura || [];
+  if(!cob.length) return;
+  const ativas = (d.banco && d.banco.ativas) || 0;
+  const labels = cob.map(c => c.dia);
+  const reais = cob.map(c => ativas ? Math.min(c.acumulado, ativas) : c.acumulado); // acumulado conta primeiras exposições (inclusive de excluídas depois) - pode passar do teto por pouco; corta
+  const proj = new Array(cob.length).fill(null);
+  const dataEst = d.projecao && d.projecao.data_estimada;
+  if(dataEst && dataEst > labels[labels.length-1]){
+    // um rótulo por dia até a data estimada (eixo por categoria: sem isso a
+    // projeção virava um segmento quase vertical num único ponto)
+    proj[cob.length-1] = reais[cob.length-1];
+    const ultimo = vfProgDataLocal(labels[labels.length-1]), alvo = vfProgDataLocal(dataEst);
+    for(let d = new Date(ultimo.getFullYear(), ultimo.getMonth(), ultimo.getDate()+1); d <= alvo; d.setDate(d.getDate()+1)){
+      const iso = vfProgIsoLocal(d);
+      labels.push(iso); reais.push(null); proj.push(iso === dataEst ? ativas : null);
     }
+    if(labels[labels.length-1] !== dataEst){ labels.push(dataEst); reais.push(null); proj.push(ativas); }
+  }
+  try{
+    await carregarBibliotecaSobDemanda('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js', () => typeof Chart !== 'undefined');
+    if(document.getElementById('vf-prog-canvas-cobertura') !== canvas) return;
+    if(graficoCoberturaVF){ graficoCoberturaVF.destroy(); graficoCoberturaVF = null; }
+    graficoCoberturaVF = new Chart(canvas, {
+      type: 'line',
+      data: {labels, datasets: [
+        {label:'Vistas', data: reais, borderColor:'#D95926', backgroundColor:'rgba(217,89,38,0.10)', fill:true, tension:0.25, pointRadius:0, borderWidth:2, spanGaps:false},
+        {label:'Projeção', data: proj, borderColor:'#D95926', borderDash:[2,4], pointRadius:0, borderWidth:1.5, fill:false, spanGaps:true},
+        {label:'todas as ativas', data: labels.map(() => ativas), borderColor:'#8A94A6', borderDash:[6,4], pointRadius:0, borderWidth:1, fill:false}
+      ]},
+      options: {
+        responsive:true, maintainAspectRatio:false, animation:{duration:300},
+        interaction:{mode:'index', intersect:false},
+        plugins:{legend:{display:false}, tooltip:{callbacks:{
+          title: items => vfProgFmtDataCurta(labels[items[0].dataIndex]),
+          label: item => item.raw == null ? null : `${item.dataset.label}: ${vfProgFmtN(item.raw)}`
+        }}},
+        scales:{
+          x:{grid:{display:false}, ticks:{color:'#888', font:{size:11}, maxRotation:0, autoSkip:true, maxTicksLimit:6, callback:(val, i) => { const dt = vfProgDataLocal(labels[i]); return String(dt.getDate()).padStart(2,'0') + '/' + VF_PROG_MESES[dt.getMonth()]; }}},
+          y:{beginAtZero:true, ticks:{color:'#888', font:{size:11}, callback: val => val >= 1000 ? (val/1000).toLocaleString('pt-BR', {maximumFractionDigits:1}) + ' mil' : val}, grid:{color:'#eee'}}
+        }
+      }
+    });
+  }catch(e){ console.error('curva de cobertura:', e); }
+}
+
+// ---- G: por caderno ----
+function vfMontarCadernosProgressoVF(d){
+  const lista = (d.cadernos || []).slice();
+  const ordem = vfProgressoVF.ordemCadernos;
+  const acerto = c => c.respostas_periodo ? c.acertos_periodo / c.respostas_periodo : null;
+  lista.sort((a, b) => {
+    if(ordem === 'nome') return (a.nome||'').localeCompare(b.nome||'', 'pt');
+    if(ordem === 'vencidas') return (b.vencidas||0) - (a.vencidas||0);
+    if(ordem === 'acerto'){ const x = acerto(a), y = acerto(b); if(x == null && y == null) return (b.vistas||0)-(a.vistas||0); if(x == null) return 1; if(y == null) return -1; return x - y; }
+    return (b.vistas||0) - (a.vistas||0);
   });
+  const grupos = new Map();
+  lista.forEach(c => { const m = c.modulo || 'Sem módulo'; if(!grupos.has(m)) grupos.set(m, []); grupos.get(m).push(c); });
+  const nomesGrupos = [...grupos.keys()].sort((a, b) => a === 'Sem módulo' ? 1 : b === 'Sem módulo' ? -1 : a.localeCompare(b, 'pt'));
+  if(!nomesGrupos.length) return '<div style="color:#888;font-size:var(--fs-c)">Nenhum caderno nesse escopo.</div>';
+  return nomesGrupos.map((g, idx) => {
+    const itens = grupos.get(g);
+    const vistas = itens.reduce((a,c)=>a+(c.vistas||0),0), ativas = itens.reduce((a,c)=>a+(c.ativas||0),0);
+    const aberto = vfProgressoVF.gruposAbertos.has(g);
+    return `<div class="card-questao" style="margin:0 0 8px 0;padding:0;overflow:hidden">
+      <div onclick="vfAlternarGrupoProgressoVF(${idx})" data-grupo="${escapeHtml(g)}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;gap:10px">
+        <span style="font-weight:600;color:#111;font-size:var(--fs-d);min-width:0">${escapeHtml(g)} <span style="color:#888;font-weight:500;font-size:var(--fs-b)">· ${itens.length}</span></span>
+        <span style="display:flex;align-items:center;gap:8px;font-size:var(--fs-b);color:#555;white-space:nowrap;flex-shrink:0">${vfProgFmtN(vistas)} / ${vfProgFmtN(ativas)} · ${vfProgPct(vistas, ativas)} <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="transform:rotate(${aberto?180:0}deg);transition:transform 0.2s"><polyline points="6 9 12 15 18 9"/></svg></span>
+      </div>
+      ${aberto ? `<div style="border-top:0.5px solid #eee">${itens.map(vfMontarLinhaCadernoProgressoVF).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+function vfMontarLinhaCadernoProgressoVF(c){
+  const pctV = c.ativas ? 100*(c.vistas||0)/c.ativas : 0;
+  const pctC = c.ativas ? 100*(c.consolidadas||0)/c.ativas : 0;
+  const ac = c.respostas_periodo ? vfProgPct(c.acertos_periodo, c.respostas_periodo) : '—';
+  const corAc = c.respostas_periodo ? vfProgCorAcerto(c.acertos_periodo, c.respostas_periodo) : '#888';
+  const aberto = vfProgressoVF.cadernosAbertos.has(c.bibliografia_id);
+  return `<div style="padding:10px 14px;border-bottom:0.5px solid #f2f2f2">
+    <div onclick="vfAlternarCadernoProgressoVF('${c.bibliografia_id}')" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <span style="font-size:var(--fs-c);color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${escapeHtml(c.nome || c.titulo || '')}</span>
+        <span style="display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:var(--fs-b)">
+          <span style="color:${corAc};font-weight:600">${ac}</span>
+          ${(c.vencidas||0) > 0 ? `<span style="background:#FAEEDA;color:#854F0B;border-radius:999px;padding:1px 7px;font-weight:600">${vfProgFmtN(c.vencidas)} ⏰</span>` : ''}
+        </span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+        <div style="flex:1;height:8px;border-radius:4px;background:#E6E4DE;overflow:hidden;position:relative">
+          <div style="position:absolute;left:0;top:0;height:100%;width:${pctV}%;background:#9CD3B3"></div>
+          <div style="position:absolute;left:0;top:0;height:100%;width:${pctC}%;background:#1F6F4A"></div>
+        </div>
+        <span style="font-size:var(--fs-b);color:#555;white-space:nowrap">${vfProgFmtN(c.vistas)} / ${vfProgFmtN(c.ativas)} · ${vfProgPct(c.vistas, c.ativas)}</span>
+      </div>
+    </div>
+    ${aberto ? `<div style="margin-top:8px;font-size:var(--fs-b);color:#555;display:flex;flex-wrap:wrap;gap:6px 14px">
+        <span>escada <b style="color:#111">${vfProgFmtN(c.aprendendo)}</b></span><span>consolidadas <b style="color:#111">${vfProgFmtN(c.consolidadas)}</b></span><span>vencidas <b style="color:#111">${vfProgFmtN(c.vencidas)}</b></span><span>leeches <b style="color:#111">${vfProgFmtN(c.leeches)}</b></span><span>respostas no período <b style="color:#111">${vfProgFmtN(c.respostas_periodo)}</b></span><span>total (com excluídas) <b style="color:#111">${vfProgFmtN(c.total)}</b></span>
+      </div>
+      <button class="filter-btn" style="margin:8px 0 0 0" onclick="vfEstudarCadernoProgressoVF('${c.bibliografia_id}')">Estudar esse caderno ›</button>` : ''}
+  </div>`;
+}
+function vfAlternarGrupoProgressoVF(idx){
+  const el = document.getElementById('vf-prog-cadernos');
+  const cab = el && el.querySelectorAll('[data-grupo]')[idx];
+  if(!cab) return;
+  const g = cab.dataset.grupo;
+  if(vfProgressoVF.gruposAbertos.has(g)) vfProgressoVF.gruposAbertos.delete(g); else vfProgressoVF.gruposAbertos.add(g);
+  if(vfProgressoVF.dados) el.innerHTML = vfMontarCadernosProgressoVF(vfProgressoVF.dados);
+}
+function vfAlternarCadernoProgressoVF(id){
+  if(vfProgressoVF.cadernosAbertos.has(id)) vfProgressoVF.cadernosAbertos.delete(id); else vfProgressoVF.cadernosAbertos.add(id);
+  const el = document.getElementById('vf-prog-cadernos'); if(el && vfProgressoVF.dados) el.innerHTML = vfMontarCadernosProgressoVF(vfProgressoVF.dados);
+}
+// fecha a página e troca o filtro pra essa publicação pelo mesmo caminho
+// que os selects do filtro usam (módulo → publicação; capítulo e recortes
+// zerados pela própria cascata; pool recarregado com o debounce de sempre)
+async function vfEstudarCadernoProgressoVF(bibliografiaId){
+  const bib = bibliografiaCache.find(b => b.id === bibliografiaId);
+  if(!bib) return;
+  document.getElementById('pagina-progresso-vf').classList.add('hidden');
+  vfDestruirGraficosProgressoVF();
+  const elMod = document.getElementById('vf-filtro-modulo');
+  if(elMod && elMod.value !== (bib.modulo_pscpp || '')){ elMod.value = bib.modulo_pscpp || ''; await mudarModuloFiltroVF(); }
+  const elPub = document.getElementById('vf-filtro-publicacao');
+  if(elPub){ elPub.value = bibliografiaId; await mudarFiltroPublicacaoVF(); }
 }
 
 // reforço: dentro da barra/painel, dispara o clique manualmente no
@@ -10728,7 +11095,8 @@ async function sincronizarPoolVFReal(){
           estado: novo.estado, intervalo_horas: novo.intervalo_horas, fator: novo.fator,
           ultima_resposta_em: novo.ultima_resposta_em, degrau: novo.degrau,
           total_degraus: novo.total_degraus, intervalo_pendente: novo.intervalo_pendente,
-          marca_contador: novo.marca_contador, total_respostas: novo.total_respostas, total_erros: novo.total_erros
+          marca_contador: novo.marca_contador, total_respostas: novo.total_respostas, total_erros: novo.total_erros,
+          historico_recente: novo.historico_recente ?? item.historico_recente ?? '' // v4 - senão iPad e outro aparelho divergem na dificuldade
         });
       }
     });
@@ -10906,10 +11274,13 @@ function vfPreBuscarProximasVF(){
     .filter(q => !jaCarregadosOuAtual.has(q.id) && q.estado === 'revisao' && q.intervalo_horas && q.ultima_resposta_em && q.explicacao === undefined)
     .map(q => {
       const decorridoH = (agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000;
-      const boost = favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1;
-      const razao = (decorridoH / q.intervalo_horas) * boost;
+      // v4 - pré-busca aproxima a fila de repetição real: razão × favorita
+      // × leech × dificuldade (mesma fórmula de escolherProximaVF, sem a
+      // porta da antiguidade - é só um palpite de quem vem em seguida)
+      const boost = (favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1) * ((q.total_erros||0) >= VF_ALGO.LEECH_ERROS ? VF_ALGO.BOOST_LEECH : 1) * dificuldadeVF(q);
+      const razao = (decorridoH / q.intervalo_horas);
       const jitter = 1 + (pseudoAleatorioVF(estadoVF.sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
-      return {q, score: razao * jitter, razao};
+      return {q, score: razao * boost * jitter, razao};
     })
     .filter(c => c.razao >= VF_ALGO.RAZAO_MINIMA_REVISAO) // mesmo piso do algoritmo real
     .sort((a,b) => b.score - a.score)
@@ -10986,7 +11357,8 @@ function vfProcessarQuestoesCruasVF(questoesCruas, estadoPorId, idsExcluidos){
         intervalo_pendente: e?.intervalo_pendente ?? null,
         marca_contador: e?.marca_contador ?? null,
         total_respostas: e?.total_respostas ?? 0,
-        total_erros: e?.total_erros ?? 0
+        total_erros: e?.total_erros ?? 0,
+        historico_recente: e?.historico_recente ?? '' // v4 (D4)
       };
     });
 }
@@ -11100,13 +11472,12 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     ? sb.rpc('buscar_questoes_por_termo_vf', {p_termo: filtroVF.termo})
     : Promise.resolve({data: null, error: null});
 
-  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: salvosData}, {data: todasTagsData}, {data: questoesTagsData}, , {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, mapaFiltrosCapituloVF, ...resultadosEntradaVF] = await Promise.all([
+  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: todasTagsData}, {data: questoesTagsData}, , {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, mapaFiltrosCapituloVF, ...resultadosEntradaVF] = await Promise.all([
     buscarTudoPaginadoVF(montarQueryQuestoesVF, aoCarregarRestanteQuestoesVF),
     buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     buscarTudoPaginadoVF(() => sb.from('exclusoes_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     buscarTudoPaginadoVF(() => sb.from('favoritos_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     buscarTudoPaginadoVF(() => sb.from('notas_vf').select('questao_vf_id, fixada', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
-    buscarTudoPaginadoVF(() => sb.from('flashs_salvos_vf').select('questao_vf_id, motivo', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
     buscarTudoPaginadoVF(() => sb.from('tags_vf').select('id, nome', {count: 'exact'}).order('nome').order('id')),
     buscarTudoPaginadoVF(() => sb.from('questoes_vf_tags').select('questao_vf_id, tags_vf(id, nome)', {count: 'exact'}).order('questao_vf_id').order('tag_id')),
     vfCarregarBibliografiaCacheVF(), // idempotente - só busca de verdade na primeira vez da sessão
@@ -11136,7 +11507,6 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   // fazia a lâmpada aparecer sozinha na tela, mesmo sem o usuário pedir
   notasFixadasVF = new Set((notaData||[]).filter(n=>n.fixada).map(n=>n.questao_vf_id));
   questoesComElementoVF = new Set((elementosLigData||[]).map(e=>e.questao_vf_id));
-  flashsSalvosVF = new Map((salvosData||[]).map(s=>[s.questao_vf_id, s.motivo]));
   vfTodasTagsCacheVF = todasTagsData || [];
   vfTagsPorQuestaoVF = new Map();
   (questoesTagsData||[]).forEach(r => {
@@ -11834,19 +12204,9 @@ async function vfCarregarPanoramaFiltroVF(){
   // banco - achado real: buscar todos os IDs filtrados (podendo ser
   // centenas) só pra depois cruzar com repeticao_vf era o gargalo real
   // de lentidão nessa seção
-  const {data: panorama} = await sb.rpc('panorama_filtro_vf', {
-    p_usuario_id: usuarioAtual.id,
-    p_ids_bibliografia: idsBibliografia,
-    p_capitulo: filtroVF.capitulo || null,
-    p_numero: !!filtroVF.numero,
-    p_lista: !!filtroVF.lista,
-    p_inconsistente: !!filtroVF.inconsistente,
-    p_filtros_inc: (filtroVF.filtrosInc || []).filter(id => id !== 'geral').length ? (filtroVF.filtrosInc || []).filter(id => id !== 'geral') : null,
-    p_filtros_exc: (filtroVF.filtrosExc || []).filter(id => id !== 'geral').length ? (filtroVF.filtrosExc || []).filter(id => id !== 'geral') : null,
-    p_filtros_escopo: (vfEscopoFiltrosCapituloVF.filtros || []).length ? vfEscopoFiltrosCapituloVF.filtros.map(f => f.id) : null,
-    p_inc_geral: (filtroVF.filtrosInc || []).includes('geral'),
-    p_exc_geral: (filtroVF.filtrosExc || []).includes('geral')
-  });
+  const paramsPanorama = vfParametrosPanoramaFiltroVF();
+  const {data: panorama} = await sb.rpc('panorama_filtro_vf', paramsPanorama);
+  vfGuardarPanoramaProjecaoVF(paramsPanorama, panorama?.[0]); // v4 - a linha de projeção aproveita a mesma resposta
   const totalFiltro = panorama?.[0]?.total || 0;
   const jaVistas = panorama?.[0]?.ja_vistas || 0;
   const excluidas = panorama?.[0]?.excluidas || 0;
@@ -12153,7 +12513,9 @@ function vfPersistirEstadoSessaoVF(){
   vfSessaoAtivaVF.respondidasSessao = estadoVF.respondidasSessao;
   vfSessaoAtivaVF.respostasDesdeUltimaNova = estadoVF.respostasDesdeUltimaNova;
   vfSessaoAtivaVF.creditoNovaVF = estadoVF.creditoNovaVF;
-  vfSessaoAtivaVF.ultimoTurnoNovaFuradoVF = estadoVF.ultimoTurnoNovaFuradoVF;
+  vfSessaoAtivaVF.creditoRepVF = estadoVF.creditoRepVF;
+  vfSessaoAtivaVF.contadorRepVF = estadoVF.contadorRepVF;
+  vfSessaoAtivaVF.cadaNAutoVF = estadoVF.cadaNAutoVF;
   vfSalvarSessaoNoStorageVF();
 }
 
@@ -12222,10 +12584,12 @@ async function vfReconstruirHistoricoDaSessaoVF(){
     // crédito acumulado do ritmo de novas (v3) - restaurado junto, senão
     // reabrir o app no meio de uma sessão pausada resetaria a proporção
     creditoNovaVF: vfSessaoAtivaVF.creditoNovaVF || 0,
-    // flag da alternância "no máximo 1 turno de nova furado a cada 2" -
-    // restaurada junto, senão reabrir o app podia furar duas vezes
-    // seguidas (a flag "esqueceria" que o turno anterior já tinha furado)
-    ultimoTurnoNovaFuradoVF: vfSessaoAtivaVF.ultimoTurnoNovaFuradoVF || false
+    // v4 - os dois créditos, o contador da porta da antiguidade e o Auto
+    // voltam juntos: o padrão N N R continua de onde parou e a porta não
+    // reinicia ao fechar e reabrir
+    creditoRepVF: vfSessaoAtivaVF.creditoRepVF || 0,
+    contadorRepVF: vfSessaoAtivaVF.contadorRepVF || 0,
+    cadaNAutoVF: vfSessaoAtivaVF.cadaNAutoVF || null
     // familiasRecentesVF (versão antiga) ignorado de propósito - substituído
     // pelo enterro de família, que persiste sozinho em localStorage à parte
   };
@@ -12246,8 +12610,11 @@ async function vfCarregarPoolInicialVF(){
     acertosSessao: 0,
     respondidasSessao: 0,
     respostasDesdeUltimaNova: 0, // Regra 1 (fluxo garantido de novas) - zera a cada SESSÃO de verdade agora, não mais a cada abertura de aba
-    creditoNovaVF: 0, // v3 - crédito acumulado do ritmo de novas, substitui respostasDesdeUltimaNova na decisão (mantida só por compatibilidade)
-    ultimoTurnoNovaFuradoVF: false, // v3.1 - alternância: no máximo 1 turno de nova furado por "muito vencida" a cada 2
+    creditoNovaVF: 0, // v4 - orçamento da fatia de novas (+1/cadaN por resposta, -1 ao servir nova)
+    creditoRepVF: 0,  // v4 - orçamento da fatia de repetição (+1-1/cadaN por resposta, -1 ao servir repetição)
+    contadorRepVF: 0, // v4 - repetições servidas (porta da antiguidade: 1 em cada 4)
+    cadaNAutoVF: null, // v4 - valor corrente do ritmo Auto (recalculado a cada AUTO_RECALC_A_CADA respostas)
+    respostasDesdeRecalcAutoVF: 0,
     avisoRodeiTudoPendenteVF: null // v3.2 - texto do aviso "rodou todas as novas", pendente de aparecer na próxima renderização
   };
   // contadores restaurados direto daqui, ANTES de tentar reconstruir o
@@ -12323,6 +12690,9 @@ async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
     estadoVF.contadorGlobal = userRow?.contador_respostas_vf || 0;
     vfTotalAfirmacoesNoBanco = totalGeralQuestoesVF ?? null;
   }
+  // v4 - ritmo Auto e linha de projeção acompanham o filtro carregado
+  vfRecalcularAutoVF();
+  vfBuscarPanoramaProjecaoVF(); // em segundo plano, não segura a primeira questão
   if(!pool.length){
     vfLimparOverlayCargaFiltroVF(el);
     if(filtroVF.termo){
@@ -12396,22 +12766,20 @@ async function avancarParaProximaVF(){
   const agoraMs = agoraCorrigidoVF();
   const pick = filtroVF.varreduraDesde
     ? vfEscolherProximaVarreduraVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.sementeSessao)
-    : escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.anteriorVeioDeAprendizado, estadoVF.sementeSessao, estadoVF.creditoNovaVF || 0, estadoVF.respostasDesdeUltimaNova, estadoVF.ultimoTurnoNovaFuradoVF || false);
+    : escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.sementeSessao, estadoVF.creditoNovaVF || 0, estadoVF.creditoRepVF || 0, estadoVF.contadorRepVF || 0, favoritosVF);
   if(!pick || pick.esgotado){
     vfMostrarTelaEsgotadoVF(pick?.motivo, !!filtroVF.varreduraDesde);
     document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
     return;
   }
   estadoVF.anteriorVeioDeAprendizado = pick.veioDeAprendizado;
-  // v3.1 - alternância "no máximo 1 turno de nova furado a cada 2":
-  // grava de volta o novo valor da flag (função pura, não muta estadoVF
-  // por dentro - só o modo normal devolve furou, varredura não usa isso)
-  if(pick.furou !== undefined) estadoVF.ultimoTurnoNovaFuradoVF = pick.furou;
   // cronômetro por entrada — tempoAtivoMs/ativoDesdeMs em vez de um único
   // horaInicioMs global (bug real corrigido antes: variável compartilhada
   // ficava desatualizada se uma pendente antiga fosse respondida depois).
   // ativoDesdeMs começa null de propósito — só arma DEPOIS de renderizar
-  estadoVF.historico.push({item: pick.item, resposta: null, acertou: null, tempoAtivoMs: 0, ativoDesdeMs: null, apareceuEmMs: agoraMs, adiantada: !!pick.adiantada});
+  // v4 - fatia ('nova'/'rep') e repeticao vêm do pick: é por eles que
+  // responderVF desconta do crédito certo e conta a porta da antiguidade
+  estadoVF.historico.push({item: pick.item, resposta: null, acertou: null, tempoAtivoMs: 0, ativoDesdeMs: null, apareceuEmMs: agoraMs, adiantada: !!pick.adiantada, fatia: pick.fatia || null, repeticao: pick.repeticao === undefined ? null : !!pick.repeticao});
   estadoVF.posicao = estadoVF.historico.length - 1;
   // trava de segurança contra toque duplo: clicar "Próxima" e, milissegundos
   // depois, o dedo ainda solto acertar Verdadeiro/Falso da questão nova antes
@@ -13204,26 +13572,37 @@ function vfAtualizarVisualTogglesFiltroVF(){
   vfAtualizarVisualNovaACadaVF();
 }
 
-// ritmo de novas (v3, Parte B4): 3 (1 a cada 3, 33%), 2 (1 a cada 2, 50%,
-// padrão) ou 1.5 (2 a cada 3, 67%). Persistido à parte do resto do
+// ritmo de novas (v4): 3 (1 a cada 3, 33%), 2 (1 a cada 2, 50%), 1.5
+// (2 a cada 3, 67%, padrão) ou 'auto'. Persistido à parte do resto do
 // filtro (não é um filtro de conteúdo - não recarrega o pool, só muda a
 // partir da próxima escolha)
-function vfNovaACadaAtualVF(){
+function vfRitmoSelecionadoVF(){
   try{
     const salvo = localStorage.getItem('pscpp_vf_nova_a_cada');
+    if(salvo === 'auto') return 'auto';
     const valor = salvo ? parseFloat(salvo) : VF_ALGO.NOVA_A_CADA;
     return [3, 2, 1.5].includes(valor) ? valor : VF_ALGO.NOVA_A_CADA;
   }catch(e){ return VF_ALGO.NOVA_A_CADA; }
 }
+// valor numérico em uso agora (em Auto, o cadaN corrente calculado do pool)
+function vfNovaACadaAtualVF(){
+  const r = vfRitmoSelecionadoVF();
+  if(r !== 'auto') return r;
+  if(estadoVF && estadoVF.cadaNAutoVF) return estadoVF.cadaNAutoVF;
+  return vfRecalcularAutoVF() || VF_ALGO.NOVA_A_CADA;
+}
+function vfRotuloRitmoVF(cadaN){ return cadaN === 3 ? '1 a cada 3' : cadaN === 2 ? '1 a cada 2' : '2 a cada 3'; }
 function vfTrocarNovaACadaVF(valor){
   try{ localStorage.setItem('pscpp_vf_nova_a_cada', String(valor)); }catch(e){}
+  if(valor === 'auto') vfRecalcularAutoVF(); // precisa de um valor já na próxima escolha
   vfAtualizarVisualNovaACadaVF();
+  vfAtualizarProjecaoNovasVF(); // só recalcula o texto - o panorama já está em cache
   // não recarrega o pool - só muda a partir da próxima escolha
   // (escolherProximaVF lê vfNovaACadaAtualVF() na hora)
 }
 function vfAtualizarVisualNovaACadaVF(){
-  const atual = vfNovaACadaAtualVF();
-  [3, 2, 1.5].forEach(valor => {
+  const atual = vfRitmoSelecionadoVF();
+  [3, 2, 1.5, 'auto'].forEach(valor => {
     const btn = document.getElementById(`vf-nova-a-cada-${valor}`);
     if(!btn) return;
     const ativo = valor === atual;
@@ -13231,6 +13610,95 @@ function vfAtualizarVisualNovaACadaVF(){
     btn.style.color = ativo ? '#fff' : '#888';
     btn.style.borderColor = ativo ? '#B23A34' : '#ddd';
   });
+}
+
+// ritmo Auto (D7): cadaN pelo tamanho da fila urgente do filtro - escada
+// elegível + revisões vencidas (razão >= 1) com algum 'E' no histórico
+// recente + favoritas vencidas. Tudo do pool em memória, sem ida ao banco.
+// < 20 → 1.5; 20–60 → 2; > 60 → 3. Nunca abaixo de 1 a cada 3
+function vfRecalcularAutoVF(){
+  if(!estadoVF || !estadoVF.pool || !estadoVF.pool.length) return null;
+  const agoraMs = agoraCorrigidoVF();
+  let urgentes = 0;
+  estadoVF.pool.forEach(q => {
+    if(q.estado === 'aprendendo'){
+      if(elegibilidadeAprendendoVF(q, agoraMs, estadoVF.contadorGlobal, estadoVF.pool.length)) urgentes++;
+    }else if(q.estado === 'revisao' && q.intervalo_horas && q.ultima_resposta_em){
+      const razao = ((agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000) / q.intervalo_horas;
+      if(razao >= 1 && ((q.historico_recente || '').includes('E') || favoritosVF.has(q.id))) urgentes++;
+    }
+  });
+  const [l1, l2] = VF_ALGO.AUTO_ALTA_PRIO_LIMITES;
+  const [f1, f2, f3] = VF_ALGO.AUTO_FRACOES;
+  estadoVF.cadaNAutoVF = urgentes < l1 ? f1 : (urgentes <= l2 ? f2 : f3);
+  estadoVF.respostasDesdeRecalcAutoVF = 0;
+  return estadoVF.cadaNAutoVF;
+}
+
+// parâmetros do panorama_filtro_vf a partir do filtro atual - usados pelo
+// painel de sessão e pela linha de projeção (mesma chamada, um lugar só)
+function vfParametrosPanoramaFiltroVF(){
+  const idsBibliografia = filtroVF.publicacao
+    ? [filtroVF.publicacao]
+    : (filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null);
+  const inc = (filtroVF.filtrosInc || []).filter(id => id !== 'geral');
+  const exc = (filtroVF.filtrosExc || []).filter(id => id !== 'geral');
+  return {
+    p_usuario_id: usuarioAtual.id,
+    p_ids_bibliografia: idsBibliografia,
+    p_capitulo: filtroVF.capitulo || null,
+    p_numero: !!filtroVF.numero,
+    p_lista: !!filtroVF.lista,
+    p_inconsistente: !!filtroVF.inconsistente,
+    p_filtros_inc: inc.length ? inc : null,
+    p_filtros_exc: exc.length ? exc : null,
+    p_filtros_escopo: (vfEscopoFiltrosCapituloVF.filtros || []).length ? vfEscopoFiltrosCapituloVF.filtros.map(f => f.id) : null,
+    p_inc_geral: (filtroVF.filtrosInc || []).includes('geral'),
+    p_exc_geral: (filtroVF.filtrosExc || []).includes('geral')
+  };
+}
+
+// linha de projeção (D8): "No seu passo dos últimos 14 dias (~N/dia),
+// nesse ritmo as novas deste filtro acabam em ~X dias · Y revisões
+// vencidas agora". Uma chamada ao panorama por troca de filtro (cache
+// por chave dos parâmetros); trocar o ritmo só refaz o texto
+let vfPanoramaProjecaoVF = null; // {chave, novasRestantes, vencidas, respostas14d}
+function vfGuardarPanoramaProjecaoVF(params, p){
+  if(!p) return;
+  vfPanoramaProjecaoVF = {
+    chave: JSON.stringify(params),
+    novasRestantes: Math.max(0, (p.total || 0) - (p.excluidas || 0) - (p.ja_vistas || 0)),
+    vencidas: p.vencidas || 0,
+    respostas14d: p.respostas_14d || 0
+  };
+  vfAtualizarProjecaoNovasVF();
+}
+async function vfBuscarPanoramaProjecaoVF(){
+  if(!usuarioAtual || !document.getElementById('vf-nova-projecao')) return;
+  const params = vfParametrosPanoramaFiltroVF();
+  const chave = JSON.stringify(params);
+  if(vfPanoramaProjecaoVF && vfPanoramaProjecaoVF.chave === chave){ vfAtualizarProjecaoNovasVF(); return; }
+  try{
+    const {data} = await sb.rpc('panorama_filtro_vf', params);
+    // se o filtro mudou enquanto a busca rodava, esse resultado é velho
+    if(JSON.stringify(vfParametrosPanoramaFiltroVF()) !== chave) return;
+    vfGuardarPanoramaProjecaoVF(params, data?.[0]);
+  }catch(e){ console.warn('projeção de novas:', e); }
+}
+function vfAtualizarProjecaoNovasVF(){
+  const el = document.getElementById('vf-nova-projecao');
+  if(!el) return;
+  const p = vfPanoramaProjecaoVF;
+  if(!p){ el.textContent = ''; return; }
+  const N = p.respostas14d / 14;
+  const cadaN = vfNovaACadaAtualVF();
+  const sufixoAuto = vfRitmoSelecionadoVF() === 'auto' ? ` (Auto: ${vfRotuloRitmoVF(cadaN)})` : '';
+  if(N < 20){
+    el.textContent = `Passo insuficiente para projetar${sufixoAuto} · ${p.vencidas} revisões vencidas agora`;
+    return;
+  }
+  const dias = Math.ceil(p.novasRestantes / (N / cadaN));
+  el.textContent = `No seu passo dos últimos 14 dias (~${Math.round(N)}/dia), nesse ritmo${sufixoAuto} as novas deste filtro acabam em ~${dias} dias · ${p.vencidas} revisões vencidas agora`;
 }
 
 // abre/fecha o bloco de filtros — começa fechado, pra não ocupar espaço
@@ -14947,9 +15415,9 @@ function renderizarBarraFixaVF(item, jaRespondida){
         <span>Notas</span>
         ${notasVF.has(item.id)?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
-      <button class="banco-acao-btn ${flashsSalvosVF.has(item.id)?'favoritada':''}" onclick="vfAbrirEscolhaMotivoSalvarVF('${item.id}')" ontouchstart="vfIniciarPressionarSalvar(event)" ontouchend="vfCancelarPressionarSalvar(event,'${item.id}')" ontouchmove="vfCancelarPressionarSalvar(event)" onmousedown="vfIniciarPressionarSalvar(event)" onmouseup="vfCancelarPressionarSalvar()" onmouseleave="vfCancelarPressionarSalvar()">
-        <svg viewBox="0 0 24 24" fill="${flashsSalvosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-        <span>Salvar</span>
+      <button class="banco-acao-btn" onclick="vfAbrirProgressoVF()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="13" width="4" height="8"/><rect x="10" y="8" width="4" height="13"/><rect x="15" y="3" width="4" height="18"/></svg>
+        <span>Progresso</span>
       </button>
     </div>
   `;
@@ -15020,13 +15488,25 @@ async function responderVF(resposta){
   if(!estadoAntes || estadoAntes === 'nova') estadoVF.respostasDesdeUltimaNova = 0;
   else estadoVF.respostasDesdeUltimaNova = (estadoVF.respostasDesdeUltimaNova || 0) + 1;
 
-  // v3 - crédito acumulado do ritmo de novas: se a servida era nova,
-  // consome 1 do crédito (ela "gastou" a folga que tinha acumulado).
-  // Sempre soma 1/cadaN depois, independente do tipo - é esse acúmulo
-  // constante que reproduz a proporção exata (33/50/67%) ao longo do
-  // tempo, testado isoladamente antes de aplicar aqui
-  if(!estadoAntes || estadoAntes === 'nova') estadoVF.creditoNovaVF = (estadoVF.creditoNovaVF || 0) - 1;
-  estadoVF.creditoNovaVF = (estadoVF.creditoNovaVF || 0) + 1 / vfNovaACadaAtualVF();
+  // v4 - orçamento nas duas direções (D1): desconta do crédito da FATIA
+  // que a escolha usou (não do tipo da questão - no fallback cruzado uma
+  // repetição pode ocupar a vaga da nova, e vice-versa), depois soma
+  // 1/cadaN na nova e 1-1/cadaN na repetição. Entradas sem fatia (sessão
+  // restaurada de versão anterior, varredura) caem no tipo da questão
+  const cadaNAgora = vfNovaACadaAtualVF();
+  const eraNovaServida = !estadoAntes || estadoAntes === 'nova';
+  const fatiaUsada = entrada.fatia || (eraNovaServida ? 'nova' : 'rep');
+  if(fatiaUsada === 'nova') estadoVF.creditoNovaVF = (estadoVF.creditoNovaVF || 0) - 1;
+  else estadoVF.creditoRepVF = (estadoVF.creditoRepVF || 0) - 1;
+  estadoVF.creditoNovaVF = (estadoVF.creditoNovaVF || 0) + 1 / cadaNAgora;
+  estadoVF.creditoRepVF = (estadoVF.creditoRepVF || 0) + (1 - 1 / cadaNAgora);
+  const foiRepeticao = entrada.repeticao === null || entrada.repeticao === undefined ? !eraNovaServida : !!entrada.repeticao;
+  if(foiRepeticao) estadoVF.contadorRepVF = (estadoVF.contadorRepVF || 0) + 1; // porta da antiguidade (D6)
+  // ritmo Auto (D7): refaz a conta a cada AUTO_RECALC_A_CADA respostas
+  if(vfRitmoSelecionadoVF() === 'auto'){
+    estadoVF.respostasDesdeRecalcAutoVF = (estadoVF.respostasDesdeRecalcAutoVF || 0) + 1;
+    if(estadoVF.respostasDesdeRecalcAutoVF >= VF_ALGO.AUTO_RECALC_A_CADA){ vfRecalcularAutoVF(); vfAtualizarProjecaoNovasVF(); }
+  }
 
   // enterro de irmãs até amanhã (substitui o antigo buffer GAP_FAMILIA) -
   // não registra durante a varredura, senão ao desligar tudo estaria
@@ -15090,7 +15570,8 @@ async function responderVF(resposta){
         estado: item.estado, intervalo_horas: item.intervalo_horas, fator: item.fator,
       ultima_resposta_em: item.ultima_resposta_em, degrau: item.degrau,
       total_degraus: item.total_degraus, intervalo_pendente: item.intervalo_pendente,
-      marca_contador: item.marca_contador, total_respostas: item.total_respostas, total_erros: item.total_erros
+      marca_contador: item.marca_contador, total_respostas: item.total_respostas, total_erros: item.total_erros,
+      historico_recente: item.historico_recente || '' // v4 (D4)
     }, {onConflict: 'usuario_id,questao_vf_id'}),
     sb.from('log_respostas_vf').insert({
       questao_vf_id: item.id, usuario_id: usuarioAtual.id, acertou,
@@ -18610,6 +19091,10 @@ function vfPreBuscarIrmasVF(questaoVfId){
 document.addEventListener('keydown', (e) => {
   if(e.key === 'Escape' && !document.getElementById('modal-confirmar-exclusao-familia-vf')?.classList.contains('hidden')){
     vfFecharDialogoExclusaoFamiliaVF();
+  }
+  if(e.key === 'Escape' && !document.getElementById('pagina-progresso-vf')?.classList.contains('hidden')){
+    if(!document.getElementById('modal-info-progresso-vf')?.classList.contains('hidden')) fecharModal('modal-info-progresso-vf');
+    else vfFecharProgressoVF();
   }
 });
 
