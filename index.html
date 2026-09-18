@@ -196,6 +196,12 @@ trocando a custom property de cada slider individualmente */
 }
 #metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:32px;min-height:32px;max-height:32px;padding-top:0;padding-bottom:0;box-sizing:border-box}
 #aba-quests .filter-select{height:32px;box-sizing:border-box;padding-top:0;padding-bottom:0}
+/* Progresso: botões no mesmo padrão dos botões de filtro do Flash (.vf-btn-filtro-tipo) */
+.vf-prog-linha{display:flex;gap:6px;width:100%}
+.vf-prog-linha .vf-prog-btn{flex:1 1 0;min-width:0}
+.vf-prog-btn{border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:5px;box-sizing:border-box;-webkit-appearance:none;appearance:none;margin:0;line-height:1.3}
+.vf-prog-btn.ativo{background:#B23A34;color:#fff;border-color:#B23A34}
+.vf-prog-btn svg{width:14px;height:14px;flex-shrink:0}
 .filter-select{font-size:var(--fs-d);padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%;box-sizing:border-box}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
@@ -1057,8 +1063,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
             <button id="vf-nova-a-cada-auto" onclick="vfTrocarNovaACadaVF('auto')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Auto</button>
           </span>
         </div>
-        <!-- v4 (D8): a consequência do ritmo escolhido, no passo real dos últimos 14 dias -->
-        <div id="vf-nova-projecao" style="font-size:var(--fs-c);color:#888;line-height:1.4;margin-top:6px;text-align:right"></div>
+
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
           <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Varredura (sem repetir) <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-varredura-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
           <button id="vf-toggle-varredura" onclick="vfToggleVarreduraVF()" style="width:44px;height:26px;border-radius:13px;border:none;background:#ddd;position:relative;cursor:pointer;flex-shrink:0;transition:background 0.2s"><span id="vf-toggle-varredura-bolinha" style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:transform 0.2s"></span></button>
@@ -1643,24 +1648,24 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <div id="vf-prog-chips" style="display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px">
-      <button class="filter-btn" data-periodo="hoje" onclick="vfTrocarPeriodoProgressoVF('hoje')" style="margin:0;flex:1 1 auto;white-space:nowrap">Hoje</button>
-      <button class="filter-btn" data-periodo="ontem" onclick="vfTrocarPeriodoProgressoVF('ontem')" style="margin:0;flex:1 1 auto;white-space:nowrap">Ontem</button>
-      <button class="filter-btn" data-periodo="7d" onclick="vfTrocarPeriodoProgressoVF('7d')" style="margin:0;flex:1 1 auto;white-space:nowrap">7 dias</button>
-      <button class="filter-btn" data-periodo="30d" onclick="vfTrocarPeriodoProgressoVF('30d')" style="margin:0;flex:1 1 auto;white-space:nowrap">30 dias</button>
-      <button class="filter-btn" data-periodo="tudo" onclick="vfTrocarPeriodoProgressoVF('tudo')" style="margin:0;flex:1 1 auto;white-space:nowrap">Tudo</button>
-      <button class="filter-btn" data-periodo="custom" onclick="vfTrocarPeriodoProgressoVF('custom')" title="Escolher datas" style="margin:0;flex-shrink:0">📅</button>
+    <div id="vf-prog-chips" class="vf-prog-linha">
+      <button class="vf-prog-btn" data-periodo="hoje" onclick="vfTrocarPeriodoProgressoVF('hoje')">Hoje</button>
+      <button class="vf-prog-btn" data-periodo="ontem" onclick="vfTrocarPeriodoProgressoVF('ontem')">Ontem</button>
+      <button class="vf-prog-btn" data-periodo="7d" onclick="vfTrocarPeriodoProgressoVF('7d')">7 dias</button>
+      <button class="vf-prog-btn" data-periodo="30d" onclick="vfTrocarPeriodoProgressoVF('30d')">30 dias</button>
+      <button class="vf-prog-btn" data-periodo="tudo" onclick="vfTrocarPeriodoProgressoVF('tudo')">Tudo</button>
+      <button class="vf-prog-btn" data-periodo="custom" onclick="vfTrocarPeriodoProgressoVF('custom')" title="Escolher datas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
     </div>
-    <div id="vf-prog-datas" class="hidden" style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
-      <input type="date" id="vf-prog-data-inicio" class="filter-select" style="margin-bottom:0;flex:1;min-width:120px" onchange="vfAplicarDatasProgressoVF()">
-      <span style="color:#888;font-size:var(--fs-c)">até</span>
-      <input type="date" id="vf-prog-data-fim" class="filter-select" style="margin-bottom:0;flex:1;min-width:120px" onchange="vfAplicarDatasProgressoVF()">
-      <button class="filter-btn" style="margin:0" onclick="vfTrocarPeriodoProgressoVF('hoje')">Redefinir</button>
+    <div id="vf-prog-datas" class="hidden" style="display:flex;align-items:center;gap:6px;margin-top:8px">
+      <input type="date" id="vf-prog-data-inicio" class="filter-select" style="margin-bottom:0;flex:1;min-width:0;font-size:var(--fs-c);padding:6px 8px" onchange="vfAplicarDatasProgressoVF()">
+      <span style="color:#888;font-size:var(--fs-c);flex-shrink:0">até</span>
+      <input type="date" id="vf-prog-data-fim" class="filter-select" style="margin-bottom:0;flex:1;min-width:0;font-size:var(--fs-c);padding:6px 8px" onchange="vfAplicarDatasProgressoVF()">
+      <button class="vf-prog-btn" style="flex-shrink:0" onclick="vfTrocarPeriodoProgressoVF('hoje')">Redefinir</button>
     </div>
     <div id="vf-prog-escopo" class="hidden" style="margin-top:8px">
-      <div style="display:flex;gap:6px">
-        <button class="filter-btn" data-escopo="banco" onclick="vfTrocarEscopoProgressoVF('banco')" style="margin:0;flex:1">Todo o banco</button>
-        <button class="filter-btn" data-escopo="filtro" onclick="vfTrocarEscopoProgressoVF('filtro')" style="margin:0;flex:1">Filtro atual</button>
+      <div class="vf-prog-linha">
+        <button class="vf-prog-btn" data-escopo="banco" onclick="vfTrocarEscopoProgressoVF('banco')">Todo o banco</button>
+        <button class="vf-prog-btn" data-escopo="filtro" onclick="vfTrocarEscopoProgressoVF('filtro')">Filtro atual</button>
       </div>
       <div id="vf-prog-escopo-linhas" style="margin-top:6px"></div>
     </div>
@@ -2132,7 +2137,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-18-097';
+const VERSAO_APP = '2026-09-18-100';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9018,9 +9023,15 @@ function vfFiltroAtualTemEscopoVF(){
     || (filtroVF.filtrosInc||[]).length || (filtroVF.filtrosExc||[]).length);
 }
 
+// pausa a SESSÃO (o relógio do balão), não só o tempo da questão: em
+// Progresso a pessoa não está estudando. Só retoma ao fechar se foi
+// esta página que pausou (se já estava pausada antes, continua pausada)
+let vfProgressoPausouSessaoVF = false;
 function vfAbrirProgressoVF(){
   if(typeof vfForcarSalvamentoEdicaoPendenteVF === 'function') vfForcarSalvamentoEdicaoPendenteVF();
   pausarTimerVF();
+  vfProgressoPausouSessaoVF = false;
+  if(vfSessaoAtivaVF && !vfSessaoAtivaVF.pausado){ vfTogglePausarSessaoFlashVF(); vfProgressoPausouSessaoVF = true; }
   try{ const salvo = localStorage.getItem('pscpp_vf_progresso_periodo'); if(['hoje','ontem','7d','30d','tudo'].includes(salvo)) vfProgressoVF.periodo = salvo; }catch(e){}
   if(vfProgressoVF.periodo === 'custom') vfProgressoVF.periodo = 'hoje';
   if(!vfFiltroAtualTemEscopoVF()) vfProgressoVF.escopo = 'banco';
@@ -9033,19 +9044,24 @@ function vfDestruirGraficosProgressoVF(){
   if(graficoPeriodoVF){ graficoPeriodoVF.destroy(); graficoPeriodoVF = null; }
   if(graficoCoberturaVF){ graficoCoberturaVF.destroy(); graficoCoberturaVF = null; }
 }
+function vfRetomarSessaoAoSairDoProgressoVF(){
+  if(vfProgressoPausouSessaoVF && vfSessaoAtivaVF && vfSessaoAtivaVF.pausado) vfTogglePausarSessaoFlashVF();
+  vfProgressoPausouSessaoVF = false;
+}
 function vfFecharProgressoVF(){
   document.getElementById('pagina-progresso-vf').classList.add('hidden');
   vfDestruirGraficosProgressoVF();
+  vfRetomarSessaoAoSairDoProgressoVF();
   retomarOuDescartarPendenteVF();
 }
 function vfPintarCabecalhoProgressoVF(){
-  document.querySelectorAll('#vf-prog-chips .filter-btn').forEach(b => b.classList.toggle('active', b.dataset.periodo === vfProgressoVF.periodo));
+  document.querySelectorAll('#vf-prog-chips .vf-prog-btn').forEach(b => b.classList.toggle('ativo', b.dataset.periodo === vfProgressoVF.periodo));
   document.getElementById('vf-prog-datas').classList.toggle('hidden', vfProgressoVF.periodo !== 'custom');
   const temEscopo = vfFiltroAtualTemEscopoVF();
   const elEscopo = document.getElementById('vf-prog-escopo');
   elEscopo.classList.toggle('hidden', !temEscopo);
   if(temEscopo){
-    elEscopo.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.escopo === vfProgressoVF.escopo));
+    elEscopo.querySelectorAll('.vf-prog-btn').forEach(b => b.classList.toggle('ativo', b.dataset.escopo === vfProgressoVF.escopo));
     const elLinhas = document.getElementById('vf-prog-escopo-linhas');
     if(vfProgressoVF.escopo === 'filtro'){
       // mesma lista de linhas que o painel de sessão monta (só as de escopo - tag/termo não entram)
@@ -9203,10 +9219,10 @@ function vfRenderizarProgressoVF(d){
     vfProgCardVF('Novas', v(P.novas, vfProgFmtN), d ? `${vfProgPct(P.novas, P.respostas)} do total` : ''),
     vfProgCardVF('Repetidas', d ? vfProgFmtN(repetidas) : tr, d ? `escada ${vfProgFmtN(P.escada)} · revisões ${vfProgFmtN(P.revisoes)}` : ''),
     vfProgCardVF('Acerto', d ? vfProgPct(P.acertos, P.respostas) : tr, d ? `novas ${acertoNovas} · escada ${acertoEscada} · rev ${acertoRev}` : '', d ? vfProgCorAcerto(P.acertos, P.respostas) : null),
-    vfProgCardVF('Tempo ativo <span title="soma dos intervalos entre respostas; pausa acima de 5 min não conta" style="color:#bbb">ⓘ</span>', v(P.min_ativo, vfProgFmtTempo)),
+    vfProgCardVF('<span style="display:inline-flex;align-items:center;gap:4px">Tempo ativo <span title="soma dos intervalos entre respostas; pausa acima de 5 min não conta" style="color:#bbb;display:inline-flex"><span style="width:12px;height:12px;display:inline-flex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span></span></span>', v(P.min_ativo, vfProgFmtTempo)),
     vfProgCardVF('Ritmo', d ? ritmo : tr),
     ehDia ? vfProgCardVF('Questões distintas', v(P.questoes_distintas, vfProgFmtN)) : vfProgCardVF('Dias com estudo', v(P.dias_com_estudo, vfProgFmtN)),
-    vfProgCardVF('Sequência', d ? `<span style="color:#D95926">🔥</span> ${vfProgFmtN(d.sequencia)}` : tr, 'dias seguidos')
+    vfProgCardVF('Sequência', d ? `<span style="display:inline-flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#D95926" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>${vfProgFmtN(d.sequencia)}</span>` : tr, 'dias seguidos')
   ].join('');
 
   // D - banco
@@ -9232,7 +9248,7 @@ function vfRenderizarProgressoVF(d){
 
   const titulo = t => `<div class="vf-secao-titulo" style="margin:16px 0 8px 0">${t}</div>`;
   const modoResp = vfProgressoVF.modoGrafico === 'respostas';
-  const segBtn = (ativo, rotulo, onclick) => `<button class="filter-btn ${ativo?'active':''}" style="margin:0" onclick="${onclick}">${rotulo}</button>`;
+  const segBtn = (ativo, rotulo, onclick) => `<button class="vf-prog-btn ${ativo?'ativo':''}" onclick="${onclick}">${rotulo}</button>`;
   const rodape = d ? 'Atualizado às ' + new Date(d.gerado_em).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' · toque pra atualizar' : 'Carregando…';
 
   vfDestruirGraficosProgressoVF(); // o innerHTML abaixo troca os canvases - destrói antes, senão a instância antiga fica pendurada num canvas órfão
@@ -9241,7 +9257,7 @@ function vfRenderizarProgressoVF(d){
     <div style="${ehEstreito ? grid2 : grid4}">${cardsB}</div>
     ${titulo('Gráfico do período')}
     <div class="card-questao" style="margin:0;padding:12px">
-      <div style="display:flex;gap:6px;margin-bottom:8px">${segBtn(modoResp, 'Respostas', "vfTrocarModoGraficoProgressoVF('respostas')")}${segBtn(!modoResp, 'Tempo', "vfTrocarModoGraficoProgressoVF('tempo')")}</div>
+      <div class="vf-prog-linha" style="margin-bottom:8px">${segBtn(modoResp, 'Respostas', "vfTrocarModoGraficoProgressoVF('respostas')")}${segBtn(!modoResp, 'Tempo', "vfTrocarModoGraficoProgressoVF('tempo')")}</div>
       <div style="position:relative;height:220px"><canvas id="vf-prog-canvas-periodo"></canvas><div id="vf-prog-periodo-vazio" class="hidden" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#888;font-size:var(--fs-c)">Nenhuma resposta nesse período.</div></div>
       <div id="vf-prog-legenda-periodo" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px"></div>
     </div>
@@ -9274,13 +9290,13 @@ function vfRenderizarProgressoVF(d){
       <div style="position:relative;height:220px"><canvas id="vf-prog-canvas-cobertura"></canvas></div>
     </div>
     ${titulo('Por caderno')}
-    <div id="vf-prog-ordem" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+    <div id="vf-prog-ordem" class="vf-prog-linha" style="margin-bottom:8px">
       ${['vistas','acerto','vencidas','nome'].map(o => segBtn(vfProgressoVF.ordemCadernos === o, {vistas:'Vistas',acerto:'Acerto',vencidas:'Vencidas',nome:'Nome'}[o], `vfTrocarOrdemCadernosProgressoVF('${o}')`)).join('')}
     </div>
     <div id="vf-prog-cadernos">${d ? vfMontarCadernosProgressoVF(d) : '<div style="color:#888;font-size:var(--fs-c)">—</div>'}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:20px;flex-wrap:wrap">
       <span id="vf-prog-rodape-texto" onclick="vfCarregarProgressoVF({forcar:true})" style="font-size:var(--fs-b);color:#888;cursor:pointer">${rodape}</span>
-      <button class="filter-btn" style="margin:0" onclick="abrirModal('modal-info-progresso-vf')">ⓘ Definições</button>
+      <button class="vf-prog-btn" onclick="abrirModal('modal-info-progresso-vf')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Definições</button>
     </div>`;
   if(d){ vfDesenharGraficoPeriodoVF(d, per); vfDesenharGraficoCoberturaVF(d); }
 }
@@ -9290,7 +9306,7 @@ function vfTrocarModoGraficoProgressoVF(modo){
 }
 function vfTrocarOrdemCadernosProgressoVF(ordem){
   vfProgressoVF.ordemCadernos = ordem;
-  document.querySelectorAll('#vf-prog-ordem .filter-btn').forEach((b, i) => b.classList.toggle('active', ['vistas','acerto','vencidas','nome'][i] === ordem));
+  document.querySelectorAll('#vf-prog-ordem .vf-prog-btn').forEach((b, i) => b.classList.toggle('ativo', ['vistas','acerto','vencidas','nome'][i] === ordem));
   const el = document.getElementById('vf-prog-cadernos');
   if(el && vfProgressoVF.dados) el.innerHTML = vfMontarCadernosProgressoVF(vfProgressoVF.dados);
 }
@@ -9315,7 +9331,7 @@ async function vfDesenharGraficoPeriodoVF(d, per){
     const datasets = modoResp ? [
       {type:'bar', label:'Novas', data: pontos.map(p=>p.novas), backgroundColor:'#D95926', stack:'r', yAxisID:'y', borderRadius:2},
       {type:'bar', label:'Repetidas', data: pontos.map(p=>p.rep), backgroundColor:'#8A94A6', stack:'r', yAxisID:'y', borderRadius:2},
-      {type:'line', label:'Acerto %', data: pontos.map(p=>p.n ? Math.round(100*p.acertos/p.n) : null), borderColor:'#202A45', backgroundColor:'#202A45', yAxisID:'y1', pointRadius:2.5, borderWidth:1.5, tension:0.2, spanGaps:true}
+      {type:'line', label:'Acerto %', data: pontos.map(p=>p.n ? Math.round(100*p.acertos/p.n) : null), borderColor:'rgba(32,42,69,0.55)', backgroundColor:'#202A45', yAxisID:'y1', pointRadius:2, borderWidth:1.2, tension:0.2, spanGaps:true}
     ] : [
       {type:'bar', label:'Tempo ativo (h)', data: pontos.map(p=>Math.round(p.min_ativo/6)/10), backgroundColor:'#8A94A6', yAxisID:'y', borderRadius:2}
     ];
@@ -9428,7 +9444,7 @@ function vfMontarLinhaCadernoProgressoVF(c){
         <span style="font-size:var(--fs-c);color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${escapeHtml(c.nome || c.titulo || '')}</span>
         <span style="display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:var(--fs-b)">
           <span style="color:${corAc};font-weight:600">${ac}</span>
-          ${(c.vencidas||0) > 0 ? `<span style="background:#FAEEDA;color:#854F0B;border-radius:999px;padding:1px 7px;font-weight:600">${vfProgFmtN(c.vencidas)} ⏰</span>` : ''}
+          ${(c.vencidas||0) > 0 ? `<span style="background:#FAEEDA;color:#854F0B;border-radius:999px;padding:1px 7px;font-weight:600;display:inline-flex;align-items:center;gap:4px" title="revisões vencidas">${vfProgFmtN(c.vencidas)}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>` : ''}
         </span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
@@ -9442,7 +9458,7 @@ function vfMontarLinhaCadernoProgressoVF(c){
     ${aberto ? `<div style="margin-top:8px;font-size:var(--fs-b);color:#555;display:flex;flex-wrap:wrap;gap:6px 14px">
         <span>escada <b style="color:#111">${vfProgFmtN(c.aprendendo)}</b></span><span>consolidadas <b style="color:#111">${vfProgFmtN(c.consolidadas)}</b></span><span>vencidas <b style="color:#111">${vfProgFmtN(c.vencidas)}</b></span><span>leeches <b style="color:#111">${vfProgFmtN(c.leeches)}</b></span><span>respostas no período <b style="color:#111">${vfProgFmtN(c.respostas_periodo)}</b></span><span>total (com excluídas) <b style="color:#111">${vfProgFmtN(c.total)}</b></span>
       </div>
-      <button class="filter-btn" style="margin:8px 0 0 0" onclick="vfEstudarCadernoProgressoVF('${c.bibliografia_id}')">Estudar esse caderno ›</button>` : ''}
+      <button class="vf-prog-btn" style="margin-top:8px" onclick="vfEstudarCadernoProgressoVF('${c.bibliografia_id}')">Estudar esse caderno ›</button>` : ''}
   </div>`;
 }
 function vfAlternarGrupoProgressoVF(idx){
@@ -9465,6 +9481,7 @@ async function vfEstudarCadernoProgressoVF(bibliografiaId){
   if(!bib) return;
   document.getElementById('pagina-progresso-vf').classList.add('hidden');
   vfDestruirGraficosProgressoVF();
+  vfRetomarSessaoAoSairDoProgressoVF();
   const elMod = document.getElementById('vf-filtro-modulo');
   if(elMod && elMod.value !== (bib.modulo_pscpp || '')){ elMod.value = bib.modulo_pscpp || ''; await mudarModuloFiltroVF(); }
   const elPub = document.getElementById('vf-filtro-publicacao');
@@ -12206,7 +12223,6 @@ async function vfCarregarPanoramaFiltroVF(){
   // de lentidão nessa seção
   const paramsPanorama = vfParametrosPanoramaFiltroVF();
   const {data: panorama} = await sb.rpc('panorama_filtro_vf', paramsPanorama);
-  vfGuardarPanoramaProjecaoVF(paramsPanorama, panorama?.[0]); // v4 - a linha de projeção aproveita a mesma resposta
   const totalFiltro = panorama?.[0]?.total || 0;
   const jaVistas = panorama?.[0]?.ja_vistas || 0;
   const excluidas = panorama?.[0]?.excluidas || 0;
@@ -12690,9 +12706,7 @@ async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
     estadoVF.contadorGlobal = userRow?.contador_respostas_vf || 0;
     vfTotalAfirmacoesNoBanco = totalGeralQuestoesVF ?? null;
   }
-  // v4 - ritmo Auto e linha de projeção acompanham o filtro carregado
-  vfRecalcularAutoVF();
-  vfBuscarPanoramaProjecaoVF(); // em segundo plano, não segura a primeira questão
+  vfRecalcularAutoVF(); // v4 - ritmo Auto acompanha o filtro carregado
   if(!pool.length){
     vfLimparOverlayCargaFiltroVF(el);
     if(filtroVF.termo){
@@ -13596,7 +13610,6 @@ function vfTrocarNovaACadaVF(valor){
   try{ localStorage.setItem('pscpp_vf_nova_a_cada', String(valor)); }catch(e){}
   if(valor === 'auto') vfRecalcularAutoVF(); // precisa de um valor já na próxima escolha
   vfAtualizarVisualNovaACadaVF();
-  vfAtualizarProjecaoNovasVF(); // só recalcula o texto - o panorama já está em cache
   // não recarrega o pool - só muda a partir da próxima escolha
   // (escolherProximaVF lê vfNovaACadaAtualVF() na hora)
 }
@@ -13658,48 +13671,9 @@ function vfParametrosPanoramaFiltroVF(){
   };
 }
 
-// linha de projeção (D8): "No seu passo dos últimos 14 dias (~N/dia),
-// nesse ritmo as novas deste filtro acabam em ~X dias · Y revisões
-// vencidas agora". Uma chamada ao panorama por troca de filtro (cache
-// por chave dos parâmetros); trocar o ritmo só refaz o texto
-let vfPanoramaProjecaoVF = null; // {chave, novasRestantes, vencidas, respostas14d}
-function vfGuardarPanoramaProjecaoVF(params, p){
-  if(!p) return;
-  vfPanoramaProjecaoVF = {
-    chave: JSON.stringify(params),
-    novasRestantes: Math.max(0, (p.total || 0) - (p.excluidas || 0) - (p.ja_vistas || 0)),
-    vencidas: p.vencidas || 0,
-    respostas14d: p.respostas_14d || 0
-  };
-  vfAtualizarProjecaoNovasVF();
-}
-async function vfBuscarPanoramaProjecaoVF(){
-  if(!usuarioAtual || !document.getElementById('vf-nova-projecao')) return;
-  const params = vfParametrosPanoramaFiltroVF();
-  const chave = JSON.stringify(params);
-  if(vfPanoramaProjecaoVF && vfPanoramaProjecaoVF.chave === chave){ vfAtualizarProjecaoNovasVF(); return; }
-  try{
-    const {data} = await sb.rpc('panorama_filtro_vf', params);
-    // se o filtro mudou enquanto a busca rodava, esse resultado é velho
-    if(JSON.stringify(vfParametrosPanoramaFiltroVF()) !== chave) return;
-    vfGuardarPanoramaProjecaoVF(params, data?.[0]);
-  }catch(e){ console.warn('projeção de novas:', e); }
-}
-function vfAtualizarProjecaoNovasVF(){
-  const el = document.getElementById('vf-nova-projecao');
-  if(!el) return;
-  const p = vfPanoramaProjecaoVF;
-  if(!p){ el.textContent = ''; return; }
-  const N = p.respostas14d / 14;
-  const cadaN = vfNovaACadaAtualVF();
-  const sufixoAuto = vfRitmoSelecionadoVF() === 'auto' ? ` (Auto: ${vfRotuloRitmoVF(cadaN)})` : '';
-  if(N < 20){
-    el.textContent = `Passo insuficiente para projetar${sufixoAuto} · ${p.vencidas} revisões vencidas agora`;
-    return;
-  }
-  const dias = Math.ceil(p.novasRestantes / (N / cadaN));
-  el.textContent = `No seu passo dos últimos 14 dias (~${Math.round(N)}/dia), nesse ritmo${sufixoAuto} as novas deste filtro acabam em ~${dias} dias · ${p.vencidas} revisões vencidas agora`;
-}
+// (a linha de projeção do ritmo, D8, foi removida em 18/09/2026 a pedido do
+// Carlos: a resposta "quando acabo" mora na página Progresso, com escopo
+// "Filtro atual" - aqui só poluía o filtro e custava uma chamada por troca)
 
 // abre/fecha o bloco de filtros — começa fechado, pra não ocupar espaço
 // da tela à toa quando não está mexendo nele. Transição suave de altura
@@ -15505,7 +15479,7 @@ async function responderVF(resposta){
   // ritmo Auto (D7): refaz a conta a cada AUTO_RECALC_A_CADA respostas
   if(vfRitmoSelecionadoVF() === 'auto'){
     estadoVF.respostasDesdeRecalcAutoVF = (estadoVF.respostasDesdeRecalcAutoVF || 0) + 1;
-    if(estadoVF.respostasDesdeRecalcAutoVF >= VF_ALGO.AUTO_RECALC_A_CADA){ vfRecalcularAutoVF(); vfAtualizarProjecaoNovasVF(); }
+    if(estadoVF.respostasDesdeRecalcAutoVF >= VF_ALGO.AUTO_RECALC_A_CADA) vfRecalcularAutoVF();
   }
 
   // enterro de irmãs até amanhã (substitui o antigo buffer GAP_FAMILIA) -
