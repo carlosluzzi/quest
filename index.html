@@ -2137,7 +2137,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-18-102';
+const VERSAO_APP = '2026-09-18-105';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8585,7 +8585,9 @@ function vfBibliotecaMudarModuloVF(){
   elPub.disabled = false;
 }
 
+let vfGeracaoCascataBibliotecaVF = 0; // mesma ideia de vfGeracaoCascataFiltroVF, pra cascata da aba Biblioteca
 async function vfBibliotecaMudarPublicacaoVF(){
+  const geracaoVF = ++vfGeracaoCascataBibliotecaVF;
   const publicacao = document.getElementById('vf-biblioteca-filtro-publicacao').value;
   const elCap = document.getElementById('vf-biblioteca-filtro-capitulo');
   elCap.innerHTML = '<option value="">Todos os capítulos</option>';
@@ -8593,7 +8595,14 @@ async function vfBibliotecaMudarPublicacaoVF(){
   if(!publicacao) return;
   const bib = (bibliografiaCache || []).find(b => b.id === publicacao);
   const rotulo = rotuloCapituloDoLivro(bib?.titulo) + ' '; // "Chapter", "Capítulo", "Section"... vem da bibliografia
-  const {data} = await sb.rpc('capitulos_distintos_por_publicacao_vf', {p_bibliografia_id: publicacao});
+  const {data, error} = await sb.rpc('capitulos_distintos_por_publicacao_vf', {p_bibliografia_id: publicacao});
+  if(geracaoVF !== vfGeracaoCascataBibliotecaVF) return; // resposta de uma publicação que não é mais a escolhida
+  if(error){
+    elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+    elCap.disabled = false;
+    vfMostrarAvisoVF('Não consegui carregar a lista de capítulos agora. Escolhe a publicação de novo pra tentar outra vez.');
+    return;
+  }
   const capitulos = [...new Set((data || []).map(q => q.capitulo).filter(Boolean))]
     .sort((a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0) || a.localeCompare(b, 'pt'));
   elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c =>
@@ -8813,6 +8822,7 @@ function vfHtmlCardBibliotecaVF(q){
       ${correcaoHtml ? `<div id="vf-bib-correcao-${q.id}" style="background:#f7f7f5;border:0.5px solid #eee;border-radius:10px;padding:8px;margin-top:10px;color:#111;font-size:var(--fs-d);line-height:1.6">${correcaoHtml}</div>` : ''}
       ${grifo && grifo.passadas > 1 ? `<p style="color:#999;font-size:var(--fs-a);margin:8px 0 0 0">Grifada em ${grifo.passadas} passadas · mostrando a última</p>` : ''}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
+        <button id="vf-bib-btn-notas-${q.id}" style="${estiloAcao}${notasVF.has(q.id) ? ';color:#B23A34;border-color:#E8C4C2' : ''}" onclick="vfAbrirNotaDaBibliotecaVF('${q.id}')">Notas${notasVF.has(q.id) ? ' •' : ''}</button>
         <button style="${estiloAcao}" onclick="vfEditarDaBibliotecaVF('${q.id}')">Editar</button>
         <button style="${estiloAcao}${favorita ? ';color:#B23A34;border-color:#E8C4C2' : ''}" onclick="vfAlternarFavoritoBibliotecaVF('${q.id}')">${favorita ? 'Desfavoritar' : 'Favoritar'}</button>
         ${excluida ? '' : `<button style="${estiloAcao};color:#A32D2D" onclick="vfExcluirDaBibliotecaVF('${q.id}')">Excluir</button>`}
@@ -12928,7 +12938,16 @@ function vfFormatarHorasVF(h){
   return `${horasInteiras}h${String(minutos).padStart(2,'0')}m`;
 }
 
+// os selects em cascata (módulo -> publicação -> capítulo) são
+// preenchidos por consultas ASSÍNCRONAS. Mexer em dois em sequência (ou
+// tocar de novo enquanto a lista ainda vem) deixava uma resposta velha
+// chegar DEPOIS e sobrescrever a lista boa - o sintoma era a lista de
+// capítulos voltar vazia, só com "Todos os capítulos", e o filtro
+// parecer que não pegou. Cada mudança carimba uma geração; resposta de
+// geração antiga é descartada
+let vfGeracaoCascataFiltroVF = 0;
 async function mudarModuloFiltroVF(){
+  const geracaoVF = ++vfGeracaoCascataFiltroVF;
   const modulo = document.getElementById('vf-filtro-modulo').value;
   filtroVF.modulo = modulo || null;
   filtroVF.publicacao = null;
@@ -12945,6 +12964,7 @@ async function mudarModuloFiltroVF(){
       const {data} = await sb.rpc('publicacoes_com_questoes_vf');
       vfPublicacoesComQuestaoVF = new Set((data||[]).map(r => r.bibliografia_id).filter(Boolean));
     }
+    if(geracaoVF !== vfGeracaoCascataFiltroVF) return; // trocou de módulo enquanto isso - quem mandou depois manda
     const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
     elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>{
       const vazio = !vfPublicacoesComQuestaoVF.has(p.id);
@@ -12959,6 +12979,7 @@ async function mudarModuloFiltroVF(){
 // busca os capítulos que realmente existem em questoes_vf pra essa
 // publicação (não uma lista genérica), e ordena numericamente quando dá
 async function mudarFiltroPublicacaoVF(){
+  const geracaoVF = ++vfGeracaoCascataFiltroVF; // ver vfGeracaoCascataFiltroVF
   const publicacao = document.getElementById('vf-filtro-publicacao').value;
   filtroVF.publicacao = publicacao || null;
   filtroVF.capitulo = null;
@@ -12976,7 +12997,17 @@ async function mudarFiltroPublicacaoVF(){
     // padrão de 1000 linhas do Supabase, cortando capítulos inteiros da
     // lista - tipicamente os adicionados mais recentemente, que ficavam
     // fora das primeiras 1000 linhas retornadas
-    const {data} = await sb.rpc('capitulos_distintos_por_publicacao_vf', {p_bibliografia_id: publicacao});
+    const {data, error} = await sb.rpc('capitulos_distintos_por_publicacao_vf', {p_bibliografia_id: publicacao});
+    if(geracaoVF !== vfGeracaoCascataFiltroVF) return; // já trocaram o filtro de novo - essa resposta não vale mais
+    if(error){
+      // rede falhou no meio: não deixa o select mudo, avisa e libera pra
+      // tentar de novo escolhendo a publicação outra vez
+      elCap.innerHTML = '<option value="">Todos os capítulos</option>';
+      elCap.disabled = false;
+      vfMostrarAvisoVF('Não consegui carregar a lista de capítulos agora. Escolhe a publicação de novo pra tentar outra vez.');
+      mudarFiltroVF();
+      return;
+    }
     const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
       .sort((a,b) => (parseFloat(a)||0) - (parseFloat(b)||0) || a.localeCompare(b,'pt'));
     elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
@@ -15424,7 +15455,15 @@ async function vfSalvarEdicaoCorrecaoVF(questaoId, textoOriginal){
 
 function renderizarBarraFixaVF(item, jaRespondida){
   const barraFixa = document.getElementById('vf-barra-fixa');
-  barraFixa.className = 'vf-barra-fixa';
+  // a barra é position:fixed e mora FORA da aba do Flash, então não
+  // some sozinha quando você troca de aba. Achado real: uma renderização
+  // que termina DEPOIS da troca (uma carga de pool que ainda estava a
+  // caminho, por exemplo) remontava a barra e ela reaparecia por cima da
+  // Biblioteca, com Verdadeiro/Falso e tudo. Monta sempre (pra estar
+  // pronta quando ele voltar), mas só fica visível se o Flash for mesmo
+  // a tela que está na frente
+  const flashNaTelaVF = !document.getElementById('aba-vf')?.classList.contains('hidden');
+  barraFixa.className = flashNaTelaVF ? 'vf-barra-fixa' : 'vf-barra-fixa hidden';
   const podeVoltar = vfIndiceAnteriorVisivelVF(estadoVF.posicao) >= 0; // desabilita quando só sobraram excluídas atrás
   const linhaPrincipal = jaRespondida
     ? `<button class="btn-secundario" style="flex:1" ${podeVoltar?'':'disabled'} onclick="anteriorVF()">← Anterior</button>
@@ -16023,6 +16062,13 @@ let questaoNotaVfAtual = null;
 // no botão Fechar/Cancelar quanto no clique fora do modal
 function fecharModalNotaVF(){
   fecharModal('modal-nota-vf');
+  if(vfNotaAbertaDaBibliotecaVF){
+    // veio da Biblioteca: o cronômetro do Flash não foi pausado, então
+    // não tem o que retomar - só atualiza o card de onde ela foi aberta
+    vfNotaAbertaDaBibliotecaVF = false;
+    vfAtualizarBotaoNotasBibliotecaVF(questaoNotaVfAtual);
+    return;
+  }
   retomarOuDescartarPendenteVF();
 }
 function fecharModalExclusaoVF(){
@@ -18609,8 +18655,31 @@ async function vfAdicionarNotaFixadaDaIrmaVF(notaId){
   if(containerFinal) vfMontarPreviewNotasVF(containerFinal, vfNotaPreviewCacheVF.get(destino) || [], destino);
 }
 
+// abre o MESMO pop-up de notas a partir da aba Biblioteca. A diferença é
+// o cronômetro: ali você não está respondendo nada, então a sessão do
+// Flash (que pode ter uma questão pendente esperando) não pode ser
+// pausada nem retomada por causa disso - sem essa marca, abrir uma nota
+// na Biblioteca podia até descartar a pendente do Flash, se a "pausa"
+// passasse do limite
+let vfNotaAbertaDaBibliotecaVF = false;
+function vfAbrirNotaDaBibliotecaVF(questaoVfId){
+  vfNotaAbertaDaBibliotecaVF = true;
+  abrirNotaVF(questaoVfId);
+}
+// o card da Biblioteca mostra se a afirmação tem nota - depois de
+// escrever/apagar no pop-up, atualiza o botão sem redesenhar a lista
+// inteira (ela é longa e perderia a posição da rolagem)
+function vfAtualizarBotaoNotasBibliotecaVF(questaoVfId){
+  const btn = document.getElementById(`vf-bib-btn-notas-${questaoVfId}`);
+  if(!btn) return;
+  const tem = notasVF.has(questaoVfId);
+  btn.textContent = 'Notas' + (tem ? ' •' : '');
+  btn.style.color = tem ? '#B23A34' : '#666';
+  btn.style.borderColor = tem ? '#E8C4C2' : '#ddd';
+}
+
 async function abrirNotaVF(questaoVfId){
-  pausarTimerVF(); // abrir Notas/Excluir com questão pendente conta como sair da tela — você está escrevendo, não lendo a afirmação
+  if(!vfNotaAbertaDaBibliotecaVF) pausarTimerVF(); // abrir Notas/Excluir com questão pendente conta como sair da tela — você está escrevendo, não lendo a afirmação
   questaoNotaVfAtual = questaoVfId;
   document.getElementById('texto-nota-vf').value = '';
   vfMudarAbaNotaVF('questao'); // sempre abre onde ele vai escrever, nunca na biblioteca
