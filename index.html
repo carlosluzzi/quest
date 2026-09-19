@@ -2145,7 +2145,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-19-112';
+const VERSAO_APP = '2026-09-19-114';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3490,6 +3490,13 @@ function trocarAba(nome, pularContadorQuest){
   // cima de outras abas (Quest, etc) sempre que já estava visível antes
   // da troca, já que não herda o .hidden da aba automaticamente
   if(nome !== 'vf') document.getElementById('vf-barra-fixa')?.classList.add('hidden');
+  // sair do Flash pelo MENU (em vez do botão "Voltar pra Biblioteca")
+  // também encerra o modo de leitura vindo da Biblioteca - senão a marca
+  // ficava presa e a próxima questão do Flash aparecia sem
+  // Verdadeiro/Falso, sem contador e com os filtros escondidos
+  if(typeof vfVeioDaBibliotecaVF !== 'undefined' && vfVeioDaBibliotecaVF && nome !== 'vf'){
+    vfSairDoModoVisualizacaoSalvoVF();
+  }
   // só limpa se a aba mudou de verdade - achado real: tocar no balão do
   // Flash pra "reabrir" chama trocarAba('vf') mesmo já estando nele
   // (toque simples sem arrastar), e limpar incondicionalmente apagava
@@ -4845,6 +4852,13 @@ function vfPctColunaVF(px, soma){
 }
 const VF_LIMIAR_TABELA_CHEIA_VF = 0.8;
 const VF_MAX_CHARS_CELULA_CURTA_VF = 24;
+// centro/direita escolhidos na mao. Esquerda (o padrao) nao conta: so esses
+// dois precisam de espaco sobrando pra aparecer na tela
+function vfTabelaAlinhadaNaMaoVF(bloco){
+  const alin = bloco && bloco.dataset ? bloco.dataset.alinhamentoTabela : '';
+  return alin === 'centro' || alin === 'direita';
+}
+
 function vfAjustarLarguraTabelaVF(bloco){
   if(!bloco || !bloco.isConnected) return;
   const tabelas = bloco.querySelectorAll('table');
@@ -4892,6 +4906,20 @@ function vfAjustarLarguraTabelaVF(bloco){
     if(larguraTotal >= 100){ bloco.style.width = '100%'; cartao.style.width = '100%'; tabela.style.width = '100%'; }
     alcas.forEach(a => { a.style.display = ''; });
     bloco.dataset.modoLargura = 'fixa';
+  }else if(vfTabelaAlinhadaNaMaoVF(bloco) && natural < container && natural >= container * VF_LIMIAR_TABELA_CHEIA_VF){
+    // alinhamento escolhido na mao (centro/direita) manda na largura: a
+    // tabela fica na largura natural dela. Sem isso, qualquer tabela que
+    // passasse de 80% do card caia no modo "cheia" (esticada pra 100%) e o
+    // margin:auto do alinhamento virava no-op - clicava em centro e nada
+    // mudava na tela
+    const proporcoesNat = largurasOk || celulas.map(td => td.getBoundingClientRect().width);
+    const somaNat = proporcoesNat.reduce((a,b) => a+b, 0) || 1;
+    tabela.style.tableLayout = 'fixed';
+    tabela.style.width = Math.ceil(natural) + 'px';
+    celulas.forEach((td, i) => { td.style.width = (proporcoesNat[i]/somaNat*100).toFixed(2) + '%'; });
+    vfLiberarQuebraSoNoQueNaoCabeVF(tabela);
+    alcas.forEach(a => { a.style.display = ''; });
+    bloco.dataset.modoLargura = 'natural-alinhada';
   }else if(natural >= container * VF_LIMIAR_TABELA_CHEIA_VF){
     // proporções: as salvas (se batem com o nº de colunas - adicionar uma
     // coluna invalida as antigas) ou as naturais medidas agora. Layout
@@ -15008,6 +15036,7 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
         b.style.background = ativoAgora ? '#B23A34' : 'transparent';
         b.style.color = ativoAgora ? '#fff' : '#666';
       });
+      vfAjustarLarguraTabelaVF(bloco); // a largura depende do alinhamento (ver vfTabelaAlinhadaNaMaoVF)
       vfSalvarAlinhamentoTabelaVF(bloco.id, op.valor);
     };
     btn.className = 'vf-tabela-alinhamento-btn';
