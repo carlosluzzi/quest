@@ -214,7 +214,10 @@ trocando a custom property de cada slider individualmente */
    a página normalmente em qualquer outro ponto da tela. Vale só pra
    campos de uma linha: textarea fica de fora de propósito, senão
    perderia a rolagem do próprio texto dentro dela */
-input[type="search"], input[type="text"], input[type="email"], input[type="number"], input[type="password"]{touch-action:none}
+/* campos de texto ficam com o comportamento NATIVO de toque - quem impede
+   que a caneta vire traço de desenho neles é a exceção no touchstart do
+   desenho (ver "escrever com a CANETA num campo de texto"). touch-action:none
+   aqui atrapalhava o Scribble em vez de ajudar */
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
 .chev.open{transform:rotate(180deg)}
@@ -1120,7 +1123,17 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     <select id="vf-biblioteca-filtro-capitulo" class="filter-select" style="margin-bottom:8px" disabled>
       <option value="">Todos os capítulos</option>
     </select>
-    <div style="display:flex;gap:8px;align-items:stretch">
+    <!-- mesmos três do Tipo do Flash (mesma classe, mesmo visual, mesmas
+         colunas do banco: eh_numero, eh_lista, inconsistente) -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px">
+      <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Tipo</span>
+      <span style="display:flex;justify-content:flex-end;gap:6px;flex:1;min-width:0">
+        <button id="vf-biblioteca-filtro-numero" onclick="vfBibliotecaToggleTipoVF('numero')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Número</button>
+        <button id="vf-biblioteca-filtro-lista" onclick="vfBibliotecaToggleTipoVF('lista')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Lista</button>
+        <button id="vf-biblioteca-filtro-inconsistente" onclick="vfBibliotecaToggleTipoVF('inconsistente')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Inconsistente</button>
+      </span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:stretch;margin-top:12px">
       <input id="vf-biblioteca-busca" type="search" class="filter-select" placeholder="Palavra em português ou inglês" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfBuscarBibliotecaVF();}">
       <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfBuscarBibliotecaVF()">Buscar</button>
     </div>
@@ -2150,7 +2163,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-19-118';
+const VERSAO_APP = '2026-09-19-122';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7281,6 +7294,7 @@ document.addEventListener('touchstart', (e) => {
   if(e.target.closest('#vf-painel-inconsistencia')) return; // painel da inconsistência da fonte - idem
   if(e.target.closest('#vf-balao-explicacao')) return; // balão de explicação/anotação (\nota{}{} e anotações de célula) - não é um modal padrão, riscar em cima dele não pode vazar pro canvas por baixo
   if(vfBalaoArrastoInfoVF) return; // proteção redundante - nunca desenha enquanto o balão está sendo arrastado, mesmo que o toque não esteja mais fisicamente sobre ele
+  if(e.target.closest('input[type="search"], input[type="text"], input[type="email"], input[type="number"], input[type="password"], input:not([type])')) return; // mesmo motivo da textarea logo abaixo: escrever com a CANETA num campo de texto (busca da Biblioteca, glossário...) precisa do toque limpo. Sem isso o toque da caneta virava início de traço, competia com o cursor/Scribble e a escrita ficava tremida
   if(e.target.closest('textarea')) return; // nunca vira início de traço - dentro de qualquer textarea (edição de explicação/enunciado/correção), o toque (caneta ou dedo) precisa ficar livre pro comportamento nativo de seleção/cursor, sem competir com o sistema de desenho
   if(e.target.closest('select')) return; // qualquer <select> nativo (filtros do Flash, e futuros) - nunca vira início de traço, o dropdown nativo do Safari precisa do toque limpo
   // Favoritar já tem sistema PRÓPRIO completo (toque curto=clique, toque
@@ -8742,6 +8756,27 @@ async function vfBibliotecaMudarPublicacaoVF(){
   ).join('');
 }
 
+// Tipo na Biblioteca: os mesmos três do Flash. Estado próprio (não mexe
+// no filtroVF da sessão do Flash - lá eles decidem o pool das próximas
+// afirmações; aqui só filtram a consulta da Biblioteca)
+let vfBibliotecaTipoVF = {numero: false, lista: false, inconsistente: false};
+function vfBibliotecaToggleTipoVF(tipo){
+  if(!VF_FILTROS_TIPO_VF.includes(tipo)) return;
+  vfBibliotecaTipoVF[tipo] = !vfBibliotecaTipoVF[tipo];
+  vfPintarBotoesTipoBibliotecaVF();
+  vfBuscarBibliotecaVF();
+}
+function vfPintarBotoesTipoBibliotecaVF(){
+  VF_FILTROS_TIPO_VF.forEach(tipo => {
+    const btn = document.getElementById('vf-biblioteca-filtro-' + tipo);
+    if(!btn) return;
+    const ativo = !!vfBibliotecaTipoVF[tipo];
+    btn.style.background = ativo ? '#B23A34' : '#fff';
+    btn.style.color = ativo ? '#fff' : '#888';
+    btn.style.borderColor = ativo ? '#B23A34' : '#ddd';
+  });
+}
+
 async function vfBuscarBibliotecaVF(){
   const termo = (document.getElementById('vf-biblioteca-busca').value || '').trim();
   const modulo = document.getElementById('vf-biblioteca-filtro-modulo').value;
@@ -8754,14 +8789,16 @@ async function vfBuscarBibliotecaVF(){
   vfBibliotecaCarregadasVF = [];
   vfBibliotecaGrifosVF = new Map();
   lista.innerHTML = '';
-  if(!termo && !modulo && !publicacao && !soGrifadas){
-    resumo.textContent = 'Digite uma palavra, escolha um módulo/publicação, ou marque "só as que eu grifei".';
+  const algumTipoVF = vfBibliotecaTipoVF.numero || vfBibliotecaTipoVF.lista || vfBibliotecaTipoVF.inconsistente;
+  if(!termo && !modulo && !publicacao && !soGrifadas && !algumTipoVF){
+    resumo.textContent = 'Digite uma palavra, escolha um módulo/publicação, um tipo, ou marque "só as que eu grifei".';
     return;
   }
   vfBibliotecaTermoVF = termo;
   vfBibliotecaDescricaoFiltroVF = [
     publicacao ? (() => { const b = (bibliografiaCache || []).find(x => x.id === publicacao); return b ? (b.nome_exibicao || b.titulo) : null; })() : modulo,
-    capitulo ? (capitulo === 'Único' ? capitulo : rotuloCapituloDoLivro(((bibliografiaCache || []).find(x => x.id === publicacao) || {}).titulo) + ' ' + capitulo) : null
+    capitulo ? (capitulo === 'Único' ? capitulo : rotuloCapituloDoLivro(((bibliografiaCache || []).find(x => x.id === publicacao) || {}).titulo) + ' ' + capitulo) : null,
+    [vfBibliotecaTipoVF.numero ? 'Número' : null, vfBibliotecaTipoVF.lista ? 'Lista' : null, vfBibliotecaTipoVF.inconsistente ? 'Inconsistente' : null].filter(Boolean).join(' + ') || null
   ].filter(Boolean).join(' · ');
   resumo.textContent = 'Procurando…';
   // três coisas em paralelo: a busca por palavra (quando tem palavra), os
@@ -8770,15 +8807,21 @@ async function vfBuscarBibliotecaVF(){
   const promessaTermo = termo
     ? sb.rpc('buscar_questoes_por_termo_vf', {p_termo: termo})
     : Promise.resolve({data: null, error: null});
-  const promessaFiltro = (modulo || publicacao)
+  const promessaFiltro = (modulo || publicacao || algumTipoVF)
     ? (() => {
         const idsBib = publicacao
           ? [publicacao]
-          : (bibliografiaCache || []).filter(b => b.modulo_pscpp === modulo).map(b => b.id);
-        if(!idsBib.length) return Promise.resolve({data: [], error: null});
+          : modulo ? (bibliografiaCache || []).filter(b => b.modulo_pscpp === modulo).map(b => b.id) : null;
+        if(idsBib && !idsBib.length) return Promise.resolve({data: [], error: null});
         return buscarTudoPaginadoVF(() => {
-          let q = sb.from('questoes_vf').select('id', {count: 'exact'}).eq('anulada', false).in('bibliografia_id', idsBib);
+          let q = sb.from('questoes_vf').select('id', {count: 'exact'}).eq('anulada', false);
+          if(idsBib) q = q.in('bibliografia_id', idsBib);
           if(capitulo) q = q.eq('capitulo', capitulo);
+          // mesma regra do Flash: Número + Lista somam (OU), Inconsistente restringe (E)
+          if(vfBibliotecaTipoVF.numero && vfBibliotecaTipoVF.lista) q = q.or('eh_numero.eq.true,eh_lista.eq.true');
+          else if(vfBibliotecaTipoVF.numero) q = q.eq('eh_numero', true);
+          else if(vfBibliotecaTipoVF.lista) q = q.eq('eh_lista', true);
+          if(vfBibliotecaTipoVF.inconsistente) q = q.eq('inconsistente', true);
           return q.order('bibliografia_id').order('capitulo').order('id');
         });
       })()
@@ -8848,6 +8891,13 @@ async function vfCarregarMaisBibliotecaVF(){
   }
   vfBibliotecaCarregandoVF = false;
   vfRenderizarBibliotecaVF();
+  // enquanto ele lê a lista, busca em segundo plano o conteúdo PESADO
+  // (explicação, inconsistência, complementar local, recortes) dessas
+  // mesmas afirmações, com a busca em lote que o Flash já usa - uma
+  // query só pra página inteira. É isso que faz o "Abrir" ser imediato:
+  // a tela do Flash se recusa a desenhar enquanto a explicação não
+  // chegou (mostra "Carregando..."), e agora ela já chegou antes do toque
+  if(proximos.length) vfBuscarConteudoEmLoteVF(vfBibliotecaCarregadasVF.slice(-proximos.length));
 }
 
 // grifos das questões dessa página. Cada passada pela questão gravou seu
@@ -8973,20 +9023,44 @@ function vfHtmlCardBibliotecaVF(q){
 // diferença é a barra de baixo: em vez de Verdadeiro/Falso (ou
 // Anterior/Próxima), um botão só - "Voltar pra Biblioteca"
 let vfVeioDaBibliotecaVF = false;
+// NÃO troca de aba: a tela do Flash é que vem pra cá (ver
+// vfAjustarTelaModoBibliotecaVF) - continua tudo dentro da Biblioteca.
+// Abre em DUAS FASES, senão demorava demais: a lista da Biblioteca já
+// carregou texto, correção, gabarito, capítulo e publicação de cada
+// afirmação - dá pra desenhar a tela NA HORA com isso, sem esperar ida
+// nenhuma ao banco. O resto (explicação, inconsistência, complementar
+// local, recortes) chega logo atrás e a tela se completa sozinha.
+// Saiu também a espera de até 8 s pelo pool da sessão do Flash: pra
+// olhar UMA afirmação não é preciso sessão nenhuma
 async function vfAbrirNoFlashDaBibliotecaVF(questaoVfId){
   const btn = document.getElementById(`vf-bib-btn-abrir-${questaoVfId}`);
-  if(btn){ btn.textContent = 'Abrindo…'; btn.disabled = true; }
-  // NÃO troca de aba: a tela do Flash é que vem pra cá (ver
-  // vfAjustarTelaModoBibliotecaVF) - continua tudo dentro da Biblioteca
-  // com sessão rodando, espera o pool dela chegar (a afirmação pode até
-  // já estar no histórico). SEM sessão, não force uma: a Biblioteca abre
-  // a afirmação num estado mínimo, sem pool nenhum - é só pra olhar
-  if(vfSessaoAtivaVF && !(estadoVF && estadoVF.historico && estadoVF.historico.length)) await vfEsperarSessaoFlashVF(8000);
   if(!estadoVF) estadoVF = {pool: [], historico: [], posicao: -1, acertosSessao: 0, respondidasSessao: 0};
-  if(btn){ btn.textContent = 'Abrir'; btn.disabled = false; }
   vfVeioDaBibliotecaVF = true;
   vfAjustarTelaModoBibliotecaVF(true);
+  const previa = (typeof vfBibliotecaCarregadasVF !== 'undefined' ? vfBibliotecaCarregadasVF : []).find(q => q && q.id === questaoVfId);
+  const jaNoHistorico = estadoVF.historico.some(h => h.item && h.item.id === questaoVfId);
+  if(previa && !jaNoHistorico){
+    vfForcarSalvamentoEdicaoPendenteVF();
+    pausarTimerVF();
+    const item = {...previa, ...(vfConteudoCompletoCache.get(questaoVfId) || {})};
+    const entrada = {item, resposta: item.resposta, acertou: true, anotacaoDataUrl: null};
+    estadoVF.historico.push(entrada);
+    const indiceTemporario = estadoVF.historico.length - 1;
+    vfVisualizandoSalvoInfoVF = {posicaoOriginal: estadoVF.posicao, indiceTemporario};
+    limparCanvasDesenhoVF();
+    estadoVF.posicao = indiceTemporario;
+    renderizarItemVF(); // <- a afirmação aparece AQUI, sem esperar o banco
+    await vfGarantirConteudoCompletoVF(item); // mesma busca (e mesmo cache) que o Flash já usa
+    if(vfVeioDaBibliotecaVF && estadoVF.historico[indiceTemporario] === entrada && estadoVF.posicao === indiceTemporario){
+      entrada.resposta = item.resposta;
+      renderizarItemVF(); // completa com explicação/inconsistência/complementar
+    }
+    return;
+  }
+  // sem prévia na lista (veio de outro caminho) - segue o jeito antigo
+  if(btn){ btn.textContent = 'Abrindo…'; btn.disabled = true; }
   await vfIrParaQuestaoSalvaVF(questaoVfId);
+  if(btn){ btn.textContent = 'Abrir'; btn.disabled = false; }
 }
 // o que some enquanto a afirmação está aberta pela Biblioteca: o painel
 // de Filtros (é filtro da sessão, não tem o que filtrar numa afirmação
@@ -9170,7 +9244,7 @@ async function vfIrParaQuestaoSalvaVF(questaoVfId){
   document.getElementById('vf-conteudo').innerHTML = `<div style="padding:60px 20px;text-align:center;color:#999">Carregando...</div>`;
   const [{data: questao, error: erroQuestao}, {data: ultimaResposta}] = await Promise.all([
     sb.from('questoes_vf').select('*, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', questaoVfId).single(),
-    sb.from('log_respostas_vf').select('acertou, criado_em').eq('questao_vf_id', questaoVfId).eq('usuario_id', usuarioAtual.id).order('criado_em', {ascending: false}).limit(1).maybeSingle()
+    sb.from('log_respostas_vf').select('acertou, respondida_em').eq('questao_vf_id', questaoVfId).eq('usuario_id', usuarioAtual.id).order('respondida_em', {ascending: false}).limit(1).maybeSingle()
   ]);
   if(erroQuestao || !questao){
     alert('Não consegui carregar essa questão agora. Tenta de novo.');
