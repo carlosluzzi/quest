@@ -2135,7 +2135,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-19-109';
+const VERSAO_APP = '2026-09-19-110';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8931,16 +8931,28 @@ let vfVeioDaBibliotecaVF = false;
 async function vfAbrirNoFlashDaBibliotecaVF(questaoVfId){
   const btn = document.getElementById(`vf-bib-btn-abrir-${questaoVfId}`);
   if(btn){ btn.textContent = 'Abrindo…'; btn.disabled = true; }
-  trocarAba('vf'); // se a sessão ainda não existe nessa aberta do app, é isso que a cria
-  const pronto = await vfEsperarSessaoFlashVF(12000);
+  trocarAba('vf');
+  // com sessão rodando, espera o pool dela chegar (a afirmação pode até
+  // já estar no histórico). SEM sessão, não force uma: a Biblioteca abre
+  // a afirmação num estado mínimo, sem pool nenhum - é só pra olhar
+  if(vfSessaoAtivaVF && !(estadoVF && estadoVF.historico && estadoVF.historico.length)) await vfEsperarSessaoFlashVF(8000);
+  if(!estadoVF) estadoVF = {pool: [], historico: [], posicao: -1, acertosSessao: 0, respondidasSessao: 0};
   if(btn){ btn.textContent = 'Abrir'; btn.disabled = false; }
-  if(!pronto){
-    trocarAba('biblioteca');
-    vfMostrarAvisoVF('Não consegui abrir o Flash agora pra mostrar essa afirmação. Tenta de novo.');
-    return;
-  }
   vfVeioDaBibliotecaVF = true;
+  vfAjustarTelaModoBibliotecaVF(true);
   await vfIrParaQuestaoSalvaVF(questaoVfId);
+}
+// o que some enquanto a afirmação está aberta pela Biblioteca: o painel
+// de Filtros (é filtro da sessão, não tem o que filtrar numa afirmação
+// só) e o balão do cronômetro (não há sessão correndo aqui)
+function vfAjustarTelaModoBibliotecaVF(ligado){
+  document.getElementById('vf-filtros')?.classList.toggle('hidden', ligado);
+  vfAtualizarOverlaySessaoVF(); // some com o convite de iniciar sessão ao entrar, devolve ao sair
+  if(ligado){
+    document.getElementById('vf-sessao-balao')?.classList.add('hidden');
+  }else if(typeof vfSessaoAtivaVF !== 'undefined' ? vfSessaoAtivaVF : estadoVF?.sessaoIniciadaEmMs){
+    vfMostrarBalaoSessaoFlashVF(); // devolve o balão à condição de antes
+  }
 }
 // a sessão do Flash é montada de forma assíncrona (entrarNoModoVF) -
 // quando a Biblioteca é a primeira tela aberta do app, ela ainda não
@@ -9110,7 +9122,10 @@ async function vfIrParaQuestaoSalvaVF(questaoVfId){
 // volta pra posição de onde a pessoa realmente estava na sessão, em vez
 // de deixar a navegação continuar a partir da posição antiga do salvo
 function vfSairDoModoVisualizacaoSalvoVF(){
-  vfVeioDaBibliotecaVF = false; // sair da visualização (por aqui ou pelo Anterior/Próxima) devolve a barra normal
+  if(vfVeioDaBibliotecaVF){
+    vfVeioDaBibliotecaVF = false; // precisa vir ANTES: o balão só volta se o modo já tiver acabado
+    vfAjustarTelaModoBibliotecaVF(false);
+  }
   if(!vfVisualizandoSalvoInfoVF) return;
   vfForcarSalvamentoEdicaoPendenteVF();
   const {posicaoOriginal, indiceTemporario} = vfVisualizandoSalvoInfoVF;
@@ -12118,6 +12133,7 @@ async function vfFinalizarSessaoFlashVF(e){
 function vfMostrarBalaoSessaoFlashVF(){
   const balao = document.getElementById('vf-sessao-balao');
   if(!balao) return;
+  if(vfVeioDaBibliotecaVF){ balao.classList.add('hidden'); return; } // olhando uma afirmação pela Biblioteca - não é sessão rodando
   // volta pro local padrão (definido no CSS) sempre que reabre - não
   // mantém a posição de um arrasto anterior à última vez que foi escondido
   balao.style.left = '';
@@ -12197,6 +12213,13 @@ let vfSessaoRestauradaAguardandoDecisaoVF = false;
 function vfAtualizarOverlaySessaoVF(){
   const overlayIniciar = document.getElementById('vf-overlay-iniciar-sessao');
   const overlayRetomar = document.getElementById('vf-overlay-retomar-sessao');
+  if(vfVeioDaBibliotecaVF){
+    // olhando uma afirmação vinda da Biblioteca: nada de convidar pra
+    // iniciar/retomar sessão por cima dela - não é disso que se trata aqui
+    if(overlayIniciar) overlayIniciar.classList.add('hidden');
+    if(overlayRetomar) overlayRetomar.classList.add('hidden');
+    return;
+  }
   if(vfSessaoRestauradaAguardandoDecisaoVF && vfSessaoAtivaVF){
     if(overlayIniciar) overlayIniciar.classList.add('hidden');
     if(overlayRetomar){
@@ -14182,14 +14205,20 @@ function renderizarItemVF(){
     : '';
   estadoVF.avisoRodeiTudoPendenteVF = null;
 
-  el.innerHTML = `
-    ${avisoRodeiTudoHtml}
+  // aberta pela Biblioteca não é sessão de estudo: o "0 de 0 certas
+  // nessa sessão" e o contador de varredura não dizem nada ali, e ainda
+  // dão a impressão de que alguma coisa foi zerada
+  const cabecalhoSessaoHtml = vfVeioDaBibliotecaVF ? '' : `
     ${contadorVarreduraHtml}
     <div style="display:flex;flex-direction:column;gap:2px;padding:2px 2px 14px;color:#888;font-size:var(--fs-c)">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="display:flex;align-items:center;gap:6px">${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao} certas nessa sessão <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
       </div>
-    </div>
+    </div>`;
+
+  el.innerHTML = `
+    ${avisoRodeiTudoHtml}
+    ${cabecalhoSessaoHtml}
     <div class="card-questao">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 6px">
         <div>
