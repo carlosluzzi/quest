@@ -2145,7 +2145,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-19-114';
+const VERSAO_APP = '2026-09-19-116';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4852,13 +4852,6 @@ function vfPctColunaVF(px, soma){
 }
 const VF_LIMIAR_TABELA_CHEIA_VF = 0.8;
 const VF_MAX_CHARS_CELULA_CURTA_VF = 24;
-// centro/direita escolhidos na mao. Esquerda (o padrao) nao conta: so esses
-// dois precisam de espaco sobrando pra aparecer na tela
-function vfTabelaAlinhadaNaMaoVF(bloco){
-  const alin = bloco && bloco.dataset ? bloco.dataset.alinhamentoTabela : '';
-  return alin === 'centro' || alin === 'direita';
-}
-
 function vfAjustarLarguraTabelaVF(bloco){
   if(!bloco || !bloco.isConnected) return;
   const tabelas = bloco.querySelectorAll('table');
@@ -4906,20 +4899,6 @@ function vfAjustarLarguraTabelaVF(bloco){
     if(larguraTotal >= 100){ bloco.style.width = '100%'; cartao.style.width = '100%'; tabela.style.width = '100%'; }
     alcas.forEach(a => { a.style.display = ''; });
     bloco.dataset.modoLargura = 'fixa';
-  }else if(vfTabelaAlinhadaNaMaoVF(bloco) && natural < container && natural >= container * VF_LIMIAR_TABELA_CHEIA_VF){
-    // alinhamento escolhido na mao (centro/direita) manda na largura: a
-    // tabela fica na largura natural dela. Sem isso, qualquer tabela que
-    // passasse de 80% do card caia no modo "cheia" (esticada pra 100%) e o
-    // margin:auto do alinhamento virava no-op - clicava em centro e nada
-    // mudava na tela
-    const proporcoesNat = largurasOk || celulas.map(td => td.getBoundingClientRect().width);
-    const somaNat = proporcoesNat.reduce((a,b) => a+b, 0) || 1;
-    tabela.style.tableLayout = 'fixed';
-    tabela.style.width = Math.ceil(natural) + 'px';
-    celulas.forEach((td, i) => { td.style.width = (proporcoesNat[i]/somaNat*100).toFixed(2) + '%'; });
-    vfLiberarQuebraSoNoQueNaoCabeVF(tabela);
-    alcas.forEach(a => { a.style.display = ''; });
-    bloco.dataset.modoLargura = 'natural-alinhada';
   }else if(natural >= container * VF_LIMIAR_TABELA_CHEIA_VF){
     // proporções: as salvas (se batem com o nº de colunas - adicionar uma
     // coluna invalida as antigas) ou as naturais medidas agora. Layout
@@ -15036,7 +15015,6 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
         b.style.background = ativoAgora ? '#B23A34' : 'transparent';
         b.style.color = ativoAgora ? '#fff' : '#666';
       });
-      vfAjustarLarguraTabelaVF(bloco); // a largura depende do alinhamento (ver vfTabelaAlinhadaNaMaoVF)
       vfSalvarAlinhamentoTabelaVF(bloco.id, op.valor);
     };
     btn.className = 'vf-tabela-alinhamento-btn';
@@ -15526,7 +15504,27 @@ function vfDesfazerAlteracoesTabelaVF(blocoId){
 // semcabecalho) - mesma lógica de vfSalvarAtributosSvgVF, mas pro
 // \begin{array}. Aceita mudança parcial: passa só o que mudou, preserva
 // o resto do que já estava lá
-async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, larguras, larguraTotal} = {}){
+// achado real (print do Carlos, 19/09/2026): arrastar a alca de largura
+// ou o divisor de coluna TAMBEM grava no mesmo texto-fonte da tabela.
+// Arrastar e tocar em centralizar logo em seguida disparava os dois
+// salvamentos ao mesmo tempo: o segundo ainda comparava com o texto de
+// ANTES do arrasto, nao achava no banco e morria em "o elemento pode ter
+// mudado nesse meio tempo" - e a tabela voltava pro canto com o botao
+// de centro aceso. Agora sai um de cada vez, na ordem
+let vfFilaSalvarTabelaVF = Promise.resolve();
+async function vfSalvarOpcoesTabelaVF(blocoId, opcoes = {}){
+  const anterior = vfFilaSalvarTabelaVF;
+  let liberar;
+  vfFilaSalvarTabelaVF = new Promise(r => { liberar = r; });
+  try{ await anterior; }catch(e){}
+  try{
+    return await vfSalvarOpcoesTabelaInternoVF(blocoId, opcoes);
+  }finally{
+    liberar();
+  }
+}
+
+async function vfSalvarOpcoesTabelaInternoVF(blocoId, {alinhamento, temCabecalho, larguras, larguraTotal} = {}){
   const origem = vfTabelaOrigemVF.get(blocoId);
   if(!origem || !origem.contexto){
     vfMostrarAvisoVF('Não consegui salvar essa mudança (não achei de onde essa tabela veio). A mudança visual continua nessa tela, mas não fica salva.');
@@ -15558,6 +15556,23 @@ async function vfSalvarOpcoesTabelaVF(blocoId, {alinhamento, temCabecalho, largu
 // no campo de onde ela veio e salva - usado pelas opções de tabela
 // (alinhamento/cabeçalho/larguras) e pela edição de célula. Devolve true
 // se conseguiu
+function vfEscaparRegexVF(texto){
+  return texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+// mesma tabela, opcoes diferentes: o trecho guardado na tela pode ter
+// ficado pra tras de um salvamento anterior (cada arrasto de largura
+// reescreve o colchete [larguras:...]). Em vez de desistir, acha o MESMO
+// bloco ignorando so o colchete de opcoes - o corpo da tabela tem que
+// bater caractere por caractere, entao nao tem risco de pegar outra
+function vfSubstituirTrechoTabelaVF(textoAtual, textoOriginalMatch, novoTrecho){
+  if(typeof textoAtual !== 'string') return null;
+  if(textoAtual.includes(textoOriginalMatch)) return textoAtual.replace(textoOriginalMatch, novoTrecho);
+  const partes = textoOriginalMatch.match(/^(\\begin\{array\}|\\sidebyside)(?:\[[^\]]*\])?([\s\S]*)$/);
+  if(!partes) return null;
+  const regex = new RegExp(vfEscaparRegexVF(partes[1]) + '(?:\\[[^\\]]*\\])?' + vfEscaparRegexVF(partes[2]));
+  return regex.test(textoAtual) ? textoAtual.replace(regex, novoTrecho) : null;
+}
+
 async function vfPersistirTrechoTabelaVF(blocoId, novoTrecho){
   const origem = vfTabelaOrigemVF.get(blocoId);
   if(!origem || !origem.contexto){
@@ -15568,11 +15583,11 @@ async function vfPersistirTrechoTabelaVF(blocoId, novoTrecho){
   if(contexto.tipo === 'campo-vf'){
     const entrada = estadoVF.historico.find(h => h.item.id === contexto.questaoId);
     const textoAtual = entrada?.item?.[contexto.campo];
-    if(!entrada || textoAtual === undefined || !textoAtual.includes(textoOriginalMatch)){
+    const textoNovo = entrada ? vfSubstituirTrechoTabelaVF(textoAtual, textoOriginalMatch, novoTrecho) : null;
+    if(textoNovo === null){
       vfMostrarAvisoVF('Não consegui salvar essa mudança (o texto pode ter mudado nesse meio tempo). Tenta de novo.');
       return false;
     }
-    const textoNovo = textoAtual.replace(textoOriginalMatch, novoTrecho);
     entrada.item[contexto.campo] = textoNovo;
     const cacheAtual = vfConteudoCompletoCache.get(contexto.questaoId) || {};
     vfConteudoCompletoCache.set(contexto.questaoId, {...cacheAtual, [contexto.campo]: textoNovo});
@@ -15583,11 +15598,11 @@ async function vfPersistirTrechoTabelaVF(blocoId, novoTrecho){
     );
   }else if(contexto.tipo === 'elemento-html'){
     const {data, error: erroBusca} = await sb.from('elementos_html_vf').select('latex_fonte').eq('id', contexto.elementoId).single();
-    if(erroBusca || !data || !data.latex_fonte.includes(textoOriginalMatch)){
+    const textoNovo = (erroBusca || !data) ? null : vfSubstituirTrechoTabelaVF(data.latex_fonte, textoOriginalMatch, novoTrecho);
+    if(textoNovo === null){
       vfMostrarAvisoVF('Não consegui salvar essa mudança (o elemento pode ter mudado nesse meio tempo). Tenta de novo.');
       return false;
     }
-    const textoNovo = data.latex_fonte.replace(textoOriginalMatch, novoTrecho);
     const itemCache = vfBibliotecaComplementarCacheVF?.find(e => e.id === contexto.elementoId);
     if(itemCache) itemCache.latex_fonte = textoNovo;
     vfInvalidarCacheElementosPorElementoIdVF(contexto.elementoId);
