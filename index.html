@@ -2135,7 +2135,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-19-108';
+const VERSAO_APP = '2026-09-19-109';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8908,9 +8908,8 @@ function vfHtmlCardBibliotecaVF(q){
       <div style="color:#111;font-size:var(--fs-d);line-height:1.6">${selo}<span id="vf-bib-texto-${q.id}">${textoHtml}</span></div>
       ${correcaoHtml ? `<div id="vf-bib-correcao-${q.id}" style="background:#f7f7f5;border:0.5px solid #eee;border-radius:10px;padding:8px;margin-top:10px;color:#111;font-size:var(--fs-d);line-height:1.6">${correcaoHtml}</div>` : ''}
       ${grifo && grifo.passadas > 1 ? `<p style="color:#999;font-size:var(--fs-a);margin:8px 0 0 0">Grifada em ${grifo.passadas} passadas · mostrando a última</p>` : ''}
-      <div id="vf-bib-detalhe-${q.id}" class="hidden" style="margin-top:12px;border-top:0.5px solid #eee;padding-top:12px"></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
-        <button id="vf-bib-btn-abrir-${q.id}" style="${estiloAcao}" onclick="vfAlternarDetalheBibliotecaVF('${q.id}')">Abrir</button>
+        <button id="vf-bib-btn-abrir-${q.id}" style="${estiloAcao};color:#B23A34;border-color:#E8C4C2;font-weight:600" onclick="vfAbrirNoFlashDaBibliotecaVF('${q.id}')">Abrir</button>
         <button id="vf-bib-btn-notas-${q.id}" style="${estiloAcao}${notasVF.has(q.id) ? ';color:#B23A34;border-color:#E8C4C2' : ''}" onclick="vfAbrirNotaDaBibliotecaVF('${q.id}')">Notas${notasVF.has(q.id) ? ' •' : ''}</button>
         <button style="${estiloAcao}" onclick="vfEditarDaBibliotecaVF('${q.id}')">Editar</button>
         <button style="${estiloAcao}${favorita ? ';color:#B23A34;border-color:#E8C4C2' : ''}" onclick="vfAlternarFavoritoBibliotecaVF('${q.id}')">${favorita ? 'Desfavoritar' : 'Favoritar'}</button>
@@ -8919,82 +8918,47 @@ function vfHtmlCardBibliotecaVF(q){
     </div>`;
 }
 
-// ---- "Abrir" na Biblioteca: ver a afirmação como ela é de verdade ----
-// mostra o que está pendurado nela: complementares da biblioteca,
-// complementar local (o que foi escrito só pra essa afirmação) e as
-// notas fixadas - exatamente o que apareceria na página do Flash. E
-// quando NÃO tem nada, diz isso com todas as letras, que é metade da
-// utilidade de abrir. Aqui é só leitura: editar/anexar continua sendo
-// pelo pop-up de Notas e pelo Flash, o que evita dois pedaços da tela
-// disputando os mesmos elementos
-async function vfAlternarDetalheBibliotecaVF(id){
-  const area = document.getElementById(`vf-bib-detalhe-${id}`);
-  const btn = document.getElementById(`vf-bib-btn-abrir-${id}`);
-  if(!area) return;
-  if(!area.classList.contains('hidden')){
-    area.classList.add('hidden');
-    area.innerHTML = '';
-    if(btn) btn.textContent = 'Abrir';
+// ---- "Abrir" na Biblioteca: abre a afirmação NA TELA DO FLASH ----
+// nada de recriar a tela aqui: usa a de verdade, com tudo que ela já
+// sabe fazer - complementar anexado, complementar local, notas fixadas,
+// anotação de célula, desenho, grifo, editar enunciado. O caminho é o
+// mesmo que a lista de favoritas já usava pra "ir pra essa questão":
+// entra no histórico da sessão como uma visualização temporária, que
+// NÃO conta como resposta e não mexe na repetição espaçada. A única
+// diferença é a barra de baixo: em vez de Verdadeiro/Falso (ou
+// Anterior/Próxima), um botão só - "Voltar pra Biblioteca"
+let vfVeioDaBibliotecaVF = false;
+async function vfAbrirNoFlashDaBibliotecaVF(questaoVfId){
+  const btn = document.getElementById(`vf-bib-btn-abrir-${questaoVfId}`);
+  if(btn){ btn.textContent = 'Abrindo…'; btn.disabled = true; }
+  trocarAba('vf'); // se a sessão ainda não existe nessa aberta do app, é isso que a cria
+  const pronto = await vfEsperarSessaoFlashVF(12000);
+  if(btn){ btn.textContent = 'Abrir'; btn.disabled = false; }
+  if(!pronto){
+    trocarAba('biblioteca');
+    vfMostrarAvisoVF('Não consegui abrir o Flash agora pra mostrar essa afirmação. Tenta de novo.');
     return;
   }
-  area.classList.remove('hidden');
-  area.innerHTML = '<p style="color:#aaa;font-size:var(--fs-c);margin:0">Carregando…</p>';
-  if(btn) btn.textContent = 'Fechar';
-  const [respostaQuestao, respostaLigacoes, respostaNotas] = await Promise.all([
-    sb.from('questoes_vf').select('complementar_local').eq('id', id).single(),
-    vfMontarQueryElementosAnexadosVF().eq('questao_vf_id', id).order('criado_em').order('id'),
-    sb.from('notas_vf').select('id, texto, cor, alinhamento, eh_mnemonico, ordem_fixacao')
-      .eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', id).eq('fixada', true)
-      .order('ordem_fixacao', {ascending: true}).order('id')
-  ]);
-  // a lista pode ter sido redesenhada (outra busca) enquanto isso
-  if(document.getElementById(`vf-bib-detalhe-${id}`) !== area) return;
-  const ligacoes = (respostaLigacoes.data || []).filter(l => l.elementos_html_vf);
-  const notas = respostaNotas.data || [];
-  const local = respostaQuestao.data?.complementar_local || '';
-  const partes = [];
-  const resumo = [
-    ligacoes.length ? `${ligacoes.length} complementar${ligacoes.length > 1 ? 'es' : ''} da biblioteca` : '',
-    local ? 'complementar local' : '',
-    notas.length ? `${notas.length} nota${notas.length > 1 ? 's' : ''} fixada${notas.length > 1 ? 's' : ''}` : ''
-  ].filter(Boolean);
-  partes.push(`<p style="color:#999;font-size:var(--fs-c);margin:0 0 10px">${resumo.length ? escapeHtml(resumo.join(' · ')) : 'Sem complementar e sem nota fixada nessa afirmação.'}</p>`);
-  ligacoes.forEach(l => {
-    const el = l.elementos_html_vf;
-    vfContextoRenderizacaoSvgVF = {tipo: 'elemento-html', elementoId: el.id};
-    const html = formatarTextoItemVF(el.latex_fonte, {listaNumerada: true});
-    vfContextoRenderizacaoSvgVF = null;
-    const mapa = JSON.stringify((el.anotacoes_elemento_html_vf || []).map(a => [a.identificador, a.texto_explicacao]));
-    partes.push(`<div class="vf-complementar-conteudo" data-bib-elemento-id="${el.id}" data-bib-anotacoes='${escapeHtml(mapa)}'>${html}</div>`);
-  });
-  if(local){
-    vfContextoRenderizacaoSvgVF = {tipo: 'campo-vf', questaoId: id, campo: 'complementar_local'};
-    const htmlLocal = formatarTextoItemVF(local, {listaNumerada: true});
-    vfContextoRenderizacaoSvgVF = null;
-    partes.push(`<div class="vf-complementar-conteudo" style="margin-top:14px">${htmlLocal}</div>`);
-  }
-  notas.forEach(n => partes.push(vfHtmlNotaFixadaLeituraVF(n)));
-  area.innerHTML = partes.join('');
-  // anotações de célula (o pontilhadinho das tabelas) continuam clicáveis
-  // aqui também - é o mesmo sistema do Flash, só que sem edição por cima
-  area.querySelectorAll('[data-bib-elemento-id]').forEach(bloco => {
-    const mapa = new Map(JSON.parse(bloco.dataset.bibAnotacoes || '[]'));
-    vfAplicarIdentificadoresECliquesVF(bloco, mapa, bloco.dataset.bibElementoId);
+  vfVeioDaBibliotecaVF = true;
+  await vfIrParaQuestaoSalvaVF(questaoVfId);
+}
+// a sessão do Flash é montada de forma assíncrona (entrarNoModoVF) -
+// quando a Biblioteca é a primeira tela aberta do app, ela ainda não
+// existe no momento do toque. Espera ela nascer, com teto de tempo pra
+// nunca ficar preso esperando
+function vfEsperarSessaoFlashVF(limiteMs){
+  return new Promise(resolve => {
+    const ate = Date.now() + limiteMs;
+    (function conferir(){
+      if(estadoVF && estadoVF.historico && estadoVF.historico.length) return resolve(true);
+      if(Date.now() > ate) return resolve(false);
+      setTimeout(conferir, 120);
+    })();
   });
 }
-// nota fixada como ela aparece na página (cor, alinhamento, selo de
-// mnemônico), mas sem alça de arrastar nem edição - ver comentário acima
-function vfHtmlNotaFixadaLeituraVF(n){
-  const temTabela = /\\begin\{array\}/.test(n.texto || '');
-  const alinhamento = n.alinhamento || 'esquerda';
-  const alinhamentoCss = alinhamento === 'centro' ? 'center' : alinhamento === 'direita' ? 'right' : 'left';
-  const conteudo = temTabela
-    ? formatarTextoItemVF(n.texto, {listaNumerada: true})
-    : `<div style="color:#333;line-height:1.4;text-align:${alinhamentoCss}">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>`;
-  const selo = n.eh_mnemonico
-    ? `<span title="Mnemônico" style="position:absolute;left:14px;top:-8px;z-index:2;display:flex;align-items:center;gap:5px;background:#fff;border:0.5px solid #EADFC9;border-radius:999px;padding:1px 8px 1px 6px;color:#C9736C;font-size:var(--fs-a);font-weight:600;letter-spacing:0.03em;line-height:1.4"><span class="vf-selo-mnemonico-icone" style="display:flex">${VF_ICONE_MNEMONICO_VF}</span><span style="color:#9a8f7d">MNEMÔNICO</span></span>`
-    : '';
-  return `<div class="${temTabela ? '' : 'card-questao'}" style="position:relative;margin:14px 0 0;${vfEstiloCorNotaVF(n.cor)}">${selo}${conteudo}</div>`;
+function vfVoltarParaBibliotecaVF(){
+  vfSairDoModoVisualizacaoSalvoVF(); // desfaz a visualização temporária e devolve a posição real da sessão
+  trocarAba('biblioteca');
 }
 
 // mantém em sincronia o que a sessão do Flash tem em memória - sem isso,
@@ -9146,6 +9110,7 @@ async function vfIrParaQuestaoSalvaVF(questaoVfId){
 // volta pra posição de onde a pessoa realmente estava na sessão, em vez
 // de deixar a navegação continuar a partir da posição antiga do salvo
 function vfSairDoModoVisualizacaoSalvoVF(){
+  vfVeioDaBibliotecaVF = false; // sair da visualização (por aqui ou pelo Anterior/Próxima) devolve a barra normal
   if(!vfVisualizandoSalvoInfoVF) return;
   vfForcarSalvamentoEdicaoPendenteVF();
   const {posicaoOriginal, indiceTemporario} = vfVisualizandoSalvoInfoVF;
@@ -15682,7 +15647,14 @@ function renderizarBarraFixaVF(item, jaRespondida){
   const flashNaTelaVF = !document.getElementById('aba-vf')?.classList.contains('hidden');
   barraFixa.className = flashNaTelaVF ? 'vf-barra-fixa' : 'vf-barra-fixa hidden';
   const podeVoltar = vfIndiceAnteriorVisivelVF(estadoVF.posicao) >= 0; // desabilita quando só sobraram excluídas atrás
-  const linhaPrincipal = jaRespondida
+  // aberta a partir da Biblioteca: aqui não se responde nada, então nem
+  // Verdadeiro/Falso nem Anterior/Próxima fazem sentido - a linha de cima
+  // vira só o caminho de volta. A fileira de ações (Notas, Complementar,
+  // Favoritar...) continua igual, que é justamente o que se quer poder
+  // fazer olhando a afirmação
+  const linhaPrincipal = vfVeioDaBibliotecaVF
+    ? `<button class="btn-secundario" style="flex:1" onclick="vfVoltarParaBibliotecaVF()">← Voltar pra Biblioteca</button>`
+    : jaRespondida
     ? `<button class="btn-secundario" style="flex:1" ${podeVoltar?'':'disabled'} onclick="anteriorVF()">← Anterior</button>
        <button class="btn-primario" style="flex:1" onclick="proximoVF()">Próxima →</button>`
     : `<button class="btn-secundario vf-btn-resposta" style="flex:1" onclick="responderVF(false)">Falso</button>
