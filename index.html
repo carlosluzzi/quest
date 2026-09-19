@@ -1105,7 +1105,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
   sem responder nenhuma. Mesma busca do filtro de palavra-chave do Flash,
   com o glossário português/inglês por trás -->
   <div class="view-aba hidden" id="aba-biblioteca">
-    <div style="display:flex;gap:8px;margin-bottom:12px">
+    <div id="vf-biblioteca-abas-secao" style="display:flex;gap:8px;margin-bottom:12px">
       <button id="vf-biblioteca-secao-afirmacoes" class="btn-secundario active" style="flex:1" onclick="vfMudarSecaoBibliotecaVF('afirmacoes')">Afirmações</button>
       <button id="vf-biblioteca-secao-notas" class="btn-secundario" style="flex:1" onclick="vfMudarSecaoBibliotecaVF('notas')">Notas</button>
     </div>
@@ -1131,6 +1131,11 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
     <p id="vf-biblioteca-resumo" style="font-size:var(--fs-c);color:#888;margin:10px 0 0 0;min-height:1.3em;line-height:1.4"></p>
     <div id="vf-biblioteca-lista" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"></div>
     </div>
+    <!-- a afirmacao aberta pela Biblioteca mora AQUI: o proprio #vf-conteudo
+         do Flash e movido pra dentro desse container (nao e copia nem tela
+         nova - e a tela de verdade, com tudo que ela sabe fazer), e devolvido
+         pro #aba-vf ao sair. Assim se ve a afirmacao SEM entrar no Flash -->
+    <div id="vf-biblioteca-detalhe" class="hidden"></div>
   </div>
 
   <div class="view-aba hidden" id="aba-adicionar">
@@ -2145,7 +2150,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-19-117';
+const VERSAO_APP = '2026-09-19-118';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3220,6 +3225,8 @@ function vfEstaVisivelAgora(){
   if(questResolucao && !questResolucao.classList.contains('hidden')) return true;
   const rascunho = document.getElementById('aba-rascunho-livre-vf');
   if(rascunho && !rascunho.classList.contains('hidden')) return true;
+  const detalheBiblioteca = document.getElementById('vf-biblioteca-detalhe');
+  if(detalheBiblioteca && !detalheBiblioteca.classList.contains('hidden')) return true; // afirmacao aberta pela Biblioteca - mesma tela, mesma caneta
   return false;
 }
 
@@ -3494,8 +3501,8 @@ function trocarAba(nome, pularContadorQuest){
   // também encerra o modo de leitura vindo da Biblioteca - senão a marca
   // ficava presa e a próxima questão do Flash aparecia sem
   // Verdadeiro/Falso, sem contador e com os filtros escondidos
-  if(typeof vfVeioDaBibliotecaVF !== 'undefined' && vfVeioDaBibliotecaVF && nome !== 'vf'){
-    vfSairDoModoVisualizacaoSalvoVF();
+  if(typeof vfVeioDaBibliotecaVF !== 'undefined' && vfVeioDaBibliotecaVF){
+    vfSairDoModoVisualizacaoSalvoVF(); // abrir pela Biblioteca não passa por trocarAba - então qualquer troca aqui é navegação de verdade, e fecha o detalhe
   }
   // só limpa se a aba mudou de verdade - achado real: tocar no balão do
   // Flash pra "reabrir" chama trocarAba('vf') mesmo já estando nele
@@ -8969,7 +8976,8 @@ let vfVeioDaBibliotecaVF = false;
 async function vfAbrirNoFlashDaBibliotecaVF(questaoVfId){
   const btn = document.getElementById(`vf-bib-btn-abrir-${questaoVfId}`);
   if(btn){ btn.textContent = 'Abrindo…'; btn.disabled = true; }
-  trocarAba('vf');
+  // NÃO troca de aba: a tela do Flash é que vem pra cá (ver
+  // vfAjustarTelaModoBibliotecaVF) - continua tudo dentro da Biblioteca
   // com sessão rodando, espera o pool dela chegar (a afirmação pode até
   // já estar no histórico). SEM sessão, não force uma: a Biblioteca abre
   // a afirmação num estado mínimo, sem pool nenhum - é só pra olhar
@@ -8983,12 +8991,41 @@ async function vfAbrirNoFlashDaBibliotecaVF(questaoVfId){
 // o que some enquanto a afirmação está aberta pela Biblioteca: o painel
 // de Filtros (é filtro da sessão, não tem o que filtrar numa afirmação
 // só) e o balão do cronômetro (não há sessão correndo aqui)
+let vfAncoraConteudoFlashVF = null;      // onde #vf-conteudo estava dentro do #aba-vf, pra devolver no lugar exato
+let vfSecaoBibliotecaAntesDetalheVF = 'afirmacoes';
 function vfAjustarTelaModoBibliotecaVF(ligado){
   document.getElementById('vf-filtros')?.classList.toggle('hidden', ligado);
-  vfAtualizarOverlaySessaoVF(); // some com o convite de iniciar sessão ao entrar, devolve ao sair
+  const detalhe = document.getElementById('vf-biblioteca-detalhe');
+  const conteudo = document.getElementById('vf-conteudo');
+  const abaVf = document.getElementById('aba-vf');
+  const secaoAfirmacoes = document.getElementById('vf-biblioteca-conteudo-afirmacoes');
+  const secaoNotas = document.getElementById('vf-biblioteca-conteudo-notas');
   if(ligado){
+    if(detalhe && conteudo && conteudo.parentElement !== detalhe){
+      vfSecaoBibliotecaAntesDetalheVF = (secaoNotas && !secaoNotas.classList.contains('hidden')) ? 'notas' : 'afirmacoes';
+      vfAncoraConteudoFlashVF = conteudo.nextSibling;
+      detalhe.appendChild(conteudo); // a tela do Flash passa a viver dentro da Biblioteca
+    }
+    detalhe?.classList.remove('hidden');
+    document.getElementById('vf-biblioteca-abas-secao')?.classList.add('hidden');
+    secaoAfirmacoes?.classList.add('hidden');
+    secaoNotas?.classList.add('hidden');
     document.getElementById('vf-sessao-balao')?.classList.add('hidden');
-  }else if(typeof vfSessaoAtivaVF !== 'undefined' ? vfSessaoAtivaVF : estadoVF?.sessaoIniciadaEmMs){
+  }else{
+    if(abaVf && conteudo && conteudo.parentElement !== abaVf){
+      const ancoraValida = vfAncoraConteudoFlashVF && vfAncoraConteudoFlashVF.parentElement === abaVf ? vfAncoraConteudoFlashVF : null;
+      abaVf.insertBefore(conteudo, ancoraValida); // devolve pro Flash exatamente de onde saiu
+    }
+    vfAncoraConteudoFlashVF = null;
+    detalhe?.classList.add('hidden');
+    document.getElementById('vf-biblioteca-abas-secao')?.classList.remove('hidden');
+    secaoAfirmacoes?.classList.toggle('hidden', vfSecaoBibliotecaAntesDetalheVF === 'notas');
+    secaoNotas?.classList.toggle('hidden', vfSecaoBibliotecaAntesDetalheVF !== 'notas');
+    if(document.getElementById('aba-vf')?.classList.contains('hidden')) document.getElementById('vf-barra-fixa')?.classList.add('hidden');
+  }
+  vfAtualizarVisibilidadeCanvasVF();
+  vfAtualizarOverlaySessaoVF(); // some com o convite de iniciar sessão ao entrar, devolve ao sair
+  if(!ligado && (typeof vfSessaoAtivaVF !== 'undefined' ? vfSessaoAtivaVF : estadoVF?.sessaoIniciadaEmMs)){
     vfMostrarBalaoSessaoFlashVF(); // devolve o balão à condição de antes
   }
 }
@@ -9007,8 +9044,8 @@ function vfEsperarSessaoFlashVF(limiteMs){
   });
 }
 function vfVoltarParaBibliotecaVF(){
-  vfSairDoModoVisualizacaoSalvoVF(); // desfaz a visualização temporária e devolve a posição real da sessão
-  trocarAba('biblioteca');
+  vfSairDoModoVisualizacaoSalvoVF(); // desfaz a visualização temporária, devolve a tela pro Flash e a posição real da sessão
+  document.getElementById('content').scrollTop = 0;
 }
 
 // mantém em sincronia o que a sessão do Flash tem em memória - sem isso,
@@ -15758,7 +15795,8 @@ function renderizarBarraFixaVF(item, jaRespondida){
   // Biblioteca, com Verdadeiro/Falso e tudo. Monta sempre (pra estar
   // pronta quando ele voltar), mas só fica visível se o Flash for mesmo
   // a tela que está na frente
-  const flashNaTelaVF = !document.getElementById('aba-vf')?.classList.contains('hidden');
+  const detalheBibliotecaAbertoVF = !document.getElementById('vf-biblioteca-detalhe')?.classList.contains('hidden');
+  const flashNaTelaVF = !document.getElementById('aba-vf')?.classList.contains('hidden') || detalheBibliotecaAbertoVF;
   barraFixa.className = flashNaTelaVF ? 'vf-barra-fixa' : 'vf-barra-fixa hidden';
   const podeVoltar = vfIndiceAnteriorVisivelVF(estadoVF.posicao) >= 0; // desabilita quando só sobraram excluídas atrás
   // aberta a partir da Biblioteca: aqui não se responde nada, então nem
