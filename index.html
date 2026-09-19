@@ -2145,7 +2145,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-19-116';
+const VERSAO_APP = '2026-09-19-117';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4852,6 +4852,26 @@ function vfPctColunaVF(px, soma){
 }
 const VF_LIMIAR_TABELA_CHEIA_VF = 0.8;
 const VF_MAX_CHARS_CELULA_CURTA_VF = 24;
+// achado real (print do Carlos, 19/09/2026): o .vf-tabela-bloco carrega a
+// tabela E a legenda \small{} embaixo. Quando a legenda e mais larga que
+// a tabela (quase sempre - e um paragrafo), o bloco fica do tamanho da
+// legenda, ou seja, ja ocupa a largura toda do card. Centralizar so o
+// bloco nao mexia UM PIXEL na tela e a tabela continuava encostada na
+// esquerda dentro dele. O alinhamento agora vale pros dois: o bloco e o
+// cartao da tabela dentro dele
+function vfAplicarAlinhamentoTabelaNaTelaVF(bloco){
+  if(!bloco) return;
+  const valor = bloco.dataset.alinhamentoTabela || 'esquerda';
+  bloco.style.marginLeft = valor === 'esquerda' ? '' : 'auto';
+  bloco.style.marginRight = valor === 'centro' ? 'auto' : (valor === 'direita' ? '0' : '');
+  const tabelas = bloco.querySelectorAll('table');
+  if(tabelas.length !== 1) return; // \sidebyside: o par inteiro ja e alinhado pelo bloco
+  const cartao = tabelas[0].parentElement;
+  if(!cartao || cartao === bloco) return;
+  cartao.style.marginLeft = valor === 'esquerda' ? '' : 'auto';
+  cartao.style.marginRight = valor === 'centro' ? 'auto' : (valor === 'direita' ? '0' : '');
+}
+
 function vfAjustarLarguraTabelaVF(bloco){
   if(!bloco || !bloco.isConnected) return;
   const tabelas = bloco.querySelectorAll('table');
@@ -4934,6 +4954,7 @@ function vfAjustarLarguraTabelaVF(bloco){
     alcas.forEach(a => { a.style.display = 'none'; });
     bloco.dataset.modoLargura = 'igual';
   }
+  vfAplicarAlinhamentoTabelaNaTelaVF(bloco); // a largura mudou - o alinhamento do cartao precisa acompanhar
   vfAgendarAjusteIrmasTabelaVF(bloco.parentElement);
 }
 
@@ -15008,8 +15029,7 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
     btn.onclick = (e) => {
       e.stopPropagation();
       bloco.dataset.alinhamentoTabela = op.valor;
-      bloco.style.marginLeft = op.valor === 'centro' ? 'auto' : op.valor === 'direita' ? 'auto' : '';
-      bloco.style.marginRight = op.valor === 'centro' ? 'auto' : '0';
+      vfAplicarAlinhamentoTabelaNaTelaVF(bloco);
       barra.querySelectorAll('.vf-tabela-alinhamento-btn').forEach((b, i) => {
         const ativoAgora = opcoes[i].valor === op.valor;
         b.style.background = ativoAgora ? '#B23A34' : 'transparent';
