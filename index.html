@@ -205,6 +205,16 @@ trocando a custom property de cada slider individualmente */
 .vf-prog-slider{width:100%;accent-color:#B23A34;margin:6px 0 2px 0;display:block}
 .filter-select{font-size:var(--fs-d);padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%;box-sizing:border-box}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
+/* escrever com a Apple Pencil dentro de um campo de uma linha (o Scribble
+   do iPad): sem isso o arrasto da caneta em cima do campo conta também
+   como gesto de rolagem, e a página escorrega embaixo da escrita - é o
+   "tremido" ao escrever na caixinha de busca. touch-action:none diz ao
+   navegador que gesto em cima DESSE campo não é pra rolar nada; o
+   Scribble continua recebendo a caneta igual, e o dedo continua rolando
+   a página normalmente em qualquer outro ponto da tela. Vale só pra
+   campos de uma linha: textarea fica de fora de propósito, senão
+   perderia a rolagem do próprio texto dentro dela */
+input[type="search"], input[type="text"], input[type="email"], input[type="number"], input[type="password"]{touch-action:none}
 .chev{display:inline-flex;align-items:center;justify-content:center;color:#888;transition:transform 0.2s}
 .chev svg{width:16px;height:16px;display:block}
 .chev.open{transform:rotate(180deg)}
@@ -2135,7 +2145,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-19-110';
+const VERSAO_APP = '2026-09-19-112';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -14126,8 +14136,14 @@ function renderizarItemVF(){
 
   let blocoResultado = '';
   if(jaRespondida){
-    const cor = entrada.acertou ? '#3B6D11' : '#A32D2D';
-    const textoResultado = `${entrada.acertou ? 'Acertou!' : 'Errou!'} É ${item.resposta ? 'VERDADEIRO' : 'FALSO'}`;
+    // aberta pela Biblioteca ninguém respondeu nada agora: dizer
+    // "Acertou!" ali é mentira e ainda dá a impressão de que a afirmação
+    // foi consumida. Mostra só o gabarito, em cinza
+    const soLeituraVF = vfVeioDaBibliotecaVF;
+    const cor = soLeituraVF ? '#666' : (entrada.acertou ? '#3B6D11' : '#A32D2D');
+    const textoResultado = soLeituraVF
+      ? `É ${item.resposta ? 'VERDADEIRO' : 'FALSO'}`
+      : `${entrada.acertou ? 'Acertou!' : 'Errou!'} É ${item.resposta ? 'VERDADEIRO' : 'FALSO'}`;
     const atributosEdicaoCorrecao = `id="vf-correcao-atual" data-editavel-vf="1" ontouchstart="vfIniciarPressionarCorrecao(event)" ontouchend="vfSoltarPressionarCorrecao(event)" ontouchmove="vfCancelarPressionarCorrecaoSilencioso(event)" onmousedown="vfIniciarPressionarCorrecao(event)" onmouseup="vfSoltarPressionarCorrecao()" onmouseleave="vfCancelarPressionarCorrecaoSilencioso()"`;
     blocoResultado = `
       <div style="height:1px;background:#eee;margin:14px 0"></div>
@@ -14277,7 +14293,11 @@ function renderizarItemVF(){
     // renderização do resultado - a tabela aparece junto, sem reflow
     // visível depois (P1). Só cai no caminho ao vivo (buscar + montar
     // depois) quando a resposta veio rápido demais pra pré-busca terminar
-    const temAlgumElementoAnexado = questoesComElementoVF.has(item.id);
+    // questoesComElementoVF é montado junto com o pool da sessão - quando
+    // a afirmação é aberta pela Biblioteca (sem sessão, ou fora do pool
+    // do filtro atual) esse mapa não sabe dela, e o complementar ficava
+    // invisível até abrir e fechar o pop-up. Nesse modo, sempre confere
+    const temAlgumElementoAnexado = questoesComElementoVF.has(item.id) || vfVeioDaBibliotecaVF;
     if(temAlgumElementoAnexado && vfElementosCacheVF.has(item.id)){
       vfMontarElementosAnexadosVF(document.getElementById('vf-elementos-html-anexados'), item.id, vfElementosCacheVF.get(item.id));
     }else if(!temAlgumElementoAnexado){
@@ -14770,6 +14790,7 @@ async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
     const textoNovo = data.latex_fonte.replace(textoOriginalMatch, novoTrecho);
     const itemCache = vfBibliotecaComplementarCacheVF?.find(e => e.id === contexto.elementoId);
     if(itemCache) itemCache.latex_fonte = textoNovo;
+    vfInvalidarCacheElementosPorElementoIdVF(contexto.elementoId); // mesma limpeza que o ajuste de tabela já fazia
     await vfSalvarComRetryVF(
       () => sb.from('elementos_html_vf').update({latex_fonte: textoNovo}).eq('id', contexto.elementoId),
       'a mudança no desenho',
@@ -17762,7 +17783,7 @@ function vfRenderizarListaBibliotecaComplementarVF(lista){
     return `
     <div style="border:0.5px solid #eee;border-radius:10px;padding:12px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-        <span style="font-weight:600;font-size:var(--fs-d);cursor:pointer" onclick="vfTogglePreviewBibliotecaVF('${item.id}')">${escapeHtml(item.titulo)}</span>
+        <span style="font-weight:600;font-size:var(--fs-d);cursor:pointer" onclick="vfTogglePreviewBibliotecaVF('${item.id}')">${formatarTextoItemVF(item.titulo)}</span>
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${fixado?'#B23A34':'#ddd'};background:${fixado?'#B23A34':'#fff'};color:${fixado?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" onclick="vfToggleAnexarElementoVF('${item.id}', this)" title="${fixado?'Desafixar (deixa de aparecer na página)':'Fixar (aparece na página da questão)'}">${VF_ICONE_PIN_VF}</button>
           <button id="vf-btn-editar-biblioteca-${item.id}" class="hidden" style="width:auto;padding:6px 10px;font-size:var(--fs-c);border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;display:flex;align-items:center;justify-content:center" onclick="vfAbrirEdicaoElementoHtmlVF('${item.id}')" title="Editar"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
