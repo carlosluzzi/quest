@@ -1833,10 +1833,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     <div id="vf-nota-conteudo-questao">
       <div id="lista-notas-vf" style="transition:max-height 0.25s ease;overflow:hidden;max-height:0"></div>
       <div id="vf-notas-irmas-vf" class="hidden" style="margin-bottom:14px"></div>
-      <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px">
-        <button type="button" title="Tirar recuo da linha" onpointerdown="vfBotaoRecuoNotaVF(event,true,'texto-nota-vf')" style="width:34px;height:30px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;font-size:var(--fs-e);line-height:1;-webkit-tap-highlight-color:transparent">⇤</button>
-        <button type="button" title="Recuar a linha" onpointerdown="vfBotaoRecuoNotaVF(event,false,'texto-nota-vf')" style="width:34px;height:30px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;font-size:var(--fs-e);line-height:1;-webkit-tap-highlight-color:transparent">⇥</button>
-      </div>
+      <div id="vf-barra-ferramentas-nota-nova" style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px"></div>
       <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:140px" onkeydown="vfTeclaTabNotaVF(event)"></textarea>
       <button class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
     </div>
@@ -2138,7 +2135,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-18-106';
+const VERSAO_APP = '2026-09-19-108';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5744,6 +5741,95 @@ function vfTeclaTabNotaVF(evento){
 // o que segura o foco no campo: sem ele, o toque no botão tira o foco do
 // textarea, e na edição inline perder o foco é justamente o que salva e
 // fecha a edição
+// ---- barrinha de ferramentas dos campos de nota ----
+// os mesmos botões em TODO lugar onde se escreve uma nota (pop-up de
+// notas, edição dentro da lista, edição na própria página e biblioteca
+// de notas): recuo, alinhamento do trecho e balãozinho. A ideia é não
+// precisar escrever comando nenhum na mão - seleciona e toca. O texto
+// continua sendo texto (é o que permite copiar, colar e editar em
+// qualquer lugar), mas quem escreve o comando é o botão
+function vfHtmlBarraFerramentasNotaVF(idCampo, altura){
+  const alt = altura || 28;
+  const botao = (titulo, chamada, miolo) => `<button type="button" title="${titulo}" onpointerdown="${chamada}" style="min-width:34px;height:${alt}px;padding:0 7px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;font-size:var(--fs-e);line-height:1;display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">${miolo}</button>`;
+  const iconeAlinhar = (x1, x2) => `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="${x1}" y1="17" x2="${x2}" y2="17"/></svg>`;
+  const iconeBalao = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+  const separador = '<span style="width:1px;background:#e4e4e0;margin:3px 2px"></span>';
+  return botao('Tirar recuo da linha', `vfBotaoRecuoNotaVF(event,true,'${idCampo}')`, '⇤')
+       + botao('Recuar a linha', `vfBotaoRecuoNotaVF(event,false,'${idCampo}')`, '⇥')
+       + separador
+       + botao('Alinhar à esquerda', `vfBotaoAlinharNotaVF(event,'esquerda','${idCampo}')`, iconeAlinhar(4, 14))
+       + botao('Centralizar', `vfBotaoAlinharNotaVF(event,'centro','${idCampo}')`, iconeAlinhar(7, 17))
+       + botao('Alinhar à direita', `vfBotaoAlinharNotaVF(event,'direita','${idCampo}')`, iconeAlinhar(10, 20))
+       + separador
+       + botao('Balãozinho: explica a palavra selecionada', `vfBotaoBalaoNotaVF(event,'${idCampo}')`, iconeBalao);
+}
+// preventDefault no pointerdown segura o foco no campo (mesmo motivo do
+// botão de recuo): sem ele o toque tira o foco do textarea, e na edição
+// inline perder o foco é justamente o que salva e fecha a edição
+function vfCampoNotaAtivoVF(idCampoPadrao){
+  const ativo = document.activeElement;
+  return (ativo && ativo.tagName === 'TEXTAREA') ? ativo : document.getElementById(idCampoPadrao);
+}
+function vfBotaoAlinharNotaVF(evento, alinhamento, idCampoPadrao){
+  evento.preventDefault();
+  const ta = vfCampoNotaAtivoVF(idCampoPadrao);
+  if(!ta) return;
+  ta.focus();
+  vfAplicarAlinhamentoNotaVF(ta, alinhamento);
+}
+// alinhamento é de LINHA: mesmo com meia linha selecionada, pega as
+// linhas inteiras que a seleção toca. Tocar de novo no mesmo alinhamento
+// desfaz (vira alinhamento normal), e tocar em outro troca - nunca
+// empilha um comando dentro do outro
+function vfAplicarAlinhamentoNotaVF(ta, alinhamento){
+  if(!ta || ta.value === undefined) return;
+  const valor = ta.value;
+  const ini = valor.lastIndexOf('\n', ta.selectionStart - 1) + 1;
+  let fim = valor.indexOf('\n', ta.selectionEnd);
+  if(fim === -1) fim = valor.length;
+  const trecho = valor.slice(ini, fim);
+  const jaTem = trecho.match(/^\\(centro|esquerda|direita)\{([\s\S]*)\}$/);
+  const miolo = jaTem ? jaTem[2] : trecho;
+  const novo = (jaTem && jaTem[1] === alinhamento) ? miolo : `\\${alinhamento}{${miolo}}`;
+  ta.value = valor.slice(0, ini) + novo + valor.slice(fim);
+  // deixa selecionado o texto de dentro, pra dar pra tocar noutro
+  // alinhamento em seguida sem precisar selecionar tudo de novo
+  const deslocamento = novo.startsWith('\\') ? novo.indexOf('{') + 1 : 0;
+  ta.selectionStart = ini + deslocamento;
+  ta.selectionEnd = ini + deslocamento + miolo.length;
+  ta.dispatchEvent(new Event('input', {bubbles: true}));
+}
+function vfBotaoBalaoNotaVF(evento, idCampoPadrao){
+  evento.preventDefault();
+  const ta = vfCampoNotaAtivoVF(idCampoPadrao);
+  if(!ta) return;
+  ta.focus();
+  vfAplicarBalaoNotaVF(ta);
+}
+// balãozinho = \nota{o que aparece}{o que explica}. Com texto
+// selecionado, ele vira a parte visível e o cursor já nasce marcando a
+// explicação (é só digitar por cima). Sem seleção, o cursor nasce na
+// parte visível
+const VF_PLACEHOLDER_BALAO_VF = 'explicação';
+function vfAplicarBalaoNotaVF(ta){
+  if(!ta || ta.value === undefined) return;
+  const valor = ta.value;
+  const ini = ta.selectionStart, fim = ta.selectionEnd;
+  const selecionado = valor.slice(ini, fim);
+  if(selecionado){
+    const novo = `\\nota{${selecionado}}{${VF_PLACEHOLDER_BALAO_VF}}`;
+    ta.value = valor.slice(0, ini) + novo + valor.slice(fim);
+    const posExplicacao = ini + novo.length - 1 - VF_PLACEHOLDER_BALAO_VF.length;
+    ta.selectionStart = posExplicacao;
+    ta.selectionEnd = posExplicacao + VF_PLACEHOLDER_BALAO_VF.length;
+  }else{
+    const novo = '\\nota{}{}';
+    ta.value = valor.slice(0, ini) + novo + valor.slice(ini);
+    ta.selectionStart = ta.selectionEnd = ini + 6; // dentro do primeiro par de chaves
+  }
+  ta.dispatchEvent(new Event('input', {bubbles: true}));
+}
+
 function vfBotaoRecuoNotaVF(evento, remover, idCampoPadrao){
   evento.preventDefault();
   const ativo = document.activeElement;
@@ -8822,13 +8908,93 @@ function vfHtmlCardBibliotecaVF(q){
       <div style="color:#111;font-size:var(--fs-d);line-height:1.6">${selo}<span id="vf-bib-texto-${q.id}">${textoHtml}</span></div>
       ${correcaoHtml ? `<div id="vf-bib-correcao-${q.id}" style="background:#f7f7f5;border:0.5px solid #eee;border-radius:10px;padding:8px;margin-top:10px;color:#111;font-size:var(--fs-d);line-height:1.6">${correcaoHtml}</div>` : ''}
       ${grifo && grifo.passadas > 1 ? `<p style="color:#999;font-size:var(--fs-a);margin:8px 0 0 0">Grifada em ${grifo.passadas} passadas · mostrando a última</p>` : ''}
+      <div id="vf-bib-detalhe-${q.id}" class="hidden" style="margin-top:12px;border-top:0.5px solid #eee;padding-top:12px"></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
+        <button id="vf-bib-btn-abrir-${q.id}" style="${estiloAcao}" onclick="vfAlternarDetalheBibliotecaVF('${q.id}')">Abrir</button>
         <button id="vf-bib-btn-notas-${q.id}" style="${estiloAcao}${notasVF.has(q.id) ? ';color:#B23A34;border-color:#E8C4C2' : ''}" onclick="vfAbrirNotaDaBibliotecaVF('${q.id}')">Notas${notasVF.has(q.id) ? ' •' : ''}</button>
         <button style="${estiloAcao}" onclick="vfEditarDaBibliotecaVF('${q.id}')">Editar</button>
         <button style="${estiloAcao}${favorita ? ';color:#B23A34;border-color:#E8C4C2' : ''}" onclick="vfAlternarFavoritoBibliotecaVF('${q.id}')">${favorita ? 'Desfavoritar' : 'Favoritar'}</button>
         ${excluida ? '' : `<button style="${estiloAcao};color:#A32D2D" onclick="vfExcluirDaBibliotecaVF('${q.id}')">Excluir</button>`}
       </div>
     </div>`;
+}
+
+// ---- "Abrir" na Biblioteca: ver a afirmação como ela é de verdade ----
+// mostra o que está pendurado nela: complementares da biblioteca,
+// complementar local (o que foi escrito só pra essa afirmação) e as
+// notas fixadas - exatamente o que apareceria na página do Flash. E
+// quando NÃO tem nada, diz isso com todas as letras, que é metade da
+// utilidade de abrir. Aqui é só leitura: editar/anexar continua sendo
+// pelo pop-up de Notas e pelo Flash, o que evita dois pedaços da tela
+// disputando os mesmos elementos
+async function vfAlternarDetalheBibliotecaVF(id){
+  const area = document.getElementById(`vf-bib-detalhe-${id}`);
+  const btn = document.getElementById(`vf-bib-btn-abrir-${id}`);
+  if(!area) return;
+  if(!area.classList.contains('hidden')){
+    area.classList.add('hidden');
+    area.innerHTML = '';
+    if(btn) btn.textContent = 'Abrir';
+    return;
+  }
+  area.classList.remove('hidden');
+  area.innerHTML = '<p style="color:#aaa;font-size:var(--fs-c);margin:0">Carregando…</p>';
+  if(btn) btn.textContent = 'Fechar';
+  const [respostaQuestao, respostaLigacoes, respostaNotas] = await Promise.all([
+    sb.from('questoes_vf').select('complementar_local').eq('id', id).single(),
+    vfMontarQueryElementosAnexadosVF().eq('questao_vf_id', id).order('criado_em').order('id'),
+    sb.from('notas_vf').select('id, texto, cor, alinhamento, eh_mnemonico, ordem_fixacao')
+      .eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', id).eq('fixada', true)
+      .order('ordem_fixacao', {ascending: true}).order('id')
+  ]);
+  // a lista pode ter sido redesenhada (outra busca) enquanto isso
+  if(document.getElementById(`vf-bib-detalhe-${id}`) !== area) return;
+  const ligacoes = (respostaLigacoes.data || []).filter(l => l.elementos_html_vf);
+  const notas = respostaNotas.data || [];
+  const local = respostaQuestao.data?.complementar_local || '';
+  const partes = [];
+  const resumo = [
+    ligacoes.length ? `${ligacoes.length} complementar${ligacoes.length > 1 ? 'es' : ''} da biblioteca` : '',
+    local ? 'complementar local' : '',
+    notas.length ? `${notas.length} nota${notas.length > 1 ? 's' : ''} fixada${notas.length > 1 ? 's' : ''}` : ''
+  ].filter(Boolean);
+  partes.push(`<p style="color:#999;font-size:var(--fs-c);margin:0 0 10px">${resumo.length ? escapeHtml(resumo.join(' · ')) : 'Sem complementar e sem nota fixada nessa afirmação.'}</p>`);
+  ligacoes.forEach(l => {
+    const el = l.elementos_html_vf;
+    vfContextoRenderizacaoSvgVF = {tipo: 'elemento-html', elementoId: el.id};
+    const html = formatarTextoItemVF(el.latex_fonte, {listaNumerada: true});
+    vfContextoRenderizacaoSvgVF = null;
+    const mapa = JSON.stringify((el.anotacoes_elemento_html_vf || []).map(a => [a.identificador, a.texto_explicacao]));
+    partes.push(`<div class="vf-complementar-conteudo" data-bib-elemento-id="${el.id}" data-bib-anotacoes='${escapeHtml(mapa)}'>${html}</div>`);
+  });
+  if(local){
+    vfContextoRenderizacaoSvgVF = {tipo: 'campo-vf', questaoId: id, campo: 'complementar_local'};
+    const htmlLocal = formatarTextoItemVF(local, {listaNumerada: true});
+    vfContextoRenderizacaoSvgVF = null;
+    partes.push(`<div class="vf-complementar-conteudo" style="margin-top:14px">${htmlLocal}</div>`);
+  }
+  notas.forEach(n => partes.push(vfHtmlNotaFixadaLeituraVF(n)));
+  area.innerHTML = partes.join('');
+  // anotações de célula (o pontilhadinho das tabelas) continuam clicáveis
+  // aqui também - é o mesmo sistema do Flash, só que sem edição por cima
+  area.querySelectorAll('[data-bib-elemento-id]').forEach(bloco => {
+    const mapa = new Map(JSON.parse(bloco.dataset.bibAnotacoes || '[]'));
+    vfAplicarIdentificadoresECliquesVF(bloco, mapa, bloco.dataset.bibElementoId);
+  });
+}
+// nota fixada como ela aparece na página (cor, alinhamento, selo de
+// mnemônico), mas sem alça de arrastar nem edição - ver comentário acima
+function vfHtmlNotaFixadaLeituraVF(n){
+  const temTabela = /\\begin\{array\}/.test(n.texto || '');
+  const alinhamento = n.alinhamento || 'esquerda';
+  const alinhamentoCss = alinhamento === 'centro' ? 'center' : alinhamento === 'direita' ? 'right' : 'left';
+  const conteudo = temTabela
+    ? formatarTextoItemVF(n.texto, {listaNumerada: true})
+    : `<div style="color:#333;line-height:1.4;text-align:${alinhamentoCss}">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>`;
+  const selo = n.eh_mnemonico
+    ? `<span title="Mnemônico" style="position:absolute;left:14px;top:-8px;z-index:2;display:flex;align-items:center;gap:5px;background:#fff;border:0.5px solid #EADFC9;border-radius:999px;padding:1px 8px 1px 6px;color:#C9736C;font-size:var(--fs-a);font-weight:600;letter-spacing:0.03em;line-height:1.4"><span class="vf-selo-mnemonico-icone" style="display:flex">${VF_ICONE_MNEMONICO_VF}</span><span style="color:#9a8f7d">MNEMÔNICO</span></span>`
+    : '';
+  return `<div class="${temTabela ? '' : 'card-questao'}" style="position:relative;margin:14px 0 0;${vfEstiloCorNotaVF(n.cor)}">${selo}${conteudo}</div>`;
 }
 
 // mantém em sincronia o que a sessão do Flash tem em memória - sem isso,
@@ -16441,10 +16607,7 @@ function vfEditarNotaNaPaginaVF(card, notaId){
   const idCampo = `vf-nota-pagina-textarea-${notaId}`;
   item.innerHTML = `<div class="card-questao" style="margin-bottom:0">
       <textarea id="${idCampo}" class="textarea-padrao vf-foco-interno-vf" style="width:100%;min-height:120px;box-sizing:border-box" onkeydown="vfTeclaTabNotaVF(event)"></textarea>
-      <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:4px">
-        <button type="button" title="Tirar recuo da linha" onpointerdown="vfBotaoRecuoNotaVF(event,true,'${idCampo}')" style="width:34px;height:28px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent">⇤</button>
-        <button type="button" title="Recuar a linha" onpointerdown="vfBotaoRecuoNotaVF(event,false,'${idCampo}')" style="width:34px;height:28px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent">⇥</button>
-      </div>
+      <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:4px;flex-wrap:wrap">${vfHtmlBarraFerramentasNotaVF(idCampo, 28)}</div>
     </div>`;
   const textarea = document.getElementById(idCampo);
   if(!textarea) return;
@@ -18417,10 +18580,7 @@ function vfEditarNotaBibliotecaVF(notaId, pref){
   const idCampo = `vf-notalib-textarea-${pref}-${notaId}`;
   container.outerHTML = `<div style="flex:1;min-width:0">
       <textarea id="${idCampo}" class="textarea-padrao vf-foco-interno-vf" style="width:100%;min-height:120px;box-sizing:border-box" onkeydown="vfTeclaTabNotaVF(event)">${escapeHtml(original)}</textarea>
-      <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:4px">
-        <button type="button" title="Tirar recuo da linha" onpointerdown="vfBotaoRecuoNotaVF(event,true,'${idCampo}')" style="width:34px;height:28px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent">⇤</button>
-        <button type="button" title="Recuar a linha" onpointerdown="vfBotaoRecuoNotaVF(event,false,'${idCampo}')" style="width:34px;height:28px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent">⇥</button>
-      </div>
+      <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:4px;flex-wrap:wrap">${vfHtmlBarraFerramentasNotaVF(idCampo, 28)}</div>
     </div>`;
   const textarea = document.getElementById(`vf-notalib-textarea-${pref}-${notaId}`);
   textarea?.focus();
@@ -18733,6 +18893,8 @@ async function abrirNotaVF(questaoVfId){
   if(!vfNotaAbertaDaBibliotecaVF) pausarTimerVF(); // abrir Notas/Excluir com questão pendente conta como sair da tela — você está escrevendo, não lendo a afirmação
   questaoNotaVfAtual = questaoVfId;
   document.getElementById('texto-nota-vf').value = '';
+  const barraNovaVF = document.getElementById('vf-barra-ferramentas-nota-nova');
+  if(barraNovaVF && !barraNovaVF.innerHTML) barraNovaVF.innerHTML = vfHtmlBarraFerramentasNotaVF('texto-nota-vf', 30);
   vfMudarAbaNotaVF('questao'); // sempre abre onde ele vai escrever, nunca na biblioteca
   abrirModal('modal-nota-vf');
   vfCarregarNotasIrmasVF(questaoVfId); // em segundo plano - o popup não espera por isso
@@ -18828,7 +18990,11 @@ function vfEditarNotaVF(notaId){
   const container = document.getElementById(`vf-nota-texto-${notaId}`);
   if(!container) return;
   vfNotaTextoOriginalAntesEditarVF[notaId] = vfNotasTextoBrutoCacheVF[notaId] ?? container.textContent;
-  container.outerHTML = `<textarea id="vf-nota-textarea-${notaId}" class="textarea-padrao vf-foco-interno-vf" style="flex:1" onkeydown="vfTeclaTabNotaVF(event)">${escapeHtml(vfNotaTextoOriginalAntesEditarVF[notaId])}</textarea>`;
+  const idCampoNotaVF = `vf-nota-textarea-${notaId}`;
+  container.outerHTML = `<div id="vf-nota-edicao-${notaId}" style="flex:1;min-width:0">
+      <textarea id="${idCampoNotaVF}" class="textarea-padrao vf-foco-interno-vf" style="width:100%;box-sizing:border-box;margin-bottom:0" onkeydown="vfTeclaTabNotaVF(event)">${escapeHtml(vfNotaTextoOriginalAntesEditarVF[notaId])}</textarea>
+      <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:4px;flex-wrap:wrap">${vfHtmlBarraFerramentasNotaVF(idCampoNotaVF, 28)}</div>
+    </div>`;
   const textarea = document.getElementById(`vf-nota-textarea-${notaId}`);
   textarea?.focus();
   // mesmo padrão do resto do app (explicação, enunciado, etc): sem botão
@@ -18845,7 +19011,8 @@ async function vfSalvarEdicaoNotaVF(notaId){
     // volta pra visualização normal, sem tocar no banco. Substitui o
     // TEXTAREA (é ele quem está no DOM agora, não "vf-nota-texto-...",
     // que já não existe mais nesse momento)
-    if(textarea) textarea.outerHTML = htmlVisualizacao(textoOriginal ?? textoNovo ?? '');
+    const blocoVF = document.getElementById(`vf-nota-edicao-${notaId}`) || textarea;
+    if(blocoVF) blocoVF.outerHTML = htmlVisualizacao(textoOriginal ?? textoNovo ?? '');
     return;
   }
 
@@ -18853,7 +19020,8 @@ async function vfSalvarEdicaoNotaVF(notaId){
   // mesma correção: substitui o textarea, que é quem realmente está no
   // DOM nesse momento
   vfNotasTextoBrutoCacheVF[notaId] = textoNovo;
-  if(textarea) textarea.outerHTML = htmlVisualizacao(textoNovo);
+  const blocoSalvoVF = document.getElementById(`vf-nota-edicao-${notaId}`) || textarea;
+  if(blocoSalvoVF) blocoSalvoVF.outerHTML = htmlVisualizacao(textoNovo);
 
   // atualiza o texto DIRETO no cache (se essa nota estiver fixada), em
   // vez de invalidar e deixar recarregar do banco - achado real e crítico:
