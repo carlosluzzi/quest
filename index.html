@@ -2163,7 +2163,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-21-129';
+const VERSAO_APP = '2026-09-21-131';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4749,7 +4749,7 @@ function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo, larguraPx, alinhame
   const margemAlinhamento = alinhamento === 'centro' ? 'margin-left:auto;margin-right:auto;'
     : alinhamento === 'direita' ? 'margin-left:auto;margin-right:0;'
     : '';
-  return `<div id="${idEscopo}" class="vf-svg-bloco" data-alinhamento-svg="${alinhamento || 'esquerda'}" style="margin:10px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}"><style>${cssBase}${cssEscopado}</style>${svgSemStyle}</div>`;
+  return `<div id="${idEscopo}" class="vf-svg-bloco" data-alinhamento-svg="${alinhamento || 'esquerda'}" style="margin:16px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}"><style>${cssBase}${cssEscopado}</style>${svgSemStyle}</div>`;
 }
 
 function vfFormatarCelulaArrayVF(celula){
@@ -5198,7 +5198,7 @@ function vfMontarBlocoSideBySideVF(conteudo1Bruto, conteudo2Bruto, opcoesStr, le
     : alinhamentoFinal === 'direita' ? 'margin-left:auto;margin-right:0;'
     : '';
   const legendaHtml = legendaTexto != null ? vfMontarLegendaTabelaVF(legendaTexto) : '';
-  return `<div id="${idEscopo}" class="vf-tabela-bloco" data-alinhamento-tabela="${alinhamentoFinal}" style="font-family:${VF_FONTE_TABELA};margin:10px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}"><div style="display:grid;grid-template-columns:auto auto;justify-content:start;width:fit-content;max-width:100%;gap:14px">${tabela1}${tabela2}</div>${legendaHtml}</div>`;
+  return `<div id="${idEscopo}" class="vf-tabela-bloco" data-alinhamento-tabela="${alinhamentoFinal}" style="font-family:${VF_FONTE_TABELA};margin:16px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}"><div style="display:grid;grid-template-columns:auto auto;justify-content:start;width:fit-content;max-width:100%;gap:14px">${tabela1}${tabela2}</div>${legendaHtml}</div>`;
 }
 
 // \begin{array}{lcc}...\end{array} - tabela no padrão visual aprovado:
@@ -5263,7 +5263,7 @@ function vfProcessarArrayLatexVF(texto){
       : alinhamentoFinal === 'direita' ? 'margin-left:auto;margin-right:0;'
       : '';
     const legendaHtml = legendaTexto != null ? vfMontarLegendaTabelaVF(legendaTexto) : '';
-    return `<div id="${idEscopo}" class="vf-tabela-bloco" data-alinhamento-tabela="${alinhamentoFinal}" data-tem-cabecalho="${temCabecalho}" style="font-family:${VF_FONTE_TABELA};margin:10px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}">${vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(colunas, conteudo, false, temCabecalho, largurasValidas, idEscopo, larguraTotal))}${legendaHtml}</div>`;
+    return `<div id="${idEscopo}" class="vf-tabela-bloco" data-alinhamento-tabela="${alinhamentoFinal}" data-tem-cabecalho="${temCabecalho}" style="font-family:${VF_FONTE_TABELA};margin:16px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}">${vfEnvolverEmCartaoVF(vfGerarTabelaInternaVF(colunas, conteudo, false, temCabecalho, largurasValidas, idEscopo, larguraTotal))}${legendaHtml}</div>`;
   });
 }
 
@@ -5982,7 +5982,12 @@ function formatarTextoItemVF(texto, opcoes){
     // <br> - sem isso, o HTML colapsa qualquer quebra de linha do texto
     // original num espaço só, mesmo que o texto no banco já tenha os
     // parágrafos bem separados
-    .replace(/\n/g, '<br>');
+    .replace(/\n/g, '<br>')
+    // tabela e desenho já são blocos: o <br> logo depois deles só somava
+    // uma linha em branco (~24px) ao espaço que o bloco já tem. Era o que
+    // deixava a legenda escrita embaixo da tabela MAIS longe dela do que a
+    // tabela estava do texto de cima
+    .replace(/(\u0000TABELA\d+\u0000)<br>/g, '$1');
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
   resultado = resultado
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
@@ -18459,6 +18464,45 @@ async function vfCarregarElementosAnexadosVF(questaoVfId){
 // anotação abre direto o modal pra criar uma. Célula já anotada: toque
 // (ou hover no mouse) sempre mostra o balão normal (a info em si) -
 // tocar no PRÓPRIO BALÃO depois é que abre a edição, não a célula de novo
+// texto de dentro de um desenho não aceita text-decoration de verdade: o
+// Safari desenha um fio contínuo e finíssimo, que some conforme o tamanho
+// da letra do SVG. Então o pontilhado é DESENHADO como uma linha própria
+// dentro do svg, na mesma escala do texto - proporcional à altura da letra,
+// então aparece igual em rótulo grande ou pequeno
+function vfRemoverMarcaAnotacaoSvgVF(texto){
+  if(!texto || !texto.parentNode || !texto.dataset) return;
+  const id = texto.dataset.identificadorAnotacao;
+  if(!id) return;
+  texto.parentNode.querySelectorAll(`[data-marca-anotacao="${id}"]`).forEach(el => el.remove());
+}
+function vfMarcarTextoSvgAnotadoVF(texto){
+  if(!texto || !texto.parentNode) return;
+  const desenhar = () => {
+    let caixa = null;
+    try{ caixa = texto.getBBox(); }catch(e){ return false; }
+    if(!caixa || !caixa.width) return false; // ainda não foi desenhado (aba escondida) - tenta no próximo quadro
+    vfRemoverMarcaAnotacaoSvgVF(texto);
+    const altura = caixa.height || 10;
+    const y = caixa.y + caixa.height + altura * 0.16;
+    const linha = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    linha.setAttribute('x1', caixa.x);
+    linha.setAttribute('x2', caixa.x + caixa.width);
+    linha.setAttribute('y1', y);
+    linha.setAttribute('y2', y);
+    linha.setAttribute('stroke', '#B23A34');
+    linha.setAttribute('stroke-width', Math.max(0.9, altura * 0.09));
+    linha.setAttribute('stroke-linecap', 'round');
+    linha.setAttribute('stroke-dasharray', `${Math.max(0.5, altura * 0.05)} ${Math.max(1.4, altura * 0.18)}`);
+    linha.setAttribute('pointer-events', 'none'); // a marca nunca rouba o toque do texto
+    linha.setAttribute('data-marca-anotacao', texto.dataset.identificadorAnotacao);
+    const transformDoTexto = texto.getAttribute('transform');
+    if(transformDoTexto) linha.setAttribute('transform', transformDoTexto); // mesmo giro/deslocamento do rótulo
+    texto.parentNode.insertBefore(linha, texto.nextSibling);
+    return true;
+  };
+  if(!desenhar()) requestAnimationFrame(desenhar);
+}
+
 // liga UM elemento (célula de tabela ou texto de dentro de um SVG) ao
 // sistema de anotação: com anotação salva, toque mostra o balão; sem
 // anotação, toque abre o pop-up pra escrever. Mesma mecânica dos dois -
@@ -18469,10 +18513,15 @@ function vfLigarAnotacaoElementoVF(el, identificador, mapaAnotacoes, elementoHtm
   el.style.webkitTapHighlightColor = 'transparent';
   const explicacaoSalva = mapaAnotacoes.get(identificador);
   const abrirModalEdicao = () => vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, explicacaoSalva || '', el);
+  const ehTextoSvg = !!el.ownerSVGElement;
   if(explicacaoSalva){
-    el.style.textDecoration = 'underline dotted';
-    el.style.textDecorationColor = '#888';
-    el.style.textUnderlineOffset = '3px';
+    if(ehTextoSvg){
+      vfMarcarTextoSvgAnotadoVF(el);
+    }else{
+      el.style.textDecoration = 'underline dotted';
+      el.style.textDecorationColor = '#888';
+      el.style.textUnderlineOffset = '3px';
+    }
     const mostrar = (e) => {
       e.stopPropagation();
       // se já tem um balão aberto (de outro ponto), esse toque só fecha ele
@@ -18549,6 +18598,7 @@ async function vfExcluirAnotacaoElementoVF(){
     if(error){ vfMostrarAvisoVF('Erro ao excluir: '+error.message); return; }
     vfInvalidarCacheElementosPorElementoIdVF(elementoHtmlId);
     celulaEl.style.textDecoration = '';
+    if(celulaEl.ownerSVGElement) vfRemoverMarcaAnotacaoSvgVF(celulaEl); // tira o pontilhado desenhado dentro do svg
     celulaEl.onclick = (e) => { e.stopPropagation(); vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, '', celulaEl); };
     celulaEl.onmouseenter = null;
   });
