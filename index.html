@@ -1931,7 +1931,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
           <div style="width:1px;background:#ddd;margin:4px 2px"></div>
           <button type="button" id="vf-editor-btn-modo-codigo" title="Ver/editar o código-fonte" onmousedown="event.preventDefault()" onclick="vfAlternarModoCodigoEditorVF()" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>
         </div>
-        <div id="vf-editor-rich-caixa" contenteditable="true" class="textarea-padrao" style="min-height:180px;overflow-y:auto"></div>
+        <div id="vf-editor-rich-caixa" contenteditable="true" class="textarea-padrao" style="min-height:180px;overflow-y:auto;white-space:pre-wrap"></div>
         <textarea id="vf-complementar-latex-novo" class="hidden textarea-padrao" style="min-height:180px;font-family:monospace;font-size:var(--fs-c)"></textarea>
         <div style="display:flex;gap:8px;margin-top:10px">
           <button id="vf-complementar-btn-usar-local" class="btn-secundario" style="flex:1" onclick="vfUsarComplementarLocalVF()">Usar só aqui</button>
@@ -2180,7 +2180,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-21-141';
+const VERSAO_APP = '2026-09-21-142';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4804,8 +4804,14 @@ function vfMontarBlocoArvoreVF(conteudo){
     // "-" ou ">" repetidos (um por nível). Vale junto com a indentação:
     // quem der o nível mais fundo manda
     let marcadores = 0;
-    const marca = texto.match(/^([->]+)\s*/);
-    if(marca){ marcadores = marca[1].length; texto = texto.slice(marca[0].length).trim(); }
+    // o teclado do iPad troca "--" por travessão curto (–) e "---" por
+    // travessão longo (—) sozinho. Então cada um desses vale o que ele
+    // substituiu: – = 2 níveis, — = 3. Também aceita ">" e o hífen comum
+    const marca = texto.match(/^([->–—‐‑]+)\s*/);
+    if(marca){
+      marcadores = [...marca[1]].reduce((soma, ch) => soma + (ch === '–' ? 2 : ch === '—' ? 3 : 1), 0);
+      texto = texto.slice(marca[0].length).trim();
+    }
     if(texto.startsWith('|')){
       pilha[pilha.length - 1].exps.push(texto.slice(1).trim());
       return;
@@ -17598,8 +17604,11 @@ function vfEditorRichParaLatexVF(){
     }else if(no.tagName === 'DIV' || no.tagName === 'P'){
       fecharBufferSolto();
       const align = no.style.textAlign;
-      const conteudoInline = converterInline(no).trim();
-      if(!conteudoInline) return; // parágrafo vazio (ex: <div><br></div> deixado por Enter) - ignora
+      // ACHADO REAL (21/09/2026): o trim() aqui apagava o espaço do INÍCIO da
+      // linha - e é o espaço do início que define o nível dentro de
+      // \arvore{}. Agora só apara o fim; o começo fica como foi escrito
+      const conteudoInline = converterInline(no).replace(/\s+$/, '');
+      if(!conteudoInline.trim()) return; // parágrafo vazio (ex: <div><br></div> deixado por Enter) - ignora
       if(align === 'center') partes.push(`\\alinhar[centro]{${conteudoInline}}`);
       else if(align === 'right') partes.push(`\\alinhar[direita]{${conteudoInline}}`);
       else partes.push(conteudoInline);
@@ -18562,7 +18571,9 @@ function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
     // pra tabela e pra desenho. Anexo que não é nem um nem outro (texto
     // solto) ficaria sem saída nenhuma - esse aqui mantém o botãozinho
     // antigo, só nesse caso
-    if(!bloco.querySelector('.vf-tabela-bloco') && !bloco.querySelector('svg')){
+    // árvore entra na mesma regra da tabela e do desenho: nada de botão
+    // "Desanexar" em cima. Ela vive na biblioteca, e é de lá que se tira
+    if(!bloco.querySelector('.vf-tabela-bloco') && !bloco.querySelector('svg') && !bloco.querySelector('.vf-arvore-bloco')){
       const saida = document.createElement('div');
       saida.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:6px';
       saida.innerHTML = `<button style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;-webkit-tap-highlight-color:transparent">Desanexar</button>`;
