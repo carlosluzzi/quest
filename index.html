@@ -1076,6 +1076,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
           <span style="display:flex;justify-content:flex-end;gap:6px;flex:1;min-width:0">
             <button id="vf-filtro-numero" onclick="toggleFiltroTagVF('numero')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Número</button>
             <button id="vf-filtro-lista" onclick="toggleFiltroTagVF('lista')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Lista</button>
+            <button id="vf-filtro-data" onclick="toggleFiltroTagVF('data')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Data</button>
             <button id="vf-filtro-inconsistente" onclick="toggleFiltroTagVF('inconsistente')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Inconsistente</button>
           </span>
         </div>
@@ -1141,12 +1142,13 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       <option value="">Todos os capítulos</option>
     </select>
     <!-- mesmos três do Tipo do Flash (mesma classe, mesmo visual, mesmas
-         colunas do banco: eh_numero, eh_lista, inconsistente) -->
+         colunas do banco: eh_numero, eh_lista, eh_data, inconsistente) -->
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px">
       <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Tipo</span>
       <span style="display:flex;justify-content:flex-end;gap:6px;flex:1;min-width:0">
         <button id="vf-biblioteca-filtro-numero" onclick="vfBibliotecaToggleTipoVF('numero')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Número</button>
         <button id="vf-biblioteca-filtro-lista" onclick="vfBibliotecaToggleTipoVF('lista')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Lista</button>
+        <button id="vf-biblioteca-filtro-data" onclick="vfBibliotecaToggleTipoVF('data')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Data</button>
         <button id="vf-biblioteca-filtro-inconsistente" onclick="vfBibliotecaToggleTipoVF('inconsistente')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Inconsistente</button>
       </span>
     </div>
@@ -2180,7 +2182,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-21-142';
+const VERSAO_APP = '2026-09-21-144';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6692,7 +6694,7 @@ let filtroVF = (function(){
     const salvo = localStorage.getItem('pscpp_vf_filtro');
     if(salvo) return JSON.parse(salvo);
   }catch(e){}
-  return {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false, inconsistente: false, termo: null, tagId: null, tagNome: null};
+  return {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false, data: false, inconsistente: false, termo: null, tagId: null, tagNome: null};
 })();
 function vfSalvarFiltroNoStorageVF(){
   try{ localStorage.setItem('pscpp_vf_filtro', JSON.stringify(filtroVF)); }catch(e){}
@@ -8877,7 +8879,7 @@ async function vfBibliotecaMudarPublicacaoVF(){
 // Tipo na Biblioteca: os mesmos três do Flash. Estado próprio (não mexe
 // no filtroVF da sessão do Flash - lá eles decidem o pool das próximas
 // afirmações; aqui só filtram a consulta da Biblioteca)
-let vfBibliotecaTipoVF = {numero: false, lista: false, inconsistente: false};
+let vfBibliotecaTipoVF = {numero: false, lista: false, data: false, inconsistente: false};
 function vfBibliotecaToggleTipoVF(tipo){
   if(!VF_FILTROS_TIPO_VF.includes(tipo)) return;
   vfBibliotecaTipoVF[tipo] = !vfBibliotecaTipoVF[tipo];
@@ -8907,7 +8909,7 @@ async function vfBuscarBibliotecaVF(){
   vfBibliotecaCarregadasVF = [];
   vfBibliotecaGrifosVF = new Map();
   lista.innerHTML = '';
-  const algumTipoVF = vfBibliotecaTipoVF.numero || vfBibliotecaTipoVF.lista || vfBibliotecaTipoVF.inconsistente;
+  const algumTipoVF = vfBibliotecaTipoVF.numero || vfBibliotecaTipoVF.lista || vfBibliotecaTipoVF.data || vfBibliotecaTipoVF.inconsistente;
   if(!termo && !modulo && !publicacao && !soGrifadas && !algumTipoVF){
     resumo.textContent = 'Digite uma palavra, escolha um módulo/publicação, um tipo, ou marque "só as que eu grifei".';
     return;
@@ -8916,7 +8918,7 @@ async function vfBuscarBibliotecaVF(){
   vfBibliotecaDescricaoFiltroVF = [
     publicacao ? (() => { const b = (bibliografiaCache || []).find(x => x.id === publicacao); return b ? (b.nome_exibicao || b.titulo) : null; })() : modulo,
     capitulo ? (capitulo === 'Único' ? capitulo : rotuloCapituloDoLivro(((bibliografiaCache || []).find(x => x.id === publicacao) || {}).titulo) + ' ' + capitulo) : null,
-    [vfBibliotecaTipoVF.numero ? 'Número' : null, vfBibliotecaTipoVF.lista ? 'Lista' : null, vfBibliotecaTipoVF.inconsistente ? 'Inconsistente' : null].filter(Boolean).join(' + ') || null
+    [vfBibliotecaTipoVF.numero ? 'Número' : null, vfBibliotecaTipoVF.lista ? 'Lista' : null, vfBibliotecaTipoVF.data ? 'Data' : null, vfBibliotecaTipoVF.inconsistente ? 'Inconsistente' : null].filter(Boolean).join(' + ') || null
   ].filter(Boolean).join(' · ');
   resumo.textContent = 'Procurando…';
   // três coisas em paralelo: a busca por palavra (quando tem palavra), os
@@ -8935,10 +8937,10 @@ async function vfBuscarBibliotecaVF(){
           let q = sb.from('questoes_vf').select('id', {count: 'exact'}).eq('anulada', false);
           if(idsBib) q = q.in('bibliografia_id', idsBib);
           if(capitulo) q = q.eq('capitulo', capitulo);
-          // mesma regra do Flash: Número + Lista somam (OU), Inconsistente restringe (E)
-          if(vfBibliotecaTipoVF.numero && vfBibliotecaTipoVF.lista) q = q.or('eh_numero.eq.true,eh_lista.eq.true');
-          else if(vfBibliotecaTipoVF.numero) q = q.eq('eh_numero', true);
-          else if(vfBibliotecaTipoVF.lista) q = q.eq('eh_lista', true);
+          // mesma regra do Flash: Número + Lista + Data somam (OU), Inconsistente restringe (E)
+          const tiposLigadosBibVF = [vfBibliotecaTipoVF.numero && 'eh_numero', vfBibliotecaTipoVF.lista && 'eh_lista', vfBibliotecaTipoVF.data && 'eh_data'].filter(Boolean);
+          if(tiposLigadosBibVF.length > 1) q = q.or(tiposLigadosBibVF.map(c => c + '.eq.true').join(','));
+          else if(tiposLigadosBibVF.length === 1) q = q.eq(tiposLigadosBibVF[0], true);
           if(vfBibliotecaTipoVF.inconsistente) q = q.eq('inconsistente', true);
           return q.order('bibliografia_id').order('capitulo').order('id');
         });
@@ -9450,7 +9452,7 @@ function vfPeriodoProgressoVF(){
   return {p_inicio: null, p_fim: null, p_granularidade: 'dia', ini: null, fim: mais(d0,1)}; // tudo (ou custom incompleto)
 }
 function vfFiltroAtualTemEscopoVF(){
-  return !!(filtroVF.publicacao || filtroVF.modulo || filtroVF.capitulo || filtroVF.numero || filtroVF.lista || filtroVF.inconsistente
+  return !!(filtroVF.publicacao || filtroVF.modulo || filtroVF.capitulo || filtroVF.numero || filtroVF.lista || filtroVF.data || filtroVF.inconsistente
     || (filtroVF.filtrosInc||[]).length || (filtroVF.filtrosExc||[]).length);
 }
 
@@ -11899,9 +11901,9 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     const idsBib = filtroVF.publicacao ? [filtroVF.publicacao]
       : (filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null);
     return {p_ids_bibliografia: idsBib && idsBib.length ? idsBib : null, p_capitulo: filtroVF.capitulo || null,
-      p_numero: !!filtroVF.numero, p_lista: !!filtroVF.lista, p_inconsistente: !!filtroVF.inconsistente};
+      p_numero: !!filtroVF.numero, p_lista: !!filtroVF.lista, p_data: !!filtroVF.data, p_inconsistente: !!filtroVF.inconsistente};
   };
-  const vfLinhaCompactaParaObjetoVF = l => ({id: l[0], eh_numero: l[1], eh_lista: l[2], inconsistente: l[3], capitulo: l[4], n_palavras: l[5], bibliografia_id: l[6], chave_familia_trecho: l[7], chave_familia_texto: l[8], anulada: false});
+  const vfLinhaCompactaParaObjetoVF = l => ({id: l[0], eh_numero: l[1], eh_lista: l[2], inconsistente: l[3], capitulo: l[4], n_palavras: l[5], bibliografia_id: l[6], chave_familia_trecho: l[7], chave_familia_texto: l[8], eh_data: l[9], anulada: false});
   const vfBuscarQuestoesPoolVF = async (aoCarregarRestante) => {
     const params = vfMontarParamsPoolVF();
     const PRIMEIRA_LEVA_VF = 1000;
@@ -11931,15 +11933,15 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     // caracteres cada), então só esses dois hashes prontos entram na
     // query, não o conteúdo pesado inteiro. Ideia do Fable: evita trazer
     // de volta os ~10MB que a otimização original tinha eliminado
-    let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, inconsistente, capitulo, n_palavras, bibliografia_id, chave_familia_trecho, chave_familia_texto, anulada', {count: 'exact'}).eq('anulada', false);
+    let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, inconsistente, capitulo, n_palavras, bibliografia_id, chave_familia_trecho, chave_familia_texto, eh_data, anulada', {count: 'exact'}).eq('anulada', false);
     if(filtroVF.publicacao) q = q.eq('bibliografia_id', filtroVF.publicacao);
     if(filtroVF.capitulo) q = q.eq('capitulo', filtroVF.capitulo);
-    // Número + Lista juntos = UNIÃO (ou uma coisa ou outra), não interseção —
-    // decisão explícita do Carlos. Só um dos dois ativo continua sendo um
+    // Número + Lista + Data juntos = UNIÃO (ou uma coisa ou outra), não interseção —
+    // decisão explícita do Carlos. Só um deles ativo continua sendo um
     // filtro direto e sem ambiguidade
-    if(filtroVF.numero && filtroVF.lista) q = q.or('eh_numero.eq.true,eh_lista.eq.true');
-    else if(filtroVF.numero) q = q.eq('eh_numero', true);
-    else if(filtroVF.lista) q = q.eq('eh_lista', true);
+    const tiposLigadosVF = [filtroVF.numero && 'eh_numero', filtroVF.lista && 'eh_lista', filtroVF.data && 'eh_data'].filter(Boolean);
+    if(tiposLigadosVF.length > 1) q = q.or(tiposLigadosVF.map(c => c + '.eq.true').join(','));
+    else if(tiposLigadosVF.length === 1) q = q.eq(tiposLigadosVF[0], true);
     // inconsistente é independente: cruza com o que estiver ligado acima
     // (é "e", não "ou" - "só as de número QUE são inconsistentes")
     if(filtroVF.inconsistente) q = q.eq('inconsistente', true);
@@ -12194,7 +12196,7 @@ async function vfIniciarSessaoFlashVF(){
 // nova (ver vfIniciarSessaoFlashVF), pra a próxima vez que a tela de
 // filtros aparecer vir sempre limpa, não com a escolha da sessão anterior
 function vfLimparFiltroVF(){
-  filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false, inconsistente: false};
+  filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false, data: false, inconsistente: false};
   vfSalvarFiltroNoStorageVF();
   const elModulo = document.getElementById('vf-filtro-modulo');
   const elPub = document.getElementById('vf-filtro-publicacao');
@@ -12203,13 +12205,7 @@ function vfLimparFiltroVF(){
   if(elPub){ elPub.innerHTML = '<option value="">Todas as publicações</option>'; elPub.disabled = true; }
   if(elCap){ elCap.innerHTML = '<option value="">Todos os capítulos</option>'; elCap.disabled = true; }
   vfAtualizarFiltrosCapituloVF(); // sem publicação = sem botões contextuais
-  ['numero', 'lista'].forEach(tipo => {
-    const btn = document.getElementById('vf-filtro-'+tipo);
-    if(!btn) return;
-    btn.style.background = '#fff';
-    btn.style.color = '#888';
-    btn.style.borderColor = '#ddd';
-  });
+  vfPintarBotoesFiltroTipoVF(); // tudo desligado agora - repinta os botões de Tipo a partir do estado
   const conteudo = document.getElementById('vf-filtros-conteudo');
   const chevron = document.getElementById('vf-chevron-filtros');
   if(conteudo && !conteudo.classList.contains('vf-filtros-fechado')){
@@ -12699,7 +12695,7 @@ async function vfRenderizarConteudoPainelSessaoVF(){
 // trocar de filtro permite o aviso repetir quando o mesmo momento
 // chegar nele
 function vfChaveFiltroAtualVF(){
-  return JSON.stringify({m: filtroVF.modulo, p: filtroVF.publicacao, c: filtroVF.capitulo, n: filtroVF.numero, l: filtroVF.lista, i: filtroVF.inconsistente, fi: filtroVF.filtrosInc || [], fe: filtroVF.filtrosExc || [], t: filtroVF.termo});
+  return JSON.stringify({m: filtroVF.modulo, p: filtroVF.publicacao, c: filtroVF.capitulo, n: filtroVF.numero, l: filtroVF.lista, d: filtroVF.data, i: filtroVF.inconsistente, fi: filtroVF.filtrosInc || [], fe: filtroVF.filtrosExc || [], t: filtroVF.termo});
 }
 let vfAvisosRodeiTudoMostradosVF = new Set();
 
@@ -12722,7 +12718,8 @@ function vfMontarPlaceholderPanoramaVF(){
 
 
   const nomePublicacao = filtroVF.publicacao ? (bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.nome_exibicao || bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.titulo) : null;
-  const tipoBase = filtroVF.numero && filtroVF.lista ? 'Número ou Lista' : filtroVF.numero ? 'Número' : filtroVF.lista ? 'Lista' : null;
+  const tiposDoFiltroVF = [filtroVF.numero ? 'Número' : null, filtroVF.lista ? 'Lista' : null, filtroVF.data ? 'Data' : null].filter(Boolean);
+  const tipoBase = tiposDoFiltroVF.length ? tiposDoFiltroVF.join(' ou ') : null;
   const tipoTexto = filtroVF.inconsistente ? (tipoBase ? tipoBase + ' + Inconsistente' : 'Inconsistente') : tipoBase;
   const linhasFiltro = [
     filtroVF.modulo ? `<div class="vf-filtro-linha"><span>Módulo</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">${escapeHtml(filtroVF.modulo)}</span></div>` : '',
@@ -12986,7 +12983,7 @@ document.addEventListener('visibilitychange', () => {
 // atualizado_em + trigger criados junto, 14/09). Custo: uma conexão
 // leve aberta enquanto o Flash está em uso, zero consultas periódicas
 let vfCanalRealtimeVF = null;
-const VF_CAMPOS_REALTIME_VF = ['texto', 'resposta', 'explicacao', 'correcao', 'dificuldade', 'inconsistente', 'complementar_local', 'eh_numero', 'eh_lista', 'capitulo', 'anulada'];
+const VF_CAMPOS_REALTIME_VF = ['texto', 'resposta', 'explicacao', 'correcao', 'dificuldade', 'inconsistente', 'complementar_local', 'eh_numero', 'eh_lista', 'eh_data', 'capitulo', 'anulada'];
 function vfLigarRealtimeQuestoesVF(){
   if(vfCanalRealtimeVF || !sb || typeof sb.channel !== 'function') return;
   try{
@@ -13597,6 +13594,7 @@ async function vfAtualizarContagensRecortesVF(){
     p_capitulo: filtroVF.capitulo || null,
     p_numero: !!filtroVF.numero,
     p_lista: !!filtroVF.lista,
+    p_data: !!filtroVF.data,
     p_inconsistente: !!filtroVF.inconsistente
   });
   if(error || vfChaveEscopoFiltrosCapituloVF() !== chave) return;
@@ -13699,7 +13697,7 @@ function vfNomesFiltrosCapituloVF(ids){
   return (ids || []).map(id => id === 'geral' ? 'Geral' : filtros.find(f => f.id === id)?.nome).filter(Boolean);
 }
 
-const VF_FILTROS_TIPO_VF = ['numero', 'lista', 'inconsistente'];
+const VF_FILTROS_TIPO_VF = ['numero', 'lista', 'data', 'inconsistente'];
 function toggleFiltroTagVF(tipo){
   if(!VF_FILTROS_TIPO_VF.includes(tipo)) return;
   filtroVF[tipo] = !filtroVF[tipo];
@@ -13720,7 +13718,7 @@ function vfPintarBotoesFiltroTipoVF(){
     btn.style.borderColor = ativo ? '#B23A34' : '#ddd';
   });
 }
-// os seis botões do filtro (Tipo e Novas) com a MESMA largura: a do
+// os botões do filtro (Tipo e Novas) com a MESMA largura: a do
 // maior deles escrito por extenso, que hoje é o "Inconsistente". Medido
 // de verdade, não chutado em px - o tamanho da letra muda por tamanho de
 // tela, e um valor fixo ou cortaria o texto ou sobraria espaço
@@ -13889,16 +13887,29 @@ async function vfCarregarExpansaoTermoVF(){
   // só os termo_pt distintos e não nulos - uma linha vem com termo_pt/
   // termo_en nulos (é o próprio termo digitado, quando ele não corresponde
   // a nenhum conceito do glossário, só uma busca direta por substring)
-  // fora da lista o que for igual ao que foi digitado: normaliza os dois
-  // lados (minúsculas, sem acento, hífen vira espaço, sem espaço de borda)
-  // antes de comparar - repetir o próprio termo no chip não informa nada
+  // ACHADO REAL (Carlos, 21/09/2026): o chip listava o RÓTULO do par do
+  // glossário ("nevoeiro / neblina"), não as palavras que a busca de fato
+  // usa - por isso o termo digitado aparecia ali dentro. Agora lista os
+  // PADRÕES devolvidos pela RPC (bruma, névoa, cerração, fog, mist, haze...),
+  // que é o que realmente vai ao banco, tirando o que o Carlos digitou.
   const digitadoNorm = vfNormalizarBuscaVF(termoNoInicio).trim();
-  const termosBrutos = [...new Set(data.map(r => r.termo_pt).filter(Boolean))];
-  const termosPt = termosBrutos.filter(t => vfNormalizarBuscaVF(t).trim() !== digitadoNorm);
-  // o glossário até respondeu, mas o que sobrou era só o próprio termo
-  // digitado: chip nenhum (nem o convite do glossário, que aqui não cabe -
-  // o termo JÁ está no glossário)
-  if(!termosPt.length && termosBrutos.length){ el.innerHTML = ''; return; }
+  const porNormalizado = new Map(); // normalizado -> forma bonita pra mostrar
+  (data || []).forEach(linha => {
+    String(linha.padrao || '').split(/[\/,;]/).forEach(parte => {
+      const bruto = parte.trim();
+      if(!bruto) return;
+      const norm = vfNormalizarBuscaVF(bruto).trim();
+      if(!norm || norm === digitadoNorm) return; // é o próprio termo digitado
+      const jaTem = porNormalizado.get(norm);
+      // entre "cerracao" e "cerração", fica a acentuada
+      if(!jaTem || (jaTem === norm && bruto !== norm)) porNormalizado.set(norm, bruto);
+    });
+  });
+  const termosPt = [...porNormalizado.values()].sort((a, b) => a.localeCompare(b, 'pt'));
+  const temGlossario = (data || []).some(r => r.termo_pt);
+  // o glossário respondeu, mas não sobrou nenhuma palavra diferente da
+  // digitada: chip nenhum (o convite do glossário não cabe - já está lá)
+  if(!termosPt.length && temGlossario){ el.innerHTML = ''; return; }
   if(!termosPt.length){
     el.innerHTML = `Só o termo digitado – <a href="#" onclick="event.preventDefault();vfAbrirGlossarioVF('${escapeHtml(termoNoInicio)}')" style="color:#B23A34">adicionar ao glossário?</a>`;
     return;
@@ -14237,6 +14248,7 @@ function vfParametrosPanoramaFiltroVF(){
     p_capitulo: filtroVF.capitulo || null,
     p_numero: !!filtroVF.numero,
     p_lista: !!filtroVF.lista,
+    p_data: !!filtroVF.data,
     p_inconsistente: !!filtroVF.inconsistente,
     p_filtros_inc: inc.length ? inc : null,
     p_filtros_exc: exc.length ? exc : null,
@@ -14340,15 +14352,7 @@ async function vfRestaurarUIFiltroVF(){
     elCap.disabled = false;
     if(capitulo) elCap.value = capitulo;
   }
-  if(numero || lista){
-    ['numero', 'lista'].forEach(tipo => {
-      if(!filtroVF[tipo]) return;
-      const btn = document.getElementById('vf-filtro-'+tipo);
-      btn.style.background = '#B23A34';
-      btn.style.color = '#fff';
-      btn.style.borderColor = '#B23A34';
-    });
-  }
+  vfPintarBotoesFiltroTipoVF(); // Número/Lista/Data/Inconsistente do filtro restaurado
   if(termo){
     document.getElementById('vf-filtro-termo').value = termo;
     document.getElementById('vf-filtro-termo-limpar').classList.remove('hidden');
@@ -16512,7 +16516,27 @@ async function vfAdicionarTagVF(){
     renderizarItemVF();
     console.error('erro ao ligar a tag na questão:', error, {tag, questaoId});
     statusEl.innerHTML = `<span style="color:#B00020">Não consegui salvar a tag: ${escapeHtml(error.message || error.code || 'erro desconhecido')}</span>`;
+    return;
   }
+  vfSincronizarColunaDaTagVF(questaoId, tag.nome, true); // DATA espelha em eh_data - ver helper
+}
+
+// a tag DATA tem coluna espelho em questoes_vf (eh_data) - é ela que o
+// botão de filtro "Data" do Flash consulta. A tag é a fonte, a coluna é
+// derivada: marcar ou desmarcar a tag pelo app grava a coluna na mesma
+// operação, senão o card ganhava a tag mas continuava de fora do filtro
+const VF_TAGS_COM_COLUNA_VF = {DATA: 'eh_data'};
+function vfColunaDaTagVF(nome){
+  const semAcento = String(nome || '').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return VF_TAGS_COM_COLUNA_VF[semAcento] || null;
+}
+async function vfSincronizarColunaDaTagVF(questaoId, nomeTag, ligada){
+  const coluna = vfColunaDaTagVF(nomeTag);
+  if(!coluna || !questaoId) return;
+  const {error} = await sb.from('questoes_vf').update({[coluna]: ligada}).eq('id', questaoId);
+  if(error){ console.error('não consegui espelhar a tag na coluna ' + coluna + ':', error); return; }
+  const itemNoPool = estadoVF?.pool?.find(i => i.id === questaoId) || estadoVF?.historico?.find(h => h.item.id === questaoId)?.item;
+  if(itemNoPool) itemNoPool[coluna] = ligada; // reflete na tela na hora, sem esperar recarregar
 }
 
 async function vfRemoverTagVF(tagId){
@@ -16534,6 +16558,7 @@ async function vfRemoverTagVF(tagId){
     renderizarItemVF();
     return;
   }
+  if(tagRemovida) vfSincronizarColunaDaTagVF(questaoId, tagRemovida.nome, false); // DATA espelha em eh_data
   await vfApagarTagOrfaVF(tagId);
 }
 
@@ -18187,6 +18212,7 @@ async function vfAbrirListaExcluidasVF(){
     p_capitulo: filtroVF.capitulo || null,
     p_numero: !!filtroVF.numero,
     p_lista: !!filtroVF.lista,
+    p_data: !!filtroVF.data,
     p_inconsistente: !!filtroVF.inconsistente
   });
   if(error){ corpo.innerHTML = `<p style="text-align:center;color:#A32D2D;padding:20px 0">Erro ao carregar: ${escapeHtml(error.message)}</p>`; return; }
@@ -18254,6 +18280,7 @@ async function vfAbrirListaLeechesVF(){
     p_capitulo: filtroVF.capitulo || null,
     p_numero: !!filtroVF.numero,
     p_lista: !!filtroVF.lista,
+    p_data: !!filtroVF.data,
     p_inconsistente: !!filtroVF.inconsistente
   });
   if(error){ corpo.innerHTML = `<p style="text-align:center;color:#A32D2D;padding:20px 0">Erro ao carregar: ${escapeHtml(error.message)}</p>`; return; }
@@ -24373,12 +24400,13 @@ function parsearArquivoVF(textoCompleto){
     try{
       const bibliografiaMatch = bloco.match(/BIBLIOGRAFIA:\s*([\s\S]*?)(?=\n\s*DIFICULDADE:)/);
       const dificuldadeMatch = bloco.match(/DIFICULDADE:\s*(\S+)/);
-      // TIPO: é opcional (nem toda questão é número/lista) — aceita as
-      // duas juntas também ("TIPO: Número, Lista"), mesmo que hoje nenhuma
-      // questão real tenha as duas ao mesmo tempo
+      // TIPO: é opcional (nem toda questão é número/lista/data) — aceita
+      // mais de uma junta também ("TIPO: Número, Data"), cada uma ligando
+      // a sua coluna própria
       const tipoMatch = bloco.match(/TIPO:\s*([^\r\n]+)/i);
       const tipoTexto = tipoMatch ? tipoMatch[1] : '';
       const ehNumero = /n[uú]mero/i.test(tipoTexto);
+      const ehData = /\bdata\b/i.test(tipoTexto);
       const ehLista = /lista/i.test(tipoTexto);
       // OBS:/OBSERVAÇÃO: Inconsistente — vem do gabarito de origem quando
       // ele mesmo aponta uma contradição no livro. Aceita "OBS:" ou
@@ -24418,7 +24446,7 @@ function parsearArquivoVF(textoCompleto){
       const fonteMatch = bloco.match(/Fonte:\s*([\s\S]*?)(?=\n\s*\n|\n\s*Página \d+ de|$)/);
       const fonte = fonteMatch ? fonteMatch[1].replace(/\s+/g,' ').trim() : null;
 
-      questoes.push({texto: textoAfirmacao, resposta, explicacao, correcao, trechos_fonte: trechosFonte, fonte, bibliografiaTextoOriginal, dificuldade, ehNumero, ehLista, inconsistente});
+      questoes.push({texto: textoAfirmacao, resposta, explicacao, correcao, trechos_fonte: trechosFonte, fonte, bibliografiaTextoOriginal, dificuldade, ehNumero, ehLista, ehData, inconsistente});
     }catch(e){
       erros.push({indice: i, motivo: 'exceção: ' + e.message});
     }
@@ -24491,6 +24519,7 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
       n_palavras: q.texto.trim().split(/\s+/).filter(Boolean).length,
       eh_numero: q.ehNumero,
       eh_lista: q.ehLista,
+      eh_data: q.ehData,
       inconsistente: q.inconsistente,
       dificuldade: q.dificuldade,
       autor_id: usuarioAtual.id,
@@ -25316,6 +25345,7 @@ async function resolverGrupoRascunhoVF(nomeArquivo, idGrupo){
         n_palavras: q.n_palavras,
         eh_numero: q.eh_numero,
         eh_lista: q.eh_lista,
+        eh_data: q.eh_data,
         inconsistente: q.inconsistente,
         dificuldade: q.dificuldade,
         autor_id: q.autor_id,
