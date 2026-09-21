@@ -2164,7 +2164,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-21-134';
+const VERSAO_APP = '2026-09-21-135';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -11593,7 +11593,7 @@ async function vfGarantirConteudoCompletoVF(item){
   if(item.explicacao !== undefined) return; // já carregado nesse próprio objeto (explicacao é o sinal certo agora - texto já vem preenchido desde o pool leve, por causa da Regra 2/família)
   const emCache = vfConteudoCompletoCache.get(item.id);
   if(emCache){ Object.assign(item, emCache); return; }
-  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', item.id).single();
+  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', item.id).single();
   if(error || !data) return;
   vfRegistrarInconsistenciaVF(data);
   vfConteudoCompletoCache.set(item.id, data);
@@ -11645,7 +11645,7 @@ async function vfBuscarConteudoEmLoteVF(itens){
   const pendentes = itens.filter(item => item.explicacao === undefined && !vfConteudoCompletoCache.has(item.id));
   if(!pendentes.length) return;
   const ids = pendentes.map(item => item.id);
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
   if(error || !data) return;
   data.forEach(vfRegistrarInconsistenciaVF);
   const porId = new Map(data.map(d => [d.id, d]));
@@ -18269,6 +18269,7 @@ function vfRenderizarComplementarLocalVF(item){
     vfContextoRenderizacaoSvgVF = null;
     return html;
   })()}</div></div>`;
+  vfOrdenarComplementosVF(item, vfElementosCacheVF.get(item.id) || []);
 }
 
 // reabre o modal Complementar já com o conteúdo local atual preenchido
@@ -18359,14 +18360,18 @@ async function vfUsarComplementarLocalVF(){
   if(!questaoId) return;
   const latexFonte = document.getElementById('vf-complementar-latex-novo').value.trim();
   if(!latexFonte){ vfMostrarAvisoVF('Escreva algo no conteúdo primeiro.'); return; }
-  const {error} = await sb.from('questoes_vf').update({complementar_local: latexFonte}).eq('id', questaoId);
+  const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
+  // carimbo de quando ESTE complemento local nasceu - é o que coloca ele na
+  // fila junto com os elementos da biblioteca (que têm criado_em próprio).
+  // Só na primeira vez: editar o texto depois não muda o lugar dele
+  const carimbo = entrada?.item?.complementar_local_em || new Date().toISOString();
+  const {error} = await sb.from('questoes_vf').update({complementar_local: latexFonte, complementar_local_em: carimbo}).eq('id', questaoId);
   if(error){ vfMostrarAvisoVF('Erro ao salvar: '+error.message); return; }
   // atualiza local imediatamente - sensação instantânea, sem esperar
   // buscar de novo do banco
-  const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
-  if(entrada) entrada.item.complementar_local = latexFonte;
+  if(entrada){ entrada.item.complementar_local = latexFonte; entrada.item.complementar_local_em = carimbo; }
   const cacheAtual = vfConteudoCompletoCache.get(questaoId) || {};
-  vfConteudoCompletoCache.set(questaoId, {...cacheAtual, complementar_local: latexFonte});
+  vfConteudoCompletoCache.set(questaoId, {...cacheAtual, complementar_local: latexFonte, complementar_local_em: carimbo});
   fecharModalComplementarVF();
   if(entrada) vfRenderizarComplementarLocalVF(entrada.item);
   if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF();
@@ -18386,6 +18391,40 @@ let vfLigacoesAnexadasVF = new Map();
 // síncrona, sem nenhuma consulta. ligacoes vem no formato da query com
 // join aninhado: [{id, elemento_html_id, elementos_html_vf: {id, titulo,
 // latex_fonte, anotacoes_elemento_html_vf: [{identificador, texto_explicacao}]}}]
+// ORDEM (pedido do Carlos, 21/09/2026): o que vem primeiro na tela é o que
+// foi adicionado primeiro. Os elementos da biblioteca têm criado_em na
+// ligação; o complemento local tem o carimbo complementar_local_em. Como os
+// dois moram em containers diferentes (#vf-elementos-html-anexados e
+// #vf-complementar-local), o local é MOVIDO pra dentro do container dos
+// anexados, na posição certa. Sem carimbo (complemento antigo, de antes
+// dessa regra) nada muda: continua depois de todos, como sempre foi
+function vfOrdenarComplementosVF(item, ligacoes){
+  const anexados = document.getElementById('vf-elementos-html-anexados');
+  const local = document.getElementById('vf-complementar-local');
+  if(!anexados || !local) return;
+  const carimbo = item && item.complementar_local_em;
+  const temLocal = !!(item && item.complementar_local && local.firstChild);
+  if(!temLocal || !carimbo || !(ligacoes||[]).length){
+    // volta pro lugar natural (logo depois dos anexados), se tiver saído
+    if(local.parentElement !== anexados.parentElement){
+      anexados.insertAdjacentElement('afterend', local);
+      local.style.marginTop = '';
+    }
+    return;
+  }
+  const quando = new Date(carimbo).getTime();
+  const posicao = ligacoes.findIndex(l => l.criado_em && new Date(l.criado_em).getTime() > quando);
+  const blocos = [...anexados.children].filter(el => el !== local);
+  if(posicao >= 0 && blocos[posicao]){
+    anexados.insertBefore(local, blocos[posicao]);
+  }else{
+    anexados.appendChild(local);
+  }
+  // dentro do container, o espaçamento é o mesmo de bloco pra bloco; no topo
+  // quem já dá o respiro é a margem do próprio container
+  local.style.marginTop = local.previousElementSibling ? '34px' : '0';
+}
+
 function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
   if(!container) return;
   vfLigacoesAnexadasVF = new Map((ligacoes||[]).map(l => [l.elemento_html_id, l.id]));
@@ -18422,6 +18461,8 @@ function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
       bloco.parentElement?.insertBefore(saida, bloco);
     }
   });
+  const entradaAtual = estadoVF?.historico?.find(h => h.item.id === questaoVfId);
+  if(entradaAtual) vfOrdenarComplementosVF(entradaAtual.item, ligacoes);
 }
 // query com join aninhado de dois níveis - traz elemento + anotações
 // numa única consulta (P1), em vez da rodada antiga (1 ida pra ligações +
@@ -18429,7 +18470,7 @@ function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
 // em lote quanto pelo caminho ao vivo (cache frio)
 function vfMontarQueryElementosAnexadosVF(){
   return sb.from('questao_elemento_html_vf')
-    .select('id, questao_vf_id, elemento_html_id, elementos_html_vf(id, titulo, latex_fonte, anotacoes_elemento_html_vf(identificador, texto_explicacao))', {count: 'exact'})
+    .select('id, questao_vf_id, elemento_html_id, criado_em, elementos_html_vf(id, titulo, latex_fonte, anotacoes_elemento_html_vf(identificador, texto_explicacao))', {count: 'exact'})
     .eq('usuario_id', usuarioAtual.id);
 }
 // pré-busca em lote - só pras questões que estão em questoesComElementoVF
