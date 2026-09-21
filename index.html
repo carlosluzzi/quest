@@ -2197,7 +2197,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-21-145';
+const VERSAO_APP = '2026-09-21-147';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -12298,7 +12298,7 @@ function vfDespausarSeNecessarioVF(){
 // que já existe pro caderno do Quest - reaproveita o MESMO modal de
 // confirmação e a mesma edge function, só o formato da questão muda
 // (V/F não tem alternativas múltiplas)
-function vfMontarRetratoParaTrackerVF(inicioSessaoMs, fimSessaoMs, sessaoVfId, historico){
+function vfMontarRetratoParaTrackerVF(inicioSessaoMs, fimSessaoMs, sessaoVfId, historico, tempoAtivoMs){
   const respondidas = historico?.filter(h => h.resposta !== null) || [];
   if(!respondidas.length) return null;
   return {
@@ -12306,6 +12306,7 @@ function vfMontarRetratoParaTrackerVF(inicioSessaoMs, fimSessaoMs, sessaoVfId, h
     sessaoVfId: sessaoVfId || null,
     criadoEm: new Date(inicioSessaoMs).toISOString(),
     finalizadoEm: new Date(fimSessaoMs).toISOString(),
+    tempoAtivoMs: Number.isFinite(tempoAtivoMs) ? tempoAtivoMs : null, // o mesmo cronômetro que vai pra tempo_efetivo_ms da sessão
     entradas: respondidas.map(h => ({...h}))
   };
 }
@@ -12337,12 +12338,40 @@ async function vfReconstruirHistoricoDeSessaoPerdidaVF(iniciadoEmMs){
   });
 }
 
+// instante da última resposta dada dentro da sessão (nulo se não houve
+// nenhuma). É ele que marca o fim DE VERDADE de uma sessão - o clique em
+// "Finalizar" pode vir horas ou dias depois, com o app aberto no meio
+async function vfInstanteUltimaRespostaVF(iniciadoEmMs){
+  if(!usuarioAtual || !Number.isFinite(iniciadoEmMs)) return null;
+  const {data, error} = await sb.from('log_respostas_vf')
+    .select('respondida_em').eq('usuario_id', usuarioAtual.id)
+    .gte('respondida_em', new Date(iniciadoEmMs).toISOString())
+    .order('respondida_em', {ascending: false}).limit(1).maybeSingle();
+  if(error || !data) return null;
+  const ms = new Date(data.respondida_em).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
+// sessão que ninguém fechou: quando o app volta e a última resposta é de
+// mais de 4 horas atrás, a sessão é encerrada sozinha no horário daquela
+// última resposta, em vez de continuar viva. ACHADO REAL (21/09): uma
+// sessão aberta na noite de sexta só foi finalizada no domingo à tarde -
+// virou PQF 084 com 38 horas de "estudo" (relógio de parede) e caiu no
+// dia errado do Tracker. App aberto não é estudo
+const VF_SESSAO_ABANDONADA_MS = 4 * 60 * 60 * 1000;
+let vfEncerramentoAutomaticoTextoVF = null;
+
 async function vfFinalizarSessaoFlashVF(e){
   if(e) e.stopPropagation();
   if(!vfSessaoAtivaVF) return;
   fecharModal('modal-confirmar-finalizar-vf'); // fecha se veio desse caminho - inofensivo se já estava fechado
   const iniciadoEmMs = vfSessaoAtivaVF.iniciadoEm;
-  const finalizadoEmMs = Date.now();
+  // fim da sessão = última resposta, não o clique em "Finalizar" (ver
+  // vfInstanteUltimaRespostaVF). Isso conserta de uma vez o
+  // finalizado_em da sessão, a duração que vai pro Tracker e o DIA em
+  // que a atividade é registrada lá
+  const ultimaRespostaMs = await vfInstanteUltimaRespostaVF(iniciadoEmMs);
+  const finalizadoEmMs = (ultimaRespostaMs && ultimaRespostaMs > iniciadoEmMs) ? ultimaRespostaMs : Date.now();
   const tempoTotalMs = vfCalcularElapsedMsVF();
   // se estadoVF se perdeu (reload no meio da sessão) e "Finalizar" foi
   // clicado direto, sem "Retomar" primeiro, reconstrói o histórico real
@@ -12413,7 +12442,7 @@ async function vfFinalizarSessaoFlashVF(e){
   if(erroInsertSessao) console.error('[Flash] Erro ao salvar sessão:', erroInsertSessao);
   // retrato pro Tracker montado ANTES de zerar a sessão - precisa do
   // início real dela (vfSessaoAtivaVF.iniciadoEm), que se perde depois
-  const retratoParaTracker = podeUsarIntegracaoTracker() ? vfMontarRetratoParaTrackerVF(iniciadoEmMs, finalizadoEmMs, sessaoInserida?.id, historicoParaContagem) : null;
+  const retratoParaTracker = podeUsarIntegracaoTracker() ? vfMontarRetratoParaTrackerVF(iniciadoEmMs, finalizadoEmMs, sessaoInserida?.id, historicoParaContagem, tempoTotalMs) : null;
   limparCanvasDesenhoVF(); // finalizar é finalizar tudo - o risco que estava na tela some junto, não fica "esquecido" por cima do resultado
   vfSessaoAtivaVF = null;
   vfSessaoRestauradaAguardandoDecisaoVF = false;
@@ -12963,7 +12992,12 @@ async function vfRestaurarSessaoFlashVF(){
   }
   const agora = Date.now();
   if(!salva.pausado){
-    salva.tempoAcumuladoMs += (agora - salva.ultimoResumeEm);
+    // o iPad pode descartar a página da memória sem passar pelo pagehide -
+    // aí o que ficou salvo é uma sessão "rodando" com ultimoResumeEm de
+    // horas atrás, e somar esse intervalo inteiro enchia o cronômetro de
+    // tempo que não foi estudo nenhum. Mesma tolerância do segundo plano:
+    // acima dela, o intervalo não conta
+    salva.tempoAcumuladoMs += Math.min(Math.max(0, agora - salva.ultimoResumeEm), VF_TOLERANCIA_SEGUNDO_PLANO_MS);
     salva.pausado = true;
   }
   // marca que ESSA sessão atravessou uma recarga da página (troca de
@@ -12977,6 +13011,20 @@ async function vfRestaurarSessaoFlashVF(){
   vfSessaoAtivaVF = salva;
   vfSalvarSessaoNoStorageVF();
   vfSessaoRestauradaAguardandoDecisaoVF = true;
+
+  // sessão abandonada (nada respondido há mais de 4h): fecha sozinha no
+  // horário da última resposta, em vez de esperar um "Finalizar" que
+  // pode vir dias depois - ver VF_SESSAO_ABANDONADA_MS
+  const ultimaAtividadeMs = (await vfInstanteUltimaRespostaVF(salva.iniciadoEm)) || salva.ultimoResumeEm || salva.iniciadoEm;
+  if(Date.now() - ultimaAtividadeMs > VF_SESSAO_ABANDONADA_MS){
+    const quando = new Date(ultimaAtividadeMs).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
+    vfEncerramentoAutomaticoTextoVF = `Sua sessão anterior ficou aberta e foi encerrada automaticamente em ${quando}, no horário da última resposta — o tempo com o app parado não entra na conta.`;
+    await vfFinalizarSessaoFlashVF();
+    const cardTracker = document.getElementById('modal-envio-tracker');
+    if(vfEncerramentoAutomaticoTextoVF && (!cardTracker || cardTracker.classList.contains('hidden'))) vfMostrarAvisoVF(vfEncerramentoAutomaticoTextoVF, 'Sessão encerrada sozinha');
+    vfEncerramentoAutomaticoTextoVF = null;
+    return;
+  }
   vfAtualizarOverlaySessaoVF();
 }
 
@@ -21831,10 +21879,15 @@ async function finalizarCaderno(){
   // que ele confirmar no popup, já que tudo abaixo é apagado na hora
   let retratoParaTracker = null;
   if(podeUsarIntegracaoTracker() && cadernoAtual){
+    // caderno não tem cronômetro próprio: o tempo ativo sai dos horários
+    // das respostas. Sem isso, um caderno aberto num dia e terminado em
+    // outro ia pro Tracker com o intervalo inteiro como "tempo de estudo"
+    const {data: marcacoesTempo} = await sb.from('respostas').select('respondido_em').eq('caderno_id', cadernoAtual.id);
     retratoParaTracker = {
       cadernoId: cadernoAtual.id,
       criadoEm: cadernoAtual.criado_em,
       finalizadoEm: new Date().toISOString(),
+      tempoAtivoMs: vfTempoAtivoDeMarcacoesVF((marcacoesTempo || []).map(r => new Date(r.respondido_em).getTime())),
       questoes: questoesCaderno.map(q=>({...q})),
       respostas: {...respostasPorQuestao},
       excluidas: new Set(questoesExcluidasAtual)
@@ -21872,12 +21925,31 @@ const TRACKER_INTERMEDIARIA_URL = 'https://jenzxycerdtjpkrzesia.supabase.co/func
 
 let retratoTrackerAtual = null;
 
+// tempo ATIVO de um caderno/sessão: soma dos intervalos entre uma
+// resposta e a seguinte, cada intervalo limitado a 5 minutos (mais que
+// isso é pausa, não estudo). É a mesma regra que o painel de Progresso
+// já usa e que o texto de ajuda do app descreve.
+// ACHADO REAL (21/09): o que ia pro Tracker era relógio de parede
+// (finalizado - iniciado). Uma sessão do Flash deixada aberta da noite
+// de sexta até a tarde de domingo foi gravada como PQF 084 com 2.296
+// minutos - "38 horas de estudo" - quando o cronômetro da própria
+// sessão marcava 220 minutos. Cronômetro e soma de intervalos batem
+// (220 x 219 min), o relógio de parede é que não servia
+const VF_LIMITE_INTERVALO_ATIVO_MS = 5 * 60 * 1000;
+function vfTempoAtivoDeMarcacoesVF(listaMs){
+  const ordenada = (listaMs || []).filter(ms => Number.isFinite(ms)).sort((a, b) => a - b);
+  let total = 0;
+  for(let i = 1; i < ordenada.length; i++) total += Math.min(Math.max(0, ordenada[i] - ordenada[i-1]), VF_LIMITE_INTERVALO_ATIVO_MS);
+  return total;
+}
+
 function abrirConfirmacaoEnvioTracker(retrato){
   retratoTrackerAtual = retrato;
   document.getElementById('confirmacao-envio-tracker').classList.remove('hidden');
-  document.getElementById('texto-confirmacao-envio-tracker').textContent = retrato.origemFlash
+  const explicacaoAutomatica = vfEncerramentoAutomaticoTextoVF ? vfEncerramentoAutomaticoTextoVF + ' ' : '';
+  document.getElementById('texto-confirmacao-envio-tracker').textContent = explicacaoAutomatica + (retrato.origemFlash
     ? 'Isso registra essa sessão do Flash (tempo, acertos e as questões) no PSCPP Tracker.'
-    : 'Isso registra esse caderno (tempo, acertos e as questões) no PSCPP Tracker.';
+    : 'Isso registra esse caderno (tempo, acertos e as questões) no PSCPP Tracker.');
   const btn = document.getElementById('btn-confirmar-envio-tracker');
   btn.disabled = false;
   btn.textContent = 'Enviar';
@@ -21910,7 +21982,12 @@ async function confirmarEnvioTracker(){
   fecharModal('modal-envio-tracker');
   vfMostrarAvisoVF('Enviando pro Tracker…', 'PSCPP Tracker');
 
-  const tempoMinutos = Math.max(1, Math.round((new Date(retrato.finalizadoEm) - new Date(retrato.criadoEm)) / 60000));
+  // tempo estudado de verdade quando ele existe (cronômetro da sessão do
+  // Flash, ou soma dos intervalos entre respostas no caderno). O relógio
+  // de parede fica só como último recurso - ver vfTempoAtivoDeMarcacoesVF
+  const tempoMinutos = Number.isFinite(retrato.tempoAtivoMs) && retrato.tempoAtivoMs > 0
+    ? Math.max(1, Math.round(retrato.tempoAtivoMs / 60000))
+    : Math.max(1, Math.round((new Date(retrato.finalizadoEm) - new Date(retrato.criadoEm)) / 60000));
   // data da atividade = o DIA em que a sessão/caderno foi finalizado, no
   // fuso de São Paulo. ACHADO REAL: o payload não mandava 'data' nenhuma,
   // e do lado do Tracker a função de gravar cai num COALESCE com "agora"
@@ -24176,7 +24253,7 @@ async function abrirDetalheCadernoConcluido(cadernoId){
 
   const [{data: caderno}, {data: respostas}] = await Promise.all([
     sb.from('cadernos').select('*').eq('id', cadernoId).single(),
-    buscarTudoPaginadoVF(() => sb.from('respostas').select('questao_id, correta, resposta_dada', {count: 'exact'}).eq('caderno_id', cadernoId).order('id'))
+    buscarTudoPaginadoVF(() => sb.from('respostas').select('questao_id, correta, resposta_dada, respondido_em', {count: 'exact'}).eq('caderno_id', cadernoId).order('id'))
   ]);
   const el = document.getElementById('modal-detalhe-caderno-conteudo');
 
@@ -24262,6 +24339,7 @@ function enviarCadernoAntigoParaTracker(cadernoId){
     cadernoId,
     criadoEm: dados.caderno.criado_em,
     finalizadoEm: dados.caderno.finalizado_em,
+    tempoAtivoMs: vfTempoAtivoDeMarcacoesVF((dados.respostas || []).map(r => new Date(r.respondido_em).getTime())),
     questoes: Object.values(mapaQuestoes),
     respostas: respostasPorQuestaoRetroativo,
     excluidas: new Set() // questões excluídas não entram nem em respostas, então não afetam aqui
