@@ -376,6 +376,17 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
    sem highlight cinza nativo do navegador ao tocar, só o sublinhado
    pontilhado indicando que dá pra tocar */
 .vf-nota-clicavel, .vf-celula-anotavel{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none}
+/* \arvore{} - árvore de chaves. O fio entra na ALTURA DA PALAVRA (não no
+   meio do bloco), porque um item pode ter várias explicações embaixo dele */
+.vf-arvore-bloco ul{list-style:none;margin:0;padding-left:20px}
+.vf-arvore-bloco li{position:relative;padding:7px 0 7px 20px}
+.vf-arvore-bloco li::before{content:'';position:absolute;left:0;top:0;height:0.85em;width:13px;border-left:1px solid #C9C9C4;border-bottom:1px solid #C9C9C4;border-bottom-left-radius:5px}
+.vf-arvore-bloco li:not(:last-child)::after{content:'';position:absolute;left:0;top:0.85em;bottom:0;border-left:1px solid #C9C9C4}
+.vf-arvore-nome{font-weight:700;color:#111;font-size:var(--fs-d)}
+.vf-arvore-exp{color:#6B6B66;font-size:var(--fs-c);line-height:1.45;font-style:italic;margin-top:4px}
+.vf-arvore-titulo{font-weight:700;color:#111;font-size:var(--fs-e)}
+.vf-arvore-bloco + .vf-tabela-bloco,.vf-arvore-bloco + .vf-svg-bloco,.vf-arvore-bloco + .vf-arvore-bloco,
+.vf-tabela-bloco + .vf-arvore-bloco,.vf-svg-bloco + .vf-arvore-bloco{margin-top:34px !important}
 .vf-tabela-bloco + .vf-tabela-bloco,.vf-tabela-bloco + .vf-svg-bloco,.vf-svg-bloco + .vf-tabela-bloco,.vf-svg-bloco + .vf-svg-bloco{margin-top:34px !important} /* !important: o bloco carrega margin inline (16px), que sem isso vence a folha de estilo */
 .vf-svg-bloco,.vf-svg-bloco *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .vf-tabela-alinhamento,.vf-tabela-alinhamento *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
@@ -2169,7 +2180,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-21-139';
+const VERSAO_APP = '2026-09-21-140';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4772,6 +4783,42 @@ function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo, larguraPx, alinhame
   return `<div id="${idEscopo}" class="vf-svg-bloco" data-alinhamento-svg="${alinhamento || 'esquerda'}" style="margin:16px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}"><style>${cssBase}${cssEscopado}</style>${svgSemStyle}</div>`;
 }
 
+// \arvore{...} - árvore de chaves (pedido do Carlos, 21/09/2026).
+// A INDENTAÇÃO define o nível (2 espaços por nível) e cada linha começando
+// com "|" é uma explicação do item logo acima - pode ter quantas quiser
+// (ex: "No verão, ..." numa linha e "No inverno, ..." na outra). O nome e as
+// explicações passam pelo mesmo formatador das células de tabela, então
+// subscrito, negrito, itálico, cor e \nota{}{} funcionam igual.
+function vfMontarBlocoArvoreVF(conteudo){
+  const linhas = (conteudo || '').replace(/\r/g, '').split('\n').filter(l => l.trim());
+  const raiz = {nivel: -1, nome: '', exps: [], filhos: []};
+  const pilha = [raiz];
+  linhas.forEach(linha => {
+    const semTab = linha.replace(/\t/g, '  ');
+    const recuo = (semTab.match(/^ */) || [''])[0].length;
+    const texto = semTab.trim();
+    if(texto.startsWith('|')){
+      pilha[pilha.length - 1].exps.push(texto.slice(1).trim());
+      return;
+    }
+    const nivel = Math.floor(recuo / 2);
+    while(pilha.length > 1 && pilha[pilha.length - 1].nivel >= nivel) pilha.pop();
+    const no = {nivel, nome: texto, exps: [], filhos: []};
+    pilha[pilha.length - 1].filhos.push(no);
+    pilha.push(no);
+  });
+  const htmlExps = (no) => no.exps.map(e => `<div class="vf-arvore-exp">${vfFormatarCelulaArrayVF(e)}</div>`).join('');
+  const htmlLista = (nos) => nos.length
+    ? `<ul>${nos.map(n => `<li><span class="vf-arvore-nome">${vfFormatarCelulaArrayVF(n.nome)}</span>${htmlExps(n)}${htmlLista(n.filhos)}</li>`).join('')}</ul>`
+    : '';
+  // uma raiz só (o caso normal): ela vira o título, sem fio nenhum em volta,
+  // e os filhos dela são a árvore. Mais de uma raiz: todas viram itens
+  const corpo = (raiz.filhos.length === 1)
+    ? `<div class="vf-arvore-titulo">${vfFormatarCelulaArrayVF(raiz.filhos[0].nome)}</div>${htmlExps(raiz.filhos[0])}${htmlLista(raiz.filhos[0].filhos)}`
+    : htmlLista(raiz.filhos);
+  return `<div class="vf-arvore-bloco" style="font-family:${VF_FONTE_TABELA};margin:16px 0;position:relative;width:fit-content;max-width:100%">${corpo}</div>`;
+}
+
 function vfFormatarCelulaArrayVF(celula){
   let c = celula.trim();
   c = c.replace(/—/g, '–'); // travessão longo sempre vira curto, mesma regra do resto do texto
@@ -5611,6 +5658,25 @@ function vfExtrairTabelasComoPlaceholderVF(texto){
   // Dentro dos colchetes (opcionais): largura em px e/ou alinhamento
   // (esquerda/centro/direita), em qualquer ordem, separados por vírgula -
   // ex: \svg[400px,centro]{...}, \svg[centro]{...}, \svg[400px]{...}
+  // \arvore{...} - mesmo tratamento de bloco das tabelas/desenhos: sai do
+  // texto como placeholder e volta montada no fim
+  {
+    let semArvore = '';
+    let posArvore = 0;
+    const regexArvore = /\\arvore\{/g;
+    let matchArvore;
+    while((matchArvore = regexArvore.exec(texto))){
+      const grupoArvore = vfExtrairGrupoBalanceadoVF(texto, matchArvore.index + matchArvore[0].length - 1);
+      if(!grupoArvore){ regexArvore.lastIndex = matchArvore.index + matchArvore[0].length; continue; }
+      semArvore += texto.slice(posArvore, matchArvore.index);
+      tabelas.push(vfMontarBlocoArvoreVF(grupoArvore.conteudo));
+      semArvore += `\u0000TABELA${tabelas.length - 1}\u0000`;
+      posArvore = grupoArvore.fimPos + 1;
+      regexArvore.lastIndex = posArvore;
+    }
+    semArvore += texto.slice(posArvore);
+    texto = semArvore;
+  }
   {
     let semSvg = '';
     let posSvg = 0;
