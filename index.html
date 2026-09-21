@@ -2180,7 +2180,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-21-140';
+const VERSAO_APP = '2026-09-21-141';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4796,13 +4796,23 @@ function vfMontarBlocoArvoreVF(conteudo){
   linhas.forEach(linha => {
     const semTab = linha.replace(/\t/g, '  ');
     const recuo = (semTab.match(/^ */) || [''])[0].length;
-    const texto = semTab.trim();
+    let texto = semTab.trim();
+    // ACHADO REAL (Carlos, 21/09/2026): colando a árvore no editor do
+    // Complementar, o espaço do começo da linha SOME (o editor é HTML, e
+    // HTML colapsa espaço de borda) - a árvore vinha toda no mesmo nível.
+    // Então o nível também pode vir por marcador, que nenhum editor come:
+    // "-" ou ">" repetidos (um por nível). Vale junto com a indentação:
+    // quem der o nível mais fundo manda
+    let marcadores = 0;
+    const marca = texto.match(/^([->]+)\s*/);
+    if(marca){ marcadores = marca[1].length; texto = texto.slice(marca[0].length).trim(); }
     if(texto.startsWith('|')){
       pilha[pilha.length - 1].exps.push(texto.slice(1).trim());
       return;
     }
-    const nivel = Math.floor(recuo / 2);
+    const nivel = Math.max(Math.floor(recuo / 2), marcadores);
     while(pilha.length > 1 && pilha[pilha.length - 1].nivel >= nivel) pilha.pop();
+    if(!texto) return; // linha só com marcador, sem nome - ignora
     const no = {nivel, nome: texto, exps: [], filhos: []};
     pilha[pilha.length - 1].filhos.push(no);
     pilha.push(no);
