@@ -301,6 +301,11 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-barra-fixa-principal{display:flex;gap:10px}
 .vf-barra-fixa-acoes{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 @media(min-width:1100px){.vf-barra-fixa{max-width:none;left:250px;right:0;transform:none;width:auto}}
+/* telas de carregamento em tela cheia: a partir de 1100px o menu vira barra
+   lateral fixa de 250px, e o centro da ÁREA DE CONTEÚDO não é mais o centro
+   da janela - sem isso a rodinha de carregando aparecia deslocada pra
+   esquerda no iPad em paisagem */
+@media(min-width:1100px){:root{--carregando-esquerda:250px}}
 @media(min-width:1100px){.vf-overlay-sessao{left:242px !important}}
 .nav-item{flex:1;min-width:0;padding:18px 0 calc(20px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:0;box-sizing:border-box;position:relative;-webkit-tap-highlight-color:transparent}
 #nav-item-adicionar{display:none}
@@ -901,12 +906,12 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
 
   <!-- ===== FÓRUM ===== -->
   <div class="view-aba hidden" id="aba-forum">
-    <div id="lista-forum"><div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div></div>
+    <div id="lista-forum"><div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:var(--carregando-esquerda, 0px);right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div></div>
   </div>
 
   <!-- ===== COMO VOCÊ TÁ INDO (placar) ===== -->
   <div class="view-aba hidden" id="aba-placar">
-    <div id="metricas-carregando-inicial" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5">
+    <div id="metricas-carregando-inicial" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:var(--carregando-esquerda, 0px);right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5">
       <svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>
     </div>
 
@@ -1086,7 +1091,7 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
       </div>
     </div>
     <div id="vf-conteudo" style="padding-bottom:170px;position:relative">
-      <div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>
+      <div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:var(--carregando-esquerda, 0px);right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>
     </div>
     <!-- camada de desenho com a caneta (Apple Pencil) - movida pra FORA do
     #app-shell (ver logo depois do fechamento dele) - o app-shell é
@@ -2164,7 +2169,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-21-135';
+const VERSAO_APP = '2026-09-21-139';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3357,12 +3362,26 @@ function vfAjustarPosicionamentoCanvasVF(){
   // ao tocar no chevron dos Filtros. Agora espera a altura parar de
   // mudar por 160ms e redimensiona UMA vez
   let vfResizeCanvasTimer = null;
+  // ACHADO REAL (Carlos, 21/09/2026): escrevendo numa nota/enunciado, o
+  // campo cresce a cada linha -> a página muda de altura -> este observer
+  // redimensionava o canvas de desenho, que tem a altura da PÁGINA INTEIRA
+  // (e ainda restaura o desenho por cima). Era a travada no meio da
+  // digitação. Com um campo de texto em foco, adia: enquanto ele estiver
+  // sendo usado o canvas fica como está, e o ajuste sai quando a digitação
+  // para de verdade (ou ao sair do campo)
+  const vfDigitandoAgoraVF = () => {
+    const el = document.activeElement;
+    return !!el && (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' || el.isContentEditable);
+  };
   const resizeObserverCanvasVF = new ResizeObserver(() => {
     clearTimeout(vfResizeCanvasTimer);
-    vfResizeCanvasTimer = setTimeout(() => {
+    const tentar = () => {
       vfResizeCanvasTimer = null;
-      if(vfEstaVisivelAgora() && !vfDesenhandoAgora) redimensionarCanvasDesenhoVF();
-    }, 160);
+      if(vfDesenhandoAgora) return;
+      if(vfDigitandoAgoraVF()){ vfResizeCanvasTimer = setTimeout(tentar, 600); return; } // ainda escrevendo - confere de novo depois
+      if(vfEstaVisivelAgora()) redimensionarCanvasDesenhoVF();
+    };
+    vfResizeCanvasTimer = setTimeout(tentar, 160);
   });
   document.querySelectorAll('#content > .view-aba').forEach(aba => resizeObserverCanvasVF.observe(aba));
 })();
@@ -13056,7 +13075,7 @@ async function vfReconstruirHistoricoDaSessaoVF(){
 
 async function vfCarregarPoolInicialVF(){
   const el = document.getElementById('vf-conteudo');
-  el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:0;right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
+  el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:var(--carregando-esquerda, 0px);right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
   document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
 
   estadoVF = {
@@ -13788,7 +13807,16 @@ async function vfCarregarExpansaoTermoVF(){
   // só os termo_pt distintos e não nulos - uma linha vem com termo_pt/
   // termo_en nulos (é o próprio termo digitado, quando ele não corresponde
   // a nenhum conceito do glossário, só uma busca direta por substring)
-  const termosPt = [...new Set(data.map(r => r.termo_pt).filter(Boolean))];
+  // fora da lista o que for igual ao que foi digitado: normaliza os dois
+  // lados (minúsculas, sem acento, hífen vira espaço, sem espaço de borda)
+  // antes de comparar - repetir o próprio termo no chip não informa nada
+  const digitadoNorm = vfNormalizarBuscaVF(termoNoInicio).trim();
+  const termosBrutos = [...new Set(data.map(r => r.termo_pt).filter(Boolean))];
+  const termosPt = termosBrutos.filter(t => vfNormalizarBuscaVF(t).trim() !== digitadoNorm);
+  // o glossário até respondeu, mas o que sobrou era só o próprio termo
+  // digitado: chip nenhum (nem o convite do glossário, que aqui não cabe -
+  // o termo JÁ está no glossário)
+  if(!termosPt.length && termosBrutos.length){ el.innerHTML = ''; return; }
   if(!termosPt.length){
     el.innerHTML = `Só o termo digitado – <a href="#" onclick="event.preventDefault();vfAbrirGlossarioVF('${escapeHtml(termoNoInicio)}')" style="color:#B23A34">adicionar ao glossário?</a>`;
     return;
@@ -14564,8 +14592,13 @@ function vfIniciarEdicaoEnunciadoVF(){
 // com o quadro do tamanho de 2 linhas, não um tamanho fixo grande demais.
 // Cresce sozinho enquanto digita, se passar pra mais linhas
 function vfAutoAlturaTextareaVF(textarea){
+  // só mexe no DOM quando a altura muda de verdade - escrever no meio de
+  // uma linha não muda nada, e regravar o mesmo valor ainda custa um
+  // recálculo de layout a cada tecla
+  const anterior = textarea.style.height;
   textarea.style.height = 'auto';
-  textarea.style.height = textarea.scrollHeight + 'px';
+  const nova = textarea.scrollHeight + 'px';
+  textarea.style.height = (nova === anterior) ? anterior : nova;
 }
 
 // tenta salvar até 3 vezes (1 tentativa + 2 retries), com um pequeno
