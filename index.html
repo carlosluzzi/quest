@@ -2163,7 +2163,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-21-128';
+const VERSAO_APP = '2026-09-21-129';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4773,6 +4773,13 @@ function vfFormatarCelulaArrayVF(celula){
   c = c.replace(/\{,\}/g, ',');
   c = c.replace(/\\,/g, ''); // espaço fino do LaTeX - aqui vira SEM espaço nenhum (5,0x, não 5,0 x - notação científica normal não separa coeficiente de variável)
   c = c.replace(/\\ /g, ' '); // \  (barra + espaço) força espaço em LaTeX de verdade, mas aqui um espaço normal já resolve - sem isso, aparecia a barra literal na tela
+  // **negrito** e *itálico* também valem dentro de célula e de legenda
+  // (\small{}) - antes só o texto normal da questão aplicava, e um
+  // "*h*" na legenda aparecia com os asteriscos na tela. O itálico exige
+  // texto colado nos asteriscos (*h*, não * h *), pra um asterisco de
+  // multiplicação no meio de uma conta não virar itálico sem querer
+  c = c.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  c = c.replace(/\*([^\s*][^*]*?[^\s*]|[^\s*])\*/g, '<em>$1</em>');
   c = vfAplicarMarcacaoMatematicaVF(c);
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp));
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
