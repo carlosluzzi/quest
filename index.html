@@ -470,6 +470,21 @@ body.vf-marcacao-texto-ativa #vf-correcao-atual,body.vf-marcacao-texto-ativa #vf
 #view-topico-detalhe .topbar-voltar{display:flex;align-items:center;gap:10px;padding:14px 16px;flex-shrink:0;background:#FBFBFA;border-bottom:0.5px solid rgba(224,224,224,0.6)}
 #conteudo-topico-detalhe{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px}
 .modal-overlay.hidden{display:none}
+/* rodapé preso do popup (botão Fechar/Cancelar) - ver
+vfFixarRodapeDoPopupVF. Antes, escrever duas notas fazia o conteúdo
+crescer e o "Fechar" ia junto pra baixo, fora da tela: era preciso rolar
+pra achar o botão de novo. Agora ele fica ancorado no rodapé, sem
+participar da rolagem. bottom:20px = o mesmo respiro do padding do
+popup: a rolagem do popup inclui o padding de baixo, então bottom:0 põe
+o botão exatamente onde ele já ficava ao rolar até o fim */
+.modal-rodape-fixo{position:sticky;bottom:0;z-index:3}
+/* faixas brancas em cima e embaixo do rodapé: o padding do popup (20px de
+cada lado) faz parte da área que rola, então sem elas o texto passava
+rolando e aparecia em volta do botão. A faixa de baixo tem exatamente a
+altura do padding (20px): um pixel a mais e ela esticaria a área de
+rolagem do popup, deslocando o botão no fim da rolagem */
+.modal-rodape-fixo::before{content:'';position:absolute;left:-20px;right:-20px;bottom:100%;height:14px;background:#fff;pointer-events:none}
+.modal-rodape-fixo::after{content:'';position:absolute;left:-20px;right:-20px;top:100%;height:20px;background:#fff;pointer-events:none}
 .modal-conteudo{background:#fff;border-radius:14px;padding:20px;width:100%;max-width:340px;max-height:85vh;overflow-y:auto}
 
 /* "Adicionar questões" é um híbrido: no mobile/tablet se comporta como um
@@ -2182,7 +2197,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-21-144';
+const VERSAO_APP = '2026-09-21-145';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3588,6 +3603,44 @@ function abrirModal(id){
   document.getElementById(id).classList.remove('hidden');
 }
 function fecharModal(id){ document.getElementById(id).classList.add('hidden'); }
+
+// o botão de fechar/cancelar de um popup não rola junto com o conteúdo -
+// fica preso no rodapé, sempre no mesmo lugar. Vale só pros popups que
+// rolam por inteiro (.modal-conteudo com a rolagem própria dele); os que
+// já têm uma área interna de rolagem (display:flex + flex-shrink:0 no
+// botão) já nasceram com o rodapé fixo e ficam exatamente como estão
+function vfFixarRodapeDoPopupVF(modal){
+  if(!modal) return;
+  const conteudo = modal.querySelector('.modal-conteudo');
+  if(!conteudo || conteudo.closest('#aba-adicionar')) return; // lá o "modal" é um card normal da tela, não um popup
+  const cs = getComputedStyle(conteudo);
+  if(cs.display === 'flex') return;
+  if(cs.overflowY !== 'auto' && cs.overflowY !== 'scroll') return;
+  const ultimo = conteudo.lastElementChild;
+  conteudo.querySelectorAll(':scope > .modal-rodape-fixo').forEach(el => { if(el !== ultimo) el.classList.remove('modal-rodape-fixo'); });
+  if(!ultimo) return;
+  // só prende quando o último bloco é mesmo o rodapé de botões - um
+  // popup que termina em texto ou lista continua rolando inteiro
+  const soBotoes = ultimo.tagName === 'BUTTON'
+    || (ultimo.children.length > 0 && [...ultimo.children].every(filho => filho.tagName === 'BUTTON'));
+  if(soBotoes) ultimo.classList.add('modal-rodape-fixo');
+}
+// roda sempre que um popup aparece - inclusive os abertos sem passar por
+// abrirModal(). O rAF e o respiro de 250ms cobrem os popups que recebem o
+// conteúdo logo depois de abrir (o último filho muda no meio do caminho)
+function vfObservarRodapesDosPopupsVF(){
+  const aplicar = modal => { vfFixarRodapeDoPopupVF(modal); requestAnimationFrame(() => vfFixarRodapeDoPopupVF(modal)); setTimeout(() => vfFixarRodapeDoPopupVF(modal), 250); };
+  const obs = new MutationObserver(mudancas => mudancas.forEach(m => {
+    const el = m.target;
+    if(el.classList && !el.classList.contains('hidden')) aplicar(el);
+  }));
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    obs.observe(m, {attributes: true, attributeFilter: ['class']});
+    if(!m.classList.contains('hidden')) aplicar(m);
+  });
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', vfObservarRodapesDosPopupsVF);
+else vfObservarRodapesDosPopupsVF();
 // Discussão de uma questão pode abrir de 2 jeitos, dependendo de onde a
 // pessoa clicou:
 // - "Discutir" DENTRO de um caderno respondendo questões → modal grande,
