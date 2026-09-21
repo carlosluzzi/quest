@@ -1789,7 +1789,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-confirmar-exclusao-familia-vf" onclick="if(event.target===this) vfFecharDialogoExclusaoFamiliaVF()">
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title" id="vf-titulo-exclusao-familia"></h3>
-    <div id="vf-lista-irmas-exclusao" style="max-height:45vh;overflow-y:auto;margin-bottom:10px"></div>
+    <div id="vf-lista-irmas-exclusao" style="margin-bottom:10px"></div>
     <textarea id="motivo-exclusao-familia-vf" class="textarea-padrao" placeholder="Motivo (opcional)" style="min-height:70px;margin-bottom:14px"></textarea>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;gap:8px">
@@ -1835,7 +1835,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfAdicionarTagVF()">+</button>
     </div>
     <button id="vf-tags-btn-ver" onclick="vfAlternarTodasTagsVF()" style="background:none;border:none;padding:0;margin-top:16px;color:#B23A34;font-size:var(--fs-c);font-weight:600;cursor:pointer;font-family:inherit;display:block">Ver tags existentes</button>
-    <div id="vf-tags-todas" class="hidden" style="margin-top:10px;max-height:34vh;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start"></div>
+    <div id="vf-tags-todas" class="hidden" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start"></div>
     <p id="vf-tags-status" style="font-size:var(--fs-c);margin:6px 0 0 0;min-height:1.4em;line-height:1.4"></p>
     <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="vfFecharPopupTagsVF()">Fechar</button>
   </div>
@@ -1845,7 +1845,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title">Suas notas nessa questão</h3>
     <div id="lista-notas-questao"></div>
-    <textarea id="texto-nota-questao" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:80px"></textarea>
+    <textarea id="texto-nota-questao" class="textarea-padrao" placeholder="Adicionar nova nota" style="min-height:80px"></textarea>
     <button class="btn-primario" style="width:100%" onclick="adicionarNotaQuestao()">Adicionar nota</button>
     <button class="btn-secundario" style="width:100%;margin-top:10px" onclick="fecharModal('modal-nota-questao')">Fechar</button>
   </div>
@@ -1862,7 +1862,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       <div id="lista-notas-vf" style="transition:max-height 0.25s ease;overflow:hidden;max-height:0"></div>
       <div id="vf-notas-irmas-vf" class="hidden" style="margin-bottom:14px"></div>
       <div id="vf-barra-ferramentas-nota-nova" style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px"></div>
-      <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Por que errei? O que devo lembrar da próxima vez?" style="min-height:140px" onkeydown="vfTeclaTabNotaVF(event)"></textarea>
+      <textarea id="texto-nota-vf" class="textarea-padrao" placeholder="Adicionar nova nota" style="min-height:140px" onkeydown="vfTeclaTabNotaVF(event)"></textarea>
       <button class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
     </div>
     <div id="vf-nota-conteudo-biblioteca" class="hidden"></div>
@@ -2163,7 +2163,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-19-122';
+const VERSAO_APP = '2026-09-21-128';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7315,7 +7315,11 @@ document.addEventListener('touchstart', (e) => {
   // pra <button>/[onclick] em vez de listar cada classe manualmente -
   // cobre automaticamente Flash e Quest sem precisar manter duas listas
   const itemMenu = e.target.closest('.nav-item');
-  const botaoIcone = itemMenu || e.target.closest('button, [onclick]');
+  // [data-identificador-anotacao]: célula de tabela e texto de dentro de um
+  // desenho. Eles reagem ao toque por onclick de propriedade (não por
+  // atributo), então não casavam com '[onclick]' e o toque da caneta virava
+  // traço em vez de abrir a anotação
+  const botaoIcone = itemMenu || e.target.closest('button, [onclick], [data-identificador-anotacao]');
   if(botaoIcone){
     // trava o scroll nativo JÁ no toque inicial (só caneta chega aqui -
     // dedo foi filtrado lá em cima e continua rolando a página normal).
@@ -14649,7 +14653,7 @@ function vfCopiarComProtecaoDuploToqueVF(elemento, evento){
 function vfTextoParaCopiaVF(elemento){
   const clone = elemento.cloneNode(true);
   // nada que é botão/enfeite da tela entra no que vai pra área de transferência
-  clone.querySelectorAll('.vf-selinho-copiado, .vf-alca-nota-preview, .vf-tabela-alinhamento, .vf-nota-cor-barra, button').forEach(el => el.remove());
+  clone.querySelectorAll('.vf-selinho-copiado, .vf-alca-nota-preview, .vf-tabela-alinhamento, .vf-nota-cor-barra, .vf-nota-acoes, button').forEach(el => el.remove());
   clone.querySelectorAll('li > span:first-child').forEach(sp => sp.after(' ')); // marcador ("1.", "C_1") + espaço + texto do item
   // lista de bolinha volta a sair com "- " na frente: assim o texto
   // copiado, colado numa outra nota, vira lista de novo em vez de virar
@@ -14907,11 +14911,11 @@ async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
   if(contexto.tipo === 'campo-vf'){
     const entrada = estadoVF.historico.find(h => h.item.id === contexto.questaoId);
     const textoAtual = entrada?.item?.[contexto.campo];
-    if(!entrada || textoAtual === undefined || !textoAtual.includes(textoOriginalMatch)){
+    const textoNovo = entrada ? vfSubstituirTrechoFonteVF(textoAtual, textoOriginalMatch, novoTrecho) : null;
+    if(textoNovo === null){
       vfMostrarAvisoVF('Não consegui salvar essa mudança (o texto pode ter mudado nesse meio tempo). Tenta segurar de novo.');
       return;
     }
-    const textoNovo = textoAtual.replace(textoOriginalMatch, novoTrecho);
     entrada.item[contexto.campo] = textoNovo;
     const cacheAtual = vfConteudoCompletoCache.get(contexto.questaoId) || {};
     vfConteudoCompletoCache.set(contexto.questaoId, {...cacheAtual, [contexto.campo]: textoNovo});
@@ -14922,11 +14926,11 @@ async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
     );
   }else if(contexto.tipo === 'elemento-html'){
     const {data, error: erroBusca} = await sb.from('elementos_html_vf').select('latex_fonte').eq('id', contexto.elementoId).single();
-    if(erroBusca || !data || !data.latex_fonte.includes(textoOriginalMatch)){
+    const textoNovo = (erroBusca || !data) ? null : vfSubstituirTrechoFonteVF(data.latex_fonte, textoOriginalMatch, novoTrecho);
+    if(textoNovo === null){
       vfMostrarAvisoVF('Não consegui salvar essa mudança (o elemento pode ter mudado nesse meio tempo). Tenta segurar de novo.');
       return;
     }
-    const textoNovo = data.latex_fonte.replace(textoOriginalMatch, novoTrecho);
     const itemCache = vfBibliotecaComplementarCacheVF?.find(e => e.id === contexto.elementoId);
     if(itemCache) itemCache.latex_fonte = textoNovo;
     vfInvalidarCacheElementosPorElementoIdVF(contexto.elementoId); // mesma limpeza que o ajuste de tabela já fazia
@@ -15687,6 +15691,24 @@ async function vfSalvarOpcoesTabelaInternoVF(blocoId, {alinhamento, temCabecalho
 // no campo de onde ela veio e salva - usado pelas opções de tabela
 // (alinhamento/cabeçalho/larguras) e pela edição de célula. Devolve true
 // se conseguiu
+// ACHADO REAL (21/09/2026): formatarTextoItemVF roda
+// vfLimparApostrofoUnderscoreVF ANTES de extrair as tabelas e os desenhos
+// (aspa curva -> reta, ˆ -> ^, '_xx -> 'xx). O trecho-fonte que a tela
+// guarda pra salvar sai desse texto JÁ LIMPO, mas a procura era feita no
+// texto ORIGINAL do banco: bastava uma aspa curva dentro do <svg> ou da
+// legenda da tabela pro trecho não ser encontrado. O salvamento morria em
+// "pode ter mudado nesse meio tempo" e o próximo desenho da tela devolvia
+// a figura/tabela pro canto - exatamente o "centralizo, saio e volto,
+// está torta de novo". Quando só a limpeza separa os dois, grava o texto
+// normalizado (que é o que o app já mostra na tela de qualquer forma)
+function vfSubstituirTrechoFonteVF(textoAtual, trechoAntigo, trechoNovo){
+  if(typeof textoAtual !== 'string') return null;
+  if(textoAtual.includes(trechoAntigo)) return textoAtual.replace(trechoAntigo, trechoNovo);
+  const limpo = vfLimparApostrofoUnderscoreVF(textoAtual);
+  if(limpo.includes(trechoAntigo)) return limpo.replace(trechoAntigo, trechoNovo);
+  return null;
+}
+
 function vfEscaparRegexVF(texto){
   return texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -15697,7 +15719,8 @@ function vfEscaparRegexVF(texto){
 // bater caractere por caractere, entao nao tem risco de pegar outra
 function vfSubstituirTrechoTabelaVF(textoAtual, textoOriginalMatch, novoTrecho){
   if(typeof textoAtual !== 'string') return null;
-  if(textoAtual.includes(textoOriginalMatch)) return textoAtual.replace(textoOriginalMatch, novoTrecho);
+  const direto = vfSubstituirTrechoFonteVF(textoAtual, textoOriginalMatch, novoTrecho);
+  if(direto !== null) return direto;
   const partes = textoOriginalMatch.match(/^(\\begin\{array\}|\\sidebyside)(?:\[[^\]]*\])?([\s\S]*)$/);
   if(!partes) return null;
   const regex = new RegExp(vfEscaparRegexVF(partes[1]) + '(?:\\[[^\\]]*\\])?' + vfEscaparRegexVF(partes[2]));
@@ -18429,40 +18452,54 @@ async function vfCarregarElementosAnexadosVF(questaoVfId){
 // anotação abre direto o modal pra criar uma. Célula já anotada: toque
 // (ou hover no mouse) sempre mostra o balão normal (a info em si) -
 // tocar no PRÓPRIO BALÃO depois é que abre a edição, não a célula de novo
+// liga UM elemento (célula de tabela ou texto de dentro de um SVG) ao
+// sistema de anotação: com anotação salva, toque mostra o balão; sem
+// anotação, toque abre o pop-up pra escrever. Mesma mecânica dos dois -
+// só muda quem chama
+function vfLigarAnotacaoElementoVF(el, identificador, mapaAnotacoes, elementoHtmlId){
+  el.dataset.identificadorAnotacao = identificador;
+  el.style.cursor = 'pointer';
+  el.style.webkitTapHighlightColor = 'transparent';
+  const explicacaoSalva = mapaAnotacoes.get(identificador);
+  const abrirModalEdicao = () => vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, explicacaoSalva || '', el);
+  if(explicacaoSalva){
+    el.style.textDecoration = 'underline dotted';
+    el.style.textDecorationColor = '#888';
+    el.style.textUnderlineOffset = '3px';
+    const mostrar = (e) => {
+      e.stopPropagation();
+      // se já tem um balão aberto (de outro ponto), esse toque só fecha ele
+      if(vfBalaoExplicacaoEstaAbertoVF()){ vfEsconderBalaoExplicacaoVF(); return; }
+      vfMostrarBalaoExplicacaoVF(e, explicacaoSalva, abrirModalEdicao);
+    };
+    el.onclick = mostrar;
+    el.onmouseenter = mostrar;
+  }else{
+    el.onclick = (e) => {
+      e.stopPropagation();
+      if(vfBalaoExplicacaoEstaAbertoVF()){ vfEsconderBalaoExplicacaoVF(); return; }
+      abrirModalEdicao();
+    };
+  }
+}
+
 function vfAplicarIdentificadoresECliquesVF(bloco, mapaAnotacoes, elementoHtmlId){
+  // textos escritos DENTRO de um desenho (rótulos de figura: "2B_MAX + 30,0m",
+  // "B_MAX", nomes de peça...) aceitam anotação igual a uma célula de tabela.
+  // O identificador é a posição do <text> dentro do <svg> - estável enquanto
+  // o desenho não for reescrito, mesmo que a figura mude de tamanho ou de
+  // alinhamento na tela
+  bloco.querySelectorAll('svg').forEach((svg, indiceSvg) => {
+    svg.querySelectorAll('text').forEach((texto, indiceTexto) => {
+      if(!texto.textContent || !texto.textContent.trim()) return; // <text> vazio não é alvo de toque
+      texto.style.pointerEvents = 'auto';
+      vfLigarAnotacaoElementoVF(texto, `s${indiceSvg}-t${indiceTexto}`, mapaAnotacoes, elementoHtmlId);
+    });
+  });
   bloco.querySelectorAll('table').forEach((tabela, indiceTabela) => {
     tabela.querySelectorAll('tr').forEach((linha, indiceLinha) => {
       linha.querySelectorAll('td').forEach((celula, indiceColuna) => {
-        const identificador = `t${indiceTabela}-l${indiceLinha}-c${indiceColuna}`;
-        celula.dataset.identificadorAnotacao = identificador;
-        celula.style.cursor = 'pointer';
-        celula.style.webkitTapHighlightColor = 'transparent';
-        const explicacaoSalva = mapaAnotacoes.get(identificador);
-        const abrirModalEdicao = () => vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, explicacaoSalva || '', celula);
-        if(explicacaoSalva){
-          celula.style.textDecoration = 'underline dotted';
-          celula.style.textDecorationColor = '#888';
-          celula.style.textUnderlineOffset = '3px';
-          const mostrar = (e) => {
-            e.stopPropagation();
-            // se já tem um balão aberto (de outra célula), esse clique só
-            // fecha ele - achado real: sem essa checagem, "clicar fora"
-            // numa célula diferente pra fechar o balão atual abria direto
-            // outro balão no mesmo toque, nunca dando pra só cancelar
-            if(vfBalaoExplicacaoEstaAbertoVF()){ vfEsconderBalaoExplicacaoVF(); return; }
-            vfMostrarBalaoExplicacaoVF(e, explicacaoSalva, abrirModalEdicao);
-          };
-          celula.onclick = mostrar;
-          celula.onmouseenter = mostrar;
-        }else{
-          celula.onclick = (e) => {
-            e.stopPropagation();
-            // mesma proteção - clicar numa célula sem anotação enquanto um
-            // balão está aberto só fecha ele, não abre direto o modal de criar
-            if(vfBalaoExplicacaoEstaAbertoVF()){ vfEsconderBalaoExplicacaoVF(); return; }
-            abrirModalEdicao();
-          };
-        }
+        vfLigarAnotacaoElementoVF(celula, `t${indiceTabela}-l${indiceLinha}-c${indiceColuna}`, mapaAnotacoes, elementoHtmlId);
       });
     });
   });
@@ -19136,12 +19173,14 @@ function vfHtmlItemNotaVF(n){
   vfNotasCorCacheVF[n.id] = n.cor || null;
   const corBolinha = n.cor && VF_CORES_NOTA_VF[n.cor] ? VF_CORES_NOTA_VF[n.cor].borda : '#fff';
   return `
-    <div id="vf-nota-item-${n.id}" style="display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid #eee;position:relative">
-      <div id="vf-nota-texto-${n.id}" data-cor-nota="${n.cor || ''}" style="flex:1;font-size:var(--fs-d);margin:0;color:#111;cursor:pointer;padding:6px 8px;border-radius:6px;${vfEstiloCorNotaVF(n.cor)}" ontouchstart="vfIniciarPressionarNotaVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>
-      <button id="vf-nota-btn-fixar-${n.id}" onclick="vfAlternarFixarNotaVF('${n.id}', ${!!n.fixada})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.fixada?'#B23A34':'#ddd'};background:${n.fixada?'#B23A34':'#fff'};color:${n.fixada?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.fixada?'Desafixar (deixa de aparecer na página)':'Fixar (aparece na página da questão)'}">${VF_ICONE_PIN_VF}</button>
-      <button id="vf-nota-btn-mnemonico-${n.id}" onclick="vfAlternarMnemonicoNotaVF('${n.id}', ${!!n.eh_mnemonico})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.eh_mnemonico?'#B23A34':'#ddd'};background:${n.eh_mnemonico?'#B23A34':'#fff'};color:${n.eh_mnemonico?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.eh_mnemonico?'Marcada como mnemônico':'Marcar como mnemônico'}">${VF_ICONE_MNEMONICO_VF}</button>
-      <button onclick="event.stopPropagation();vfAbrirBarraCorNotaModalVF(this,'${n.id}')" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid #ddd;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center" title="Cor da nota"><span style="width:14px;height:14px;border-radius:50%;border:1.5px solid #bbb;background:${corBolinha};display:block"></span></button>
-      <button onclick="excluirNotaVF('${n.id}')" style="width:30px;height:30px;flex-shrink:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);display:flex;align-items:center;justify-content:center" title="Excluir nota">✕</button>
+    <div id="vf-nota-item-${n.id}" style="padding:10px 0;border-bottom:0.5px solid #eee;position:relative">
+      <div class="vf-nota-acoes" style="display:flex;gap:8px;justify-content:flex-end;margin:0 0 8px">
+        <button id="vf-nota-btn-fixar-${n.id}" onclick="vfAlternarFixarNotaVF('${n.id}', ${!!n.fixada})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.fixada?'#B23A34':'#ddd'};background:${n.fixada?'#B23A34':'#fff'};color:${n.fixada?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.fixada?'Desafixar (deixa de aparecer na página)':'Fixar (aparece na página da questão)'}">${VF_ICONE_PIN_VF}</button>
+        <button id="vf-nota-btn-mnemonico-${n.id}" onclick="vfAlternarMnemonicoNotaVF('${n.id}', ${!!n.eh_mnemonico})" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid ${n.eh_mnemonico?'#B23A34':'#ddd'};background:${n.eh_mnemonico?'#B23A34':'#fff'};color:${n.eh_mnemonico?'#fff':'#888'};cursor:pointer;display:flex;align-items:center;justify-content:center" title="${n.eh_mnemonico?'Marcada como mnemônico':'Marcar como mnemônico'}">${VF_ICONE_MNEMONICO_VF}</button>
+        <button onclick="event.stopPropagation();vfAbrirBarraCorNotaModalVF(this,'${n.id}')" style="width:30px;height:30px;flex-shrink:0;border-radius:7px;border:0.5px solid #ddd;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center" title="Cor da nota"><span style="width:14px;height:14px;border-radius:50%;border:1.5px solid #bbb;background:${corBolinha};display:block"></span></button>
+        <button onclick="excluirNotaVF('${n.id}')" style="width:30px;height:30px;flex-shrink:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);display:flex;align-items:center;justify-content:center" title="Excluir nota">✕</button>
+      </div>
+      <div id="vf-nota-texto-${n.id}" data-cor-nota="${n.cor || ''}" style="font-size:var(--fs-d);margin:0;color:#111;cursor:pointer;padding:6px 8px;border-radius:6px;${vfEstiloCorNotaVF(n.cor)}" ontouchstart="vfIniciarPressionarNotaVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>
     </div>`;
 }
 // segurar no texto da nota edita, igual já funciona no enunciado/explicação
