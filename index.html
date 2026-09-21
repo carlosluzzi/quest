@@ -2164,7 +2164,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-21-133';
+const VERSAO_APP = '2026-09-21-134';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -25052,7 +25052,20 @@ function vfRemoverCardGrupoRascunhoVF(idGrupo, atraso){
   setTimeout(() => {
     const card = document.getElementById(idGrupo + '-card');
     const container = card?.parentElement; // serve às duas telas de rascunho (Quest e V/F), sem saber o id de nenhuma
+    // ACHADO REAL (Carlos, 21/09/2026): cadastrar um grupo e já ir escolhendo
+    // o módulo/publicação do próximo - quando o card cadastrado some, a lista
+    // encurta e TUDO salta pra cima, tirando de baixo do dedo justamente o
+    // card que está sendo preenchido. Se o card que sai está ACIMA do que
+    // está à vista, desconta a altura dele do scroll: o que está na tela
+    // não se mexe um pixel
+    const scrollAntes = container ? container.scrollTop : 0;
+    const cardEstavaAcima = !!card && card.offsetTop < scrollAntes;
+    const alturaAntes = container ? container.scrollHeight : 0;
     card?.remove();
+    if(container && cardEstavaAcima){
+      const encolheu = alturaAntes - container.scrollHeight;
+      if(encolheu > 0) container.scrollTop = Math.max(0, scrollAntes - encolheu);
+    }
     if(container && !container.querySelector('[id$="-card"]')){
       container.innerHTML = '<p style="text-align:center;color:#888">Nenhuma pendência no momento.</p>';
     }
