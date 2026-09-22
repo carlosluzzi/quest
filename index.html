@@ -2209,7 +2209,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-22-160';
+const VERSAO_APP = '2026-09-22-161';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -12326,6 +12326,17 @@ function vfSincronizarSessaoComBancoVF(){
   vfSessaoSyncTimerVF = setTimeout(async () => {
     const sess = vfSessaoAtivaVF;
     if(!sess || !sess.id) return;
+    // ACHADO REAL (22/09, mesmo dia): com a sessão rodando, o banco só tinha
+    // o acumulado até a última pausa - fechar o app e reabrir depois de 1 h
+    // estudando mostrava 19 min. Agora, a cada escrita, o tempo corrido
+    // desde o último resume é dobrado no acumulado e o resume reancorado
+    // em "agora": o banco sempre tem o total até a última resposta
+    if(!sess.pausado){
+      const agora = Date.now();
+      sess.tempoAcumuladoMs = (sess.tempoAcumuladoMs || 0) + Math.max(0, agora - (sess.ultimoResumeEm || agora));
+      sess.ultimoResumeEm = agora;
+      try{ localStorage.setItem(VF_SESSAO_LOCALSTORAGE_KEY, JSON.stringify(sess)); }catch(e){}
+    }
     vfSessaoSyncPendenteVF = true;
     const {error} = await sb.from('sessoes_vf').update({
       pausado: !!sess.pausado,
@@ -13272,10 +13283,12 @@ async function vfRestaurarSessaoFlashVF(){
     salva.tempoAcumuladoMs += Math.min(Math.max(0, agora - salva.ultimoResumeEm), VF_TOLERANCIA_SEGUNDO_PLANO_MS);
     salva.pausado = true;
   }else if(!salva.pausado && salva.id){
-    // sessão do banco ainda "rodando" (ninguém pausou): quem estiver
-    // estudando nela em outro aparelho continua; aqui ela entra pausada
-    // só na TELA de decisão - o cronômetro de verdade é o do banco
-    salva.tempoAcumuladoMs += Math.min(Math.max(0, agora - salva.ultimoResumeEm), VF_TOLERANCIA_SEGUNDO_PLANO_MS);
+    // sessão do banco ainda "rodando" (ninguém pausou): o tempo desde o
+    // último resume conta até a ÚLTIMA RESPOSTA (+ 2 min de tolerância) -
+    // o que passou depois disso foi app fechado, não estudo
+    const ultimaRespMs = await vfInstanteUltimaRespostaVF(salva.iniciadoEm);
+    const limiteMs = Math.max(0, ((ultimaRespMs && ultimaRespMs > salva.ultimoResumeEm) ? ultimaRespMs - salva.ultimoResumeEm : 0) + VF_TOLERANCIA_SEGUNDO_PLANO_MS);
+    salva.tempoAcumuladoMs += Math.min(Math.max(0, agora - salva.ultimoResumeEm), limiteMs);
     salva.pausado = true;
     salva.ultimoResumeEm = agora;
   }
