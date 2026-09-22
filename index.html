@@ -2202,7 +2202,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-22-156';
+const VERSAO_APP = '2026-09-22-158';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5721,8 +5721,14 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     // conteúdo. Já valia dentro de célula de tabela; fora dela ficava cru
     // na tela (\text{½} aparecia com a palavra text e as chaves)
     .replace(/\\text\{([^{}]*)\}/g, '$1')
-    // \sqrt{...} depois das gregas (pode ter grega dentro, tipo \sqrt{\Delta})
-    .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
+    // \sqrt{...} depois das gregas (pode ter grega dentro, tipo \sqrt{\Delta}).
+    // As chaves de dentro contam: o miolo pode ter subscrito (A_{WP}) ou
+    // fração, e a versão antiga ([^}]+) parava na PRIMEIRA chave fechada -
+    // o ")" que o √ acrescenta caía dentro do subscrito, e "\sqrt{ρ·g·A_{WP}}"
+    // aparecia como √(ρ·g·A com "WP)" subscrito (achado real, 22/09).
+    // Aceita até dois níveis de chaves aninhadas, que cobre tudo que
+    // aparece na prática
+    .replace(/\\sqrt\s*\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*)\}/g, '√($1)')
     // sobrescrito com chaves: X^{Y...} - qualquer conteúdo dentro,
     // inclusive sinal de menos e múltiplos caracteres (ex: 10^{-1})
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞)\]\}])\^\{([^}]+)\}/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
@@ -6128,14 +6134,19 @@ function vfProcessarAlinhamentoTrechoVF(texto){
   while((match = regexInicio.exec(texto))){
     const grupo = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
     if(!grupo){ regexInicio.lastIndex = match.index + match[0].length; continue; }
-    resultado += texto.slice(pos, match.index);
-    resultado += `<div style="text-align:${VF_ALINHAMENTOS_TRECHO_VF[match[1]]};margin:2px 0">${grupo.conteudo}</div>`;
+    // o <div> já quebra linha sozinho, dos dois lados: UM <br> colado
+    // nele (o enter que a pessoa deu pra entrar ou sair do trecho
+    // alinhado) é engolido, senão viraria uma linha em branco inteira
+    // além do respiro que o bloco já tem. Mesma regra das listas e das
+    // tabelas. Antes daqui eram engolidos DOIS <br> de baixo e a margem
+    // era de 2px: com um enter a fórmula centralizada ficava grudada no
+    // texto seguinte, e com dois continuava igual (achado real, 22/09).
+    // Agora sobra a linha em branco pra quem escrever o segundo enter
+    const antes = texto.slice(pos, match.index);
+    resultado += antes.endsWith('<br>') ? antes.slice(0, -4) : antes;
+    resultado += `<div style="text-align:${VF_ALINHAMENTOS_TRECHO_VF[match[1]]};margin:6px 0">${grupo.conteudo}</div>`;
     pos = grupo.fimPos + 1;
-    // o <div> já quebra linha por conta própria: os <br> colados logo
-    // depois (a linha em branco que a pessoa escreveu) só empilhariam
-    // espaço vazio embaixo do trecho alinhado
-    let comidos = 0;
-    while(comidos < 2 && texto.slice(pos, pos + 4) === '<br>'){ pos += 4; comidos++; }
+    if(texto.slice(pos, pos + 4) === '<br>') pos += 4;
     regexInicio.lastIndex = pos;
   }
   resultado += texto.slice(pos);
