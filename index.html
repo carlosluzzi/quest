@@ -2202,7 +2202,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-22-148';
+const VERSAO_APP = '2026-09-22-151';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3478,12 +3478,17 @@ document.addEventListener('focusin', (e)=>{
   if(ehCampoDeTeclado(e.target) && e.target.closest('#app-shell')){
     const nav = document.getElementById('bottom-nav');
     if(nav) nav.classList.add('teclado-aberto');
-    // mesma lógica pra barra fixa do V/F — hoje isso fica mascarado porque
-    // os únicos campos de texto do V/F vivem dentro de modal (que cobre a
-    // tela toda), mas não custa nada deixar coberto pra qualquer campo
-    // futuro que apareça direto na tela principal
+    // mesma lógica pra barra fixa do V/F, com UMA exceção: a edição de
+    // nota que acontece na própria página (segurar a nota fixada no card ->
+    // vfEditarNotaNaPaginaVF) põe um textarea direto na tela, não num
+    // modal. Escondendo a barra ali, o Carlos perdia Anterior/Próxima/
+    // Excluir/Favoritar justamente enquanto escrevia - e a barra ainda
+    // continuava fora da tela depois (achado real, 22/09). Como a barra
+    // fica embaixo, no iPhone o teclado cobre ela de qualquer jeito; no
+    // iPad, com teclado físico ou flutuante, ela segue acessível
     const barraVF = document.getElementById('vf-barra-fixa');
-    if(barraVF && !barraVF.classList.contains('hidden')) barraVF.classList.add('teclado-aberto-vf');
+    const ehNotaNaPaginaVF = !!e.target.closest('#vf-preview-notas-container, #vf-preview-notas-irmas-container');
+    if(barraVF && !barraVF.classList.contains('hidden') && !ehNotaNaPaginaVF) barraVF.classList.add('teclado-aberto-vf');
     setTimeout(()=>{ e.target.scrollIntoView({block:'center', behavior:'smooth'}); }, 300);
   }
 });
@@ -6149,7 +6154,17 @@ function formatarTextoItemVF(texto, opcoes){
     // uma linha em branco (~24px) ao espaço que o bloco já tem. Era o que
     // deixava a legenda escrita embaixo da tabela MAIS longe dela do que a
     // tabela estava do texto de cima
-    .replace(/(\u0000TABELA\d+\u0000)<br>/g, '$1');
+    .replace(/(\u0000TABELA\d+\u0000)<br>/g, '$1')
+    // lista é bloco pelo mesmo motivo: ela já termina (e já começa) numa
+    // linha própria, com 6px de respiro em cima e embaixo. O <br> do
+    // enter que a pessoa deu pra sair da lista somava uma linha inteira
+    // em cima desses 6px - o texto seguinte ficava longe demais da lista
+    // (achado real, 22/09: uma anotação com um item "+" e um parágrafo
+    // logo abaixo aparecia com um vão do tamanho de uma linha em branco).
+    // Só um <br> é engolido de cada lado: quem escreve DUAS quebras de
+    // propósito continua tendo a linha em branco que pediu
+    .replace(/(<\/(?:ul|ol)>)<br>/g, '$1')
+    .replace(/<br>(<(?:ul|ol)[ >])/g, '$1');
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
   resultado = resultado
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
@@ -13757,7 +13772,15 @@ function vfPintarBotoesFiltrosCapituloVF(){
   document.querySelectorAll('.vf-btn-recorte').forEach(btn => {
     const estado = vfEstadoFiltroCapituloVF(btn.dataset.filtroId);
     const n = vfContagensRecortesVF.get(btn.dataset.filtroId);
-    const nome = (btn.dataset.nome || '') + (typeof n === 'number' ? ` (${n})` : '');
+    // o número entre parênteses saiu do rótulo (22/09): era ele que
+    // esticava cada botão - a largura de todos é igualada pelo rótulo
+    // mais largo, e "✗ Mercante (107)" fazia até "Geral" virar um botão
+    // enorme. A contagem continua existindo, só não aparece escrita
+    const nome = btn.dataset.nome || '';
+    // "Geral" é sintético: só faz sentido no capítulo que tem afirmação
+    // fora de todos os recortes (Arte Naval, por exemplo). Onde a
+    // contagem dele é zero, o botão nem aparece
+    if(btn.dataset.filtroId === 'geral') btn.style.display = (n === 0) ? 'none' : '';
     if(estado === 'inc'){
       btn.style.background = '#B23A34'; btn.style.color = '#fff'; btn.style.borderColor = '#B23A34';
       btn.textContent = '✓ ' + nome;
@@ -13832,14 +13855,13 @@ function vfIgualarLarguraBotoesFiltroVF(){
   const botoes = document.querySelectorAll('.vf-btn-filtro-tipo');
   if(!botoes.length) return;
   botoes.forEach(b => { b.style.width = ''; }); // solta pra medir a largura natural de cada um
-  // recortes: mede com o rótulo no estado mais largo ("✗ Mercante (107)") -
+  // recortes: mede com o rótulo no estado mais largo ("✗ Mercante") -
   // achado real: medir só o nome deixava o botão curto demais quando o
-  // ✓/✗ entrava, e o texto saía cortado
+  // ✓/✗ entrava, e o texto saía cortado. A contagem não entra mais na
+  // medição porque também não entra mais no rótulo (ver
+  // vfPintarBotoesFiltrosCapituloVF)
   const recortes = Array.from(botoes).filter(b => b.classList.contains('vf-btn-recorte'));
-  recortes.forEach(b => {
-    const n = (typeof vfContagensRecortesVF !== 'undefined') ? vfContagensRecortesVF.get(b.dataset.filtroId) : undefined;
-    b.textContent = '✗ ' + (b.dataset.nome || '') + (typeof n === 'number' ? ` (${n})` : '');
-  });
+  recortes.forEach(b => { b.textContent = '✗ ' + (b.dataset.nome || ''); });
   let maior = 0;
   botoes.forEach(b => { maior = Math.max(maior, b.getBoundingClientRect().width); });
   if(recortes.length && typeof vfPintarBotoesFiltrosCapituloVF === 'function') vfPintarBotoesFiltrosCapituloVF(); // devolve o rótulo do estado real
