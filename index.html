@@ -2202,7 +2202,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-22-158';
+const VERSAO_APP = '2026-09-22-159';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4926,6 +4926,25 @@ function vfFormatarCelulaArrayVF(celula){
   // geral (ver vfExtrairTabelasComoPlaceholderVF), célula também pode
   // ter uma palavra/número anotável clicável
   c = vfProcessarNotaClicavelVF(c);
+  // a explicação do \nota{}{} vira o atributo data-explicacao do <span>
+  // gerado logo acima. Todas as regras daqui pra baixo (negrito, itálico,
+  // matemática, subscrito, expoente) rodam na string INTEIRA da célula e
+  // por isso entravam também DENTRO do atributo: um "ω_e" escrito na
+  // explicação virava "ω<sub>e</sub>" no valor do atributo, e o balão -
+  // que formata/escapa o que recebe - mostrava a tag crua na tela
+  // (achado real, Carlos, 22/09/2026). Fora de tabela isso não acontece
+  // porque lá o <span> inteiro já vira placeholder protegido
+  // (vfProcessarNotaClicavelComPlaceholderVF). Aqui a proteção é a mesma
+  // ideia: guarda cada atributo num marcador inerte (área de uso privado
+  // do Unicode, que nenhuma regra abaixo reconhece), formata o resto, e
+  // devolve no fim. A explicação tem que chegar ao balão do jeito que foi
+  // escrita - quem formata ela é vfMostrarBalaoExplicacaoVF, que já
+  // aplica subscrito, negrito, gregas e o resto por conta própria
+  const explicacoesNotaCelulaVF = [];
+  c = c.replace(/data-explicacao="([^"]*)"/g, (m, valor) => {
+    explicacoesNotaCelulaVF.push(valor);
+    return `data-explicacao="\uE000${explicacoesNotaCelulaVF.length - 1}\uE001"`;
+  });
   // \newline dentro de célula quebra em múltiplas linhas na mesma célula -
   // comando LaTeX padrão diferente de \\ (que já é o separador ENTRE
   // linhas da tabela, não pode ser reaproveitado sem ambiguidade)
@@ -4951,6 +4970,16 @@ function vfFormatarCelulaArrayVF(celula){
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp));
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
+  // devolve as explicações do \nota{}{} guardadas lá em cima, aplicando
+  // só as limpezas que NÃO geram HTML (o que a célula já fazia nelas
+  // antes desta proteção existir): \text{}, vírgula decimal {,} e os
+  // forçadores de espaço do LaTeX. Tudo que vira tag fica por conta do
+  // balão, na hora de exibir
+  c = c.replace(/\uE000(\d+)\uE001/g, (m, indice) => explicacoesNotaCelulaVF[Number(indice)]
+    .replace(/\\text\{([^}]*)\}/g, '$1')
+    .replace(/\{,\}/g, ',')
+    .replace(/\\,/g, '')
+    .replace(/\\ /g, ' '));
   return c;
 }
 
