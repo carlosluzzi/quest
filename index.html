@@ -2202,7 +2202,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-22-151';
+const VERSAO_APP = '2026-09-22-153';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4548,11 +4548,14 @@ function atualizarContadorDisponiveis(){
 // caracteres do conteúdo têm equivalente - um único caractere sem
 // mapeamento (ex: "D" em "C_D0") já faz cair no <sub>/<sup> de sempre,
 // sem mudar nada do que já funcionava
+// (22/09/2026) as LETRAS saíram daqui também, pelo mesmo motivo dos
+// sobrescritos logo abaixo: ᵢ e ᵣ vêm de "Phonetic Extensions", ₘ/ₙ/ₐ de
+// "Superscripts and Subscripts" - fontes diferentes, o "i" de c_min saía
+// desalinhado do "m" e do "n". Letra em subscrito agora é sempre <sub>
+// (fonte do próprio texto); número e sinal seguem Unicode (T₁, x₂)
 const VF_MAPA_SUBSCRITO_UNICODE = {
   '0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉',
-  '+':'₊','-':'₋','−':'₋','=':'₌','(':'₍',')':'₎',
-  'a':'ₐ','e':'ₑ','h':'ₕ','i':'ᵢ','k':'ₖ','l':'ₗ','m':'ₘ','n':'ₙ','o':'ₒ',
-  'p':'ₚ','r':'ᵣ','s':'ₛ','t':'ₜ','u':'ᵤ','v':'ᵥ','x':'ₓ'
+  '+':'₊','-':'₋','−':'₋','=':'₌','(':'₍',')':'₎'
 };
 // só dígitos e sinais entram em Unicode puro. As LETRAS saíram de
 // propósito: os sobrescritos de letra vêm de blocos diferentes do
@@ -12227,7 +12230,114 @@ function vfSalvarSessaoNoStorageVF(){
     if(vfSessaoAtivaVF) localStorage.setItem(VF_SESSAO_LOCALSTORAGE_KEY, JSON.stringify(vfSessaoAtivaVF));
     else localStorage.removeItem(VF_SESSAO_LOCALSTORAGE_KEY);
   }catch(e){}
+  vfSincronizarSessaoComBancoVF(); // v151→152 (22/09): a sessão mora no banco; o localStorage é só espelho
 }
+// ---- sessão viva no banco (22/09/2026) ----
+// A linha em sessoes_vf nasce no Iniciar (finalizado_em nulo) e carrega o
+// estado do cronômetro (pausado, tempo_acumulado_ms, ultimo_resume_em).
+// Todo aparelho lê a MESMA linha ao abrir/voltar e ouve as mudanças pelo
+// realtime - pausou no iPad, o Mac vê pausado; finalizou num, o outro
+// fecha o balão. Antes cada aparelho guardava a sua própria sessão no
+// localStorage e só o Finalizar chegava ao banco (achado real: "sessão
+// pausada de 2 min" aparecendo do nada = a sessão velha do outro aparelho)
+let vfSessaoSyncTimerVF = null;
+let vfSessaoSyncPendenteVF = false;
+function vfSincronizarSessaoComBancoVF(){
+  if(!usuarioAtual || !vfSessaoAtivaVF || !vfSessaoAtivaVF.id) return;
+  // agrupa escritas em sequência (pausa + display + persistir) numa só, 300 ms depois da última
+  clearTimeout(vfSessaoSyncTimerVF);
+  vfSessaoSyncTimerVF = setTimeout(async () => {
+    const sess = vfSessaoAtivaVF;
+    if(!sess || !sess.id) return;
+    vfSessaoSyncPendenteVF = true;
+    const {error} = await sb.from('sessoes_vf').update({
+      pausado: !!sess.pausado,
+      tempo_acumulado_ms: Math.round(sess.tempoAcumuladoMs || 0),
+      ultimo_resume_em: new Date(sess.ultimoResumeEm || sess.iniciadoEm).toISOString()
+    }).eq('id', sess.id);
+    vfSessaoSyncPendenteVF = false;
+    if(error) console.warn('sessão: não sincronizou com o banco', error.message);
+  }, 300);
+}
+// linha do banco -> objeto de sessão em memória (mesmo formato de sempre)
+function vfSessaoDaLinhaVF(l){
+  return {
+    id: l.id,
+    iniciadoEm: new Date(l.iniciado_em).getTime(),
+    pausado: !!l.pausado,
+    tempoAcumuladoMs: Number(l.tempo_acumulado_ms) || 0,
+    ultimoResumeEm: l.ultimo_resume_em ? new Date(l.ultimo_resume_em).getTime() : new Date(l.iniciado_em).getTime(),
+    atualizadoEm: l.atualizado_em ? new Date(l.atualizado_em).getTime() : null
+  };
+}
+async function vfBuscarSessaoAbertaNoBancoVF(){
+  if(!usuarioAtual) return null;
+  const {data, error} = await sb.from('sessoes_vf')
+    .select('id, iniciado_em, pausado, tempo_acumulado_ms, ultimo_resume_em, atualizado_em')
+    .eq('usuario_id', usuarioAtual.id).is('finalizado_em', null)
+    .order('iniciado_em', {ascending: false}).limit(1).maybeSingle();
+  if(error){ console.warn('sessão aberta: erro ao buscar', error.message); return null; }
+  return data ? vfSessaoDaLinhaVF(data) : null;
+}
+// aplica uma mudança vinda de OUTRO aparelho (realtime ou releitura ao
+// voltar do segundo plano) na sessão em memória, sem mexer no pool
+function vfAplicarSessaoRemotaVF(remota){
+  if(!vfSessaoAtivaVF || !remota || remota.id !== vfSessaoAtivaVF.id) return;
+  if(vfSessaoSyncPendenteVF) return; // a minha escrita ainda está indo - a resposta do banco é mais nova que isso
+  const mudouPausa = !!remota.pausado !== !!vfSessaoAtivaVF.pausado;
+  vfSessaoAtivaVF.pausado = remota.pausado;
+  vfSessaoAtivaVF.tempoAcumuladoMs = remota.tempoAcumuladoMs;
+  vfSessaoAtivaVF.ultimoResumeEm = remota.ultimoResumeEm;
+  try{ localStorage.setItem(VF_SESSAO_LOCALSTORAGE_KEY, JSON.stringify(vfSessaoAtivaVF)); }catch(e){}
+  if(typeof vfAtualizarDisplayBalaoSessaoVF === 'function') vfAtualizarDisplayBalaoSessaoVF();
+  if(mudouPausa && typeof vfMostrarToastLeveVF === 'function') vfMostrarToastLeveVF(remota.pausado ? 'Sessão pausada em outro aparelho' : 'Sessão retomada em outro aparelho');
+}
+// outro aparelho finalizou (ou apagou) a sessão: encerra aqui sem gravar nada
+function vfSessaoEncerradaRemotamenteVF(){
+  if(!vfSessaoAtivaVF) return;
+  vfSessaoAtivaVF = null;
+  vfSessaoRestauradaAguardandoDecisaoVF = false;
+  estadoVF = null;
+  try{ localStorage.removeItem(VF_SESSAO_LOCALSTORAGE_KEY); }catch(e){}
+  if(vfIntervalSessaoVF){ clearInterval(vfIntervalSessaoVF); vfIntervalSessaoVF = null; }
+  const balao = document.getElementById('vf-sessao-balao');
+  if(balao) balao.classList.add('hidden');
+  const barra = document.getElementById('vf-barra-fixa');
+  if(barra){ barra.className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px'); }
+  vfAtualizarOverlaySessaoVF();
+  if(typeof vfMostrarToastLeveVF === 'function') vfMostrarToastLeveVF('Sessão finalizada em outro aparelho');
+}
+let vfCanalRealtimeSessaoVF = null;
+function vfLigarRealtimeSessaoVF(){
+  if(vfCanalRealtimeSessaoVF || !sb || typeof sb.channel !== 'function' || !usuarioAtual) return;
+  try{
+    vfCanalRealtimeSessaoVF = sb.channel('sessoes-vf-estado')
+      .on('postgres_changes', {event: '*', schema: 'public', table: 'sessoes_vf', filter: `usuario_id=eq.${usuarioAtual.id}`}, (payload) => {
+        const nova = payload && payload.new, velha = payload && payload.old;
+        if(payload.eventType === 'DELETE'){
+          if(vfSessaoAtivaVF && velha && velha.id === vfSessaoAtivaVF.id) vfSessaoEncerradaRemotamenteVF();
+          return;
+        }
+        if(!nova) return;
+        if(vfSessaoAtivaVF && nova.id === vfSessaoAtivaVF.id){
+          if(nova.finalizado_em) vfSessaoEncerradaRemotamenteVF();
+          else vfAplicarSessaoRemotaVF(vfSessaoDaLinhaVF(nova));
+          return;
+        }
+        // sessão nova iniciada em outro aparelho enquanto aqui não há nenhuma: adota
+        if(!vfSessaoAtivaVF && payload.eventType === 'INSERT' && !nova.finalizado_em){
+          vfSessaoAtivaVF = vfSessaoDaLinhaVF(nova);
+          vfSessaoAtivaVF.recarregada = true;
+          try{ localStorage.setItem(VF_SESSAO_LOCALSTORAGE_KEY, JSON.stringify(vfSessaoAtivaVF)); }catch(e){}
+          vfSessaoRestauradaAguardandoDecisaoVF = true;
+          vfAtualizarOverlaySessaoVF();
+        }
+      })
+      .subscribe();
+  }catch(e){ console.warn('realtime sessoes_vf indisponível:', e); vfCanalRealtimeSessaoVF = null; }
+}
+const VF_SESSAO_VAZIA_DESCARTE_MS = 10 * 60 * 1000; // sessão sem resposta parada há mais que isso: some sozinha
+const VF_MINIMO_RESPOSTAS_ORFA_VF = 5;             // menos que isso depois da última sessão não vira sessão órfã
 function vfCalcularElapsedMsVF(){
   if(!vfSessaoAtivaVF) return 0;
   if(vfSessaoAtivaVF.pausado) return vfSessaoAtivaVF.tempoAcumuladoMs;
@@ -12244,8 +12354,23 @@ function vfFormatarTempoSessaoVF(ms){
 }
 
 async function vfIniciarSessaoFlashVF(){
-  const agora = Date.now();
-  vfSessaoAtivaVF = {iniciadoEm: agora, pausado: false, tempoAcumuladoMs: 0, ultimoResumeEm: agora};
+  // se outro aparelho já tem uma sessão aberta, continua ELA em vez de
+  // abrir uma segunda - é a mesma pessoa estudando
+  const aberta = await vfBuscarSessaoAbertaNoBancoVF();
+  if(aberta){
+    vfSessaoAtivaVF = aberta; vfSessaoAtivaVF.recarregada = true;
+    if(vfSessaoAtivaVF.pausado){ vfSessaoAtivaVF.pausado = false; vfSessaoAtivaVF.ultimoResumeEm = Date.now(); }
+  }else{
+    const agora = Date.now();
+    vfSessaoAtivaVF = {iniciadoEm: agora, pausado: false, tempoAcumuladoMs: 0, ultimoResumeEm: agora};
+    const {data, error} = await sb.from('sessoes_vf').insert({
+      usuario_id: usuarioAtual.id, iniciado_em: new Date(agora).toISOString(), finalizado_em: null,
+      pausado: false, tempo_acumulado_ms: 0, ultimo_resume_em: new Date(agora).toISOString(),
+      tempo_efetivo_ms: 0, total_questoes_respondidas: 0
+    }).select('id').single();
+    if(error) console.error('[Flash] não consegui abrir a sessão no banco:', error); else vfSessaoAtivaVF.id = data.id;
+  }
+  vfLigarRealtimeSessaoVF();
   vfSalvarSessaoNoStorageVF();
   vfAtualizarOverlaySessaoVF();
   // só é sessão NOVA de verdade quando ainda não existe pool/progresso em
@@ -12381,9 +12506,12 @@ async function vfInstanteUltimaRespostaVF(iniciadoEmMs){
 const VF_SESSAO_ABANDONADA_MS = 4 * 60 * 60 * 1000;
 let vfEncerramentoAutomaticoTextoVF = null;
 
+let vfSessaoDescartadaSemRespostaVF = false;
 async function vfFinalizarSessaoFlashVF(e){
   if(e) e.stopPropagation();
   if(!vfSessaoAtivaVF) return;
+  vfSessaoDescartadaSemRespostaVF = false;
+  clearTimeout(vfSessaoSyncTimerVF); // não deixa uma sincronização atrasada reabrir a linha depois de fechada
   fecharModal('modal-confirmar-finalizar-vf'); // fecha se veio desse caminho - inofensivo se já estava fechado
   const iniciadoEmMs = vfSessaoAtivaVF.iniciadoEm;
   // fim da sessão = última resposta, não o clique em "Finalizar" (ver
@@ -12425,7 +12553,29 @@ async function vfFinalizarSessaoFlashVF(e){
     .maybeSingle();
 
   let sessaoInserida, erroInsertSessao;
-  if(sessaoExistente){
+  // sessão sem nenhuma resposta não existe: apaga a linha em vez de salvar
+  // (achado real: 6 sessões de 0 questões e 1 a 8 min em 5 dias, todas de
+  // "abri pra olhar e saí")
+  const respostasNoBanco = ultimaRespostaMs && ultimaRespostaMs >= iniciadoEmMs;
+  if(!respostasNoBanco && !totalRespondidas){
+    if(sessaoExistente) await sb.from('sessoes_vf').delete().eq('id', sessaoExistente.id);
+    sessaoInserida = null; erroInsertSessao = null;
+    vfSessaoDescartadaSemRespostaVF = true;
+  }else if(sessaoExistente && !sessaoExistente.finalizado_em){
+    // caso normal agora: a linha aberta no Iniciar - fecha ela. A contagem
+    // vem do banco (a sessão pode ter sido respondida em dois aparelhos)
+    const {count: totalRealContado} = await sb.from('log_respostas_vf')
+      .select('id', {count: 'exact', head: true}).eq('usuario_id', usuarioAtual.id)
+      .gte('respondida_em', new Date(iniciadoEmMs).toISOString())
+      .lte('respondida_em', new Date(finalizadoEmMs).toISOString());
+    const resultado = await sb.from('sessoes_vf').update({
+      finalizado_em: new Date(finalizadoEmMs).toISOString(),
+      tempo_efetivo_ms: tempoTotalMs,
+      total_questoes_respondidas: totalRealContado ?? totalRespondidas,
+      pausado: true, tempo_acumulado_ms: tempoTotalMs
+    }).eq('id', sessaoExistente.id).select('id').single();
+    sessaoInserida = resultado.data; erroInsertSessao = resultado.error;
+  }else if(sessaoExistente){
     // mescla em vez de duplicar: finalizado_em fica com o mais tarde dos
     // dois, tempo_efetivo_ms com o maior (aproximação razoável - cada
     // aparelho só mede o próprio tempo ativo, não dá pra somar sem risco
@@ -12462,7 +12612,7 @@ async function vfFinalizarSessaoFlashVF(e){
   if(erroInsertSessao) console.error('[Flash] Erro ao salvar sessão:', erroInsertSessao);
   // retrato pro Tracker montado ANTES de zerar a sessão - precisa do
   // início real dela (vfSessaoAtivaVF.iniciadoEm), que se perde depois
-  const retratoParaTracker = podeUsarIntegracaoTracker() ? vfMontarRetratoParaTrackerVF(iniciadoEmMs, finalizadoEmMs, sessaoInserida?.id, historicoParaContagem, tempoTotalMs) : null;
+  const retratoParaTracker = (!vfSessaoDescartadaSemRespostaVF && podeUsarIntegracaoTracker()) ? vfMontarRetratoParaTrackerVF(iniciadoEmMs, finalizadoEmMs, sessaoInserida?.id, historicoParaContagem, tempoTotalMs) : null;
   limparCanvasDesenhoVF(); // finalizar é finalizar tudo - o risco que estava na tela some junto, não fica "esquecido" por cima do resultado
   vfSessaoAtivaVF = null;
   vfSessaoRestauradaAguardandoDecisaoVF = false;
@@ -12967,7 +13117,7 @@ async function vfSessaoOrfaNoBancoVF(){
     .eq('usuario_id', usuarioAtual.id).order('respondida_em', {ascending: true});
   if(ultimaSessao?.finalizado_em) q = q.gt('respondida_em', ultimaSessao.finalizado_em);
   const {data, error} = await q;
-  if(error || !data || !data.length) return null;
+  if(error || !data || data.length < VF_MINIMO_RESPOSTAS_ORFA_VF) return null; // uma resposta avulsa não vira sessão
   const inicioMs = new Date(data[0].respondida_em).getTime();
   const fimMs = new Date(data[data.length - 1].respondida_em).getTime();
   // tempo estudado ≠ relógio de parede: entre uma resposta e outra pode
@@ -13000,7 +13150,31 @@ async function vfSessaoOrfaNoBancoVF(){
 // na aba Flash e decidir "Retomar" ou "Finalizar" explicitamente (nada
 // acontece automaticamente, mesma filosofia do resto desse sistema)
 async function vfRestaurarSessaoFlashVF(){
-  let salva = vfCarregarSessaoDoStorageVF();
+  vfLigarRealtimeSessaoVF();
+  // fonte da verdade: a linha aberta no banco (compartilhada entre
+  // aparelhos). O localStorage só entra se o banco não tiver nada
+  let salva = await vfBuscarSessaoAbertaNoBancoVF();
+  if(salva){
+    // sessão aberta sem nenhuma resposta e parada há mais de 10 min: some
+    // sozinha, sem overlay "Retomar/Finalizar" - foi um "abri pra olhar"
+    const ultimaResp = await vfInstanteUltimaRespostaVF(salva.iniciadoEm);
+    const referenciaMs = Math.max(salva.atualizadoEm || 0, salva.ultimoResumeEm || 0, salva.iniciadoEm);
+    if(!ultimaResp && Date.now() - referenciaMs > VF_SESSAO_VAZIA_DESCARTE_MS){
+      await sb.from('sessoes_vf').delete().eq('id', salva.id);
+      try{ localStorage.removeItem(VF_SESSAO_LOCALSTORAGE_KEY); }catch(e){}
+      return;
+    }
+    // o resumo do histórico/contadores (só existe no aparelho) continua vindo do localStorage, se for da mesma sessão
+    const local = vfCarregarSessaoDoStorageVF();
+    if(local && local.id === salva.id){ salva = {...local, ...salva}; }
+  }else{
+    salva = vfCarregarSessaoDoStorageVF();
+    if(salva && salva.id){
+      // o localStorage lembra de uma sessão que o banco já fechou/apagou (finalizada em outro aparelho): descarta
+      try{ localStorage.removeItem(VF_SESSAO_LOCALSTORAGE_KEY); }catch(e){}
+      salva = null;
+    }
+  }
   // nada salvo aqui, mas pode haver uma sessão em aberto no banco:
   // respostas registradas DEPOIS da última sessão finalizada são, por
   // definição, de uma sessão que nunca foi fechada. Acontece quando o
@@ -13011,7 +13185,8 @@ async function vfRestaurarSessaoFlashVF(){
     if(!salva) return;
   }
   const agora = Date.now();
-  if(!salva.pausado){
+  if(!salva.pausado && !salva.id){
+    // (só pra sessão vinda do localStorage antigo, sem linha no banco)
     // o iPad pode descartar a página da memória sem passar pelo pagehide -
     // aí o que ficou salvo é uma sessão "rodando" com ultimoResumeEm de
     // horas atrás, e somar esse intervalo inteiro enchia o cronômetro de
@@ -13019,6 +13194,13 @@ async function vfRestaurarSessaoFlashVF(){
     // acima dela, o intervalo não conta
     salva.tempoAcumuladoMs += Math.min(Math.max(0, agora - salva.ultimoResumeEm), VF_TOLERANCIA_SEGUNDO_PLANO_MS);
     salva.pausado = true;
+  }else if(!salva.pausado && salva.id){
+    // sessão do banco ainda "rodando" (ninguém pausou): quem estiver
+    // estudando nela em outro aparelho continua; aqui ela entra pausada
+    // só na TELA de decisão - o cronômetro de verdade é o do banco
+    salva.tempoAcumuladoMs += Math.min(Math.max(0, agora - salva.ultimoResumeEm), VF_TOLERANCIA_SEGUNDO_PLANO_MS);
+    salva.pausado = true;
+    salva.ultimoResumeEm = agora;
   }
   // marca que ESSA sessão atravessou uma recarga da página (troca de
   // versão do app, aba recarregada, iPad descarregando a página da
@@ -13085,6 +13267,14 @@ document.addEventListener('visibilitychange', () => {
   if(!vfSessaoEscondidaEmVF) return;
   const escondidoEm = vfSessaoEscondidaEmVF;
   vfSessaoEscondidaEmVF = null;
+  // ao voltar, confere no banco se outro aparelho mexeu na sessão nesse meio tempo
+  if(vfSessaoAtivaVF && vfSessaoAtivaVF.id){
+    vfBuscarSessaoAbertaNoBancoVF().then(remota => {
+      if(!vfSessaoAtivaVF) return;
+      if(!remota || remota.id !== vfSessaoAtivaVF.id) vfSessaoEncerradaRemotamenteVF();
+      else if(remota.atualizadoEm && (!vfSessaoAtivaVF.atualizadoEm || remota.atualizadoEm > vfSessaoAtivaVF.atualizadoEm)) vfAplicarSessaoRemotaVF(remota);
+    });
+  }
   if(!vfSessaoAtivaVF || vfSessaoAtivaVF.pausado) return;
   const agora = Date.now();
   if(agora - escondidoEm > VF_TOLERANCIA_SEGUNDO_PLANO_MS){
