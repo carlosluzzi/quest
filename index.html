@@ -2202,7 +2202,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-22-153';
+const VERSAO_APP = '2026-09-22-156';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4383,7 +4383,7 @@ async function selecionarFiltroSelect(nivel, valor){
     elCap.innerHTML = '<option value="">Todos os capítulos</option>';
     elCap.disabled = true;
     if(valor){
-      const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===valor).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+      const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===valor).sort(vfCompararPublicacoesVF);
       const temasDoModulo = temasCache.filter(t=>t.modulo_pscpp===valor);
       const opcoesTemas = temasDoModulo.length
         ? temasDoModulo.map(t=>`<option value="tema:${t.id}">🔵 ${escapeHtml(t.nome)} (junta ${t.bibliografiaIds.length} publicações)</option>`).join('') + '<option disabled>──────────</option>'
@@ -4653,7 +4653,23 @@ const VF_REGEX_NOME_SEM_CHAVES = new RegExp('\\\\(' + VF_NOMES_MATEMATICOS_REGEX
 // outro comando - aí é fórmula. Não some quando vem uma palavra: numa
 // frase como "\rho de água" ou "\alpha é o ângulo" o espaço é do texto,
 // e engolir ele grudaria as palavras
-function vfJuntarSimboloVF(resto){
+// ...MENOS pros símbolos que são relação ou operação entre dois lados
+// (≈, ≤, ×, →, ∈ e companhia) e pros nomes de função (sin, log...).
+// Nesses o espaço escrito depois do comando é espaço de verdade: "T_E
+// \\approx T_R" tem que sair "T_E ≈ T_R", e saía "T_E ≈T_R" porque o "T"
+// sozinho (seguido de "_") era lido como variável colada, igual ao ρU
+// (achado real, 22/09)
+const VF_SIMBOLOS_QUE_PEDEM_ESPACO_VF = new Set([
+  'approx','le','leq','ge','geq','ne','neq','ll','gg','sim','simeq','cong','propto','equiv',
+  'pm','mp','times','div','cdot','ast',
+  'to','rightarrow','leftarrow','leftrightarrow','Rightarrow','Leftarrow','Leftrightarrow','mapsto',
+  'in','notin','subset','supset','subseteq','supseteq','cup','cap','perp','parallel',
+  'otimes','oplus','therefore','because',
+  'sin','cos','tan','cot','sec','csc','arcsin','arccos','arctan','sinh','cosh','tanh',
+  'log','ln','exp','max','min','lim','det','gcd','mod'
+]);
+function vfJuntarSimboloVF(resto, nome){
+  if(nome && VF_SIMBOLOS_QUE_PEDEM_ESPACO_VF.has(nome)) return false;
   return /^\\[A-Za-z]/.test(resto) || /^[A-Za-z](?![A-Za-zÀ-ÿ])/.test(resto);
 }
 // fonte serifada, exceção deliberada só pras tabelas (\begin{array}) -
@@ -5688,7 +5704,7 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     .replace(VF_REGEX_NOME_SEM_CHAVES, (match, nome, espacos, posicao, inteiro) => {
       const simbolo = VF_LETRAS_GREGAS[nome] || VF_OPERADORES_MATEMATICOS[nome];
       if(!simbolo) return match; // nome desconhecido - devolve cru, inclusive os espaços
-      return simbolo + (vfJuntarSimboloVF(inteiro.slice(posicao + match.length)) ? '' : espacos);
+      return simbolo + (vfJuntarSimboloVF(inteiro.slice(posicao + match.length), nome) ? '' : espacos);
     })
     // acentos matemáticos - \dot{} (derivada no tempo, comum em
     // engenharia/física: ψ̇), \ddot{}, \hat{}, \bar{}, \vec{}, \tilde{}.
@@ -6810,6 +6826,20 @@ let vfRespostasEmVooVF = new Map();
 // timestamp - usado pro enterro de irmãs se limpar sozinho na virada do
 // dia (mesmo dia local de quem estuda, não UTC)
 const vfFormatadorDiaLocalVF = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'});
+// ordem das publicações dentro de um módulo nos seletores do app.
+// bibliografia.ordem_exibicao (número pequeno, definido à mão) manda:
+// menor primeiro. Quem não tem número cai depois de todas as numeradas,
+// em ordem alfabética - ou seja, sem nenhum número cadastrado tudo
+// continua exatamente como era antes (22/09: ordem da Manobrabilidade
+// pedida pelo Carlos, começando por A.601(15) e terminando nas PNA)
+function vfNomePublicacaoVF(b){ return b.nome_exibicao || b.titulo || ''; }
+function vfCompararPublicacoesVF(a, b){
+  const oa = Number.isFinite(a?.ordem_exibicao) ? a.ordem_exibicao : Infinity;
+  const ob = Number.isFinite(b?.ordem_exibicao) ? b.ordem_exibicao : Infinity;
+  if(oa !== ob) return oa - ob;
+  return vfNomePublicacaoVF(a).localeCompare(vfNomePublicacaoVF(b), 'pt');
+}
+
 function vfDiaLocalDeVF(ms){ return vfFormatadorDiaLocalVF.format(new Date(ms)); }
 
 // familiaId -> {dia, ms} - dia (YYYY-MM-DD) em que foi respondida, e o
@@ -8919,7 +8949,7 @@ function vfBibliotecaMudarModuloVF(){
     return;
   }
   const pubs = (bibliografiaCache || []).filter(b => b.modulo_pscpp === modulo)
-    .sort((a, b) => (a.nome_exibicao || a.titulo).localeCompare(b.nome_exibicao || b.titulo, 'pt'));
+    .sort(vfCompararPublicacoesVF);
   elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(pub => {
     const vazia = vfPublicacoesComQuestaoVF && !vfPublicacoesComQuestaoVF.has(pub.id);
     return `<option value="${pub.id}" ${vazia ? 'disabled style="color:#ccc"' : ''}>${escapeHtml(pub.nome_exibicao || pub.titulo)}</option>`;
@@ -13745,7 +13775,7 @@ async function mudarModuloFiltroVF(){
       vfPublicacoesComQuestaoVF = new Set((data||[]).map(r => r.bibliografia_id).filter(Boolean));
     }
     if(geracaoVF !== vfGeracaoCascataFiltroVF) return; // trocou de módulo enquanto isso - quem mandou depois manda
-    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort(vfCompararPublicacoesVF);
     elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>{
       const vazio = !vfPublicacoesComQuestaoVF.has(p.id);
       return `<option value="${p.id}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(p.nome_exibicao || p.titulo)}</option>`;
@@ -14648,7 +14678,7 @@ async function vfRestaurarUIFiltroVF(){
   if(modulo){
     document.getElementById('vf-filtro-modulo').value = modulo;
     const elPub = document.getElementById('vf-filtro-publicacao');
-    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort(vfCompararPublicacoesVF);
     elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>{
       const vazio = !vfPublicacoesComQuestaoVF?.has(p.id);
       return `<option value="${p.id}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(p.nome_exibicao || p.titulo)}</option>`;
@@ -18422,7 +18452,7 @@ function vfMudarModuloFiltroBibliotecaVF(){
     // só publicações desse módulo que realmente têm algum elemento
     const pubsComElemento = new Set();
     vfModulosPorElementoBibliotecaVF.forEach(entrada => { if(entrada.modulos.has(modulo)) entrada.publicacoes.forEach(p => pubsComElemento.add(p)); });
-    const pubs = bibliografiaCache.filter(b => pubsComElemento.has(b.id)).sort((a,b) => (a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+    const pubs = bibliografiaCache.filter(b => pubsComElemento.has(b.id)).sort(vfCompararPublicacoesVF);
     elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p => `<option value="${p.id}">${escapeHtml(p.nome_exibicao || p.titulo)}</option>`).join('');
     elPub.disabled = false;
   }
@@ -19487,9 +19517,9 @@ async function vfCarregarNotasIrmasVF(questaoVfId){
   const ids = (irmas || []).map(i => i.id).filter(Boolean);
   if(!ids.length) return;
   const {data, error} = await sb.from('notas_vf')
-    .select('id, texto, cor, eh_mnemonico, questao_vf_id')
+    .select('id, texto, cor, eh_mnemonico, questao_vf_id, origem_nota_id')
     .eq('usuario_id', usuarioAtual.id).in('questao_vf_id', ids)
-    .order('criado_em', {ascending: false});
+    .order('criado_em', {ascending: true}); // mais antiga primeiro: é ela que fica quando a mesma nota existe em várias irmãs
   if(error || !data || !data.length) return;
   if(questaoNotaVfAtual !== questaoVfId) return;
   // não oferece o que já está escrito igualzinho aqui - senão viraria
@@ -19498,7 +19528,24 @@ async function vfCarregarNotasIrmasVF(questaoVfId){
   const listaDaqui = vfListaNotasCacheVF.get(questaoVfId) || [];
   listaDaqui.forEach(n => jaAqui.add((n.texto || '').trim()));
   const jaTrazidas = new Set(listaDaqui.map(n => n.origem_nota_id).filter(Boolean)); // ver origem_nota_id em vfCarregarNotasFixadasIrmasVF
-  vfNotasIrmasAtuaisVF = data.filter(n => !jaAqui.has((n.texto || '').trim()) && !jaTrazidas.has(n.id));
+  // a MESMA nota costuma existir em várias irmãs (foi copiada de uma pra
+  // outra, e a cópia é independente). A oferta é por TEXTO, não por
+  // linha: com três irmãs e a nota já copiada em duas, aparecia duas
+  // vezes o mesmo "+" pra adicionar aqui (achado real, 22/09). Fica a
+  // mais antiga da corrente - é ela que as cópias apontam em
+  // origem_nota_id, então continua valendo o "já trazida" de antes
+  const porTexto = new Map();
+  (data || []).forEach(n => {
+    const chave = (n.texto || '').trim();
+    if(!chave || porTexto.has(chave)) return;
+    porTexto.set(chave, n);
+  });
+  vfNotasIrmasAtuaisVF = [...porTexto.values()].filter(n =>
+    !jaAqui.has((n.texto || '').trim())
+    && !jaTrazidas.has(n.id)
+    // cópia de uma nota que já foi trazida pra cá por outro caminho:
+    // origem igual = mesma nota, mesmo com id diferente
+    && !(n.origem_nota_id && jaTrazidas.has(n.origem_nota_id)));
   if(!vfNotasIrmasAtuaisVF.length) return;
   vfRenderizarNotasIrmasVF();
 }
@@ -19566,9 +19613,9 @@ async function vfCarregarNotasFixadasIrmasVF(questaoVfId){
   const ids = (irmas || []).map(i => i.id).filter(Boolean);
   if(!ids.length) return;
   const {data, error} = await sb.from('notas_vf')
-    .select('id, texto, cor, alinhamento, eh_mnemonico')
+    .select('id, texto, cor, alinhamento, eh_mnemonico, origem_nota_id')
     .eq('usuario_id', usuarioAtual.id).eq('fixada', true).in('questao_vf_id', ids)
-    .order('criado_em', {ascending: false});
+    .order('criado_em', {ascending: true}); // mais antiga primeiro: é ela que representa a nota quando várias irmãs têm a mesma
   if(error || !data || !data.length) return;
   // se a tela já trocou de questão enquanto isso, não pinta nada
   if(estadoVF?.historico?.[estadoVF.posicao]?.item?.id !== questaoVfId) return;
@@ -19579,7 +19626,21 @@ async function vfCarregarNotasFixadasIrmasVF(questaoVfId){
   // isso, bastava editar a cópia aqui pra a oferta da irmã voltar a
   // aparecer, já que a comparação era só pelo texto
   const jaTrazidas = new Set(fixadasDaqui.map(n => n.origem_nota_id).filter(Boolean));
-  vfNotasFixadasIrmasVF = data.filter(n => !jaAqui.has((n.texto || '').trim()) && !jaTrazidas.has(n.id));
+  // uma oferta por TEXTO, não uma por irmã: depois de copiar a nota pra
+  // uma segunda irmã, ela passa a existir em duas questões e o mesmo "+"
+  // aparecia duplicado na terceira (achado real, 22/09)
+  const porTexto = new Map();
+  (data || []).forEach(n => {
+    const chave = (n.texto || '').trim();
+    if(!chave || porTexto.has(chave)) return;
+    porTexto.set(chave, n);
+  });
+  vfNotasFixadasIrmasVF = [...porTexto.values()].filter(n =>
+    !jaAqui.has((n.texto || '').trim())
+    && !jaTrazidas.has(n.id)
+    // cópia de uma nota que já veio pra cá por outro caminho: mesma
+    // origem = mesma nota, mesmo com id diferente
+    && !(n.origem_nota_id && jaTrazidas.has(n.origem_nota_id)));
   if(!vfNotasFixadasIrmasVF.length) return;
   const atual = document.getElementById('vf-preview-notas-irmas-container');
   if(!atual) return;
@@ -25304,7 +25365,7 @@ function atualizarPublicacoesRevisao(idGrupo){
     elPublicacao.disabled = true;
     return;
   }
-  const opcoes = bibliografiaCache.filter(b => b.modulo_pscpp === modulo).sort((a,b)=>(a.nome_exibicao||a.titulo).localeCompare(b.nome_exibicao||b.titulo,'pt'));
+  const opcoes = bibliografiaCache.filter(b => b.modulo_pscpp === modulo).sort(vfCompararPublicacoesVF);
   elPublicacao.innerHTML = '<option value="">Escolhe a publicação...</option>' + opcoes.map(b=>`<option value="${b.id}">${escapeHtml(b.nome_exibicao || b.titulo)}</option>`).join('');
   elPublicacao.disabled = false;
 }
