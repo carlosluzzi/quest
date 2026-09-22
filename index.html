@@ -477,13 +477,18 @@ pra achar o botão de novo. Agora ele fica ancorado no rodapé, sem
 participar da rolagem. bottom:20px = o mesmo respiro do padding do
 popup: a rolagem do popup inclui o padding de baixo, então bottom:0 põe
 o botão exatamente onde ele já ficava ao rolar até o fim */
-.modal-rodape-fixo{position:sticky;bottom:0;z-index:3}
-/* faixas brancas em cima e embaixo do rodapé: o padding do popup (20px de
-cada lado) faz parte da área que rola, então sem elas o texto passava
-rolando e aparecia em volta do botão. A faixa de baixo tem exatamente a
-altura do padding (20px): um pixel a mais e ela esticaria a área de
-rolagem do popup, deslocando o botão no fim da rolagem */
-.modal-rodape-fixo::before{content:'';position:absolute;left:-20px;right:-20px;bottom:100%;height:14px;background:#fff;pointer-events:none}
+/* a faixa branca de CIMA é uma borda do próprio botão, não uma tarja por
+cima: assim ela ocupa espaço de verdade no layout e nunca tapa o que vem
+logo acima (achado real: a mensagem "Essa tag funciona no filtro" ficava
+cortada ao meio pela tarja). A margem inline de cada rodapé é zerada
+porque essa borda faz o mesmo papel, com a mesma folga em todos eles */
+.modal-rodape-fixo{position:sticky;bottom:0;z-index:3;border-top:10px solid #fff;background-clip:padding-box;margin-top:0 !important}
+/* faixa branca embaixo do rodapé: o padding do popup (20px de cada lado)
+faz parte da área que rola, então sem ela o texto passava rolando e
+aparecia embaixo do botão. Tem exatamente a altura do padding (20px): um
+pixel a mais e ela esticaria a área de rolagem, deslocando o botão no fim
+da rolagem. Embaixo do rodapé nunca há conteúdo de verdade, então aqui
+tarja por cima não tapa nada */
 .modal-rodape-fixo::after{content:'';position:absolute;left:-20px;right:-20px;top:100%;height:20px;background:#fff;pointer-events:none}
 .modal-conteudo{background:#fff;border-radius:14px;padding:20px;width:100%;max-width:340px;max-height:85vh;overflow-y:auto}
 
@@ -2197,7 +2202,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-21-147';
+const VERSAO_APP = '2026-09-22-148';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
