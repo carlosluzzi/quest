@@ -1916,7 +1916,10 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
      biblioteca tinha rolagem própria (max-height:50vh) - duas barras de
      rolagem uma dentro da outra, e a de fora ainda escondia as abas
      (achado real, Carlos, 22/09). Agora só a faixa do meio rola -->
-<div class="modal-overlay hidden" id="modal-nota-vf" onclick="if(event.target===this) fecharModalNotaVF()">
+<!-- tocar fora NÃO fecha esse modal (23/09, Carlos): escrevendo nota
+     comprida, um toque fora sem querer fazia perder tudo que estava
+     digitado. Só o botão Fechar fecha -->
+<div class="modal-overlay hidden" id="modal-nota-vf">
   <div class="modal-conteudo popup-formulario" style="display:flex;flex-direction:column">
     <h3 class="config-title" style="flex-shrink:0">Notas</h3>
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-shrink:0">
@@ -2236,7 +2239,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-23-177';
+const VERSAO_APP = '2026-09-23-179';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -19716,6 +19719,55 @@ function vfLigarAnotacaoElementoVF(el, identificador, mapaAnotacoes, elementoHtm
   }
 }
 
+// uma célula como "D / ND" são dois valores, não um: cada um vira um
+// pedaço clicável com anotação separada, sem precisar mexer no LaTeX.
+// Só divide quando o separador tem espaço dos DOIS lados - assim "km/h",
+// "1/2" e "E/S" continuam sendo uma coisa só. Devolve os pedaços criados,
+// ou lista vazia quando a célula não deve ser dividida
+const VF_SEPARADOR_PEDACO_CELULA_VF = /(\s+[\/·;|–—]\s+)/;
+function vfDividirCelulaEmPedacosVF(celula, temAnotacaoDaCelulaInteira){
+  // já existe anotação da célula inteira: respeita o que foi anotado antes
+  // (pra dividir, é só excluir aquela anotação primeiro)
+  if(temAnotacaoDaCelulaInteira) return [];
+  // célula que já usa \nota{}{} no texto: aqueles pedaços já são
+  // independentes, não precisa (nem pode) empilhar outro sistema em cima
+  if(celula.querySelector('.vf-nota-clicavel, .vf-pedaco-anotacao')) return [];
+  if(!VF_SEPARADOR_PEDACO_CELULA_VF.test(celula.textContent || '')) return [];
+  const grupos = [];
+  let atual = [];
+  const fechar = () => { if(atual.length){ grupos.push({nos: atual, separador: false}); atual = []; } };
+  [...celula.childNodes].forEach(no => {
+    if(no.nodeType !== 3 || !VF_SEPARADOR_PEDACO_CELULA_VF.test(no.textContent)){ atual.push(no); return; }
+    no.textContent.split(VF_SEPARADOR_PEDACO_CELULA_VF).forEach(parte => {
+      if(!parte) return;
+      const ehSeparador = VF_SEPARADOR_PEDACO_CELULA_VF.test(parte) && parte.trim().length === 1;
+      if(ehSeparador){
+        fechar();
+        grupos.push({nos: [document.createTextNode(parte)], separador: true});
+      }else{
+        atual.push(document.createTextNode(parte));
+      }
+    });
+  });
+  fechar();
+  const comTexto = (grupo) => grupo.nos.some(n => (n.textContent || '').trim());
+  if(grupos.filter(g => !g.separador && comTexto(g)).length < 2) return [];
+  celula.textContent = ''; // os nós originais continuam guardados em "grupos"
+  const pedacos = [];
+  grupos.forEach(grupo => {
+    if(grupo.separador || !comTexto(grupo)){
+      grupo.nos.forEach(n => celula.appendChild(n)); // a barra e os espaços ficam fora do alvo
+      return;
+    }
+    const span = document.createElement('span');
+    span.className = 'vf-pedaco-anotacao';
+    grupo.nos.forEach(n => span.appendChild(n));
+    celula.appendChild(span);
+    pedacos.push(span);
+  });
+  return pedacos;
+}
+
 function vfAplicarIdentificadoresECliquesVF(bloco, mapaAnotacoes, elementoHtmlId){
   // textos escritos DENTRO de um desenho (rótulos de figura: "2B_MAX + 30,0m",
   // "B_MAX", nomes de peça...) aceitam anotação igual a uma célula de tabela.
@@ -19732,7 +19784,15 @@ function vfAplicarIdentificadoresECliquesVF(bloco, mapaAnotacoes, elementoHtmlId
   bloco.querySelectorAll('table').forEach((tabela, indiceTabela) => {
     tabela.querySelectorAll('tr').forEach((linha, indiceLinha) => {
       linha.querySelectorAll('td').forEach((celula, indiceColuna) => {
-        vfLigarAnotacaoElementoVF(celula, `t${indiceTabela}-l${indiceLinha}-c${indiceColuna}`, mapaAnotacoes, elementoHtmlId);
+        const idCelula = `t${indiceTabela}-l${indiceLinha}-c${indiceColuna}`;
+        // célula com dois valores separados ("D / ND"): cada lado vira um
+        // alvo próprio, com anotação própria (23/09, Carlos)
+        const pedacos = vfDividirCelulaEmPedacosVF(celula, mapaAnotacoes.has(idCelula));
+        if(pedacos.length){
+          pedacos.forEach((pedaco, indicePedaco) => vfLigarAnotacaoElementoVF(pedaco, `${idCelula}-p${indicePedaco}`, mapaAnotacoes, elementoHtmlId));
+          return;
+        }
+        vfLigarAnotacaoElementoVF(celula, idCelula, mapaAnotacoes, elementoHtmlId);
       });
     });
   });
