@@ -2213,7 +2213,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-23-166';
+const VERSAO_APP = '2026-09-23-169';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4626,7 +4626,8 @@ function vfSobrescritoOuTagVF(conteudo){
 const VF_LETRAS_GREGAS = {
   'Delta':'Δ','delta':'δ','Phi':'Φ','phi':'φ','Alpha':'Α','alpha':'α',
   'Beta':'Β','beta':'β','Gamma':'Γ','gamma':'γ','Theta':'Θ','theta':'θ',
-  'Lambda':'Λ','lambda':'λ','Mu':'Μ','mu':'μ','Nu':'Ν','nu':'ν',
+  'Lambda':'Λ','lambda':'λ','Lamda':'Λ','lamda':'λ', // "lamda" sem o b é erro de digitação comum (e LaTeX de verdade não aceita) - aqui vale igual
+  'Mu':'Μ','mu':'μ','Nu':'Ν','nu':'ν',
   'Pi':'Π','pi':'π','Rho':'Ρ','rho':'ρ','Sigma':'Σ','sigma':'σ',
   'Tau':'Τ','tau':'τ','Omega':'Ω','omega':'ω',
   'Epsilon':'Ε','epsilon':'ε','varepsilon':'ϵ','Zeta':'Ζ','zeta':'ζ',
@@ -4677,6 +4678,17 @@ const VF_OPERADORES_MATEMATICOS = {
 // "comer" letras demais (leria "inftyk" como nome, não reconhecido,
 // texto quebrado) - com a lista fechada, sabe exatamente onde "infty"
 // termina, sem precisar de espaço ou separador nenhum
+// nome grego escrito TODO EM MAIÚSCULA (\LAMBDA, \DELTA, \OMEGA) vale
+// como a letra maiúscula correspondente. No LaTeX de verdade isso nem
+// existe, mas sai fácil assim do teclado do iPad e a intenção é óbvia -
+// antes ficava cru na tela (achado real, Carlos, 23/09). Só cria o
+// apelido quando a versão capitalizada existe: "varepsilon" não vira
+// "VAREPSILON" porque não há "Varepsilon"
+Object.keys(VF_LETRAS_GREGAS).forEach(nome => {
+  const maiusculo = nome.toUpperCase();
+  const capitalizado = nome.charAt(0).toUpperCase() + nome.slice(1).toLowerCase();
+  if(!VF_LETRAS_GREGAS[maiusculo] && VF_LETRAS_GREGAS[capitalizado]) VF_LETRAS_GREGAS[maiusculo] = VF_LETRAS_GREGAS[capitalizado];
+});
 const VF_NOMES_MATEMATICOS_REGEX = Object.keys({...VF_LETRAS_GREGAS, ...VF_OPERADORES_MATEMATICOS}).sort((a,b) => b.length-a.length).join('|');
 // recebe o texto JÁ escapado (depois do escapeHtml) - \, {, } não são
 // caracteres especiais de HTML, então processar essas marcações depois
@@ -4784,7 +4796,13 @@ function vfProcessarNotaClicavelComPlaceholderVF(texto, tabelas){
     const grupo2 = vfExtrairGrupoBalanceadoVF(texto, pos2);
     if(!grupo2){ regexInicio.lastIndex = match.index + match[0].length; continue; }
     resultado += texto.slice(pos, match.index);
-    const span = `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(grupo2.conteudo)}" onclick="vfCliqueNotaClicavelVF(event)">${grupo1.conteudo}</span>`;
+    // o texto clicável (o X do \nota{X}{Y}) também é formatado: ele vira
+    // placeholder protegido logo aqui, então nenhuma regra de depois
+    // chegava nele e um "\Lambda" escrito ali ficava cru na tela,
+    // enquanto o mesmo comando no meio da frase virava Λ (achado real,
+    // Carlos, 23/09). Formata agora, antes de guardar
+    const gatilho = formatarTextoItemVF(grupo1.conteudo, {listaNumerada: true});
+    const span = `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(grupo2.conteudo)}" onclick="vfCliqueNotaClicavelVF(event)">${gatilho}</span>`;
     tabelas.push(span);
     resultado += `\u0000TABELA${tabelas.length - 1}\u0000`;
     pos = grupo2.fimPos + 1;
