@@ -81,6 +81,13 @@ DENTRO das próprias bordas, nunca é cortado pelo overflow do pai */
 /* marca do balãozinho dentro do editor visual: mostra QUE tem explicação
    ali sem mostrar o código \nota{}{} - tocar nela reabre a explicação */
 [data-vf-editor-rich]:empty:before{content:attr(data-placeholder);color:#aaa;pointer-events:none}
+/* radical de verdade: o sinal é um SVG que estica na altura do miolo
+   (vector-effect mantém a espessura do traço mesmo esticado), e a barra
+   horizontal é a borda de cima do próprio miolo - assim ela sempre tem a
+   largura exata do conteúdo, com fração empilhada dentro ou sem */
+.vf-raiz{display:inline-flex;align-items:stretch;vertical-align:middle;margin:0 1px}
+.vf-raiz-sinal{width:.58em;flex-shrink:0;align-self:stretch;overflow:visible}
+.vf-raiz-miolo{display:inline-flex;align-items:center;border-top:1.3px solid currentColor;padding:2px 4px 2px 2px}
 .vf-editor-nota{background:#FAEEDA;border-bottom:1.5px dotted #EF9F27;border-radius:4px;padding:0 3px;cursor:pointer}
 #vf-balao-editor-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
 #vf-balao-editor-overlay.hidden{display:none}
@@ -1924,10 +1931,11 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     <div id="vf-nota-conteudo-questao">
       <div id="lista-notas-vf" style="transition:max-height 0.25s ease;overflow:hidden;max-height:0"></div>
       <div id="vf-notas-irmas-vf" class="hidden" style="margin-bottom:14px"></div>
+      <div id="vf-nota-previa" class="hidden" style="background:#fff;border:0.5px solid #E6E6E3;border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:var(--fs-d);line-height:1.5;color:#111;max-height:260px;overflow-y:auto"></div>
       <div id="vf-barra-ferramentas-nota-nova" style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px"></div>
-      <div id="vf-nota-rich-caixa" data-vf-editor-rich data-espelho="texto-nota-vf" contenteditable="true" class="textarea-padrao vf-foco-interno-vf" data-placeholder="Adicionar nova nota" style="min-height:140px;overflow-y:auto;white-space:pre-wrap"></div>
-      <textarea id="texto-nota-vf" class="textarea-padrao vf-foco-interno-vf hidden" placeholder="Adicionar nova nota" style="min-height:140px;font-family:monospace;font-size:var(--fs-c)" onkeydown="vfTeclaTabNotaVF(event)"></textarea>
-      <button class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
+      <textarea id="texto-nota-vf" class="textarea-padrao vf-foco-interno-vf" placeholder="Adicionar nova nota" style="min-height:140px" oninput="vfAgendarPreviaNotaVF()" onkeydown="vfTeclaTabNotaVF(event)"></textarea>
+      <button id="vf-nota-btn-adicionar" class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
+      <button id="vf-nota-btn-cancelar-edicao" class="btn-secundario hidden" style="width:100%;margin-top:8px" onclick="vfCancelarEdicaoNoQuadroVF()">Cancelar edição</button>
     </div>
     <div id="vf-nota-conteudo-biblioteca" class="hidden"></div>
     </div>
@@ -2228,7 +2236,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-23-173';
+const VERSAO_APP = '2026-09-23-176';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5650,7 +5658,9 @@ function vfProcessarFracoesVF(texto){
     if(!grupo2){ regexInicio.lastIndex = match.index + match[0].length; continue; }
 
     resultado += texto.slice(pos, match.index);
-    const num = grupo1.conteudo, den = grupo2.conteudo;
+    // numerador/denominador passam pela própria função: fração dentro de
+    // fração ficava crua, porque o miolo sai do texto que ainda seria lido
+    const num = vfProcessarFracoesVF(grupo1.conteudo), den = vfProcessarFracoesVF(grupo2.conteudo);
     const chave = `${num}/${den}`;
     // caractere Unicode pronto quando a fração é uma das comuns (½, ⅓,
     // ¾, etc - existem prontos no teclado/fonte, ficam mais limpos que
@@ -5660,6 +5670,30 @@ function vfProcessarFracoesVF(texto){
     // matemático padrão
     resultado += fracoesUnicode[chave] || `<span style="display:inline-block;text-align:center;vertical-align:middle;line-height:1.15;margin:0 2px"><span style="display:block;border-bottom:1.3px solid currentColor;padding:0 3px">${num}</span><span style="display:block;padding:0 3px">${den}</span></span>`;
     pos = grupo2.fimPos + 1;
+    regexInicio.lastIndex = pos;
+  }
+  resultado += texto.slice(pos);
+  return resultado;
+}
+
+// \sqrt{conteudo} - radical de verdade, não "√(conteudo)" com parêntese
+// (23/09, Carlos): o traço inclinado é um SVG esticado na altura do
+// miolo e a barra de cima é a borda do miolo, então o sinal cresce
+// sozinho quando dentro tem uma fração empilhada, um subscrito alto ou
+// outra raiz. Roda depois de \frac pelo mesmo motivo que os parênteses
+// grandes: precisa do conteúdo já montado
+const VF_SVG_RADICAL_VF = '<svg class="vf-raiz-sinal" viewBox="0 0 12 24" preserveAspectRatio="none" aria-hidden="true"><path d="M0.8 14 L4.2 22.4 L11.2 1" fill="none" stroke="currentColor" stroke-width="1.3" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+function vfProcessarRaizesVF(texto){
+  let resultado = '';
+  let pos = 0;
+  const regexInicio = /\\sqrt\s*\{/g;
+  let match;
+  while((match = regexInicio.exec(texto))){
+    const grupo = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+    if(!grupo){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    resultado += texto.slice(pos, match.index);
+    resultado += `<span class="vf-raiz">${VF_SVG_RADICAL_VF}<span class="vf-raiz-miolo">${vfProcessarRaizesVF(grupo.conteudo)}</span></span>`;
+    pos = grupo.fimPos + 1;
     regexInicio.lastIndex = pos;
   }
   resultado += texto.slice(pos);
@@ -5787,6 +5821,7 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     // alto (uma fração empilhada, por exemplo) e crescer o parêntese
     .replace(/\\text\{([^{}]*)\}/g, '$1'); // \text{...} fora de tabela - achado real: só era processado dentro de célula (vfFormatarCelulaArrayVF), "\text{ com }" solto no meio de uma fórmula ficava cru
   c = vfProcessarFracoesVF(c);
+  c = vfProcessarRaizesVF(c); // depois da fração: o radical precisa do miolo pronto pra crescer junto com ele
   c = vfProcessarUnderbraceVF(c);
   c = vfProcessarOverlineVF(c);
   c = vfProcessarDelimitadoresGrandesVF(c); // por último: precisa do miolo já montado pra saber se cresce o parêntese
@@ -5828,14 +5863,6 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     // conteúdo. Já valia dentro de célula de tabela; fora dela ficava cru
     // na tela (\text{½} aparecia com a palavra text e as chaves)
     .replace(/\\text\{([^{}]*)\}/g, '$1')
-    // \sqrt{...} depois das gregas (pode ter grega dentro, tipo \sqrt{\Delta}).
-    // As chaves de dentro contam: o miolo pode ter subscrito (A_{WP}) ou
-    // fração, e a versão antiga ([^}]+) parava na PRIMEIRA chave fechada -
-    // o ")" que o √ acrescenta caía dentro do subscrito, e "\sqrt{ρ·g·A_{WP}}"
-    // aparecia como √(ρ·g·A com "WP)" subscrito (achado real, 22/09).
-    // Aceita até dois níveis de chaves aninhadas, que cobre tudo que
-    // aparece na prática
-    .replace(/\\sqrt\s*\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*)\}/g, '√($1)')
     // sobrescrito com chaves: X^{Y...} - qualquer conteúdo dentro,
     // inclusive sinal de menos e múltiplos caracteres (ex: 10^{-1})
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞)\]\}])\^\{([^}]+)\}/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
@@ -15595,7 +15622,7 @@ let vfTimerPressionarTabelaVF = null;
 // original visível no editor até salvar e reabrir (só aí a conversão pro
 // nosso formato interno descartava a formatação estranha). Preserva
 // quebras de linha reais como parágrafos próprios, uma linha por vez
-['vf-editor-rich-caixa', 'vf-nota-rich-caixa'].forEach(idCaixaColar => document.getElementById(idCaixaColar)?.addEventListener('paste', (evento) => {
+['vf-editor-rich-caixa'].forEach(idCaixaColar => document.getElementById(idCaixaColar)?.addEventListener('paste', (evento) => {
   evento.preventDefault();
   const texto = (evento.clipboardData || window.clipboardData).getData('text/plain');
   const linhas = texto.split(/\r\n|\r|\n/);
@@ -17150,6 +17177,8 @@ let questaoNotaVfAtual = null;
 // pendente (ou descartando, se a pausa foi longa demais) — usadas tanto
 // no botão Fechar/Cancelar quanto no clique fora do modal
 function fecharModalNotaVF(){
+  vfSairModoEdicaoNotaVF();
+  vfAtualizarPreviaNotaVF();
   fecharModal('modal-nota-vf');
   if(vfNotaAbertaDaBibliotecaVF){
     // veio da Biblioteca: o cronômetro do Flash não foi pausado, então
@@ -17472,6 +17501,16 @@ function vfMostrarBotoesAlinhamentoNotaVF(card, notaId){
 // explicação e da lista de notas. Os botõezinhos de recuo vêm junto,
 // porque no iPad o Tab do teclado da tela não serve
 function vfEditarNotaNaPaginaVF(card, notaId){
+  // a nota fixada na página não vira mais caixa de texto ali mesmo: abre
+  // o popup de Notas dessa questão e traz a nota pro quadro de escrever,
+  // onde já tem prévia e barra de ferramentas (uma só, não duas)
+  const containerPagina = document.getElementById('vf-preview-notas-container');
+  const questaoId = containerPagina?.dataset.questaoId || questaoNotaVfAtual;
+  if(!questaoId) return;
+  abrirNotaVF(questaoId);
+  setTimeout(() => vfEntrarModoEdicaoNotaVF(notaId), 80); // depois do popup montar
+}
+function vfEditarNotaNaPaginaAntigoVF(card, notaId){
   const item = card.closest('.vf-nota-preview-item');
   const container = document.getElementById('vf-preview-notas-container');
   if(!item || !container) return;
@@ -18458,57 +18497,6 @@ document.addEventListener('click', (evento) => {
   evento.stopPropagation();
   vfAbrirPopupBalaoEditorVF(caixa.id, chip, chip.textContent, chip.dataset.explicacao || '');
 });
-
-// barra de ferramentas da caixa visual das notas - mesma lógica da do
-// Complementar, mas com o botão de balãozinho junto e o alvo fixo na
-// caixa das notas
-function vfHtmlBarraEditorNotaRicaVF(){
-  const botao = (titulo, chamada, miolo, id) => `<button type="button"${id ? ` id="${id}"` : ''} title="${titulo}" onpointerdown="event.preventDefault()" onclick="${chamada}" style="min-width:34px;height:30px;padding:0 7px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;font-size:var(--fs-e);line-height:1;display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">${miolo}</button>`;
-  const iconeAlinhar = (x1, x2) => `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="${x1}" y1="17" x2="${x2}" y2="17"/></svg>`;
-  const iconeBalao = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
-  const iconeCodigo = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
-  const iconeTabela = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>';
-  const separador = '<span style="width:1px;background:#e4e4e0;margin:3px 2px"></span>';
-  return botao('Negrito', "vfEditorRichAplicarFormatoVF('negrito')", '<b>B</b>')
-       + botao('Itálico', "vfEditorRichAplicarFormatoVF('italico')", '<i>I</i>')
-       + separador
-       + botao('Alinhar à esquerda', "vfEditorRichAlinharVF('esquerda','vf-nota-rich-caixa')", iconeAlinhar(4, 14))
-       + botao('Centralizar', "vfEditorRichAlinharVF('centro','vf-nota-rich-caixa')", iconeAlinhar(7, 17))
-       + botao('Alinhar à direita', "vfEditorRichAlinharVF('direita','vf-nota-rich-caixa')", iconeAlinhar(10, 20))
-       + separador
-       + botao('Balãozinho: explica o trecho selecionado', "vfEditorRichBalaoVF('vf-nota-rich-caixa')", iconeBalao)
-       + botao('Inserir tabela', "vfEditorRichInserirTabelaVF('vf-nota-rich-caixa')", iconeTabela)
-       + separador
-       + botao('Ver/editar o código', 'vfAlternarModoCodigoNotaVF()', iconeCodigo, 'vf-nota-btn-modo-codigo');
-}
-
-// alterna a caixa das notas entre visual e código (mesma ideia do
-// Complementar) - o textarea de código é o espelho que o resto do app lê
-function vfAlternarModoCodigoNotaVF(){
-  const caixa = document.getElementById('vf-nota-rich-caixa');
-  const textarea = document.getElementById('texto-nota-vf');
-  const btn = document.getElementById('vf-nota-btn-modo-codigo');
-  if(!caixa || !textarea) return;
-  if(!caixa.classList.contains('hidden')){
-    vfSincronizarEspelhoRichVF(caixa);
-    caixa.classList.add('hidden');
-    textarea.classList.remove('hidden');
-    if(btn){ btn.style.background = '#B23A34'; btn.style.color = '#fff'; btn.style.borderColor = '#B23A34'; }
-  }else{
-    vfCarregarEspelhoNaCaixaRichVF('vf-nota-rich-caixa');
-    textarea.classList.add('hidden');
-    caixa.classList.remove('hidden');
-    if(btn){ btn.style.background = '#fff'; btn.style.color = '#666'; btn.style.borderColor = '#ddd'; }
-  }
-}
-
-function vfGarantirModoVisualNotaVF(){
-  const caixa = document.getElementById('vf-nota-rich-caixa');
-  const textarea = document.getElementById('texto-nota-vf');
-  if(!caixa || !textarea) return;
-  caixa.classList.remove('hidden');
-  textarea.classList.add('hidden');
-}
 
 function vfEditorRichSincronizarAntesDeSalvarVF(){
   const emModoCodigo = !document.getElementById('vf-complementar-latex-novo').classList.contains('hidden');
@@ -20219,11 +20207,10 @@ async function abrirNotaVF(questaoVfId){
   if(!vfNotaAbertaDaBibliotecaVF) pausarTimerVF(); // abrir Notas/Excluir com questão pendente conta como sair da tela — você está escrevendo, não lendo a afirmação
   questaoNotaVfAtual = questaoVfId;
   document.getElementById('texto-nota-vf').value = '';
-  const caixaRicaNotaVF = document.getElementById('vf-nota-rich-caixa');
-  if(caixaRicaNotaVF) caixaRicaNotaVF.innerHTML = '';
-  vfGarantirModoVisualNotaVF();
+  vfSairModoEdicaoNotaVF(); // abrir o popup sempre começa escrevendo nota nova, nunca no meio de uma edição anterior
+  vfAtualizarPreviaNotaVF();
   const barraNovaVF = document.getElementById('vf-barra-ferramentas-nota-nova');
-  if(barraNovaVF && !barraNovaVF.innerHTML) barraNovaVF.innerHTML = vfHtmlBarraEditorNotaRicaVF();
+  if(barraNovaVF && !barraNovaVF.innerHTML) barraNovaVF.innerHTML = vfHtmlBarraFerramentasNotaVF('texto-nota-vf', 30);
   vfMudarAbaNotaVF('questao'); // sempre abre onde ele vai escrever, nunca na biblioteca
   abrirModal('modal-nota-vf');
   vfCarregarNotasIrmasVF(questaoVfId); // em segundo plano - o popup não espera por isso
@@ -20277,6 +20264,99 @@ function vfHtmlItemNotaVF(n){
       <div id="vf-nota-texto-${n.id}" data-cor-nota="${n.cor || ''}" style="font-size:var(--fs-d);margin:0;color:#111;cursor:pointer;padding:6px 8px;border-radius:6px;${vfEstiloCorNotaVF(n.cor)}" ontouchstart="vfIniciarPressionarNotaVF(event,'${n.id}')" ontouchend="vfCancelarPressionarNotaSilenciosoVF()" ontouchmove="vfCancelarPressionarNotaSilenciosoVF(event)" onmousedown="vfIniciarPressionarNotaVF(event,'${n.id}')" onmouseup="vfCancelarPressionarNotaSilenciosoVF()" onmouseleave="vfCancelarPressionarNotaSilenciosoVF()">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>
     </div>`;
 }
+// ---- prévia ao vivo da nota (23/09, Carlos) ----
+// em cima do campo de escrever aparece a nota EXATAMENTE como vai ficar
+// depois de salva: negrito, centralizado, fórmula, lista, e o balãozinho
+// já pontilhado e clicável. O campo embaixo continua sendo texto puro -
+// quem quiser ver o resultado olha pra cima, não precisa salvar pra saber
+let vfTimerPreviaNotaVF = null;
+function vfAgendarPreviaNotaVF(){
+  clearTimeout(vfTimerPreviaNotaVF);
+  vfTimerPreviaNotaVF = setTimeout(vfAtualizarPreviaNotaVF, 120); // digitar não repinta a cada tecla
+}
+function vfAtualizarPreviaNotaVF(){
+  const campo = document.getElementById('texto-nota-vf');
+  const previa = document.getElementById('vf-nota-previa');
+  if(!campo || !previa) return;
+  const texto = campo.value.trim();
+  previa.classList.toggle('hidden', !texto);
+  if(!texto){ previa.innerHTML = ''; return; }
+  previa.innerHTML = `<div style="font-size:var(--fs-a);letter-spacing:.06em;text-transform:uppercase;color:#bbb;margin-bottom:6px">prévia</div>${formatarTextoItemVF(texto, {listaNumerada: true})}`;
+}
+
+// ---- editar nota existente no MESMO quadro de escrever ----
+// nota pronta não vira caixa de texto no lugar onde está (isso obrigava
+// uma segunda barra de ferramentas na tela e uma segunda prévia): ela
+// volta pro quadro principal, com a prévia e a barra que já existem ali
+let vfNotaEmEdicaoVF = null;
+function vfEntrarModoEdicaoNotaVF(notaId){
+  const campo = document.getElementById('texto-nota-vf');
+  if(!campo) return;
+  vfNotaEmEdicaoVF = notaId;
+  campo.value = vfNotasTextoBrutoCacheVF[notaId] ?? '';
+  vfAtualizarPreviaNotaVF();
+  const btn = document.getElementById('vf-nota-btn-adicionar');
+  if(btn) btn.textContent = 'Salvar alterações';
+  document.getElementById('vf-nota-btn-cancelar-edicao')?.classList.remove('hidden');
+  // o item da lista fica apagado enquanto está sendo editado aqui em baixo,
+  // pra não parecer que existem duas cópias da mesma nota na tela
+  const item = document.getElementById(`vf-nota-item-${notaId}`);
+  if(item) item.style.opacity = '0.4';
+  campo.focus();
+  setTimeout(() => campo.scrollIntoView({block: 'center', behavior: 'smooth'}), 50);
+}
+function vfSairModoEdicaoNotaVF(){
+  if(vfNotaEmEdicaoVF){
+    const item = document.getElementById(`vf-nota-item-${vfNotaEmEdicaoVF}`);
+    if(item) item.style.opacity = '';
+  }
+  vfNotaEmEdicaoVF = null;
+  const campo = document.getElementById('texto-nota-vf');
+  if(campo) campo.value = '';
+  const btn = document.getElementById('vf-nota-btn-adicionar');
+  if(btn) btn.textContent = 'Adicionar nota';
+  document.getElementById('vf-nota-btn-cancelar-edicao')?.classList.add('hidden');
+}
+function vfCancelarEdicaoNoQuadroVF(){
+  vfSairModoEdicaoNotaVF();
+  vfAtualizarPreviaNotaVF();
+}
+async function vfSalvarNotaDoQuadroVF(){
+  const notaId = vfNotaEmEdicaoVF;
+  const campo = document.getElementById('texto-nota-vf');
+  const textoNovo = (campo?.value || '').trim();
+  const textoOriginal = vfNotasTextoBrutoCacheVF[notaId] ?? '';
+  if(!textoNovo){ vfMostrarAvisoVF('A nota ficou vazia - pra tirar ela, usa o ✕ na lista.'); return; }
+  vfSairModoEdicaoNotaVF();
+  vfAtualizarPreviaNotaVF();
+  if(textoNovo === textoOriginal) return; // nada mudou: nem toca no banco
+  // aplica na tela JÁ, sem esperar o banco (mesmo padrão do resto do app)
+  vfNotasTextoBrutoCacheVF[notaId] = textoNovo;
+  const textoEl = document.getElementById(`vf-nota-texto-${notaId}`);
+  if(textoEl) textoEl.innerHTML = formatarTextoItemVF(textoNovo, {listaNumerada: true});
+  // texto novo DIRETO no cache das fixadas (nunca invalidar e deixar
+  // recarregar: tem corrida real contra o update abaixo)
+  const listaFixadas = vfNotaPreviewCacheVF.get(questaoNotaVfAtual);
+  const notaFixada = listaFixadas?.find(n => n.id === notaId);
+  if(notaFixada){
+    notaFixada.texto = textoNovo;
+    if(typeof renderizarItemVF === 'function') renderizarItemVF();
+  }
+  vfListaNotasCacheVF.delete(questaoNotaVfAtual);
+  vfNotasBibliotecaCacheVF = null;
+  const {error} = await sb.from('notas_vf').update({texto: textoNovo}).eq('id', notaId);
+  if(error){
+    vfNotasTextoBrutoCacheVF[notaId] = textoOriginal;
+    const voltando = document.getElementById(`vf-nota-texto-${notaId}`);
+    if(voltando) voltando.innerHTML = formatarTextoItemVF(textoOriginal, {listaNumerada: true});
+    if(notaFixada){
+      notaFixada.texto = textoOriginal;
+      if(typeof renderizarItemVF === 'function') renderizarItemVF();
+    }
+    vfMostrarAvisoVF('Não consegui salvar a edição. Tenta de novo.');
+  }
+}
+
 // segurar no texto da nota edita, igual já funciona no enunciado/explicação
 // das questões - toque rápido não faz nada especial aqui (o texto já é
 // selecionável/copiável normalmente como texto comum)
@@ -20318,6 +20398,11 @@ async function renderizarListaNotasVF(){
 // no banco de novo
 let vfNotaTextoOriginalAntesEditarVF = {};
 function vfEditarNotaVF(notaId){
+  vfEntrarModoEdicaoNotaVF(notaId);
+}
+// versão antiga (caixa de texto no lugar da nota, salvando no blur) -
+// substituída pela edição no quadro principal, mantida só como referência
+function vfEditarNotaNoLugarAntigoVF(notaId){
   const container = document.getElementById(`vf-nota-texto-${notaId}`);
   if(!container) return;
   vfNotaTextoOriginalAntesEditarVF[notaId] = vfNotasTextoBrutoCacheVF[notaId] ?? container.textContent;
@@ -20532,17 +20617,13 @@ async function vfCopiarExplicacaoParaClaude(botao){
 }
 
 async function adicionarNotaVF(){
+  if(vfNotaEmEdicaoVF) return vfSalvarNotaDoQuadroVF(); // o mesmo botão salva a edição quando tem uma em curso
   vfNotasBibliotecaCacheVF = null; // biblioteca de notas recarrega na próxima abertura
   const campo = document.getElementById('texto-nota-vf');
-  const caixaRicaVF = document.getElementById('vf-nota-rich-caixa');
-  // no modo visual, o texto de verdade está na caixa rica - o textarea é
-  // só o espelho, e pode estar um passo atrás se o último toque foi num
-  // botão da barra em vez de uma tecla
-  if(caixaRicaVF && !caixaRicaVF.classList.contains('hidden')) vfSincronizarEspelhoRichVF(caixaRicaVF);
   const texto = campo.value.trim();
   if(!texto) return;
   campo.value = ''; // limpa já, sensação instantânea
-  if(caixaRicaVF) caixaRicaVF.innerHTML = '';
+  vfAtualizarPreviaNotaVF();
 
   // insere na lista JÁ, com um id temporário - não espera o insert voltar
   // pra pessoa ver a nota que acabou de escrever
@@ -20573,7 +20654,7 @@ async function adicionarNotaVF(){
     renderizarItemVF();
     vfMostrarAvisoVF('Não consegui salvar a nota. Tenta de novo.');
     campo.value = texto; // devolve o texto pro campo, pra não perder o que foi escrito
-    if(caixaRicaVF && !caixaRicaVF.classList.contains('hidden')) vfCarregarEspelhoNaCaixaRichVF('vf-nota-rich-caixa');
+    vfAtualizarPreviaNotaVF();
     return;
   }
   // troca o id temporário pelo real - reconstrói o item inteiro (o
