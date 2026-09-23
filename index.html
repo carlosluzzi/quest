@@ -2213,7 +2213,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-23-164';
+const VERSAO_APP = '2026-09-23-166';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4991,7 +4991,8 @@ function vfFormatarCelulaArrayVF(celula){
   // \newline dentro de célula quebra em múltiplas linhas na mesma célula -
   // comando LaTeX padrão diferente de \\ (que já é o separador ENTRE
   // linhas da tabela, não pode ser reaproveitado sem ambiguidade)
-  c = c.replace(/\\newline/g, '<br>');
+  c = c.replace(/\\(?:linha|quebra|newline)\b/g, '<br>');
+  c = c.replace(/\\espa[cç]o\b/g, '<span style="display:block;height:0.6em"></span>'); // mesma dupla do texto normal, ver formatarTextoItemVF
   // enter DE VERDADE digitado na edição da célula vale o mesmo que
   // \newline. Precisa virar <br> mesmo com white-space:pre-wrap na
   // classe: células curtas levam nowrap de vfAjustarLarguraTabelaVF
@@ -6209,15 +6210,17 @@ function vfProcessarAlinhamentoTrechoVF(texto){
     if(!grupo){ regexInicio.lastIndex = match.index + match[0].length; continue; }
     // o <div> já quebra linha sozinho, dos dois lados: UM <br> colado
     // nele (o enter que a pessoa deu pra entrar ou sair do trecho
-    // alinhado) é engolido, senão viraria uma linha em branco inteira
-    // além do respiro que o bloco já tem. Mesma regra das listas e das
-    // tabelas. Antes daqui eram engolidos DOIS <br> de baixo e a margem
-    // era de 2px: com um enter a fórmula centralizada ficava grudada no
-    // texto seguinte, e com dois continuava igual (achado real, 22/09).
-    // Agora sobra a linha em branco pra quem escrever o segundo enter
+    // alinhado) é engolido, senão viraria uma linha em branco inteira.
+    // Mesma regra das listas e das tabelas. Com a margem zerada, o
+    // resultado é idêntico a uma linha comum; o segundo enter, se ele
+    // escrever, continua virando linha em branco de verdade
     const antes = texto.slice(pos, match.index);
     resultado += antes.endsWith('<br>') ? antes.slice(0, -4) : antes;
-    resultado += `<div style="text-align:${VF_ALINHAMENTOS_TRECHO_VF[match[1]]};margin:6px 0">${grupo.conteudo}</div>`;
+    // margem ZERO de propósito (23/09): centralizar um trecho não pode
+    // mudar o espaçamento dele com o resto. Um enter antes ou depois de um
+    // \centro{} vale exatamente o mesmo que um enter entre duas linhas
+    // normais - e quando ele quiser mais folga, usa \espaco
+    resultado += `<div style="text-align:${VF_ALINHAMENTOS_TRECHO_VF[match[1]]}">${grupo.conteudo}</div>`;
     pos = grupo.fimPos + 1;
     if(texto.slice(pos, pos + 4) === '<br>') pos += 4;
     regexInicio.lastIndex = pos;
@@ -6252,6 +6255,14 @@ function formatarTextoItemVF(texto, opcoes){
     // <br> - sem isso, o HTML colapsa qualquer quebra de linha do texto
     // original num espaço só, mesmo que o texto no banco já tenha os
     // parágrafos bem separados
+    // quebras de linha escritas à mão, pra texto que vive numa linha só -
+    // o caso da explicação do \nota{}{}, onde não dá pra dar enter porque
+    // tudo está dentro das chaves. \linha pula uma linha; \espaco pula e
+    // ainda deixa uma folga (pedido do Carlos, 23/09). \newline e
+    // \quebra valem como sinônimos de \linha - \newline já existia
+    // dentro de célula de tabela e continua igual
+    .replace(/\\(?:linha|quebra|newline)\b/g, '<br>')
+    .replace(/\\espa[cç]o\b/g, '<span style="display:block;height:0.6em"></span>')
     .replace(/\n/g, '<br>')
     // tabela e desenho já são blocos: o <br> logo depois deles só somava
     // uma linha em branco (~24px) ao espaço que o bloco já tem. Era o que
