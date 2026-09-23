@@ -2239,7 +2239,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-23-179';
+const VERSAO_APP = '2026-09-23-181';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2395,7 +2395,7 @@ function formatarEnunciadoInterno(texto){
     }) // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // subscrito com chaves explícitas (ex: "N_{v(Munk)}", "Y'_{v(L)}") — permite parênteses/letras/números dentro, sem limite de 6 caracteres da regra de baixo
-    .replace(/([)\]])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // subscrito logo depois de um grupo fechando - ex: (Yv·v)_{popa}, aplica ao grupo inteiro, não a uma letra isolada
+    .replace(/([)\]>])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // subscrito logo depois de um grupo fechando - ex: (Yv·v)_{popa}, aplica ao grupo inteiro, não a uma letra isolada
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // isola a seção "TRECHOS DA FONTE" ANTES de qualquer divisão em
@@ -2602,7 +2602,7 @@ function extrairAlternativas(alternativasTexto){
     })
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
-    .replace(/([)\]])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/([)\]>])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
@@ -4630,8 +4630,8 @@ function vfNomesMatematicosSoltosVF(trecho){
 // chaves em cada parte. Roda ANTES da marcação matemática: depois dela o
 // "b^{2}" já teria virado "b²" sozinho e o par não seria mais reconhecido
 const VF_PARTE_SCRIPT_VF = '(\\{[^{}]*\\}|[A-Za-z0-9+\\-]{1,10})';
-const VF_REGEX_SUP_SUB_VF = new RegExp('([A-Za-zÀ-úΑ-Ωα-ω0-9∞\\)\\]\\}])\\^' + VF_PARTE_SCRIPT_VF + '_' + VF_PARTE_SCRIPT_VF, 'g');
-const VF_REGEX_SUB_SUP_VF = new RegExp('([A-Za-zÀ-úΑ-Ωα-ω0-9∞\\)\\]\\}])_' + VF_PARTE_SCRIPT_VF + '\\^' + VF_PARTE_SCRIPT_VF, 'g');
+const VF_REGEX_SUP_SUB_VF = new RegExp('([A-Za-zÀ-úΑ-Ωα-ω0-9∞\\)\\]\\}>])\\^' + VF_PARTE_SCRIPT_VF + '_' + VF_PARTE_SCRIPT_VF, 'g');
+const VF_REGEX_SUB_SUP_VF = new RegExp('([A-Za-zÀ-úΑ-Ωα-ω0-9∞\\)\\]\\}>])_' + VF_PARTE_SCRIPT_VF + '\\^' + VF_PARTE_SCRIPT_VF, 'g');
 function vfAplicarSobrescritoESubscritoJuntosVF(texto){
   const semChaves = p => vfNomesMatematicosSoltosVF(p.startsWith('{') ? p.slice(1, -1) : p);
   return String(texto)
@@ -5768,6 +5768,27 @@ function vfProcessarOverlineVF(texto){
   return resultado;
 }
 
+// \vec{V} / \vetor{V} - seta de vetor em cima do símbolo. A seta é
+// posicionada por cima (position:absolute) em vez de ser um caractere
+// combinante: assim ela fica centralizada no conteúdo inteiro, não só na
+// última letra, e não briga com a fonte
+function vfProcessarVetorVF(texto){
+  let resultado = '';
+  let pos = 0;
+  const regexInicio = /\\(?:vec|vetor)\s*\{/g;
+  let match;
+  while((match = regexInicio.exec(texto))){
+    const grupo = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+    if(!grupo){ regexInicio.lastIndex = match.index + match[0].length; continue; }
+    resultado += texto.slice(pos, match.index);
+    resultado += `<span style="position:relative;display:inline-block;line-height:1.15;padding-top:0.22em">${grupo.conteudo}<span style="position:absolute;left:0;right:0;top:-0.2em;text-align:center;font-size:0.62em;line-height:1;pointer-events:none">&#8594;</span></span>`;
+    pos = grupo.fimPos + 1;
+    regexInicio.lastIndex = pos;
+  }
+  resultado += texto.slice(pos);
+  return resultado;
+}
+
 // \left( ... \right) - parêntese/colchete/chave que acompanha a altura
 // do miolo. Antes os dois comandos eram simplesmente apagados e sobrava
 // um parêntese de tamanho normal: em volta de uma fração empilhada ele
@@ -5827,6 +5848,7 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
   c = vfProcessarRaizesVF(c); // depois da fração: o radical precisa do miolo pronto pra crescer junto com ele
   c = vfProcessarUnderbraceVF(c);
   c = vfProcessarOverlineVF(c);
+  c = vfProcessarVetorVF(c);
   c = vfProcessarDelimitadoresGrandesVF(c); // por último: precisa do miolo já montado pra saber se cresce o parêntese
   return c
     // \nome{conteudo} - letra grega/operador seguido de chaves SEM
@@ -5868,7 +5890,7 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
     .replace(/\\text\{([^{}]*)\}/g, '$1')
     // sobrescrito com chaves: X^{Y...} - qualquer conteúdo dentro,
     // inclusive sinal de menos e múltiplos caracteres (ex: 10^{-1})
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞)\]\}])\^\{([^}]+)\}/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞)\]\}>])\^\{([^}]+)\}/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
     // alguns símbolos matemáticos são desenhados pelas fontes com altura
     // visual bem menor que letras/números normais, mesmo com o mesmo
     // font-size (parecem "pequenos"/perdidos no meio do texto) - aumenta
@@ -6580,7 +6602,7 @@ function formatarTextoItemVF(texto, opcoes){
     })
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
-    .replace(/([)\]])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/([)\]>])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   return vfReinserirTabelasVF(vfProcessarAlinhamentoTrechoVF(resultado), tabelas);
 }
@@ -15194,7 +15216,7 @@ function renderizarItemVF(){
   // ganha conteúdo se alguma irmã tiver nota fixada que ainda não está
   // nesta questão
   const cardNotaHtml = jaRespondida
-    ? `${notasFixadasVF.has(item.id) ? `<div id="vf-preview-notas-container" style="position:relative;margin-top:14px"></div>` : ''}<div id="vf-preview-notas-irmas-container" class="hidden" style="margin-top:14px"></div>`
+    ? `${notasFixadasVF.has(item.id) ? `<div id="vf-preview-notas-container" style="position:relative;margin-top:22px"></div>` : ''}<div id="vf-preview-notas-irmas-container" class="hidden" style="margin-top:22px"></div>`
     : '';
 
 
