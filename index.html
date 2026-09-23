@@ -2221,7 +2221,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-23-170';
+const VERSAO_APP = '2026-09-23-171';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6240,8 +6240,11 @@ function vfProcessarAlinhamentoTrechoVF(texto){
     // Mesma regra das listas e das tabelas. Com a margem zerada, o
     // resultado é idêntico a uma linha comum; o segundo enter, se ele
     // escrever, continua virando linha em branco de verdade
+    // engole a quebra de cima só quando foi UM enter; com dois (ou mais)
+    // a linha em branco que ele escreveu continua valendo - ver a mesma
+    // regra aplicada às listas em formatarTextoItemVF
     const antes = texto.slice(pos, match.index);
-    resultado += antes.endsWith('<br>') ? antes.slice(0, -4) : antes;
+    resultado += (antes.endsWith('<br>') && !antes.endsWith('<br><br>')) ? antes.slice(0, -4) : antes;
     // margem ZERO de propósito (23/09): centralizar um trecho não pode
     // mudar o espaçamento dele com o resto. Um enter antes ou depois de um
     // \centro{} vale exatamente o mesmo que um enter entre duas linhas
@@ -6304,7 +6307,11 @@ function formatarTextoItemVF(texto, opcoes){
     // Só um <br> é engolido de cada lado: quem escreve DUAS quebras de
     // propósito continua tendo a linha em branco que pediu
     .replace(/(<\/(?:ul|ol)>)<br>/g, '$1')
-    .replace(/<br>(<(?:ul|ol)[ >])/g, '$1');
+    // ...e só quando foi UM enter. Dois enters antes de uma lista/bloco
+    // continuam valendo linha em branco de verdade (23/09): engolir um
+    // dos dois deixava a linha sumir, porque a que sobra é justamente a
+    // que o bloco já daria sozinho
+    .replace(/((?:<br>)+)(<(?:ul|ol)[ >])/g, (m, quebras, bloco) => (quebras.length === 4 ? '' : quebras) + bloco);
   resultado = vfAplicarSobrescritoESubscritoJuntosVF(resultado); // b^2_{crit} - os dois no mesmo símbolo, empilhados
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
   resultado = resultado
