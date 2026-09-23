@@ -2239,7 +2239,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-23-181';
+const VERSAO_APP = '2026-09-23-182';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2395,7 +2395,12 @@ function formatarEnunciadoInterno(texto){
     }) // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // subscrito com chaves explícitas (ex: "N_{v(Munk)}", "Y'_{v(L)}") — permite parênteses/letras/números dentro, sem limite de 6 caracteres da regra de baixo
-    .replace(/([)\]>])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // subscrito logo depois de um grupo fechando - ex: (Yv·v)_{popa}, aplica ao grupo inteiro, não a uma letra isolada
+    .replace(/([)\]>])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    // ...e o subscrito/expoente SEM chaves logo depois de um bloco montado
+    // (\vec{R}_0, \sqrt{x}^2): o caractere anterior é o ">" do fim da tag,
+    // que as regras de base por letra nunca pegam (achado real, 23/09)
+    .replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/(>)\^((?:[Α-Ωα-ω∞]|[A-Za-z0-9+\-]{1,4}))/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp)) // subscrito logo depois de um grupo fechando - ex: (Yv·v)_{popa}, aplica ao grupo inteiro, não a uma letra isolada
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // isola a seção "TRECHOS DA FONTE" ANTES de qualquer divisão em
@@ -2603,6 +2608,11 @@ function extrairAlternativas(alternativasTexto){
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/([)\]>])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    // ...e o subscrito/expoente SEM chaves logo depois de um bloco montado
+    // (\vec{R}_0, \sqrt{x}^2): o caractere anterior é o ">" do fim da tag,
+    // que as regras de base por letra nunca pegam (achado real, 23/09)
+    .replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/(>)\^((?:[Α-Ωα-ω∞]|[A-Za-z0-9+\-]{1,4}))/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
@@ -5059,6 +5069,8 @@ function vfFormatarCelulaArrayVF(celula){
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp));
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
+  c = c.replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)); // depois de bloco montado (\vec{R}_0 dentro de tabela)
+  c = c.replace(/(>)\^((?:[Α-Ωα-ω∞]|[A-Za-z0-9+\-]{1,4}))/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp));
   // devolve as explicações do \nota{}{} guardadas lá em cima, aplicando
   // só as limpezas que NÃO geram HTML (o que a célula já fazia nelas
   // antes desta proteção existir): \text{}, vírgula decimal {,} e os
@@ -6603,6 +6615,11 @@ function formatarTextoItemVF(texto, opcoes){
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/([)\]>])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    // ...e o subscrito/expoente SEM chaves logo depois de um bloco montado
+    // (\vec{R}_0, \sqrt{x}^2): o caractere anterior é o ">" do fim da tag,
+    // que as regras de base por letra nunca pegam (achado real, 23/09)
+    .replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/(>)\^((?:[Α-Ωα-ω∞]|[A-Za-z0-9+\-]{1,4}))/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   return vfReinserirTabelasVF(vfProcessarAlinhamentoTrechoVF(resultado), tabelas);
 }
