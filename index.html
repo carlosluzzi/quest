@@ -75,9 +75,15 @@ o outline/focus-ring padrão do navegador se estende pra FORA das bordas
 do elemento e fica cortado nesses casos. box-shadow inset é desenhado
 DENTRO das próprias bordas, nunca é cortado pelo overflow do pai */
 .vf-foco-interno-vf:focus{outline:none;box-shadow:inset 0 0 0 1.5px #B23A34}
-#vf-editor-rich-caixa table{border-collapse:collapse;margin:4px 0}
-#vf-editor-rich-caixa table td{border:1px solid #ccc;padding:6px 10px;min-width:32px}
-#vf-editor-rich-caixa table tr:first-child.vf-editor-tr-cabecalho td{background:#F2F1EC;color:#44443F;font-weight:600}
+[data-vf-editor-rich] table{border-collapse:collapse;margin:4px 0}
+[data-vf-editor-rich] table td{border:1px solid #ccc;padding:6px 10px;min-width:32px}
+[data-vf-editor-rich] table tr:first-child.vf-editor-tr-cabecalho td{background:#F2F1EC;color:#44443F;font-weight:600}
+/* marca do balãozinho dentro do editor visual: mostra QUE tem explicação
+   ali sem mostrar o código \nota{}{} - tocar nela reabre a explicação */
+[data-vf-editor-rich]:empty:before{content:attr(data-placeholder);color:#aaa;pointer-events:none}
+.vf-editor-nota{background:#FAEEDA;border-bottom:1.5px dotted #EF9F27;border-radius:4px;padding:0 3px;cursor:pointer}
+#vf-balao-editor-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+#vf-balao-editor-overlay.hidden{display:none}
 .vf-editor-tabela-wrap{position:relative;display:inline-block;margin:6px 16px 20px 6px}
 .vf-editor-tabela-alca{position:absolute;right:-14px;bottom:-14px;width:22px;height:22px;border-radius:6px;background:#fff;border:1.5px solid #999;color:#666;display:flex;align-items:center;justify-content:center;cursor:nwse-resize;-webkit-tap-highlight-color:transparent;touch-action:none;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
 .vf-editor-tabela-cabecalho-toggle{position:absolute;left:-14px;top:-14px;width:22px;height:22px;border-radius:6px;background:#fff;border:1.5px solid #999;color:#666;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
@@ -1919,7 +1925,8 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       <div id="lista-notas-vf" style="transition:max-height 0.25s ease;overflow:hidden;max-height:0"></div>
       <div id="vf-notas-irmas-vf" class="hidden" style="margin-bottom:14px"></div>
       <div id="vf-barra-ferramentas-nota-nova" style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px"></div>
-      <textarea id="texto-nota-vf" class="textarea-padrao vf-foco-interno-vf" placeholder="Adicionar nova nota" style="min-height:140px" onkeydown="vfTeclaTabNotaVF(event)"></textarea>
+      <div id="vf-nota-rich-caixa" data-vf-editor-rich data-espelho="texto-nota-vf" contenteditable="true" class="textarea-padrao vf-foco-interno-vf" data-placeholder="Adicionar nova nota" style="min-height:140px;overflow-y:auto;white-space:pre-wrap"></div>
+      <textarea id="texto-nota-vf" class="textarea-padrao vf-foco-interno-vf hidden" placeholder="Adicionar nova nota" style="min-height:140px;font-family:monospace;font-size:var(--fs-c)" onkeydown="vfTeclaTabNotaVF(event)"></textarea>
       <button class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
     </div>
     <div id="vf-nota-conteudo-biblioteca" class="hidden"></div>
@@ -1972,7 +1979,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
           <div style="width:1px;background:#ddd;margin:4px 2px"></div>
           <button type="button" id="vf-editor-btn-modo-codigo" title="Ver/editar o código-fonte" onmousedown="event.preventDefault()" onclick="vfAlternarModoCodigoEditorVF()" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>
         </div>
-        <div id="vf-editor-rich-caixa" contenteditable="true" class="textarea-padrao" style="min-height:180px;overflow-y:auto;white-space:pre-wrap"></div>
+        <div id="vf-editor-rich-caixa" data-vf-editor-rich data-espelho="vf-complementar-latex-novo" contenteditable="true" class="textarea-padrao" style="min-height:180px;overflow-y:auto;white-space:pre-wrap"></div>
         <textarea id="vf-complementar-latex-novo" class="hidden textarea-padrao" style="min-height:180px;font-family:monospace;font-size:var(--fs-c)"></textarea>
         <div style="display:flex;gap:8px;margin-top:10px">
           <button id="vf-complementar-btn-usar-local" class="btn-secundario" style="flex:1" onclick="vfUsarComplementarLocalVF()">Usar só aqui</button>
@@ -2221,7 +2228,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-23-171';
+const VERSAO_APP = '2026-09-23-173';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -15588,7 +15595,7 @@ let vfTimerPressionarTabelaVF = null;
 // original visível no editor até salvar e reabrir (só aí a conversão pro
 // nosso formato interno descartava a formatação estranha). Preserva
 // quebras de linha reais como parágrafos próprios, uma linha por vez
-document.getElementById('vf-editor-rich-caixa')?.addEventListener('paste', (evento) => {
+['vf-editor-rich-caixa', 'vf-nota-rich-caixa'].forEach(idCaixaColar => document.getElementById(idCaixaColar)?.addEventListener('paste', (evento) => {
   evento.preventDefault();
   const texto = (evento.clipboardData || window.clipboardData).getData('text/plain');
   const linhas = texto.split(/\r\n|\r|\n/);
@@ -15596,7 +15603,8 @@ document.getElementById('vf-editor-rich-caixa')?.addEventListener('paste', (even
     if(i > 0) document.execCommand('insertParagraph', false, null);
     if(linha) document.execCommand('insertText', false, linha);
   });
-});
+  vfSincronizarEspelhoRichVF(evento.currentTarget);
+}));
 
 document.addEventListener('touchstart', vfIniciarPressionarTabelaVF, {passive: true});
 document.addEventListener('mousedown', vfIniciarPressionarTabelaVF);
@@ -17753,6 +17761,31 @@ function vfFecharPainelInconsistenciaVF(){
   document.removeEventListener('mousedown', vfFecharPainelInconsistenciaSeForaVF);
 }
 
+// largura que o título (o **negrito** que abre a explicação) precisa pra
+// caber numa linha só, já somando o padding do balão. Zero quando a
+// explicação não começa por negrito - aí a largura segue só o tamanho do texto
+function vfLarguraMinimaDoTituloDoBalaoVF(balao, span){
+  const titulo = span.querySelector('strong');
+  if(!titulo) return 0;
+  const textoTitulo = titulo.textContent.trim();
+  // só vale como título se for a PRIMEIRA coisa do balão - um negrito no
+  // meio de um parágrafo é ênfase, não título, e não manda na largura
+  if(!textoTitulo || !span.textContent.trim().startsWith(textoTitulo)) return 0;
+  const estiloSpan = getComputedStyle(span);
+  const medidor = document.createElement('span');
+  medidor.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:nowrap;font-weight:700';
+  medidor.style.fontSize = estiloSpan.fontSize;
+  medidor.style.fontFamily = estiloSpan.fontFamily;
+  medidor.style.letterSpacing = estiloSpan.letterSpacing;
+  medidor.innerHTML = titulo.innerHTML;
+  document.body.appendChild(medidor);
+  const larguraTitulo = medidor.getBoundingClientRect().width;
+  medidor.remove();
+  const estiloBalao = getComputedStyle(balao);
+  const padding = (parseFloat(estiloBalao.paddingLeft) || 0) + (parseFloat(estiloBalao.paddingRight) || 0);
+  return Math.ceil(larguraTitulo + padding) + 2; // +2 de folga pro arredondamento do layout
+}
+
 function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   const balao = document.getElementById('vf-balao-explicacao');
   const span = document.getElementById('vf-balao-explicacao-texto');
@@ -17772,7 +17805,12 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   // linhas, mais fácil de ler), sempre dentro da tela
   const tamanho = textoLimpo.length;
   const larguraIdeal = tamanho < 140 ? 280 : tamanho < 320 ? 360 : tamanho < 600 ? 440 : 520;
-  balao.style.maxWidth = Math.min(larguraIdeal, window.innerWidth - 20) + 'px';
+  // ...mas nunca mais estreito que o TÍTULO do balão (23/09, Carlos): quando
+  // a explicação começa com **negrito**, aquilo é o título - e título
+  // quebrado em duas linhas fica feio mesmo quando o texto embaixo é curto.
+  // Mede o título numa linha só e usa isso como piso da largura; o teto
+  // continua sendo a tela
+  balao.style.maxWidth = Math.min(Math.max(larguraIdeal, vfLarguraMinimaDoTituloDoBalaoVF(balao, span)), window.innerWidth - 20) + 'px';
   // o balão inteiro (a informação em si) fica clicável quando há edição
   // associada - sem nenhum link "editar" separado aparecendo dentro dele
   balao.style.cursor = aoEditar ? 'pointer' : 'default';
@@ -17901,8 +17939,43 @@ function vfEditorRichAplicarFormatoVF(tipo){
   document.execCommand(tipo === 'negrito' ? 'bold' : 'italic', false, null);
 }
 
-function vfEditorRichAlinharVF(alinhamento){
-  const caixa = document.getElementById('vf-editor-rich-caixa');
+// a caixa do editor visual deixou de ser uma só (23/09): agora existe a
+// do Complementar e a das Notas, e qualquer outra que venha depois. Sem
+// id explícito, vale a que está em foco; sem foco, a do Complementar
+function vfCaixaRichVF(idCaixa){
+  if(idCaixa) return document.getElementById(idCaixa);
+  const ativa = document.activeElement?.closest?.('[data-vf-editor-rich]');
+  return ativa || document.getElementById(vfUltimaCaixaRichVF) || document.getElementById('vf-editor-rich-caixa');
+}
+let vfUltimaCaixaRichVF = 'vf-editor-rich-caixa';
+document.addEventListener('focusin', (e) => {
+  const caixa = e.target.closest?.('[data-vf-editor-rich]');
+  if(caixa && caixa.id) vfUltimaCaixaRichVF = caixa.id;
+});
+// tudo que se escreve na caixa visual é espelhado, na hora, no textarea
+// de código que fica escondido atrás dela - assim todo o resto do app
+// (salvar nota, salvar complementar) continua lendo .value como sempre leu
+function vfSincronizarEspelhoRichVF(caixa){
+  if(!caixa || !caixa.dataset.espelho) return;
+  const espelho = document.getElementById(caixa.dataset.espelho);
+  if(!espelho) return;
+  espelho.value = vfEditorRichParaLatexVF(caixa.id);
+}
+document.addEventListener('input', (e) => {
+  const caixa = e.target.closest?.('[data-vf-editor-rich]');
+  if(caixa) vfSincronizarEspelhoRichVF(caixa);
+});
+// caminho inverso: joga o conteúdo do textarea de código na caixa visual
+function vfCarregarEspelhoNaCaixaRichVF(idCaixa){
+  const caixa = document.getElementById(idCaixa);
+  if(!caixa) return;
+  const espelho = document.getElementById(caixa.dataset.espelho || '');
+  caixa.innerHTML = vfEditorRichDeLatexVF(espelho ? espelho.value : '');
+}
+
+function vfEditorRichAlinharVF(alinhamento, idCaixa){
+  const caixa = vfCaixaRichVF(idCaixa);
+  if(!caixa) return;
   const alignCss = alinhamento === 'centro' ? 'center' : alinhamento === 'direita' ? 'right' : '';
   const selecao = window.getSelection();
   if(!selecao.rangeCount) return;
@@ -17931,15 +18004,18 @@ function vfEditorRichAlinharVF(alinhamento){
   let bloco = no2.nodeType === 3 ? no2.parentElement : no2;
   while(bloco && bloco !== caixa && bloco.parentElement !== caixa) bloco = bloco.parentElement;
   if(bloco && bloco !== caixa) bloco.style.textAlign = alignCss;
+  vfSincronizarEspelhoRichVF(caixa);
 }
 
-function vfEditorRichInserirTabelaVF(){
-  const caixa = document.getElementById('vf-editor-rich-caixa');
+function vfEditorRichInserirTabelaVF(idCaixa){
+  const caixa = vfCaixaRichVF(idCaixa);
+  if(!caixa) return;
   caixa.focus();
   const iconeAlca = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 20 L20 14 M20 20 L14 20 M20 20 L9 20 M20 20 L20 9"/></svg>`;
   const iconeCabecalho = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18" stroke-width="3"/></svg>`;
   const html = `<div class="vf-editor-tabela-wrap" contenteditable="false"><table><tr class="vf-editor-tr-cabecalho"><td contenteditable="true">Cabeçalho 1</td><td contenteditable="true">Cabeçalho 2</td></tr><tr><td contenteditable="true"></td><td contenteditable="true"></td></tr></table><button type="button" class="vf-editor-tabela-cabecalho-toggle ativo" contenteditable="false" onclick="vfEditorRichToggleCabecalhoVF(this)" title="Tem cabeçalho">${iconeCabecalho}</button><div class="vf-editor-tabela-alca" contenteditable="false">${iconeAlca}</div></div><div><br></div>`;
   document.execCommand('insertHTML', false, html);
+  vfSincronizarEspelhoRichVF(caixa);
 }
 
 // alterna se a primeira linha é cabeçalho (fundo destacado, negrito) ou
@@ -18053,8 +18129,9 @@ function vfEditorRichSoltarRedimensionarTabelaVF(){
 
 // converte o conteúdo da caixa (HTML) pro nosso formato interno - roda
 // bem antes de salvar (ver vfEditorRichSincronizarAntesDeSalvarVF)
-function vfEditorRichParaLatexVF(){
-  const caixa = document.getElementById('vf-editor-rich-caixa');
+function vfEditorRichParaLatexVF(idCaixa){
+  const caixa = vfCaixaRichVF(idCaixa);
+  if(!caixa) return '';
   const partes = [];
   // converte um único filho INLINE (texto solto, negrito, itálico, quebra
   // de linha) pro nosso formato - usado tanto por converterInline (que
@@ -18064,6 +18141,7 @@ function vfEditorRichParaLatexVF(){
     if(filho.nodeType === 3) return filho.textContent.replace(/\u00a0/g, ' ');
     if(filho.nodeType !== 1) return '';
     const tag = filho.tagName;
+    if(filho.classList && filho.classList.contains('vf-editor-nota')) return `\\nota{${filho.textContent}}{${filho.dataset.explicacao || ''}}`;
     if(tag === 'B' || tag === 'STRONG') return `**${converterInline(filho)}**`;
     if(tag === 'I' || tag === 'EM') return `*${converterInline(filho)}*`;
     if(tag === 'BR') return '\n';
@@ -18166,14 +18244,50 @@ function vfEditorRichDeLatexVF(texto){
     semSvg += texto.slice(posSvg);
     texto = semSvg;
   }
+  // \nota{trecho}{explicação} sai de cena ANTES do escapeHtml (a
+  // explicação pode ter chaves dentro - c_{33}, \frac{}{} - então tem que
+  // ser lida com contagem de chaves, não com regex simples) e volta já
+  // como a marca visual clicável
+  // \nota{trecho}{explicação} sai de cena logo depois do \svg, pelo mesmo
+  // motivo dele: a explicação pode ter chave dentro (c_{33}, \frac{}{}) e
+  // pode ter QUEBRA DE LINHA dentro - e o divisor de parágrafos lá embaixo
+  // picava a explicação no meio, perdendo texto e deixando "}" solto na
+  // tela (achado real, 23/09, testando uma nota com título e explicação
+  // em duas linhas)
+  const notasGuardadas = [];
+  {
+    let semNotas = '';
+    let posNota = 0;
+    const regexNota = /\\nota\s*\{/g;
+    let mNota;
+    while((mNota = regexNota.exec(texto))){
+      const g1 = vfExtrairGrupoBalanceadoVF(texto, mNota.index + mNota[0].length - 1);
+      if(!g1){ regexNota.lastIndex = mNota.index + mNota[0].length; continue; }
+      const entreGrupos = texto.slice(g1.fimPos + 1).match(/^\s*\{/);
+      if(!entreGrupos){ regexNota.lastIndex = g1.fimPos + 1; continue; }
+      const g2 = vfExtrairGrupoBalanceadoVF(texto, g1.fimPos + entreGrupos[0].length);
+      if(!g2){ regexNota.lastIndex = g1.fimPos + 1; continue; }
+      semNotas += texto.slice(posNota, mNota.index) + `\u0000NOTAEDIT${notasGuardadas.length}\u0000`;
+      notasGuardadas.push({trecho: g1.conteudo, explicacao: g2.conteudo});
+      posNota = g2.fimPos + 1;
+      regexNota.lastIndex = posNota;
+    }
+    semNotas += texto.slice(posNota);
+    texto = semNotas;
+  }
   const converterInlineParaHtml = (t) => escapeHtml(t)
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\u0000NOTAEDIT(\d+)\u0000/g, (m, i) => {
+      const n = notasGuardadas[Number(i)];
+      if(!n) return '';
+      return `<span class="vf-editor-nota" contenteditable="false" data-explicacao="${escapeHtml(n.explicacao)}">${escapeHtml(n.trecho)}</span>`;
+    });
   const iconeAlca = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 20 L20 14 M20 20 L14 20 M20 20 L9 20 M20 20 L20 9"/></svg>`;
   const iconeCabecalho = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18" stroke-width="3"/></svg>`;
   const blocos = [];
   let pos = 0;
-  const regex = /\\begin\{array\}(?:\[([^\]]*)\])?\{([lcr]+)\}([\s\S]*?)\\end\{array\}|\\alinhar\[(centro|direita)\]\{([^}]*)\}|\u0000SVGBRUTO(\d+)\u0000/g;
+  const regex = /\\begin\{array\}(?:\[([^\]]*)\])?\{([lcr]+)\}([\s\S]*?)\\end\{array\}|\\alinhar\[(centro|direita|esquerda)\]\s*\{|\\(centro|direita|esquerda)\s*\{|\u0000SVGBRUTO(\d+)\u0000/g;
   let match;
   const paragrafosNormais = (trecho) => {
     trecho.trim().split(/\n+/).forEach(p => { if(p.trim()) blocos.push(`<div>${converterInlineParaHtml(p.trim())}</div>`); });
@@ -18204,9 +18318,24 @@ function vfEditorRichDeLatexVF(texto){
       const classeAtivo = temCabecalho ? ' ativo' : '';
       blocos.push(`<div class="vf-editor-tabela-wrap" contenteditable="false"><table>${linhasHtml}</table><button type="button" class="vf-editor-tabela-cabecalho-toggle${classeAtivo}" contenteditable="false" onclick="vfEditorRichToggleCabecalhoVF(this)" title="Tem cabeçalho">${iconeCabecalho}</button><div class="vf-editor-tabela-alca" contenteditable="false">${iconeAlca}</div></div>`);
     }else{
-      // é \alinhar[...]{}
-      const align = match[4] === 'centro' ? 'center' : 'right';
-      blocos.push(`<div style="text-align:${align}">${converterInlineParaHtml(match[5])}</div>`);
+      // é comando de alinhamento - tanto \alinhar[centro]{} (o que o editor
+      // visual gravava) quanto \centro{}/\esquerda{}/\direita{} (o que a
+      // barra de ferramentas das notas gravava). O conteúdo é lido contando
+      // chaves, não com regex: dentro dele pode ter \nota{}{}, \frac{}{},
+      // subscrito com chave - e o [^}]* de antes cortava na primeira chave
+      const nomeAlinhamento = match[4] || match[5];
+      const grupoAlinhado = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+      if(!grupoAlinhado){
+        // chave sem fechar: volta atrás e deixa virar texto comum, sem sumir nada
+        pos = match.index;
+        regex.lastIndex = match.index + match[0].length;
+        continue;
+      }
+      const align = nomeAlinhamento === 'centro' ? 'center' : nomeAlinhamento === 'direita' ? 'right' : 'left';
+      blocos.push(`<div style="text-align:${align}">${converterInlineParaHtml(grupoAlinhado.conteudo)}</div>`);
+      pos = grupoAlinhado.fimPos + 1;
+      regex.lastIndex = pos;
+      continue;
     }
     pos = match.index + match[0].length;
   }
@@ -18222,6 +18351,165 @@ function vfEditorRichDeLatexVF(texto){
 // momento - se a pessoa estiver no modo código (viu/editou o texto cru
 // direto), a textarea já tem o valor certo digitado por ela, e
 // reconverter do editor visual por cima destruiria essa edição
+// ---- balãozinho dentro do editor visual: em vez de digitar
+// \nota{trecho}{explicação}, seleciona o trecho, toca no balão e escreve
+// só a explicação num pop-up. Na caixa fica uma marca âmbar clicável ----
+let vfBalaoEditorChipVF = null;
+let vfBalaoEditorRangeVF = null;
+let vfBalaoEditorCaixaVF = null;
+
+function vfEditorRichBalaoVF(idCaixa){
+  const caixa = vfCaixaRichVF(idCaixa);
+  if(!caixa) return;
+  const selecao = window.getSelection();
+  let chip = null;
+  let trecho = '';
+  vfBalaoEditorRangeVF = null;
+  if(selecao && selecao.rangeCount){
+    const range = selecao.getRangeAt(0);
+    if(caixa.contains(range.commonAncestorContainer)){
+      const no = range.commonAncestorContainer;
+      const elemento = no.nodeType === 3 ? no.parentElement : no;
+      chip = elemento && elemento.closest ? elemento.closest('.vf-editor-nota') : null;
+      trecho = range.toString();
+      vfBalaoEditorRangeVF = range.cloneRange();
+    }
+  }
+  if(!chip && !trecho.trim()){
+    vfMostrarAvisoVF('Seleciona a palavra (ou o trecho) que vai ganhar o balãozinho.');
+    return;
+  }
+  vfAbrirPopupBalaoEditorVF(caixa.id, chip, chip ? chip.textContent : trecho, chip ? (chip.dataset.explicacao || '') : '');
+}
+
+function vfAbrirPopupBalaoEditorVF(idCaixa, chip, trecho, explicacao){
+  vfBalaoEditorCaixaVF = idCaixa;
+  vfBalaoEditorChipVF = chip || null;
+  let overlay = document.getElementById('vf-balao-editor-overlay');
+  if(!overlay){
+    document.body.insertAdjacentHTML('beforeend', `
+<div id="vf-balao-editor-overlay" class="hidden" onclick="if(event.target===this) vfFecharPopupBalaoEditorVF()">
+  <div style="background:#fff;border-radius:16px;padding:18px;width:100%;max-width:420px;box-sizing:border-box;box-shadow:0 20px 50px rgba(0,0,0,0.3)">
+    <div style="font-size:var(--fs-d);font-weight:600;margin-bottom:3px">Balãozinho</div>
+    <div id="vf-balao-editor-trecho" style="font-size:var(--fs-c);color:#888;margin-bottom:10px;word-break:break-word"></div>
+    <textarea id="vf-balao-editor-texto" class="textarea-padrao" placeholder="O que aparece quando tocar nesse trecho" style="min-height:130px;margin-bottom:10px"></textarea>
+    <div style="display:flex;gap:8px">
+      <button type="button" class="btn-secundario" style="flex:1" onclick="vfFecharPopupBalaoEditorVF()">Cancelar</button>
+      <button type="button" class="btn-primario" style="flex:1" onclick="vfSalvarPopupBalaoEditorVF()">Salvar</button>
+    </div>
+    <button type="button" id="vf-balao-editor-remover" class="btn-secundario" style="width:100%;margin-top:8px;color:#B23A34" onclick="vfRemoverBalaoEditorVF()">Tirar o balãozinho</button>
+  </div>
+</div>`);
+    overlay = document.getElementById('vf-balao-editor-overlay');
+  }
+  document.getElementById('vf-balao-editor-trecho').textContent = trecho;
+  const campo = document.getElementById('vf-balao-editor-texto');
+  campo.value = explicacao || '';
+  document.getElementById('vf-balao-editor-remover').classList.toggle('hidden', !chip);
+  overlay.classList.remove('hidden');
+  setTimeout(() => campo.focus(), 30);
+}
+
+function vfSalvarPopupBalaoEditorVF(){
+  const explicacao = document.getElementById('vf-balao-editor-texto').value.trim();
+  const caixa = document.getElementById(vfBalaoEditorCaixaVF);
+  if(vfBalaoEditorChipVF){
+    vfBalaoEditorChipVF.dataset.explicacao = explicacao;
+  }else if(vfBalaoEditorRangeVF && caixa){
+    const chip = document.createElement('span');
+    chip.className = 'vf-editor-nota';
+    chip.setAttribute('contenteditable', 'false');
+    chip.dataset.explicacao = explicacao;
+    chip.textContent = document.getElementById('vf-balao-editor-trecho').textContent;
+    vfBalaoEditorRangeVF.deleteContents();
+    vfBalaoEditorRangeVF.insertNode(chip);
+    // espaço depois da marca: sem ele, marca no fim da linha deixa o cursor
+    // preso, sem lugar nenhum pra continuar escrevendo fora dela. Só quando
+    // ainda não tem espaço ali - senão marcar uma palavra no meio da frase
+    // deixava dois espaços grudados depois dela
+    const depoisDaMarca = chip.nextSibling;
+    const jaTemEspaco = depoisDaMarca && depoisDaMarca.nodeType === 3 && /^[\s\u00a0]/.test(depoisDaMarca.textContent);
+    if(!jaTemEspaco) chip.after(document.createTextNode('\u00a0'));
+  }
+  vfSincronizarEspelhoRichVF(caixa);
+  vfFecharPopupBalaoEditorVF();
+}
+
+function vfRemoverBalaoEditorVF(){
+  const caixa = document.getElementById(vfBalaoEditorCaixaVF);
+  if(vfBalaoEditorChipVF) vfBalaoEditorChipVF.replaceWith(document.createTextNode(vfBalaoEditorChipVF.textContent));
+  vfSincronizarEspelhoRichVF(caixa);
+  vfFecharPopupBalaoEditorVF();
+}
+
+function vfFecharPopupBalaoEditorVF(){
+  document.getElementById('vf-balao-editor-overlay')?.classList.add('hidden');
+  vfBalaoEditorChipVF = null;
+  vfBalaoEditorRangeVF = null;
+}
+
+// tocar numa marca já existente reabre a explicação dela pra editar
+document.addEventListener('click', (evento) => {
+  const chip = evento.target.closest ? evento.target.closest('.vf-editor-nota') : null;
+  if(!chip) return;
+  const caixa = chip.closest('[data-vf-editor-rich]');
+  if(!caixa) return;
+  evento.preventDefault();
+  evento.stopPropagation();
+  vfAbrirPopupBalaoEditorVF(caixa.id, chip, chip.textContent, chip.dataset.explicacao || '');
+});
+
+// barra de ferramentas da caixa visual das notas - mesma lógica da do
+// Complementar, mas com o botão de balãozinho junto e o alvo fixo na
+// caixa das notas
+function vfHtmlBarraEditorNotaRicaVF(){
+  const botao = (titulo, chamada, miolo, id) => `<button type="button"${id ? ` id="${id}"` : ''} title="${titulo}" onpointerdown="event.preventDefault()" onclick="${chamada}" style="min-width:34px;height:30px;padding:0 7px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;font-size:var(--fs-e);line-height:1;display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">${miolo}</button>`;
+  const iconeAlinhar = (x1, x2) => `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="${x1}" y1="17" x2="${x2}" y2="17"/></svg>`;
+  const iconeBalao = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+  const iconeCodigo = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
+  const iconeTabela = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>';
+  const separador = '<span style="width:1px;background:#e4e4e0;margin:3px 2px"></span>';
+  return botao('Negrito', "vfEditorRichAplicarFormatoVF('negrito')", '<b>B</b>')
+       + botao('Itálico', "vfEditorRichAplicarFormatoVF('italico')", '<i>I</i>')
+       + separador
+       + botao('Alinhar à esquerda', "vfEditorRichAlinharVF('esquerda','vf-nota-rich-caixa')", iconeAlinhar(4, 14))
+       + botao('Centralizar', "vfEditorRichAlinharVF('centro','vf-nota-rich-caixa')", iconeAlinhar(7, 17))
+       + botao('Alinhar à direita', "vfEditorRichAlinharVF('direita','vf-nota-rich-caixa')", iconeAlinhar(10, 20))
+       + separador
+       + botao('Balãozinho: explica o trecho selecionado', "vfEditorRichBalaoVF('vf-nota-rich-caixa')", iconeBalao)
+       + botao('Inserir tabela', "vfEditorRichInserirTabelaVF('vf-nota-rich-caixa')", iconeTabela)
+       + separador
+       + botao('Ver/editar o código', 'vfAlternarModoCodigoNotaVF()', iconeCodigo, 'vf-nota-btn-modo-codigo');
+}
+
+// alterna a caixa das notas entre visual e código (mesma ideia do
+// Complementar) - o textarea de código é o espelho que o resto do app lê
+function vfAlternarModoCodigoNotaVF(){
+  const caixa = document.getElementById('vf-nota-rich-caixa');
+  const textarea = document.getElementById('texto-nota-vf');
+  const btn = document.getElementById('vf-nota-btn-modo-codigo');
+  if(!caixa || !textarea) return;
+  if(!caixa.classList.contains('hidden')){
+    vfSincronizarEspelhoRichVF(caixa);
+    caixa.classList.add('hidden');
+    textarea.classList.remove('hidden');
+    if(btn){ btn.style.background = '#B23A34'; btn.style.color = '#fff'; btn.style.borderColor = '#B23A34'; }
+  }else{
+    vfCarregarEspelhoNaCaixaRichVF('vf-nota-rich-caixa');
+    textarea.classList.add('hidden');
+    caixa.classList.remove('hidden');
+    if(btn){ btn.style.background = '#fff'; btn.style.color = '#666'; btn.style.borderColor = '#ddd'; }
+  }
+}
+
+function vfGarantirModoVisualNotaVF(){
+  const caixa = document.getElementById('vf-nota-rich-caixa');
+  const textarea = document.getElementById('texto-nota-vf');
+  if(!caixa || !textarea) return;
+  caixa.classList.remove('hidden');
+  textarea.classList.add('hidden');
+}
+
 function vfEditorRichSincronizarAntesDeSalvarVF(){
   const emModoCodigo = !document.getElementById('vf-complementar-latex-novo').classList.contains('hidden');
   if(!emModoCodigo){
@@ -19931,8 +20219,11 @@ async function abrirNotaVF(questaoVfId){
   if(!vfNotaAbertaDaBibliotecaVF) pausarTimerVF(); // abrir Notas/Excluir com questão pendente conta como sair da tela — você está escrevendo, não lendo a afirmação
   questaoNotaVfAtual = questaoVfId;
   document.getElementById('texto-nota-vf').value = '';
+  const caixaRicaNotaVF = document.getElementById('vf-nota-rich-caixa');
+  if(caixaRicaNotaVF) caixaRicaNotaVF.innerHTML = '';
+  vfGarantirModoVisualNotaVF();
   const barraNovaVF = document.getElementById('vf-barra-ferramentas-nota-nova');
-  if(barraNovaVF && !barraNovaVF.innerHTML) barraNovaVF.innerHTML = vfHtmlBarraFerramentasNotaVF('texto-nota-vf', 30);
+  if(barraNovaVF && !barraNovaVF.innerHTML) barraNovaVF.innerHTML = vfHtmlBarraEditorNotaRicaVF();
   vfMudarAbaNotaVF('questao'); // sempre abre onde ele vai escrever, nunca na biblioteca
   abrirModal('modal-nota-vf');
   vfCarregarNotasIrmasVF(questaoVfId); // em segundo plano - o popup não espera por isso
@@ -20243,9 +20534,15 @@ async function vfCopiarExplicacaoParaClaude(botao){
 async function adicionarNotaVF(){
   vfNotasBibliotecaCacheVF = null; // biblioteca de notas recarrega na próxima abertura
   const campo = document.getElementById('texto-nota-vf');
+  const caixaRicaVF = document.getElementById('vf-nota-rich-caixa');
+  // no modo visual, o texto de verdade está na caixa rica - o textarea é
+  // só o espelho, e pode estar um passo atrás se o último toque foi num
+  // botão da barra em vez de uma tecla
+  if(caixaRicaVF && !caixaRicaVF.classList.contains('hidden')) vfSincronizarEspelhoRichVF(caixaRicaVF);
   const texto = campo.value.trim();
   if(!texto) return;
   campo.value = ''; // limpa já, sensação instantânea
+  if(caixaRicaVF) caixaRicaVF.innerHTML = '';
 
   // insere na lista JÁ, com um id temporário - não espera o insert voltar
   // pra pessoa ver a nota que acabou de escrever
@@ -20276,6 +20573,7 @@ async function adicionarNotaVF(){
     renderizarItemVF();
     vfMostrarAvisoVF('Não consegui salvar a nota. Tenta de novo.');
     campo.value = texto; // devolve o texto pro campo, pra não perder o que foi escrito
+    if(caixaRicaVF && !caixaRicaVF.classList.contains('hidden')) vfCarregarEspelhoNaCaixaRichVF('vf-nota-rich-caixa');
     return;
   }
   // troca o id temporário pelo real - reconstrói o item inteiro (o
