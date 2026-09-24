@@ -2248,7 +2248,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-24-190';
+const VERSAO_APP = '2026-09-24-191';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2615,7 +2615,11 @@ function extrairItensNumerados(enunciado){
 function extrairAlternativas(alternativasTexto){
   if(!alternativasTexto) return [];
   alternativasTexto = vfLimparApostrofoUnderscoreVF(alternativasTexto);
-  const escaped = escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim()
+  // (24/09) mesma ordem do enunciado (formatarEnunciadoInterno): escape →
+  // colapsar espaços → marcação matemática (\le, \lambda, \sqrt{}, \infty...)
+  // → subscrito/expoente. Achado real: 78 questões do Quest tinham LaTeX
+  // cru nas alternativas ("\le 10m/s") enquanto o enunciado renderizava
+  const escaped = vfAplicarMarcacaoMatematicaVF(escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim())
     .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
       if(!abreNegrito && !fechaNegrito) return base + vfSobrescritoOuTagVF(exp);
       return base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>';
