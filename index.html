@@ -225,6 +225,15 @@ trocando a custom property de cada slider individualmente */
 .vf-prog-btn svg{width:14px;height:14px;flex-shrink:0}
 .vf-prog-slider{width:100%;accent-color:#B23A34;margin:6px 0 2px 0;display:block}
 .filter-select{font-size:var(--fs-d);padding:6px 10px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#111;cursor:pointer;margin-bottom:10px;width:100%;box-sizing:border-box}
+/* a fonte serifada de matemática (PQMatematica, no body) vale pra letra
+   grega e sinal matemático em QUALQUER lugar - e isso vazou pra interface:
+   nome de publicação com "δ" ou "≥" aparecia serifado dentro do filtro
+   (achado real, Carlos, 24/09, no computador). A serifa é pro CONTEÚDO
+   (afirmação, notas, tabelas, balões); filtro, menu, barra de cima e
+   campo de formulário voltam pra fonte do sistema */
+select, option, optgroup, .filter-select, .textarea-padrao,
+#vf-filtros, #vf-filtros *, .topbar, .topbar *,
+.nav-item, .nav-item *, .bottom-nav, .bottom-nav *{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 .filter-select:disabled{opacity:0.5;cursor:not-allowed}
 /* escrever com a Apple Pencil dentro de um campo de uma linha (o Scribble
    do iPad): sem isso o arrasto da caneta em cima do campo conta também
@@ -2239,7 +2248,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-24-186';
+const VERSAO_APP = '2026-09-24-187';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
