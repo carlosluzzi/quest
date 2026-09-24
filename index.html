@@ -2038,7 +2038,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   <div class="modal-conteudo popup-formulario">
     <h3 class="config-title" id="vf-anotacao-elemento-titulo">Anotação</h3>
     <div id="vf-anotacao-elemento-bloco-celula" class="hidden">
-      <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Texto da célula</div>
+      <div id="vf-anotacao-elemento-rotulo-celula" style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Texto da célula</div>
       <textarea id="vf-anotacao-elemento-celula-texto" class="textarea-padrao" placeholder="Texto da célula" style="min-height:70px"></textarea>
       <div style="font-size:var(--fs-b);color:#888;margin:10px 0 4px">Anotação (balão ao tocar)</div>
     </div>
@@ -2239,7 +2239,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-24-183';
+const VERSAO_APP = '2026-09-24-186';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4805,7 +4805,7 @@ function vfProcessarNotaClicavelVF(texto){
     const grupo2 = vfExtrairGrupoBalanceadoVF(texto, pos2);
     if(!grupo2){ regexInicio.lastIndex = match.index + match[0].length; continue; }
     resultado += texto.slice(pos, match.index);
-    resultado += `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(grupo2.conteudo)}" onclick="vfCliqueNotaClicavelVF(event)">${grupo1.conteudo}</span>`;
+    resultado += `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(grupo2.conteudo)}" data-gatilho-bruto="${escapeHtml(grupo1.conteudo)}" onclick="vfCliqueNotaClicavelVF(event)">${grupo1.conteudo}</span>`;
     pos = grupo2.fimPos + 1;
     regexInicio.lastIndex = pos;
   }
@@ -4838,7 +4838,7 @@ function vfProcessarNotaClicavelComPlaceholderVF(texto, tabelas){
     // enquanto o mesmo comando no meio da frase virava Λ (achado real,
     // Carlos, 23/09). Formata agora, antes de guardar
     const gatilho = formatarTextoItemVF(grupo1.conteudo, {listaNumerada: true});
-    const span = `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(grupo2.conteudo)}" onclick="vfCliqueNotaClicavelVF(event)">${gatilho}</span>`;
+    const span = `<span class="vf-nota-clicavel" data-explicacao="${escapeHtml(grupo2.conteudo)}" data-gatilho-bruto="${escapeHtml(grupo1.conteudo)}" onclick="vfCliqueNotaClicavelVF(event)">${gatilho}</span>`;
     tabelas.push(span);
     resultado += `\u0000TABELA${tabelas.length - 1}\u0000`;
     pos = grupo2.fimPos + 1;
@@ -5042,6 +5042,16 @@ function vfFormatarCelulaArrayVF(celula){
     explicacoesNotaCelulaVF.push(valor);
     return `data-explicacao="\uE000${explicacoesNotaCelulaVF.length - 1}\uE001"`;
   });
+  // data-gatilho-bruto precisa da MESMA proteção, e por um motivo a mais:
+  // é por esse valor que a edição na página localiza o \nota{}{} lá no
+  // texto de origem. Sem proteger, um gatilho escrito como "\Lambda = 1"
+  // chegava ao atributo já convertido pra "Λ = 1" e a busca no texto
+  // nunca achava (achado real, 24/09). Volta EXATAMENTE como foi escrito
+  const gatilhosNotaCelulaVF = [];
+  c = c.replace(/data-gatilho-bruto="([^"]*)"/g, (m, valor) => {
+    gatilhosNotaCelulaVF.push(valor);
+    return `data-gatilho-bruto="\uE002${gatilhosNotaCelulaVF.length - 1}\uE003"`;
+  });
   // \newline dentro de célula quebra em múltiplas linhas na mesma célula -
   // comando LaTeX padrão diferente de \\ (que já é o separador ENTRE
   // linhas da tabela, não pode ser reaproveitado sem ambiguidade)
@@ -5081,6 +5091,7 @@ function vfFormatarCelulaArrayVF(celula){
     .replace(/\{,\}/g, ',')
     .replace(/\\,/g, '')
     .replace(/\\ /g, ' '));
+  c = c.replace(/\uE002(\d+)\uE003/g, (m, indice) => gatilhosNotaCelulaVF[Number(indice)]); // sem nenhuma limpeza: tem que bater caractere por caractere com a origem
   return c;
 }
 
@@ -17978,7 +17989,147 @@ async function vfSalvarOrdemNotasFixadasVF(questaoVfId){
 function vfCliqueNotaClicavelVF(evento){
   evento.stopPropagation();
   if(vfBalaoExplicacaoEstaAbertoVF()){ vfEsconderBalaoExplicacaoVF(); return; }
-  vfMostrarBalaoExplicacaoVF(evento, evento.currentTarget.dataset.explicacao);
+  const gatilho = evento.currentTarget;
+  // balãozinho que veio escrito no texto (\nota{}{}) agora também é
+  // editável DA PÁGINA, igual às anotações feitas clicando na célula
+  // (24/09, Carlos): tocar no balão abre a edição, sem ter que entrar em
+  // Complementar > editar > salvar > salvar
+  const contexto = vfContextoNotaDoTextoVF(gatilho);
+  const aoEditar = contexto ? () => vfAbrirEdicaoNotaDoTextoVF(contexto) : null;
+  vfMostrarBalaoExplicacaoVF(evento, gatilho.dataset.explicacao, aoEditar);
+}
+
+// ---- editar na página um \nota{}{} que veio escrito no texto ----
+// acha de onde aquele balãozinho veio: tabela com origem conhecida
+// (enunciado/correção ou elemento da biblioteca) ou texto solto de um
+// elemento anexado. Devolve null quando não dá pra localizar - aí o
+// balão continua só de leitura, como era antes
+function vfContextoNotaDoTextoVF(gatilho){
+  if(!gatilho || !gatilho.dataset || gatilho.dataset.gatilhoBruto === undefined) return null;
+  const blocoTabela = gatilho.closest('.vf-tabela-bloco');
+  const blocoElemento = gatilho.closest('.vf-elemento-html-bloco');
+  const escopo = (blocoTabela && typeof vfTabelaOrigemVF !== 'undefined' && vfTabelaOrigemVF.has(blocoTabela.id)) ? blocoTabela : blocoElemento;
+  if(!escopo) return null;
+  const gatilhoBruto = gatilho.dataset.gatilhoBruto;
+  const explicacao = gatilho.dataset.explicacao || '';
+  // qual das cópias idênticas é essa - a busca no texto de origem é por
+  // conteúdo, então duas iguais precisam ser distinguidas pela ordem
+  const iguais = [...escopo.querySelectorAll('.vf-nota-clicavel')].filter(el =>
+    el.dataset.gatilhoBruto === gatilhoBruto && (el.dataset.explicacao || '') === explicacao);
+  const ocorrencia = iguais.indexOf(gatilho);
+  if(ocorrencia === -1) return null;
+  return {
+    gatilhoEl: gatilho,
+    gatilhoBruto,
+    explicacao,
+    ocorrencia,
+    blocoTabelaId: (escopo === blocoTabela) ? blocoTabela.id : null,
+    elementoHtmlId: blocoElemento ? blocoElemento.dataset.elementoId : null
+  };
+}
+
+// troca (ou remove) a N-ésima ocorrência de um \nota{gatilho}{explicação}
+// dentro de um texto. novaExplicacao null = tira o balãozinho e deixa só
+// o texto que aparecia. Devolve null quando não encontra
+function vfTrocarNotaNoTextoVF(texto, gatilhoBruto, explicacaoAntiga, ocorrencia, novaExplicacao){
+  // a explicação chega do atributo já com as limpezas que a célula aplica
+  // ao devolver o valor protegido (\text{}, {,}, \, e \ ). Compara os dois
+  // lados pela mesma régua, senão uma explicação escrita com esses
+  // comandos nunca casaria com a origem
+  const mesmaRegua = (t) => (t || '')
+    .replace(/\\text\{([^}]*)\}/g, '$1')
+    .replace(/\{,\}/g, ',')
+    .replace(/\\,/g, '')
+    .replace(/\\ /g, ' ');
+  const gatilhoAlvo = mesmaRegua(gatilhoBruto);
+  const explicacaoAlvo = mesmaRegua(explicacaoAntiga);
+  const regex = /\\nota\s*\{/g;
+  let match, achadas = 0;
+  while((match = regex.exec(texto))){
+    const g1 = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
+    if(!g1){ regex.lastIndex = match.index + match[0].length; continue; }
+    const entre = texto.slice(g1.fimPos + 1).match(/^\s*\{/);
+    if(!entre){ regex.lastIndex = g1.fimPos + 1; continue; }
+    const g2 = vfExtrairGrupoBalanceadoVF(texto, g1.fimPos + entre[0].length);
+    if(!g2){ regex.lastIndex = g1.fimPos + 1; continue; }
+    if(mesmaRegua(g1.conteudo) === gatilhoAlvo && mesmaRegua(g2.conteudo) === explicacaoAlvo){
+      if(achadas === ocorrencia){
+        const substituto = novaExplicacao === null ? g1.conteudo : `\\nota{${g1.conteudo}}{${novaExplicacao}}`; // mantém o gatilho EXATAMENTE como está na origem
+        return texto.slice(0, match.index) + substituto + texto.slice(g2.fimPos + 1);
+      }
+      achadas++;
+    }
+    regex.lastIndex = g2.fimPos + 1;
+  }
+  return null;
+}
+
+function vfAbrirEdicaoNotaDoTextoVF(contexto){
+  vfAnotacaoContextoAtualVF = {tipo: 'nota-latex', ...contexto};
+  document.getElementById('vf-anotacao-elemento-titulo').textContent = 'Balãozinho';
+  const blocoCampo = document.getElementById('vf-anotacao-elemento-bloco-celula');
+  blocoCampo.classList.remove('hidden');
+  document.getElementById('vf-anotacao-elemento-rotulo-celula').textContent = 'Texto que aparece';
+  const campoGatilho = document.getElementById('vf-anotacao-elemento-celula-texto');
+  campoGatilho.value = contexto.gatilhoBruto;
+  campoGatilho.disabled = true; // o texto visível se edita pelo código da tabela; aqui é só referência
+  campoGatilho.style.opacity = '0.6';
+  document.getElementById('vf-anotacao-elemento-texto').value = contexto.explicacao;
+  const btnExcluir = document.getElementById('vf-anotacao-elemento-btn-excluir');
+  btnExcluir.classList.remove('hidden');
+  btnExcluir.textContent = 'Tirar o balãozinho';
+  abrirModal('modal-anotacao-elemento-vf');
+}
+
+// grava o texto novo lá na origem: tabela usa o mesmo caminho da edição
+// de célula (serve pra enunciado/correção E pra elemento da biblioteca);
+// balãozinho fora de tabela vai direto no latex_fonte do elemento
+async function vfGravarNotaDoTextoVF(contexto, novaExplicacao){
+  if(contexto.blocoTabelaId){
+    const origem = vfTabelaOrigemVF.get(contexto.blocoTabelaId);
+    if(!origem){ vfMostrarAvisoVF('Não consegui achar de onde essa tabela veio.'); return false; }
+    const novoTrecho = vfTrocarNotaNoTextoVF(origem.textoOriginalMatch, contexto.gatilhoBruto, contexto.explicacao, contexto.ocorrencia, novaExplicacao);
+    if(novoTrecho === null){ vfMostrarAvisoVF('Não consegui localizar esse balãozinho no texto de origem.'); return false; }
+    return await vfPersistirTrechoTabelaVF(contexto.blocoTabelaId, novoTrecho);
+  }
+  if(contexto.elementoHtmlId){
+    const {data, error} = await sb.from('elementos_html_vf').select('latex_fonte').eq('id', contexto.elementoHtmlId).single();
+    if(error || !data){ vfMostrarAvisoVF('Não consegui ler esse elemento. Tenta de novo.'); return false; }
+    const textoNovo = vfTrocarNotaNoTextoVF(data.latex_fonte, contexto.gatilhoBruto, contexto.explicacao, contexto.ocorrencia, novaExplicacao);
+    if(textoNovo === null){ vfMostrarAvisoVF('Não consegui localizar esse balãozinho no texto de origem.'); return false; }
+    const itemCache = vfBibliotecaComplementarCacheVF?.find(e => e.id === contexto.elementoHtmlId);
+    if(itemCache) itemCache.latex_fonte = textoNovo;
+    vfInvalidarCacheElementosPorElementoIdVF(contexto.elementoHtmlId);
+    const {error: erroUpdate} = await sb.from('elementos_html_vf').update({latex_fonte: textoNovo}).eq('id', contexto.elementoHtmlId);
+    if(erroUpdate){ vfMostrarAvisoVF('Não consegui salvar. Tenta de novo.'); return false; }
+    return true;
+  }
+  return false;
+}
+
+async function vfConfirmarEdicaoNotaDoTextoVF(){
+  const contexto = vfAnotacaoContextoAtualVF;
+  const novaExplicacao = document.getElementById('vf-anotacao-elemento-texto').value.replace(/—/g, '–').trim();
+  fecharModal('modal-anotacao-elemento-vf');
+  if(!novaExplicacao){ vfMostrarAvisoVF('Balãozinho sem texto não vale - use "Tirar o balãozinho" pra remover.'); return; }
+  if(novaExplicacao === contexto.explicacao) return;
+  const ok = await vfGravarNotaDoTextoVF(contexto, novaExplicacao);
+  if(!ok) return;
+  contexto.gatilhoEl.dataset.explicacao = novaExplicacao; // a tela já mostra o texto novo no próximo toque
+  contexto.explicacao = novaExplicacao;
+}
+
+async function vfExcluirNotaDoTextoVF(){
+  const contexto = vfAnotacaoContextoAtualVF;
+  fecharModal('modal-anotacao-elemento-vf');
+  vfAbrirConfirmacaoGenericaVF('Tirar o balãozinho', 'Tirar o balãozinho desse trecho? O texto continua, só a explicação sai.', async () => {
+    const ok = await vfGravarNotaDoTextoVF(contexto, null);
+    if(!ok) return;
+    // o trecho continua na tela, só deixa de ser clicável
+    const solto = document.createElement('span');
+    solto.innerHTML = contexto.gatilhoEl.innerHTML;
+    contexto.gatilhoEl.replaceWith(solto);
+  });
 }
 // ---- Inconsistências da fonte (tabela inconsistencias_vf) ----
 // questoes_vf.inconsistente = true marca afirmação literal do livro cuja
@@ -19859,6 +20010,12 @@ function vfAplicarIdentificadoresECliquesVF(bloco, mapaAnotacoes, elementoHtmlId
 let vfAnotacaoContextoAtualVF = null;
 function vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, textoAtual, celulaEl){
   vfAnotacaoContextoAtualVF = {elementoHtmlId, identificador, celulaEl, textoCelulaOriginal: null};
+  // desfaz o que o modo "balãozinho" deixa marcado no mesmo pop-up
+  const campoCelulaVF = document.getElementById('vf-anotacao-elemento-celula-texto');
+  campoCelulaVF.disabled = false;
+  campoCelulaVF.style.opacity = '';
+  document.getElementById('vf-anotacao-elemento-rotulo-celula').textContent = 'Texto da célula';
+  document.getElementById('vf-anotacao-elemento-btn-excluir').textContent = 'Excluir anotação';
   document.getElementById('vf-anotacao-elemento-texto').value = textoAtual || '';
   // célula de tabela com origem localizável: mostra também o texto dela
   // pra editar no mesmo pop-up (\sidebyside e blocos sem origem: só a anotação)
@@ -19885,6 +20042,7 @@ function vfInvalidarCacheElementosPorElementoIdVF(elementoHtmlId){
 }
 async function vfExcluirAnotacaoElementoVF(){
   if(!vfAnotacaoContextoAtualVF) return;
+  if(vfAnotacaoContextoAtualVF.tipo === 'nota-latex') return vfExcluirNotaDoTextoVF();
   const {elementoHtmlId, identificador, celulaEl} = vfAnotacaoContextoAtualVF;
   fecharModal('modal-anotacao-elemento-vf');
   vfAbrirConfirmacaoGenericaVF('Excluir anotação', 'Excluir essa anotação?', async () => {
@@ -19899,6 +20057,7 @@ async function vfExcluirAnotacaoElementoVF(){
 }
 async function vfConfirmarAnotacaoElementoVF(){
   if(!vfAnotacaoContextoAtualVF) return;
+  if(vfAnotacaoContextoAtualVF.tipo === 'nota-latex') return vfConfirmarEdicaoNotaDoTextoVF();
   const {elementoHtmlId, identificador, celulaEl, textoCelulaOriginal} = vfAnotacaoContextoAtualVF;
   const texto = document.getElementById('vf-anotacao-elemento-texto').value.trim().replace(/—/g, '–'); // travessão longo sempre vira curto, mesma regra do resto do app
   // texto da célula (quando o campo está visível) - salva se mudou,
