@@ -2248,7 +2248,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-24-187';
+const VERSAO_APP = '2026-09-24-188';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -26511,11 +26511,40 @@ async function resolverGrupoRascunho(nomeArquivo, idGrupo){
   // quando um dos assuntos ainda não tem reconhecimento cadastrado (ex:
   // MARPOL), mas ainda assim os outros itens do grupo destoam. Prefere
   // bloquear demais a deixar passar um cadastro errado
-  const misturaSuspeita = titulosDistintos.size > 1 || (identificadas.length > 0 && identificadas.length < itens.length);
-  if(misturaSuspeita){
+  const sinalDeMistura = titulosDistintos.size > 1 || (identificadas.length > 0 && identificadas.length < itens.length);
+  // ...mas "aparece outro título" não é a mesma coisa que "é de outro
+  // livro" (24/09, Carlos): um relatório que CITA outro (o PIANC 121 cita
+  // o Ship Dimensions, Report 235, em 4 das 29 questões) fazia o bloqueio
+  // disparar num grupo 100% do mesmo livro, e não sobrava caminho nenhum
+  // pra cadastrar em lote. Agora, quando um título DOMINA o grupo (>= 80%
+  // das identificações) e é justamente o que ele escolheu no dropdown,
+  // passa - com uma confirmação dizendo quem é a minoria. Prova de
+  // concurso misturada (o caso que criou essa proteção) continua barrada:
+  // lá nenhum título domina, ou o dominante não é o escolhido
+  const contagemPorTitulo = new Map();
+  identificadas.forEach(r => contagemPorTitulo.set(r.titulo, (contagemPorTitulo.get(r.titulo) || 0) + 1));
+  const rankingTitulos = [...contagemPorTitulo.entries()].sort((a, b) => b[1] - a[1]);
+  const tituloDominante = rankingTitulos[0] || null;
+  const fracaoDominante = tituloDominante ? tituloDominante[1] / Math.max(1, identificadas.length) : 0;
+  const dominanteEhAEscolhida = !!(tituloDominante && bibEscolhida && tituloDominante[0] === bibEscolhida.titulo);
+  const podePelaMaioria = dominanteEhAEscolhida && fracaoDominante >= 0.8;
+  if(sinalDeMistura && !podePelaMaioria){
     const mensagemTitulos = titulosDistintos.size ? ` (encontrei: ${[...titulosDistintos].join(' | ')})` : '';
     alert(`Esse grupo parece ter questões de assuntos diferentes entre si${mensagemTitulos}. Pra evitar cadastro errado, resolve cada questão separadamente em vez de tudo em lote – abre uma de cada vez pela tela de revisão.`);
+    vfTravarAcoesGrupoRascunhoVF(idGrupo, false);
+    vfStatusGrupoRascunhoVF(idGrupo, 'Cadastro em lote bloqueado - o grupo parece misturado.', '#B00020');
     return;
+  }
+  if(sinalDeMistura && podePelaMaioria){
+    const minoriaTitulos = rankingTitulos.slice(1).map(([titulo, n]) => `${n}x ${titulo}`).join(' | ');
+    const naoIdentificadas = itens.length - identificadas.length;
+    const detalheMistura = [minoriaTitulos, naoIdentificadas ? `${naoIdentificadas} sem título reconhecido` : ''].filter(Boolean).join(' · ');
+    const seguirMesmoAssim = confirm(`A maioria do grupo (${tituloDominante[1]} de ${identificadas.length} identificadas) é de "${tituloDominante[0]}", que é a publicação escolhida.\n\nTambém aparece: ${detalheMistura || 'nada mais'}.\n\nCadastrar as ${itens.length} questões como "${bibEscolhida.titulo}"?`);
+    if(!seguirMesmoAssim){
+      vfTravarAcoesGrupoRascunhoVF(idGrupo, false);
+      vfStatusGrupoRascunhoVF(idGrupo, 'Cadastro cancelado - confere o grupo pela tela de revisão.', '#B00020');
+      return;
+    }
   }
 
   // de-duplica DENTRO do mesmo lote antes de processar — sem isso, várias
