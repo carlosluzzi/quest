@@ -2248,7 +2248,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-24-191';
+const VERSAO_APP = '2026-09-24-192';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7958,6 +7958,10 @@ const VF_LIMIAR_ARRASTO_BOTAO_PX = 16;
 // tem um tremor natural mesmo parada (documentado antes), e isso fazia
 // clicar no menu com a caneta falhar com mais frequência que com o dedo
 const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 20;
+// alternativa do Quest: é papel de escrever (X pra marcar falsa, risco
+// numa palavra) - limiar menor, um X de 10px já vira traço. O toque de
+// selecionar é parado, não passa disso (24/09, Carlos)
+const VF_LIMIAR_ARRASTO_ALTERNATIVA_PX = 10;
 
 document.addEventListener('touchstart', (e) => {
   if(!vfEstaVisivelAgora()) return;
@@ -8027,7 +8031,7 @@ document.addEventListener('touchstart', (e) => {
     // gesto). O clique do toque curto não se perde: ele já é disparado à
     // mão em vfFinalizarTracoDesenho (elementoParaClicar.click())
     if(!e.target.closest('input, [contenteditable=""], [contenteditable="true"]')) e.preventDefault();
-    vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX, elemento: botaoIcone, t0: Date.now(), comprimento: 0, ultimoX: touch.clientX, ultimoY: touch.clientY, ehMenu: !!itemMenu};
+    vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : (e.target.closest('.alternativa') ? VF_LIMIAR_ARRASTO_ALTERNATIVA_PX : VF_LIMIAR_ARRASTO_BOTAO_PX), elemento: botaoIcone, t0: Date.now(), comprimento: 0, ultimoX: touch.clientX, ultimoY: touch.clientY, ehMenu: !!itemMenu};
     // suprime o efeito de "apertar" (button:active) já desde o primeiro
     // instante do toque, só pra caneta - achado real: a classe só era
     // adicionada depois que o movimento já tivesse passado do limiar de
@@ -8172,7 +8176,7 @@ document.addEventListener('touchmove', (e) => {
       const deslocamento = Math.hypot(dx, dy);
       const viraTraco = deslocamento > info.limiar
         || (!info.ehMenu && info.comprimento > info.limiar)
-        || (!info.ehMenu && (Date.now() - info.t0) > 220 && deslocamento > 4);
+        || (!info.ehMenu && (Date.now() - info.t0) > (info.limiar <= VF_LIMIAR_ARRASTO_ALTERNATIVA_PX ? 150 : 220) && deslocamento > 4);
       if(viraTraco){
         // virou arrasto de verdade - começa o traço retroativamente a
         // partir do ponto onde o dedo/caneta tocou primeiro, não de onde
@@ -21692,6 +21696,7 @@ async function gerarSuperQuest(){
   indiceQuestaoAtual = 0;
   respostasPorQuestao = {};
   vfDesenhosPorQuestaoQuestVF = new Map(); // caderno novo - não herda desenho de outro
+  limparCanvasDesenhoVF(); // ...nem o que ainda estava desenhado na tela
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
   questoesExcluidasAtual = new Set();
@@ -21768,6 +21773,7 @@ async function montarCaderno(){
   indiceQuestaoAtual = 0;
   respostasPorQuestao = {};
   vfDesenhosPorQuestaoQuestVF = new Map(); // caderno novo - não herda desenho de outro
+  limparCanvasDesenhoVF(); // ...nem o que ainda estava desenhado na tela
   alternativaSelecionadaAtual = null;
   alternativasRiscadasAtual = new Set();
   questoesExcluidasAtual = new Set();
@@ -23272,6 +23278,7 @@ async function finalizarCaderno(){
 
   await sb.from('cadernos').update({status:'finalizado', finalizado_em:new Date().toISOString()}).eq('id', cadernoAtual.id);
   try{ localStorage.removeItem('pscpp_quest_desenhos_' + cadernoAtual.id); }catch(e){}
+  limparCanvasDesenhoVF(); // achado real (24/09): o risco da última questão ficava no canvas e reaparecia na primeira questão do caderno seguinte
   cadernoAtual = null;
   questoesCaderno = [];
   respostasPorQuestao = {};
