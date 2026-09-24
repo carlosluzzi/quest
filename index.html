@@ -2248,7 +2248,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-24-188';
+const VERSAO_APP = '2026-09-24-190';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2462,7 +2462,8 @@ function formatarEnunciadoInterno(texto){
         const matchCorreto = s.match(/^(Correto\s*:)\s*/i);
         if(matchCorreto){
           const textoCorreto = s.slice(matchCorreto[0].length).trim();
-          return `<div class="linha-numerada"><span class="linha-marcador"></span><span class="linha-texto"><strong>${matchCorreto[1]}</strong> ${textoCorreto}</span></div>`;
+          // __ESPACADOR__ vira a mesma largura do marcador da alternativa (badge de 32px ou texto de 19px) - ver o return abaixo
+          return `<div class="linha-numerada"><span class="linha-marcador" style="__ESPACADOR__"></span><span class="linha-texto"><strong>${matchCorreto[1]}</strong> ${textoCorreto}</span></div>`;
         }
         return `<div class="enunciado-linha">${s}</div>`;
       }).join('');
@@ -2493,7 +2494,12 @@ function formatarEnunciadoInterno(texto){
     const estiloBadge = 'display:inline-block;min-width:32px;height:24px;line-height:24px;padding:0 4px;border-radius:8px;font-weight:700;text-align:center;box-sizing:border-box';
     if(matchIncorreta){ corMarcador = ` style="${estiloBadge};background:#FCEBEB;color:#A32D2D"`; resto = resto.slice(matchIncorreta[0].length); }
     else if(matchCorreta){ corMarcador = ` style="${estiloBadge};background:#EAF3DE;color:#3B6D11"`; resto = resto.slice(matchCorreta[0].length); }
-    return `<div class="linha-numerada"><span class="linha-marcador"${corMarcador}>${marcador}</span><span class="linha-texto">${resto}</span></div>${secoesSeparadas}`;
+    // achado real (24/09): o "Correto:" ficava ~13px à esquerda do texto da
+    // alternativa quando o marcador dela era badge (32px) - o espaçador
+    // vazio continuava com os 19px do marcador em texto. Agora herda a
+    // mesma largura mínima do marcador que está logo acima
+    const larguraEspacador = corMarcador ? 'min-width:32px' : 'min-width:19px';
+    return `<div class="linha-numerada"><span class="linha-marcador"${corMarcador}>${marcador}</span><span class="linha-texto">${resto}</span></div>${secoesSeparadas.replace(/__ESPACADOR__/g, larguraEspacador)}`;
   }
 
   // 1. Maiúsculas com ponto ou parêntese (correlação) – ancorado no "A." ou
@@ -8017,7 +8023,7 @@ document.addEventListener('touchstart', (e) => {
     // gesto). O clique do toque curto não se perde: ele já é disparado à
     // mão em vfFinalizarTracoDesenho (elementoParaClicar.click())
     if(!e.target.closest('input, [contenteditable=""], [contenteditable="true"]')) e.preventDefault();
-    vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX, elemento: botaoIcone};
+    vfBotaoPendenteToqueInfo = {x: touch.clientX, y: touch.clientY, identifier: touch.identifier, limiar: itemMenu ? VF_LIMIAR_ARRASTO_NAV_ITEM_PX : VF_LIMIAR_ARRASTO_BOTAO_PX, elemento: botaoIcone, t0: Date.now(), comprimento: 0, ultimoX: touch.clientX, ultimoY: touch.clientY, ehMenu: !!itemMenu};
     // suprime o efeito de "apertar" (button:active) já desde o primeiro
     // instante do toque, só pra caneta - achado real: a classe só era
     // adicionada depois que o movimento já tivesse passado do limiar de
@@ -8149,7 +8155,21 @@ document.addEventListener('touchmove', (e) => {
     const touchPendente = Array.from(e.changedTouches).find(t => t.identifier === vfBotaoPendenteToqueInfo.identifier);
     if(touchPendente){
       const dx = touchPendente.clientX - vfBotaoPendenteToqueInfo.x, dy = touchPendente.clientY - vfBotaoPendenteToqueInfo.y;
-      if(Math.hypot(dx, dy) > vfBotaoPendenteToqueInfo.limiar){
+      // (24/09, Carlos: "quero riscar em cima das alternativas do Quest
+      // sem perder o clique") - além do deslocamento, também vira traço:
+      // pelo CAMINHO percorrido (um circulozinho ou um x pequeno andam
+      // bastante sem sair de perto do ponto inicial) e pelo TEMPO: caneta
+      // segurada mais de 220 ms e já se mexendo é escrita, não toque. O
+      // toque de selecionar continua sendo curto e parado. Menu de baixo
+      // fica só com o deslocamento, como antes
+      const info = vfBotaoPendenteToqueInfo;
+      info.comprimento += Math.hypot(touchPendente.clientX - info.ultimoX, touchPendente.clientY - info.ultimoY);
+      info.ultimoX = touchPendente.clientX; info.ultimoY = touchPendente.clientY;
+      const deslocamento = Math.hypot(dx, dy);
+      const viraTraco = deslocamento > info.limiar
+        || (!info.ehMenu && info.comprimento > info.limiar)
+        || (!info.ehMenu && (Date.now() - info.t0) > 220 && deslocamento > 4);
+      if(viraTraco){
         // virou arrasto de verdade - começa o traço retroativamente a
         // partir do ponto onde o dedo/caneta tocou primeiro, não de onde
         // está agora (senão nasceria um pedacinho de traço faltando)
@@ -8200,6 +8220,16 @@ document.addEventListener('touchmove', (e) => {
           // trava, sem distinção por tela (ver comentário lá)
           vfTravarScrollContentVF();
           mostrarBarraDesenhoVF();
+          // pontos que a caneta reportou ENQUANTO a decisão estava adiada -
+          // sem isso o começo do traço saía como uma reta do ponto inicial
+          // até onde a caneta estava agora (o tique, o começo do x, o
+          // risco curto perdiam a forma)
+          if(VF_SUPORTA_COALESCED_VF && vfPontosAntesDoInicioVF.length){
+            const pendentes = vfPontosAntesDoInicioVF;
+            vfPontosAntesDoInicioVF = [];
+            pendentes.forEach(pt => vfProcessarPontoDesenhoVF(pt.x, pt.y, pt.p, rect, true));
+            vfAtualizarPreviewDestaqueVF();
+          }
         }
         vfBotaoPendenteToqueInfo = null;
       }
@@ -8503,7 +8533,7 @@ function vfAtualizarPreviewDestaqueVF(){
 if(VF_SUPORTA_COALESCED_VF){
   document.addEventListener('pointermove', (e) => {
     if(!vfDesenhandoAgora){
-      if(e.pointerType === 'pen' && e.pointerId === vfUltimoPointerIdCanetaVF && (e.buttons & 1) && vfPontosAntesDoInicioVF.length < 60){
+      if(e.pointerType === 'pen' && e.pointerId === vfUltimoPointerIdCanetaVF && (e.buttons & 1) && vfPontosAntesDoInicioVF.length < 240){
         vfPontosAntesDoInicioVF.push({x: e.clientX, y: e.clientY, p: e.pressure});
       }
       return;
