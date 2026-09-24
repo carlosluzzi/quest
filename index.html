@@ -2239,7 +2239,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-23-182';
+const VERSAO_APP = '2026-09-24-183';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7968,7 +7968,21 @@ document.addEventListener('touchstart', (e) => {
   // desenho. Eles reagem ao toque por onclick de propriedade (não por
   // atributo), então não casavam com '[onclick]' e o toque da caneta virava
   // traço em vez de abrir a anotação
-  const botaoIcone = itemMenu || e.target.closest('button, [onclick], [data-identificador-anotacao]');
+  // escrever por cima da NOTA FIXADA tem que ser imediato (24/09, Carlos:
+  // "tá meio travado escrever por cima da anotação"): o card inteiro tem
+  // onclick, então todo traço ali caía na decisão adiada acima e só virava
+  // traço depois de 16px de movimento - um tique, um circulozinho ou um
+  // sublinhado curto nunca chegavam lá, viravam clique e abriam o popup de
+  // Notas no meio da escrita. Dentro do card, só os controles de verdade
+  // (alça de arrastar, botão, balãozinho clicável, célula anotável)
+  // continuam no esquema de clique; o resto é papel pra escrever.
+  // Dedo nunca chega aqui (filtrado lá em cima), então tocar com o dedo
+  // continua abrindo a nota normalmente
+  const noCardDeNotaVF = e.target.closest('#vf-preview-notas-container, #vf-preview-notas-irmas-container');
+  const controleDoCardVF = e.target.closest('.vf-alca-nota-preview, .vf-nota-clicavel, button, [data-identificador-anotacao]');
+  const botaoIcone = (noCardDeNotaVF && !controleDoCardVF)
+    ? null
+    : (itemMenu || e.target.closest('button, [onclick], [data-identificador-anotacao]'));
   if(botaoIcone){
     // trava o scroll nativo JÁ no toque inicial (só caneta chega aqui -
     // dedo foi filtrado lá em cima e continua rolando a página normal).
@@ -17662,6 +17676,10 @@ let vfTimerPressionarNotaPreviewVF = null;
 let vfPosicaoInicialPressionarNotaPreviewVF = null;
 function vfIniciarPressionarNotaPreviewVF(evento, notaId){
   clearTimeout(vfTimerPressionarNotaPreviewVF);
+  // caneta parada em cima do card enquanto se escreve não pode abrir a
+  // barra de alinhamento - segurar pra isso é gesto de dedo (24/09)
+  const toqueCanetaVF = evento && evento.touches && evento.touches[0];
+  if(toqueCanetaVF && typeof vfEhToqueDeCaneta === 'function' && vfEhToqueDeCaneta(toqueCanetaVF)) return;
   const ponto = evento && (evento.touches ? evento.touches[0] : evento);
   vfPosicaoInicialPressionarNotaPreviewVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
   const card = evento.currentTarget;
