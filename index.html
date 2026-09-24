@@ -2248,7 +2248,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-24-192';
+const VERSAO_APP = '2026-09-24-193';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -2529,7 +2529,18 @@ function formatarEnunciadoInterno(texto){
   if(/\bI\s?[).\-–—‒]\s?/.test(escaped) && /\s\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/.test(escaped)){
     const partes = escaped.split(/(?<!\se)(?<!,)(?<![Aa]penas)(?<![Ss]omente)(?<!\sSó)(?<![Gg]abarito:)(?<![Gg]abarito: )(?=\s\(?[IVXLCDM]{1,6}\s?[).\-–—‒])/).map(p=>p.trim()).filter(Boolean);
     const normalizarMarcadorRomano = t => t.replace(/^(\(?[IVXLCDM]{1,6})\s?[-–—‒]\s*/, '$1. ');
-    return [normalizarMarcadorRomano(partes[0]||''), ...partes.slice(1).map(p=>linhaMarcada(p, /^\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/))].join('') + textoFonte;
+    // (24/09) todos os marcadores romanos da questão com a MESMA largura,
+    // a do mais largo ("III.", "VIII.") - senão o texto de cada item
+    // começava numa coluna diferente e ficava uma escadinha. Medida em
+    // "ch" (largura do algarismo) + folga, então acompanha o tamanho da fonte
+    const itensRomanos = partes.slice(1).map(p=>linhaMarcada(p, /^\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/));
+    // largura estimada por caractere (fonte proporcional: "I" é fino, "M" é largo)
+    const larguraCharEm = {I: 0.3, V: 0.66, X: 0.62, L: 0.54, C: 0.7, D: 0.74, M: 0.86, '(': 0.34, ')': 0.34, '.': 0.28, '-': 0.36, '–': 0.5, '—': 1, '‒': 0.5};
+    const larguraDe = m => [...m].reduce((soma, ch) => soma + (larguraCharEm[ch] || 0.6), 0);
+    const maiorMarcadorEm = Math.max(0, ...partes.slice(1).map(p => larguraDe((p.match(/^\(?[IVXLCDM]{1,6}\s?[).\-–—‒]/) || [''])[0].replace(/\s/g,''))));
+    const larguraMarcador = maiorMarcadorEm > 1.05 ? `min-width:${(maiorMarcadorEm + 0.25).toFixed(2)}em` : ''; // "I." e "II." cabem nos 19px de sempre
+    const itensAlinhados = larguraMarcador ? itensRomanos.map(h => h.replace(/<span class="linha-marcador">/g, `<span class="linha-marcador" style="${larguraMarcador}">`).replace(/<span class="linha-marcador" style="display:inline-block;min-width:32px;/g, `<span class="linha-marcador" style="display:inline-block;min-width:max(32px, ${larguraMarcador.replace('min-width:','')});`)) : itensRomanos;
+    return [normalizarMarcadorRomano(partes[0]||''), ...itensAlinhados].join('') + textoFonte;
   }
 
   // 3. Parênteses vazios (Certo/Errado, ordenação) — o texto de origem
