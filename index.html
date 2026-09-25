@@ -417,7 +417,11 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-arvore-titulo{font-weight:700;color:#111;font-size:var(--fs-e)}
 .vf-arvore-bloco + .vf-tabela-bloco,.vf-arvore-bloco + .vf-svg-bloco,.vf-arvore-bloco + .vf-arvore-bloco,
 .vf-tabela-bloco + .vf-arvore-bloco,.vf-svg-bloco + .vf-arvore-bloco{margin-top:34px !important}
-.vf-tabela-bloco + .vf-tabela-bloco,.vf-tabela-bloco + .vf-svg-bloco,.vf-svg-bloco + .vf-tabela-bloco,.vf-svg-bloco + .vf-svg-bloco{margin-top:34px !important} /* !important: o bloco carrega margin inline (16px), que sem isso vence a folha de estilo */
+.vf-tabela-bloco + .vf-tabela-bloco,.vf-tabela-bloco + .vf-svg-bloco,.vf-svg-bloco + .vf-tabela-bloco,.vf-svg-bloco + .vf-svg-bloco{margin-top:34px !important}
+/* (24/09) a legenda solta (\small / \legenda) entre dois blocos quebrava a
+   regra de vizinhança acima - o desenho vinha grudado na legenda da
+   tabela. Bloco depois de legenda respira os mesmos 34px */
+.vf-legenda-solta + .vf-tabela-bloco,.vf-legenda-solta + .vf-svg-bloco,.vf-legenda-solta + .vf-arvore-bloco{margin-top:34px !important} /* !important: o bloco carrega margin inline (16px), que sem isso vence a folha de estilo */
 .vf-svg-bloco,.vf-svg-bloco *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .vf-tabela-alinhamento,.vf-tabela-alinhamento *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .vf-tabela-bloco,.vf-tabela-bloco *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
@@ -2248,7 +2252,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-24-193';
+const VERSAO_APP = '2026-09-25-196';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5642,7 +5646,7 @@ function vfProcessarTextoPequenoVF(texto){
   // anterior mais do que o espaçamento pedido
   texto = texto.replace(/(?:<br>\s*)+(?=\\(?:small|legenda|paragrafo|lista|alinhar)[\[{])/g, '');
   texto = vfProcessarComandoComOpcaoVF(texto, 'small', (opcao, conteudo) =>
-    `<div style="font-size:var(--fs-b);color:#6B6B66;margin-top:2px;padding-left:10px">${conteudo}</div>`);
+    `<div class="vf-legenda-solta" style="font-size:var(--fs-b);color:#6B6B66;margin-top:2px;padding-left:10px">${conteudo}</div>`);
   // \legenda[espaco]{texto} - igual \small, mas com o espaçamento acima
   // (margin-top, em px) configurável - usado pelo editor visual de
   // blocos, onde cada bloco de texto pode ter seu próprio respiro em
@@ -5650,7 +5654,7 @@ function vfProcessarTextoPequenoVF(texto){
   // (igual o valor fixo que \small sempre teve)
   texto = vfProcessarComandoComOpcaoVF(texto, 'legenda', (espaco, conteudo) => {
     const espacoPx = espaco !== undefined ? espaco.replace('px','') : '2';
-    return `<div style="font-size:var(--fs-b);color:#6B6B66;margin-top:${espacoPx}px;padding-left:10px">${conteudo}</div>`;
+    return `<div class="vf-legenda-solta" style="font-size:var(--fs-b);color:#6B6B66;margin-top:${espacoPx}px;padding-left:10px">${conteudo}</div>`;
   });
   // \paragrafo[espaco]{texto} - texto no tamanho normal (mesmo da
   // explicação/enunciado), com espaçamento acima configurável - pro
@@ -12386,6 +12390,42 @@ async function vfBuscarConteudoEmLoteVF(itens){
 // saber com certeza quais 3 novas ele escolheria a seguir, não é só uma
 // estimativa). Não bloqueia nada, roda solta; se errar, a busca ao vivo
 // ainda cobre (agora em lote também, ver vfGarantirConteudoCompletoVF)
+// (-196) preparo do card no instante da escolha: nota fixada, anexos e
+// notas fixadas das irmãs, tudo em paralelo. Nota e anexos vão pros
+// caches normais (vfNotaPreviewCacheVF / vfElementosCacheVF). As notas
+// das irmãs ficam num cache de USO ÚNICO (consumido e apagado ao
+// renderizar o resultado) - assim fixar/copiar/editar nota nunca deixa
+// dado velho pra trás, sem precisar invalidar em cada lugar que mexe em nota
+const vfNotasIrmasPreparadasVF = new Map(); // questaoId -> array de notas fixadas das irmãs (cru, sem filtrar)
+const vfNotasIrmasEmVooVF = new Map();      // questaoId -> promessa da busca
+function vfBuscarNotasFixadasIrmasVF(questaoVfId){
+  if(!questaoVfId || !usuarioAtual) return Promise.resolve([]);
+  if(vfNotasIrmasPreparadasVF.has(questaoVfId)) return Promise.resolve(vfNotasIrmasPreparadasVF.get(questaoVfId));
+  if(vfNotasIrmasEmVooVF.has(questaoVfId)) return vfNotasIrmasEmVooVF.get(questaoVfId);
+  const promessa = vfPreBuscarIrmasVF(questaoVfId).then(async irmas => {
+    const ids = (irmas || []).map(i => i.id).filter(Boolean);
+    let lista = [];
+    if(ids.length){
+      const {data, error} = await sb.from('notas_vf')
+        .select('id, texto, cor, alinhamento, eh_mnemonico, origem_nota_id')
+        .eq('usuario_id', usuarioAtual.id).eq('fixada', true).in('questao_vf_id', ids)
+        .order('criado_em', {ascending: true}); // mais antiga primeiro: é ela que representa a nota quando várias irmãs têm a mesma
+      if(!error && data) lista = data;
+    }
+    vfNotasIrmasEmVooVF.delete(questaoVfId);
+    vfNotasIrmasPreparadasVF.set(questaoVfId, lista);
+    return lista;
+  }).catch(() => { vfNotasIrmasEmVooVF.delete(questaoVfId); return []; });
+  vfNotasIrmasEmVooVF.set(questaoVfId, promessa);
+  return promessa;
+}
+function vfPrepararCardVF(questaoVfId){
+  if(!questaoVfId) return;
+  vfBuscarNotasEmLoteVF([questaoVfId]).catch(() => {});      // nota fixada (só busca se notasVF diz que existe alguma)
+  vfBuscarElementosEmLoteVF([questaoVfId]).catch(() => {});  // anexos (só se questoesComElementoVF diz que tem)
+  vfBuscarNotasFixadasIrmasVF(questaoVfId).catch(() => {});  // notas fixadas das irmãs (irmãs via RPC já cacheado)
+}
+
 function vfPreBuscarProximasVF(){
   if(!estadoVF || !estadoVF.pool) return;
   const agoraMs = agoraCorrigidoVF();
@@ -14210,12 +14250,17 @@ async function avancarParaProximaVF(){
   // depois de renderizar a questão anterior), isso é instantâneo (já
   // está em vfConteudoCompletoCache). Se não, é uma busca rápida de uma
   // linha só (~50ms), não o pool inteiro como era antes
+  // (-196) prepara o que aparece junto com o resultado - nota fixada,
+  // anexos (tabela/desenho) e notas fixadas das irmãs - pra ESSA questão,
+  // no instante em que ela foi escolhida, em paralelo com o conteúdo
+  // pesado. A pré-busca de candidatas (vfPreBuscarProximasVF) é só um
+  // palpite: quando o algoritmo escolhia outra (porta da antiguidade,
+  // escada, primeira da sessão, cache de nota invalidado depois de
+  // editar), a nota só era buscada DEPOIS da resposta e chegava atrasada
+  // em relação ao "Verdadeiro/Falso". As notas das irmãs nunca tinham
+  // pré-busca nenhuma - eram sempre 2 idas ao banco depois do resultado
+  vfPrepararCardVF(pick.item.id);
   await vfGarantirConteudoCompletoVF(pick.item);
-  // cobre o caso da primeira questão da sessão (ela nunca foi "próxima"
-  // antes, então vfPreBuscarProximasVF nunca rodou pra ela) - dispara sem
-  // esperar, chega enquanto a pessoa lê a afirmação. Nas demais questões
-  // isso é um no-op (já teria sido pré-buscada como "próxima" da anterior)
-  vfBuscarElementosEmLoteVF([pick.item.id]).catch(() => {});
   // só limpa o rascunho AGORA, junto com a troca de tela - achado real:
   // limpar antes do await de cima deixava um intervalo visível (às vezes
   // perceptível) onde o rascunho já tinha sumido mas a questão nova ainda
@@ -19843,7 +19888,10 @@ function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
     vfContextoRenderizacaoSvgVF = {tipo: 'elemento-html', elementoId: elemento.id};
     const conteudoFormatado = formatarTextoItemVF(elemento.latex_fonte, {listaNumerada: true});
     vfContextoRenderizacaoSvgVF = null;
-    return `<div style="margin-top:${indiceBloco === 0 ? 0 : 18}px"><div id="${idBloco}" class="vf-elemento-html-bloco" data-elemento-id="${elemento.id}" data-ligacao-id="${ligacao.id}" data-questao-vf-id="${questaoVfId}" data-mapa-anotacoes='${escapeHtml(JSON.stringify([...mapaAnotacoes]))}'>${conteudoFormatado}</div></div>`;
+    // (24/09) 34px entre anexos - o mesmo respiro padrão de bloco depois de
+    // bloco (tabela/desenho/árvore vizinhos); com 18px a legenda da tabela
+    // ficava grudada no título do desenho seguinte
+    return `<div style="margin-top:${indiceBloco === 0 ? 0 : 34}px"><div id="${idBloco}" class="vf-elemento-html-bloco" data-elemento-id="${elemento.id}" data-ligacao-id="${ligacao.id}" data-questao-vf-id="${questaoVfId}" data-mapa-anotacoes='${escapeHtml(JSON.stringify([...mapaAnotacoes]))}'>${conteudoFormatado}</div></div>`;
   });
   container.innerHTML = blocos.join('');
   // aplica as anotações já salvas em cada bloco recém-inserido - depois
@@ -20613,22 +20661,33 @@ async function vfCopiarNotaDaIrmaVF(notaId){
 // com um "+". Um toque copia pra cá já fixada e ele segue pra próxima.
 // Enquanto não tocar, nada é gravado: é só uma oferta na tela
 let vfNotasFixadasIrmasVF = [];
-async function vfCarregarNotasFixadasIrmasVF(questaoVfId){
+// (-196) síncrona quando o preparo do card (vfPrepararCardVF, disparado
+// ao clicar em Próxima) já chegou - que é o caso normal: monta as notas
+// das irmãs no MESMO tick do resultado, junto com nota/anexo/complementar.
+// Só espera o banco se a resposta veio antes do preparo terminar. O
+// preparo é consumido aqui (uso único) - a próxima visita busca de novo
+function vfCarregarNotasFixadasIrmasVF(questaoVfId){
   const container = document.getElementById('vf-preview-notas-irmas-container');
   if(!container || !usuarioAtual) return;
   vfNotasFixadasIrmasVF = [];
   container.classList.add('hidden');
   container.innerHTML = '';
-  const irmas = await vfPreBuscarIrmasVF(questaoVfId); // mesma pré-busca do pop-up de excluir - normalmente já respondida
-  const ids = (irmas || []).map(i => i.id).filter(Boolean);
-  if(!ids.length) return;
-  const {data, error} = await sb.from('notas_vf')
-    .select('id, texto, cor, alinhamento, eh_mnemonico, origem_nota_id')
-    .eq('usuario_id', usuarioAtual.id).eq('fixada', true).in('questao_vf_id', ids)
-    .order('criado_em', {ascending: true}); // mais antiga primeiro: é ela que representa a nota quando várias irmãs têm a mesma
-  if(error || !data || !data.length) return;
-  // se a tela já trocou de questão enquanto isso, não pinta nada
-  if(estadoVF?.historico?.[estadoVF.posicao]?.item?.id !== questaoVfId) return;
+  if(vfNotasIrmasPreparadasVF.has(questaoVfId)){
+    const lista = vfNotasIrmasPreparadasVF.get(questaoVfId);
+    vfNotasIrmasPreparadasVF.delete(questaoVfId);
+    vfMontarNotasFixadasIrmasVF(questaoVfId, lista);
+    return;
+  }
+  vfBuscarNotasFixadasIrmasVF(questaoVfId).then(lista => {
+    vfNotasIrmasPreparadasVF.delete(questaoVfId);
+    // se a tela já trocou de questão enquanto isso, não pinta nada
+    if(estadoVF?.historico?.[estadoVF.posicao]?.item?.id !== questaoVfId) return;
+    if(!document.getElementById('vf-preview-notas-irmas-container')) return;
+    vfMontarNotasFixadasIrmasVF(questaoVfId, lista);
+  });
+}
+function vfMontarNotasFixadasIrmasVF(questaoVfId, data){
+  if(!data || !data.length) return;
   const fixadasDaqui = vfNotaPreviewCacheVF.get(questaoVfId) || [];
   const jaAqui = new Set(fixadasDaqui.map(n => (n.texto || '').trim()));
   // origem_nota_id: a cópia é uma nota INDEPENDENTE (apagar ou editar uma
@@ -24544,6 +24603,7 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Arte Naval", autorBusca:["rp"], autor:"FRAGOSO, O.; CAJATY, M.", titulo:"Rebocadores Portuários", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["hensen", "tug"], autor:"HENSEN, H.", titulo:"Tug Use in Port: A Practical Guide", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["tup"], autor:"HENSEN, H.", titulo:"Tug Use in Port: A Practical Guide", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["tug use in port"], autor:"HENSEN, H.", titulo:"Tug Use in Port: A Practical Guide", capitulos:null}, // o nome do livro por extenso, como vem na fonte ("Tug Use in Port, p. 7") - sem isso, 2622 afirmações caíram no rascunho de uma vez (25/09)
   {modulo:"Arte Naval", autorBusca:["tup4"], autor:"HENSEN, H.", titulo:"Tug Use in Port: A Practical Guide", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["hensen", "estabilidade", "rebocadores"], autor:"HENSEN, H.; VAN DER LAAN, M.", titulo:"Estabilidade dos Rebocadores", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["1428"], autor:"IMO", titulo:"Required Pilot Transfer Arrangements (MSC.1/Circ.1428)", capitulos:null},
@@ -25248,7 +25308,23 @@ function identificarBibliografiaPorTituloCabecalhoVF(tituloCabecalho, capituloDo
     return tituloNorm.length >= 8 && cabecalhoNorm.includes(tituloNorm);
   });
   // dedup por módulo+título, mesma regra de identificarBibliografia
-  const candidatos = [...new Map(candidatosBrutos.map(c => [c.modulo+'|'+c.titulo, c])).values()];
+  let candidatos = [...new Map(candidatosBrutos.map(c => [c.modulo+'|'+c.titulo, c])).values()];
+  if(!candidatos.length){
+    // segunda tentativa: compara só a parte do título ANTES do ":" - o
+    // subtítulo quase nunca aparece no cabeçalho do arquivo. "Tug Use in
+    // Port, Capítulo 1" nunca casava com "Tug Use in Port: A Practical
+    // Guide", e o arquivo inteiro caía no rascunho (achado real, 25/09).
+    // Só aceita quando o prefixo é longo (>= 12) e aponta pra UMA
+    // publicação só - "Navegação" (dos dois Miguens) fica de fora pelos
+    // dois critérios, que é o certo
+    const porPrefixo = BIBLIOGRAFIA_FECHADA.filter(entrada => {
+      const prefixo = normalizarBusca(tituloBaseBibliografiaVF(entrada.titulo).split(':')[0]);
+      return prefixo.length >= 12 && cabecalhoNorm.includes(prefixo);
+    });
+    const unicos = [...new Map(porPrefixo.map(c => [c.modulo+'|'+c.titulo, c])).values()];
+    if(unicos.length !== 1) return null;
+    candidatos = unicos;
+  }
   if(!candidatos.length) return null;
   if(candidatos.length === 1) return candidatos[0];
   // mesma obra repartida entre módulos por faixa de capítulo (Nayak,
