@@ -37,10 +37,21 @@
   --fs-e:16px; --fs-f:18px; --fs-g:20px; --fs-h:22px; --fs-i:25px;
   --azul-marca:#202A45;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --fz:1; /* fator do "Tamanho da fonte" (Seu perfil) - ver aplicarFontScale */
+}
+/* (26/09) Tamanho da fonte: antes era zoom no #content, que esticava o
+   card, os paddings e as larguras junto - e no iPad a letra em si quase
+   não mudava (o Safari reajusta o texto dentro de zoom). Agora só os
+   degraus da escala tipográfica são multiplicados, e só dentro do miolo
+   (#content): a letra cresce/encolhe, o layout não. Os valores repetem
+   os de :root de cada ponto de quebra, multiplicados por --fz */
+#content{
+  --fs-a:calc(10px*var(--fz)); --fs-b:calc(11px*var(--fz)); --fs-c:calc(12px*var(--fz)); --fs-d:calc(14px*var(--fz));
+  --fs-e:calc(16px*var(--fz)); --fs-f:calc(18px*var(--fz)); --fs-g:calc(20px*var(--fz)); --fs-h:calc(22px*var(--fz)); --fs-i:calc(25px*var(--fz));
 }
 *{box-sizing:border-box}
 input[type=checkbox],input[type=radio]{accent-color:#B23A34}
-html{height:100%;overflow:hidden;overscroll-behavior:none}
+html{height:100%;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%}
 /* letra grega e sinal matemático com a fonte serifada de verdade (o λ
 com o pezinho, o Δ com as hastes de espessura variada), igual às fórmulas
 do Claude - o resto do texto continua na fonte do sistema, sem serifa.
@@ -354,6 +365,10 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
     --fs-a:12px; --fs-b:13px; --fs-c:15px; --fs-d:17px;
     --fs-e:19px; --fs-f:20px; --fs-g:24px; --fs-h:27px; --fs-i:31px;
   }
+  #content{
+    --fs-a:calc(12px*var(--fz)); --fs-b:calc(13px*var(--fz)); --fs-c:calc(15px*var(--fz)); --fs-d:calc(17px*var(--fz));
+    --fs-e:calc(19px*var(--fz)); --fs-f:calc(20px*var(--fz)); --fs-g:calc(24px*var(--fz)); --fs-h:calc(27px*var(--fz)); --fs-i:calc(31px*var(--fz));
+  }
   #app-shell{max-width:100%}
   .topbar{max-width:100%}
   #bottom-nav{max-width:100%}
@@ -367,6 +382,10 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
   :root{
     --fs-a:12px; --fs-b:13px; --fs-c:15px; --fs-d:17px;
     --fs-e:19px; --fs-f:20px; --fs-g:24px; --fs-h:27px; --fs-i:31px;
+  }
+  #content{
+    --fs-a:calc(12px*var(--fz)); --fs-b:calc(13px*var(--fz)); --fs-c:calc(15px*var(--fz)); --fs-d:calc(17px*var(--fz));
+    --fs-e:calc(19px*var(--fz)); --fs-f:calc(20px*var(--fz)); --fs-g:calc(24px*var(--fz)); --fs-h:calc(27px*var(--fz)); --fs-i:calc(31px*var(--fz));
   }
   body{display:flex;background:#f5f5f3}
   #app-shell{max-width:100%}
@@ -2653,7 +2672,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-26-201';
+const VERSAO_APP = '2026-09-26-202';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3667,7 +3686,8 @@ let fontScaleRAF = null;
 function aplicarFontScale(v, salvar){
   if(salvar === undefined) salvar = true;
   const contentEl = document.getElementById('content');
-  if(contentEl) contentEl.style.zoom = (v/100);
+  if(contentEl) contentEl.style.zoom = ''; // limpa o zoom das versões anteriores (26/09: agora é só a letra que muda, via --fz)
+  document.documentElement.style.setProperty('--fz', String(Number(v)/100));
   const label = document.getElementById('font-value');
   if(label) label.textContent = v + '%';
   if(salvar) localStorage.setItem('pscpp_font_scale', v);
