@@ -1993,8 +1993,16 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 
     <div style="border-top:0.5px solid #eee;margin:20px 0 14px"></div>
 
-    <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-perfil')">Fechar</button>
-    <button class="btn-secundario" style="width:100%;color:#B00020;margin-top:10px" onclick="sair()">Sair da conta</button>
+    <!-- (26/09) os DOIS botões num só rodapé preso: antes o rodapé-fixo
+         (vfFixarRodapeDoPopupVF) prendia só o último botão - "Sair da
+         conta" ficava grudado embaixo enquanto "Fechar" rolava com o
+         resto, dando a sensação de uma rolagem dentro da outra.
+         background:inherit = a cor do popup (claro ou escuro), pra o
+         conteúdo não aparecer no vão entre os dois botões ao rolar -->
+    <div style="background:inherit">
+      <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-perfil')">Fechar</button>
+      <button class="btn-secundario" style="width:100%;color:#B00020;margin-top:10px" onclick="sair()">Sair da conta</button>
+    </div>
   </div>
 </div>
 
@@ -2672,7 +2680,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-26-202';
+const VERSAO_APP = '2026-09-26-203';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
