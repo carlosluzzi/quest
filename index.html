@@ -588,7 +588,257 @@ tarja por cima não tapa nada */
   0%{transform:translateX(-100%)}
   100%{transform:translateX(350%)}
 }
+
+/* ============================================================
+   TEMA ESCURO "CARVAO"
+   Ativado por html[data-tema="escuro"]. A preferencia (auto/claro/
+   escuro) fica no localStorage e e aplicada por um script no <head>
+   antes da primeira pintura, pra nao dar flash branco ao abrir.
+   Os seletores [style*=...] existem porque boa parte das cores do
+   app esta em style inline - sem !important eles ganhariam do CSS.
+   ============================================================ */
+html[data-tema="escuro"]{color-scheme:dark;background-color:#141413}
+html[data-tema="escuro"] body{background-color:#141413 !important;color:#EDEAE3 !important}
+html[data-tema="escuro"] #bg-fixed{background-color:#141413 !important;background-image:none !important}
+html[data-tema="escuro"] .topbar{background:#141413 !important;border-bottom-color:#2E2E2B !important}
+html[data-tema="escuro"] .bottom-nav{background:#1A1A18 !important;border-top-color:#2E2E2B !important}
+html[data-tema="escuro"] .nav-item.active{background:#262622 !important}
+html[data-tema="escuro"] .nav-item.active .nav-icon,
+html[data-tema="escuro"] .nav-item.active .nav-label{color:#E07C6F !important}
+html[data-tema="escuro"] .card-questao{background:#1E1E1C !important;border-color:#2E2E2B !important;box-shadow:none !important}
+html[data-tema="escuro"] .btn-secundario{background:#262622 !important;color:#EDEAE3 !important}
+html[data-tema="escuro"] .vf-barra-fixa{background:#141413 !important}
+html[data-tema="escuro"] .modal-overlay{background:rgba(0,0,0,0.62) !important}
+html[data-tema="escuro"] .modal-conteudo{background:#1E1E1C !important;color:#EDEAE3 !important}
+html[data-tema="escuro"] .config-title{color:#EDEAE3 !important}
+html[data-tema="escuro"] .config-label{color:#B4B0A8 !important}
+html[data-tema="escuro"] .config-label span{color:#9D9A93 !important}
+html[data-tema="escuro"] .config-reset-btn{color:#E07C6F !important}
+html[data-tema="escuro"] .filter-select,
+html[data-tema="escuro"] .textarea-padrao,
+html[data-tema="escuro"] select,
+html[data-tema="escuro"] textarea,
+html[data-tema="escuro"] input[type=text],
+html[data-tema="escuro"] input[type=search],
+html[data-tema="escuro"] input[type=email],
+html[data-tema="escuro"] input[type=password],
+html[data-tema="escuro"] input[type=number]{background:#1E1E1C !important;color:#EDEAE3 !important;border-color:#3A3A36 !important}
+html[data-tema="escuro"] option,
+html[data-tema="escuro"] optgroup{background:#1E1E1C;color:#EDEAE3}
+html[data-tema="escuro"] ::placeholder{color:#7C7A74 !important}
+html[data-tema="escuro"] hr{border-color:#2E2E2B !important}
+html[data-tema="escuro"] .vf-nota-clicavel{border-bottom-color:#8C8A83 !important}
+html[data-tema="escuro"] .vf-editor-nota{background:#3A2F1C !important;color:#E8BE7A !important}
+
+/* fundos vindos de style inline */
+html[data-tema="escuro"] [style*="background:#fff"],
+html[data-tema="escuro"] [style*="background: #fff"],
+html[data-tema="escuro"] [style*="background:#FFF"],
+html[data-tema="escuro"] [style*="background-color:#fff"]{background-color:#1E1E1C !important}
+html[data-tema="escuro"] [style*="background:#FBFBFA"],
+html[data-tema="escuro"] [style*="background-color:#FBFBFA"]{background-color:#141413 !important}
+html[data-tema="escuro"] [style*="background:#F9F9F7"],
+html[data-tema="escuro"] [style*="background:#fafaf9"]{background-color:#141413 !important}
+html[data-tema="escuro"] [style*="background:#f7f7f5"],
+html[data-tema="escuro"] [style*="background:#f5f5f3"],
+html[data-tema="escuro"] [style*="background:#F5F5F4"],
+html[data-tema="escuro"] [style*="background:#f0f0ee"],
+html[data-tema="escuro"] [style*="background:#F0F0EE"],
+html[data-tema="escuro"] [style*="background:#f0f0ed"],
+html[data-tema="escuro"] [style*="background:#e4e4e0"],
+html[data-tema="escuro"] [style*="background:#E6E4DE"],
+html[data-tema="escuro"] [style*="background:#e0e0e0"],
+html[data-tema="escuro"] [style*="background:#eee"],
+html[data-tema="escuro"] [style*="background:#EEE"],
+html[data-tema="escuro"] [style*="background:#E6E6E3"],
+html[data-tema="escuro"] [style*="background:#F2F1EC"]{background-color:#262622 !important}
+html[data-tema="escuro"] [style*="background:#ddd"],
+html[data-tema="escuro"] [style*="background:#ccc"]{background-color:#3A3A36 !important}
+/* chip preto de "selecionado": no escuro ele inverte de peso pra continuar
+   lendo como selecionado (texto continua branco, entao clareia so o fundo) */
+html[data-tema="escuro"] [style*="background:#111"]{background-color:#4A4A45 !important}
+html[data-tema="escuro"] [style*="background:#FFF3CD"],
+html[data-tema="escuro"] [style*="background:#FEF6E4"]{background-color:#3A2F1C !important}
+
+/* textos vindos de style inline (ancorados em ";" ou no inicio do
+   atributo pra nao pegar border-color:/background-color: por engano) */
+html[data-tema="escuro"] [style^="color:#111"],
+html[data-tema="escuro"] [style*=";color:#111"],
+html[data-tema="escuro"] [style*="; color:#111"]{color:#EDEAE3 !important}
+html[data-tema="escuro"] [style^="color:#333"],
+html[data-tema="escuro"] [style*=";color:#333"],
+html[data-tema="escuro"] [style^="color:#444"],
+html[data-tema="escuro"] [style*=";color:#444"]{color:#DCD8D0 !important}
+html[data-tema="escuro"] [style^="color:#555"],
+html[data-tema="escuro"] [style*=";color:#555"],
+html[data-tema="escuro"] [style^="color:#666"],
+html[data-tema="escuro"] [style*=";color:#666"],
+html[data-tema="escuro"] [style^="color:#777"],
+html[data-tema="escuro"] [style*=";color:#777"]{color:#B4B0A8 !important}
+html[data-tema="escuro"] [style^="color:#888"],
+html[data-tema="escuro"] [style*=";color:#888"],
+html[data-tema="escuro"] [style^="color:#999"],
+html[data-tema="escuro"] [style*=";color:#999"],
+html[data-tema="escuro"] [style^="color:#aaa"],
+html[data-tema="escuro"] [style*=";color:#aaa"],
+html[data-tema="escuro"] [style^="color:#bbb"],
+html[data-tema="escuro"] [style*=";color:#bbb"],
+html[data-tema="escuro"] [style^="color:#ccc"],
+html[data-tema="escuro"] [style*=";color:#ccc"]{color:#9D9A93 !important}
+html[data-tema="escuro"] [style^="color:#B23A34"],
+html[data-tema="escuro"] [style*=";color:#B23A34"]{color:#E07C6F !important}
+html[data-tema="escuro"] [style^="color:#B00020"],
+html[data-tema="escuro"] [style*=";color:#B00020"],
+html[data-tema="escuro"] [style^="color:#A32D2D"],
+html[data-tema="escuro"] [style*=";color:#A32D2D"]{color:#EBA09A !important}
+html[data-tema="escuro"] [style^="color:#202A45"],
+html[data-tema="escuro"] [style*=";color:#202A45"]{color:#A9B6D8 !important}
+
+/* bordas vindas de style inline */
+html[data-tema="escuro"] [style*="solid #ddd"],
+html[data-tema="escuro"] [style*="solid #eee"],
+html[data-tema="escuro"] [style*="solid #ccc"],
+html[data-tema="escuro"] [style*="solid #e0e0e0"],
+html[data-tema="escuro"] [style*="solid #e5e5e3"],
+html[data-tema="escuro"] [style*="solid #E6E6E3"],
+html[data-tema="escuro"] [style*="solid #f0f0ee"]{border-color:#2E2E2B !important}
+
+/* pastilhas dos 7 modulos + tags + status (pares fundo/texto) */
+/* pastilhas de modulo: sao classes (.mod-*), nao style inline */
+html[data-tema="escuro"] .mod-Manobrabilidade{background:#262438;color:#ADA6EC}
+html[data-tema="escuro"] .mod-Arte-Naval{background:#1C2837;color:#94BEE6}
+html[data-tema="escuro"] .mod-Navegação-em-Águas-Restritas{background:#23301B;color:#A9CE82}
+html[data-tema="escuro"] .mod-Legislação{background:#3A2F1C;color:#E8BE7A}
+html[data-tema="escuro"] .mod-Meteorologia-e-Oceanografia{background:#3A2523;color:#EBA09A}
+html[data-tema="escuro"] .mod-Comunicações{background:#2A2925;color:#C4C1B8}
+html[data-tema="escuro"] .mod-Conhecimentos-Gerais{background:#33241E;color:#DFA48F}
+/* fundos das 4 cores de balao/nota (\nota{} vermelho/ambar/verde/azul) */
+html[data-tema="escuro"] [style*="background:#FDF3F2"]{background-color:#3A2523 !important}
+html[data-tema="escuro"] [style*="background:#FDF6EA"]{background-color:#3A2F1C !important}
+html[data-tema="escuro"] [style*="background:#F2F8EA"]{background-color:#23301B !important}
+html[data-tema="escuro"] [style*="background:#F0F6FC"]{background-color:#1C2837 !important}
+html[data-tema="escuro"] [style*="background:#EEEDFE"]{background-color:#262438 !important}
+html[data-tema="escuro"] [style^="color:#3C3489"],
+html[data-tema="escuro"] [style*=";color:#3C3489"]{color:#ADA6EC !important}
+html[data-tema="escuro"] [style*="background:#E6F1FB"]{background-color:#1C2837 !important}
+html[data-tema="escuro"] [style^="color:#0C447C"],
+html[data-tema="escuro"] [style*=";color:#0C447C"]{color:#94BEE6 !important}
+html[data-tema="escuro"] [style*="background:#EAF3DE"]{background-color:#23301B !important}
+html[data-tema="escuro"] [style^="color:#27500A"],
+html[data-tema="escuro"] [style*=";color:#27500A"],
+html[data-tema="escuro"] [style^="color:#3B6D11"],
+html[data-tema="escuro"] [style*=";color:#3B6D11"]{color:#A9CE82 !important}
+html[data-tema="escuro"] [style*="background:#FAEEDA"]{background-color:#3A2F1C !important}
+html[data-tema="escuro"] [style^="color:#633806"],
+html[data-tema="escuro"] [style*=";color:#633806"],
+html[data-tema="escuro"] [style^="color:#854F0B"],
+html[data-tema="escuro"] [style*=";color:#854F0B"]{color:#E8BE7A !important}
+html[data-tema="escuro"] [style*="background:#FCEBEB"],
+html[data-tema="escuro"] [style*="background:#F2DAD8"]{background-color:#3A2523 !important}
+html[data-tema="escuro"] [style^="color:#791F1F"],
+html[data-tema="escuro"] [style*=";color:#791F1F"]{color:#EBA09A !important}
+html[data-tema="escuro"] [style*="background:#F1EFE8"]{background-color:#2A2925 !important}
+html[data-tema="escuro"] [style^="color:#444441"],
+html[data-tema="escuro"] [style*=";color:#444441"]{color:#C4C1B8 !important}
+html[data-tema="escuro"] [style*="background:#FAECE7"]{background-color:#33241E !important}
+html[data-tema="escuro"] [style^="color:#4A1B0C"],
+html[data-tema="escuro"] [style*=";color:#4A1B0C"]{color:#DFA48F !important}
+html[data-tema="escuro"] [style*="background:#EDF4F0"]{background-color:#1F2B27 !important}
+html[data-tema="escuro"] [style^="color:#2D6A53"],
+html[data-tema="escuro"] [style*=";color:#2D6A53"]{color:#8CC7B0 !important}
+
+/* traco da caneta: o canvas inteiro e invertido no escuro, entao a
+   tinta escura que ele ja usa (e tudo que ja estava desenhado) vira
+   clara sozinha, sem trocar a paleta nem reprocessar desenho antigo */
+html[data-tema="escuro"] #vf-canvas-desenho,
+html[data-tema="escuro"] #vf-canvas-desenho-explicacao{filter:invert(1) hue-rotate(180deg)}
+html[data-tema="escuro"] #vf-swatch-cor-atual,
+html[data-tema="escuro"] #vf-preview-espessura,
+html[data-tema="escuro"] #vf-grade-cores-caneta{filter:invert(1) hue-rotate(180deg)}
+
+/* controle de aparencia no perfil */
+.config-tema-row{display:flex;gap:6px}
+.config-tema-btn{flex:1;padding:10px 6px;border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#555;font-size:var(--fs-c);font-weight:600;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;cursor:pointer;-webkit-appearance:none;appearance:none;outline:none;-webkit-tap-highlight-color:transparent}
+.config-tema-btn.ativo{background:#111;border-color:#111;color:#fff}
+.config-tema-dica{font-size:var(--fs-a);color:#999;margin-top:10px;text-align:center}
+html[data-tema="escuro"] .config-tema-btn{background:#262622 !important;border-color:#3A3A36 !important;color:#B4B0A8 !important}
+html[data-tema="escuro"] .config-tema-btn.ativo{background:#EDEAE3 !important;border-color:#EDEAE3 !important;color:#141413 !important}
+html[data-tema="escuro"] .config-tema-dica{color:#7C7A74 !important}
 </style>
+<script>
+/* ============================================================
+   TEMA - claro / escuro "Carvao" / automatico
+   Fica aqui no <head>, num bloco proprio, por dois motivos:
+   1) roda antes da primeira pintura, entao abrir o app no escuro
+      nao pisca branco;
+   2) fica isolado do bloco grande de JS - se qualquer coisa la
+      embaixo falhar (CDN fora do ar, etc), o tema continua de pe.
+   A preferencia (auto/claro/escuro) vive no localStorage, ou seja,
+   e por aparelho de proposito: iPad pode estar no escuro e o Mac no
+   claro sem um atropelar o outro.
+   ============================================================ */
+(function(){
+  var CHAVE = 'pq_tema';
+
+  function preferencia(){
+    try{
+      var v = localStorage.getItem(CHAVE);
+      return (v === 'claro' || v === 'escuro') ? v : 'auto';
+    }catch(e){ return 'auto'; }
+  }
+
+  function sistemaEscuro(){
+    try{ return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); }
+    catch(e){ return false; }
+  }
+
+  function marcarBotoes(escolha){
+    var btns = document.querySelectorAll('.config-tema-btn');
+    for(var i = 0; i < btns.length; i++){
+      btns[i].classList.toggle('ativo', btns[i].getAttribute('data-tema') === escolha);
+    }
+  }
+
+  function aplicar(pref){
+    var escolha = pref || preferencia();
+    var escuro = escolha === 'escuro' || (escolha === 'auto' && sistemaEscuro());
+    document.documentElement.setAttribute('data-tema', escuro ? 'escuro' : 'claro');
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', escuro ? '#141413' : '#B23A34');
+    marcarBotoes(escolha);
+  }
+
+  function escolher(pref){
+    try{ localStorage.setItem(CHAVE, pref); }catch(e){}
+    aplicar(pref);
+  }
+
+  window.VF_CHAVE_TEMA_VF = CHAVE;
+  window.vfPreferenciaTemaVF = preferencia;
+  window.vfSistemaEscuroVF = sistemaEscuro;
+  window.vfAplicarTemaVF = aplicar;
+  window.vfEscolherTemaVF = escolher;
+  window.vfMarcarBotoesTemaVF = marcarBotoes;
+  window.vfModoEscuroAtivoVF = function(){
+    return document.documentElement.getAttribute('data-tema') === 'escuro';
+  };
+
+  aplicar(); // antes de pintar
+
+  /* no automatico, acompanha o modo noturno do aparelho em tempo real */
+  try{
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var aoMudar = function(){ if(preferencia() === 'auto') aplicar('auto'); };
+    if(mq.addEventListener) mq.addEventListener('change', aoMudar);
+    else if(mq.addListener) mq.addListener(aoMudar);
+  }catch(e){}
+
+  /* os botoes do perfil so existem depois que o HTML e lido */
+  var marcar = function(){ marcarBotoes(preferencia()); };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', marcar);
+  else marcar();
+})();
+</script>
 </head>
 <body>
 <script>
@@ -1573,6 +1823,18 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 
     <div style="border-top:0.5px solid #eee;margin:20px 0 14px"></div>
 
+    <div class="config-item">
+      <div class="config-label">Aparência</div>
+      <div class="config-tema-row">
+        <button type="button" class="config-tema-btn" data-tema="auto" onclick="vfEscolherTemaVF('auto')">Automático</button>
+        <button type="button" class="config-tema-btn" data-tema="claro" onclick="vfEscolherTemaVF('claro')">Claro</button>
+        <button type="button" class="config-tema-btn" data-tema="escuro" onclick="vfEscolherTemaVF('escuro')">Escuro</button>
+      </div>
+      <div class="config-tema-dica">No automático, segue o modo noturno do aparelho.</div>
+    </div>
+
+    <div style="border-top:0.5px solid #eee;margin:20px 0 14px"></div>
+
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-perfil')">Fechar</button>
     <button class="btn-secundario" style="width:100%;color:#B00020;margin-top:10px" onclick="sair()">Sair da conta</button>
   </div>
@@ -2252,7 +2514,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-25-196';
+const VERSAO_APP = '2026-09-26-199';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9576,7 +9838,8 @@ async function vfBuscarBibliotecaVF(){
     promessaFiltro,
     buscarTudoPaginadoVF(() => sb.from('exclusoes_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     vfCarregarBibliografiaCacheVF(),
-    promessaGrifadas
+    promessaGrifadas,
+    vfGarantirMarcadoresVF() // (26/09) notas/fixadas/anexos - ver comentário na declaração
   ]);
   if(erroBusca || erroFiltro || erroGrifadas){
     resumo.textContent = `Não consegui buscar agora (${(erroBusca || erroFiltro || erroGrifadas).message || 'erro de rede'}). Tenta de novo.`;
@@ -9774,6 +10037,7 @@ let vfVeioDaBibliotecaVF = false;
 // olhar UMA afirmação não é preciso sessão nenhuma
 async function vfAbrirNoFlashDaBibliotecaVF(questaoVfId){
   const btn = document.getElementById(`vf-bib-btn-abrir-${questaoVfId}`);
+  if(!vfMarcadoresCarregadosVF) await vfGarantirMarcadoresVF(); // normalmente já veio com a busca - no-op
   if(!estadoVF) estadoVF = {pool: [], historico: [], posicao: -1, acertosSessao: 0, respondidasSessao: 0};
   vfVeioDaBibliotecaVF = true;
   vfAjustarTelaModoBibliotecaVF(true);
@@ -12284,6 +12548,31 @@ let notasVF = new Set();
 // visível na página - subconjunto de notasVF, só quem foi explicitamente
 // fixada pelo usuário, não qualquer nota salva
 let notasFixadasVF = new Set();
+// (26/09) ACHADO REAL: notasVF / notasFixadasVF / questoesComElementoVF só
+// eram carregados junto com o pool da sessão do Flash. Abrindo o app e
+// indo DIRETO pra Biblioteca (sem iniciar sessão), os três ficavam
+// vazios: a nota fixada existia no banco, mas a tela nem criava o
+// container dela (notasFixadasVF.has() dizia "não tem") - parecia que
+// fixar não tinha funcionado. Esse carregador leve (só ids) roda uma vez
+// por abertura do app, no primeiro caminho que precisar: pool ou Biblioteca
+let vfMarcadoresCarregadosVF = false;
+let vfMarcadoresEmVooVF = null;
+function vfGarantirMarcadoresVF(){
+  if(vfMarcadoresCarregadosVF || !usuarioAtual) return Promise.resolve();
+  if(vfMarcadoresEmVooVF) return vfMarcadoresEmVooVF;
+  vfMarcadoresEmVooVF = Promise.all([
+    buscarTudoPaginadoVF(() => sb.from('notas_vf').select('questao_vf_id, fixada', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('questao_elemento_html_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id'))
+  ]).then(([{data: notaData, error: e1}, {data: elemData, error: e2}]) => {
+    vfMarcadoresEmVooVF = null;
+    if(e1 || e2) return; // sem marcar como carregado - tenta de novo na próxima
+    notasVF = new Set((notaData||[]).map(n=>n.questao_vf_id));
+    notasFixadasVF = new Set((notaData||[]).filter(n=>n.fixada).map(n=>n.questao_vf_id));
+    questoesComElementoVF = new Set((elemData||[]).map(e=>e.questao_vf_id));
+    vfMarcadoresCarregadosVF = true;
+  }).catch(() => { vfMarcadoresEmVooVF = null; });
+  return vfMarcadoresEmVooVF;
+}
 // questões que têm pelo menos um elemento HTML (tabela, SVG, etc) anexado
 // - preenchido em carregarPoolVF, mantido em dia em anexar/desanexar/criar.
 // Serve pra saber ANTES de responder se vale a pena pré-buscar os
@@ -12718,6 +13007,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   // fazia a lâmpada aparecer sozinha na tela, mesmo sem o usuário pedir
   notasFixadasVF = new Set((notaData||[]).filter(n=>n.fixada).map(n=>n.questao_vf_id));
   questoesComElementoVF = new Set((elementosLigData||[]).map(e=>e.questao_vf_id));
+  vfMarcadoresCarregadosVF = true;
   vfTodasTagsCacheVF = todasTagsData || [];
   vfTagsPorQuestaoVF = new Map();
   (questoesTagsData||[]).forEach(r => {
@@ -12841,14 +13131,68 @@ function vfSincronizarSessaoComBancoVF(){
       try{ localStorage.setItem(VF_SESSAO_LOCALSTORAGE_KEY, JSON.stringify(sess)); }catch(e){}
     }
     vfSessaoSyncPendenteVF = true;
-    const {error} = await sb.from('sessoes_vf').update({
+    // ACHADO REAL (25/09): sessão com 84 respostas mostrando 9 min. Um
+    // aparelho com uma cópia VELHA da sessão na memória (aba do Mac em
+    // segundo plano, sem receber o realtime) gravava a cópia velha por
+    // cima da linha viva ao voltar/ser escondido - e o iPad, ouvindo o
+    // realtime, adotava o valor velho. Mesma coisa já tinha acontecido
+    // com uma sessão FINALIZADA no dia anterior recebendo update de manhã.
+    // Regra agora: a gravação só passa se a linha ainda estiver aberta E
+    // for exatamente a versão que este aparelho conhece (atualizado_em).
+    // Se não passou, a cópia daqui é que está velha: lê o banco, mescla
+    // (mantendo só a intenção de pausa/retomada daqui) e grava de novo
+    let consulta = sb.from('sessoes_vf').update({
       pausado: !!sess.pausado,
       tempo_acumulado_ms: Math.round(sess.tempoAcumuladoMs || 0),
       ultimo_resume_em: new Date(sess.ultimoResumeEm || sess.iniciadoEm).toISOString()
-    }).eq('id', sess.id);
+    }).eq('id', sess.id).is('finalizado_em', null);
+    if(sess.atualizadoEmBruto) consulta = consulta.eq('atualizado_em', sess.atualizadoEmBruto);
+    const {data, error} = await consulta.select('atualizado_em').maybeSingle();
     vfSessaoSyncPendenteVF = false;
-    if(error) console.warn('sessão: não sincronizou com o banco', error.message);
+    if(error){ console.warn('sessão: não sincronizou com o banco', error.message); return; }
+    if(data && data.atualizado_em){
+      if(vfSessaoAtivaVF && vfSessaoAtivaVF.id === sess.id){
+        vfSessaoAtivaVF.atualizadoEmBruto = data.atualizado_em;
+        vfSessaoAtivaVF.atualizadoEm = new Date(data.atualizado_em).getTime();
+      }
+      return;
+    }
+    // nada gravado: a linha mudou por outro aparelho (ou foi fechada)
+    if(vfSessaoResolvendoConflitoVF) return;
+    vfSessaoResolvendoConflitoVF = true;
+    try{
+      const remota = await vfBuscarSessaoAbertaNoBancoVF();
+      if(!vfSessaoAtivaVF || vfSessaoAtivaVF.id !== sess.id) return;
+      if(!remota || remota.id !== sess.id){ vfSessaoEncerradaRemotamenteVF(); return; }
+      vfMesclarSessaoRemotaVF(remota);
+    }finally{ vfSessaoResolvendoConflitoVF = false; }
   }, 300);
+}
+let vfSessaoResolvendoConflitoVF = false;
+// a cópia daqui estava velha: o tempo (acumulado + resume) vem do banco,
+// que é a verdade; só a INTENÇÃO de pausa/retomada deste aparelho é
+// preservada, refeita por cima do tempo certo. Depois grava de novo, já
+// com a versão nova - agora a trava passa
+function vfMesclarSessaoRemotaVF(remota){
+  const sess = vfSessaoAtivaVF;
+  if(!sess || !remota || remota.id !== sess.id) return;
+  const queriaPausar = !!sess.pausado;
+  const agora = Date.now();
+  sess.tempoAcumuladoMs = remota.tempoAcumuladoMs;
+  sess.ultimoResumeEm = remota.ultimoResumeEm;
+  sess.pausado = remota.pausado;
+  sess.atualizadoEm = remota.atualizadoEm;
+  sess.atualizadoEmBruto = remota.atualizadoEmBruto;
+  if(queriaPausar && !remota.pausado){
+    sess.tempoAcumuladoMs += Math.max(0, agora - remota.ultimoResumeEm);
+    sess.pausado = true;
+  }else if(!queriaPausar && remota.pausado){
+    sess.pausado = false;
+    sess.ultimoResumeEm = agora;
+  }
+  try{ localStorage.setItem(VF_SESSAO_LOCALSTORAGE_KEY, JSON.stringify(sess)); }catch(e){}
+  if(typeof vfAtualizarDisplayBalaoSessaoVF === 'function') vfAtualizarDisplayBalaoSessaoVF();
+  vfSincronizarSessaoComBancoVF();
 }
 // linha do banco -> objeto de sessão em memória (mesmo formato de sempre)
 function vfSessaoDaLinhaVF(l){
@@ -12858,7 +13202,8 @@ function vfSessaoDaLinhaVF(l){
     pausado: !!l.pausado,
     tempoAcumuladoMs: Number(l.tempo_acumulado_ms) || 0,
     ultimoResumeEm: l.ultimo_resume_em ? new Date(l.ultimo_resume_em).getTime() : new Date(l.iniciado_em).getTime(),
-    atualizadoEm: l.atualizado_em ? new Date(l.atualizado_em).getTime() : null
+    atualizadoEm: l.atualizado_em ? new Date(l.atualizado_em).getTime() : null,
+    atualizadoEmBruto: l.atualizado_em || null
   };
 }
 async function vfBuscarSessaoAbertaNoBancoVF(){
@@ -12879,6 +13224,8 @@ function vfAplicarSessaoRemotaVF(remota){
   vfSessaoAtivaVF.pausado = remota.pausado;
   vfSessaoAtivaVF.tempoAcumuladoMs = remota.tempoAcumuladoMs;
   vfSessaoAtivaVF.ultimoResumeEm = remota.ultimoResumeEm;
+  vfSessaoAtivaVF.atualizadoEm = remota.atualizadoEm;
+  vfSessaoAtivaVF.atualizadoEmBruto = remota.atualizadoEmBruto;
   try{ localStorage.setItem(VF_SESSAO_LOCALSTORAGE_KEY, JSON.stringify(vfSessaoAtivaVF)); }catch(e){}
   if(typeof vfAtualizarDisplayBalaoSessaoVF === 'function') vfAtualizarDisplayBalaoSessaoVF();
   if(mudouPausa && typeof vfMostrarToastLeveVF === 'function') vfMostrarToastLeveVF(remota.pausado ? 'Sessão pausada em outro aparelho' : 'Sessão retomada em outro aparelho');
@@ -13860,24 +14207,31 @@ document.addEventListener('visibilitychange', () => {
   if(!vfSessaoEscondidaEmVF) return;
   const escondidoEm = vfSessaoEscondidaEmVF;
   vfSessaoEscondidaEmVF = null;
-  // ao voltar, confere no banco se outro aparelho mexeu na sessão nesse meio tempo
+  vfVoltarDoSegundoPlanoSessaoVF(escondidoEm);
+});
+// (25/09) ao voltar, PRIMEIRO lê o banco e só depois soma/grava - antes a
+// leitura era solta (then) e a gravação do desconto de 2 min saía em
+// paralelo, com a cópia velha deste aparelho, por cima do que o outro
+// aparelho tinha acabado de gravar
+async function vfVoltarDoSegundoPlanoSessaoVF(escondidoEm){
   if(vfSessaoAtivaVF && vfSessaoAtivaVF.id){
-    vfBuscarSessaoAbertaNoBancoVF().then(remota => {
-      if(!vfSessaoAtivaVF) return;
-      if(!remota || remota.id !== vfSessaoAtivaVF.id) vfSessaoEncerradaRemotamenteVF();
-      else if(remota.atualizadoEm && (!vfSessaoAtivaVF.atualizadoEm || remota.atualizadoEm > vfSessaoAtivaVF.atualizadoEm)) vfAplicarSessaoRemotaVF(remota);
-    });
+    const remota = await vfBuscarSessaoAbertaNoBancoVF();
+    if(!vfSessaoAtivaVF) return;
+    if(!remota || remota.id !== vfSessaoAtivaVF.id){ vfSessaoEncerradaRemotamenteVF(); return; }
+    if(remota.atualizadoEm && (!vfSessaoAtivaVF.atualizadoEm || remota.atualizadoEm > vfSessaoAtivaVF.atualizadoEm)) vfAplicarSessaoRemotaVF(remota);
   }
   if(!vfSessaoAtivaVF || vfSessaoAtivaVF.pausado) return;
   const agora = Date.now();
   if(agora - escondidoEm > VF_TOLERANCIA_SEGUNDO_PLANO_MS){
-    // conta só até o momento em que saiu; recomeça a contar agora
+    // conta só até o momento em que saiu; recomeça a contar agora. Se o
+    // banco (outro aparelho) já avançou o resume pra depois da saída, a
+    // diferença é negativa e nada é somado - esse aparelho não estudou
     vfSessaoAtivaVF.tempoAcumuladoMs += Math.max(0, escondidoEm - vfSessaoAtivaVF.ultimoResumeEm);
     vfSessaoAtivaVF.ultimoResumeEm = agora;
     vfSalvarSessaoNoStorageVF();
     if(typeof vfAtualizarDisplayBalaoSessaoVF === 'function') vfAtualizarDisplayBalaoSessaoVF();
   }
-});
+}
 
 // ---- correções em tempo real (questoes_vf) ----
 // Carlos corrige afirmações por outro chat (no Mac) enquanto estuda no
