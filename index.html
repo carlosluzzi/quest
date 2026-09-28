@@ -799,6 +799,90 @@ html[data-tema="escuro"] #vf-sessao-balao.pausado #vf-sessao-balao-btn-pausar{ba
 html[data-tema="escuro"] #rascunho-livre-papel{background-color:#161614 !important;background-image:radial-gradient(circle, #2E2D28 1.1px, transparent 1.1px) !important}
 html[data-tema="escuro"] #rascunho-livre-papel > div:first-of-type{opacity:0.16 !important}
 html[data-tema="escuro"] [style*="color:#2B2620"]{color:#6E6A61 !important}
+
+/* ============================================================
+   BARRA DE DESENHO (caneta / grifo / sublinhar / riscar /
+   marca-texto / borracha) e os paineis que ela abre.
+   No claro e uma barra branca flutuante, com icones quase pretos e
+   a ferramenta ativa marcada por uma pastilha azul clara. Traduzida
+   so pela cor, no escuro quebrava em quatro pontos:
+     1. o corpo dos icones (#2a2a2e e vizinhos, fill fixo dentro do
+        SVG) some no fundo escuro - sobrava so a ponta colorida
+        flutuando, sem desenho de caneta/marcador em volta;
+     2. os tracinhos separadores (#eee) caem na mesma faixa do fundo
+        da barra e desaparecem, colando os grupos uns nos outros;
+     3. a pastilha azul do ativo (#D2E7FA) vira a coisa mais clara da
+        tela inteira, puxando o olho pra ela em vez do conteudo;
+     4. a sombra (preta a 12%) nao existe sobre fundo escuro, entao a
+        barra deixava de parecer flutuante e virava um retangulo
+        grudado no topo.
+   ============================================================ */
+html[data-tema="escuro"] #vf-barra-desenho{
+  background-color:#262622 !important;
+  border:0.5px solid #3E3D38;
+  box-shadow:0 10px 30px rgba(0,0,0,0.55) !important;
+}
+/* 2. separadores: precisam de contraste proprio contra a barra */
+html[data-tema="escuro"] #vf-barra-desenho > div[style*="width:1px"]{background-color:#43423C !important}
+/* pegador de arrastar: seis pontinhos, no claro #ccc */
+html[data-tema="escuro"] #vf-alca-arrastar span{background-color:#5C5B54 !important}
+/* 3. pastilha da ferramenta ativa - mesmo azul, rebaixado pro escuro
+   (o JS tambem aplica essa cor em tempo real, virando "rgb(...)") */
+html[data-tema="escuro"] #vf-barra-desenho [style*="background:#D2E7FA"],
+html[data-tema="escuro"] #vf-barra-desenho [style*="background: rgb(210, 231, 250)"]{background-color:#2C3B4A !important}
+/* 1. corpo dos icones: cada um tem seu proprio quase-preto no fill E no
+   stroke do path, entao os dois mudam juntos */
+html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#2a2a2e"],
+html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#2c2c30"],
+html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#2e2e32"],
+html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#232426"],
+html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#222121"],
+html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#28282c"]{fill:#D2CEC6 !important;stroke:#D2CEC6 !important}
+/* borracha: cinza medio, so clareia o suficiente pra nao sumir */
+html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#89898c"]{fill:#9A9992 !important;stroke:#9A9992 !important}
+/* a ponta da caneta no icone mostra a cor da tinta - o traco na tela
+   aparece invertido (ver o filtro do canvas), entao o icone acompanha
+   pra bater com o que sai da caneta de verdade */
+html[data-tema="escuro"] #vf-barra-desenho .vf-tinta-marcador{filter:invert(1) hue-rotate(180deg)}
+/* aro branco das bolinhas de cor: vira o tom da propria barra, pra ler
+   como recorte e nao como anel aceso */
+html[data-tema="escuro"] #vf-barra-desenho span[style*="border:2px solid #fff"]{border-color:#43423C !important}
+/* 4. paineis que a barra abre (Caneta / Marca-texto / Borracha):
+   mesma superficie flutuante da barra */
+html[data-tema="escuro"] #vf-painel-caneta,
+html[data-tema="escuro"] #vf-painel-destaque,
+html[data-tema="escuro"] #vf-painel-borracha,
+html[data-tema="escuro"] #vf-painel-marcacao-texto{
+  background-color:#262622 !important;
+  border:0.5px solid #3E3D38;
+  box-shadow:0 14px 40px rgba(0,0,0,0.6) !important;
+}
+
+/* ============================================================
+   O NEGRITO DA CORRECAO (o trecho que muda na versao certa).
+   No claro, preto forte sobre branco: o negrito engrossa o traco e o
+   olho acha na hora. No escuro a logica se inverte - letra clara sobre
+   fundo escuro "borra" pra fora (halation), entao o texto normal ja
+   parece meio negrito e o negrito de verdade quase nao se separa.
+   Sem trocar de cor, a saida e trabalhar a DIFERENCA de luminancia:
+   o negrito sobe pro branco puro e o texto em volta desce um degrau,
+   mais uma pastilha neutra (branco a 7%) so pra fechar o contorno.
+   box-decoration-break:clone fecha a pastilha certinho em cada linha
+   quando o trecho quebra em duas. */
+html[data-tema="escuro"] #vf-correcao-atual,
+html[data-tema="escuro"] [id^="vf-bib-correcao-"]{color:#BFBBB3 !important}
+html[data-tema="escuro"] #vf-correcao-atual strong,
+html[data-tema="escuro"] #vf-correcao-atual b,
+html[data-tema="escuro"] [id^="vf-bib-correcao-"] strong,
+html[data-tema="escuro"] [id^="vf-bib-correcao-"] b{
+  color:#FFFFFF !important;
+  background:rgba(255,255,255,0.07);
+  border-radius:4px;
+  padding:0 3px;
+  margin:0 -1px;
+  -webkit-box-decoration-break:clone;
+  box-decoration-break:clone;
+}
 html[data-tema="escuro"] .vf-nota-clicavel{border-bottom-color:#8C8A83 !important}
 html[data-tema="escuro"] .vf-editor-nota{background:#3A2F1C !important;color:#E8BE7A !important}
 
@@ -2719,7 +2803,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-26-205';
+const VERSAO_APP = '2026-09-28-208';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
