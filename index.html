@@ -832,21 +832,29 @@ html[data-tema="escuro"] #vf-barra-desenho [style*="background:#D2E7FA"],
 html[data-tema="escuro"] #vf-barra-desenho [style*="background: rgb(210, 231, 250)"]{background-color:#2C3B4A !important}
 /* 1. corpo dos icones: cada um tem seu proprio quase-preto no fill E no
    stroke do path, entao os dois mudam juntos */
-html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#2a2a2e"],
 html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#2c2c30"],
 html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#2e2e32"],
 html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#232426"],
 html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#222121"],
 html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#28282c"]{fill:#D2CEC6 !important;stroke:#D2CEC6 !important}
+/* EXCECAO: o "A" do icone de grifar (#2a2a2e) fica DENTRO do bloco
+   amarelo do grifo, nao sobre a barra. Clarear ele junto com os outros
+   deixava letra clara sobre fundo claro - era o "A com amarelo que nao
+   aparece direito". Esse continua escuro, igual no tema claro, e ainda
+   escurece mais um tanto pra separar bem do amarelo. */
+html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#2a2a2e"]{fill:#1A1A18 !important;stroke:#1A1A18 !important}
+
 /* borracha: cinza medio, so clareia o suficiente pra nao sumir */
 html[data-tema="escuro"] #vf-barra-desenho svg path[fill="#89898c"]{fill:#9A9992 !important;stroke:#9A9992 !important}
-/* a ponta da caneta no icone mostra a cor da tinta - o traco na tela
-   aparece invertido (ver o filtro do canvas), entao o icone acompanha
-   pra bater com o que sai da caneta de verdade */
-html[data-tema="escuro"] #vf-barra-desenho .vf-tinta-marcador{filter:invert(1) hue-rotate(180deg)}
-/* aro branco das bolinhas de cor: vira o tom da propria barra, pra ler
-   como recorte e nao como anel aceso */
-html[data-tema="escuro"] #vf-barra-desenho span[style*="border:2px solid #fff"]{border-color:#43423C !important}
+
+/* aro das bolinhas de cor: no claro e branco sobre barra branca, ou
+   seja, quase so um respiro. No escuro precisa ser o contrario - um aro
+   de verdade, claro, separando a cor do fundo da pastilha. Vale tambem
+   pras bolinhas da grade de cores dos paineis. */
+html[data-tema="escuro"] #vf-barra-desenho span[style*="border:2px solid #fff"],
+html[data-tema="escuro"] #vf-painel-caneta [style*="border:2px solid #fff"],
+html[data-tema="escuro"] #vf-painel-destaque [style*="border:2px solid #fff"],
+html[data-tema="escuro"] #vf-painel-borracha [style*="border:2px solid #fff"]{border-color:#E4E0D8 !important;box-shadow:0 0 0 1px rgba(0,0,0,0.45) !important}
 /* 4. paineis que a barra abre (Caneta / Marca-texto / Borracha):
    mesma superficie flutuante da barra */
 html[data-tema="escuro"] #vf-painel-caneta,
@@ -865,24 +873,14 @@ html[data-tema="escuro"] #vf-painel-marcacao-texto{
    fundo escuro "borra" pra fora (halation), entao o texto normal ja
    parece meio negrito e o negrito de verdade quase nao se separa.
    Sem trocar de cor, a saida e trabalhar a DIFERENCA de luminancia:
-   o negrito sobe pro branco puro e o texto em volta desce um degrau,
-   mais uma pastilha neutra (branco a 7%) so pra fechar o contorno.
-   box-decoration-break:clone fecha a pastilha certinho em cada linha
-   quando o trecho quebra em duas. */
+   o negrito sobe pro branco puro e o texto em volta desce um degrau.
+   Sem pastilha, sem cor: so a distancia entre os dois tons. */
 html[data-tema="escuro"] #vf-correcao-atual,
 html[data-tema="escuro"] [id^="vf-bib-correcao-"]{color:#BFBBB3 !important}
 html[data-tema="escuro"] #vf-correcao-atual strong,
 html[data-tema="escuro"] #vf-correcao-atual b,
 html[data-tema="escuro"] [id^="vf-bib-correcao-"] strong,
-html[data-tema="escuro"] [id^="vf-bib-correcao-"] b{
-  color:#FFFFFF !important;
-  background:rgba(255,255,255,0.07);
-  border-radius:4px;
-  padding:0 3px;
-  margin:0 -1px;
-  -webkit-box-decoration-break:clone;
-  box-decoration-break:clone;
-}
+html[data-tema="escuro"] [id^="vf-bib-correcao-"] b{color:#FFFFFF !important}
 html[data-tema="escuro"] .vf-nota-clicavel{border-bottom-color:#8C8A83 !important}
 html[data-tema="escuro"] .vf-editor-nota{background:#3A2F1C !important;color:#E8BE7A !important}
 
@@ -986,6 +984,9 @@ html[data-tema="escuro"] [style*="background:#E6F1FB"]{background-color:#1C2837 
 html[data-tema="escuro"] [style^="color:#0C447C"],
 html[data-tema="escuro"] [style*=";color:#0C447C"]{color:#94BEE6 !important}
 html[data-tema="escuro"] [style*="background:#EAF3DE"]{background-color:#23301B !important}
+/* aviso "rodou todas as novas": verde bem claro no tema claro; no escuro
+   vira o mesmo verde em versao de fundo, com o texto claro por cima */
+html[data-tema="escuro"] .vf-aviso-rodei-tudo{background-color:#22301A !important;color:#A9CE82 !important}
 html[data-tema="escuro"] [style^="color:#27500A"],
 html[data-tema="escuro"] [style*=";color:#27500A"],
 html[data-tema="escuro"] [style^="color:#3B6D11"],
@@ -1014,9 +1015,12 @@ html[data-tema="escuro"] [style*=";color:#2D6A53"]{color:#8CC7B0 !important}
    clara sozinha, sem trocar a paleta nem reprocessar desenho antigo */
 html[data-tema="escuro"] #vf-canvas-desenho,
 html[data-tema="escuro"] #vf-canvas-desenho-explicacao{filter:invert(1) hue-rotate(180deg)}
-html[data-tema="escuro"] #vf-swatch-cor-atual,
-html[data-tema="escuro"] #vf-preview-espessura,
-html[data-tema="escuro"] #vf-grade-cores-caneta{filter:invert(1) hue-rotate(180deg)}
+/* a bolinha de cor, o preview de espessura e a grade da caneta NAO usam
+   mais filtro de CSS: a cor certa e calculada em JS (vfCorNaTelaVF) e
+   aplicada direto. Filtro em elemento de interface dava dois problemas -
+   invertia junto a borda e a sombra da bolinha, e no Safari nem sempre
+   pegava em <path> dentro de SVG, que era o motivo do icone da caneta
+   nao acompanhar a cor escolhida. */
 
 /* controle de aparencia no perfil */
 .config-tema-row{display:flex;gap:6px}
@@ -1069,6 +1073,9 @@ html[data-tema="escuro"] .config-tema-dica{color:#7C7A74 !important}
     if(meta) meta.setAttribute('content', escuro ? '#141413' : '#B23A34');
     marcarBotoes(escolha);
     trocarLogos(escuro);
+    // a barra de desenho mostra a cor da tinta JA passada pelo filtro do
+    // canvas - trocar de tema muda esse resultado, entao ela repinta
+    if(typeof window.vfRepintarCoresDaBarraVF === 'function') window.vfRepintarCoresDaBarraVF();
   }
 
   function escolher(pref){
@@ -2803,7 +2810,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-28-208';
+const VERSAO_APP = '2026-09-28-212';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8886,7 +8893,10 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect, dentroDeL
   const ctxAtivo = (vfModoDestaque && vfCtxTracoTemp) ? vfCtxTracoTemp : vfCtxDesenhoAtivoAgoraVF();
   if(vfModoDestaque){
     ctxAtivo.globalCompositeOperation = 'source-over';
-    ctxAtivo.strokeStyle = vfCorDestaqueAtual;
+    // o canvas inteiro e invertido no escuro; sem desfazer isso aqui, o
+    // amarelo do marca-texto chegaria na tela como marrom escuro. Guarda
+    // a tinta ja pre-invertida pra ela voltar a ser clara depois do filtro
+    ctxAtivo.strokeStyle = vfCorDaTelaVF(vfCorDestaqueAtual);
     ctxAtivo.globalAlpha = 1;
   }else{
     ctxAtivo.globalCompositeOperation = vfModoBorracha ? 'destination-out' : 'source-over';
@@ -12259,6 +12269,70 @@ function vfRecolorirIconesMarcacaoTextoVF(corAlvoHex){
   });
 }
 
+/* ============================================================
+   COR DA TINTA  x  COR NA TELA (so no modo escuro)
+
+   No escuro o canvas de desenho inteiro e renderizado com
+   filter: invert(1) hue-rotate(180deg). Isso e de proposito: o bitmap
+   guardado continua independente do tema - a folha de rascunho salva
+   no claro reaparece certa no escuro, e o contrario tambem - e a tinta
+   escura que a paleta sempre usou vira traco claro sozinha, sem
+   reprocessar desenho nenhum.
+
+   O efeito colateral e que a cor GUARDADA (a tinta) deixa de ser a cor
+   VISTA. Era por isso que a bolinha da barra mostrava um azul e a
+   caneta escrevia outro: a bolinha mostrava a tinta, a tela mostrava a
+   tinta ja filtrada. As duas funcoes abaixo fazem essa conta com a
+   mesma matriz do hue-rotate(180) da especificacao de filtros CSS, pra
+   interface poder mostrar exatamente o que vai sair da caneta.
+
+   Detalhe util: a matriz do hue-rotate(180) e igual a propria inversa,
+   entao uma funcao so serve pros dois sentidos - muda de que lado fica
+   o "255 -" da inversao. */
+function vfMatrizHue180VF(r, g, b){
+  const lim = n => Math.max(0, Math.min(255, Math.round(n)));
+  return [
+    lim(-0.574*r + 1.430*g + 0.144*b),
+    lim( 0.426*r + 0.430*g + 0.144*b),
+    lim( 0.426*r + 1.430*g - 0.856*b)
+  ];
+}
+function vfHexParaRgbVF(hex){
+  let h = String(hex || '').trim().replace('#','');
+  if(h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  if(!/^[0-9a-fA-F]{6}$/.test(h)) return null;
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+function vfRgbParaHexVF(v){
+  return '#' + v.map(n => n.toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+/* tinta guardada -> como ela aparece na tela */
+function vfCorNaTelaVF(hex){
+  if(!(typeof vfModoEscuroAtivoVF === 'function' && vfModoEscuroAtivoVF())) return hex;
+  const c = vfHexParaRgbVF(hex);
+  if(!c) return hex;
+  return vfRgbParaHexVF(vfMatrizHue180VF(255-c[0], 255-c[1], 255-c[2]));
+}
+/* cor desejada na tela -> que tinta guardar pra ela aparecer assim */
+function vfCorDaTelaVF(hex){
+  if(!(typeof vfModoEscuroAtivoVF === 'function' && vfModoEscuroAtivoVF())) return hex;
+  const c = vfHexParaRgbVF(hex);
+  if(!c) return hex;
+  const m = vfMatrizHue180VF(c[0], c[1], c[2]);
+  return vfRgbParaHexVF([255-m[0], 255-m[1], 255-m[2]]);
+}
+/* repinta a barra inteira quando o tema muda (o que era tinta escura
+   passa a aparecer claro, e a interface tem que acompanhar na hora) */
+window.vfRepintarCoresDaBarraVF = vfRepintarCoresDaBarraVF;
+function vfRepintarCoresDaBarraVF(){
+  try{
+    if(typeof vfCorDesenhoAtual !== 'undefined') selecionarCorDesenhoVF(vfCorDesenhoAtual);
+    if(typeof vfRenderizarGradeCoresVF === 'function'){
+      vfRenderizarGradeCoresVF('vf-grade-cores-caneta', vfCorDesenhoAtual);
+    }
+  }catch(e){}
+}
+
 function selecionarCorDesenhoVF(cor){
   vfCorDesenhoAtual = cor;
   // moldura QUADRADA ao redor (pseudo-elemento próprio, não box-shadow
@@ -12267,13 +12341,17 @@ function selecionarCorDesenhoVF(cor){
   document.querySelectorAll('.vf-cor-desenho').forEach(btn => {
     btn.classList.toggle('vf-cor-selecionada', btn.dataset.cor === cor);
   });
-  document.getElementById('vf-swatch-cor-atual').style.background = cor;
-  document.getElementById('vf-preview-espessura').style.background = cor;
-  vfAtualizarPreenchimentoSliderVF('vf-slider-espessura', '--preenchimento-slider-caneta', cor);
+  // a bolinha, o preview de espessura e o preenchimento do slider
+  // mostram a cor COMO ELA APARECE - no claro e a propria tinta, no
+  // escuro e a tinta ja passada pelo filtro do canvas
+  const corNaTelaVF = vfCorNaTelaVF(cor);
+  document.getElementById('vf-swatch-cor-atual').style.background = corNaTelaVF;
+  document.getElementById('vf-preview-espessura').style.background = corNaTelaVF;
+  vfAtualizarPreenchimentoSliderVF('vf-slider-espessura', '--preenchimento-slider-caneta', corNaTelaVF);
   // o marcador, e agora também os ícones de Persistente/Variável, seguem
   // a cor escolhida de verdade, girando a matiz de cada tom (mantém toda
   // a sombra/luz dos ícones reais)
-  vfRecolorirIconeMarcador(cor);
+  vfRecolorirIconeMarcador(corNaTelaVF);
 }
 
 
@@ -12475,7 +12553,7 @@ function vfRenderizarGradeCoresVF(idGrid, corAtual){
       ? `<button type="button" onclick="event.stopPropagation();vfExcluirCorCustomizadaVF('${idGrid}','${cor}')" title="Excluir cor" style="position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:#B23A34;border:1.5px solid #fff;color:#fff;font-size:10px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.35);${SEM_SELECAO}">✕</button>`
       : '';
     html += `<div style="position:relative;width:26px;height:26px;flex-shrink:0">
-      <button class="${config.classeBotao}${classeExtra}" data-cor="${cor}"${ehCustomizada ? ' data-customizada="1"' : ''} onclick="${onclickBotao}"${atributosSegurar} style="width:26px;height:26px;border-radius:50%;background:${cor};border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0;${SEM_SELECAO}"></button>
+      <button class="${config.classeBotao}${classeExtra}" data-cor="${cor}"${ehCustomizada ? ' data-customizada="1"' : ''} onclick="${onclickBotao}"${atributosSegurar} style="width:26px;height:26px;border-radius:50%;background:${idGrid === 'vf-grade-cores-caneta' ? vfCorNaTelaVF(cor) : cor};border:2px solid #fff;box-shadow:none;cursor:pointer;padding:0;${SEM_SELECAO}"></button>
       ${botaoX}
     </div>`;
   });
@@ -16047,7 +16125,7 @@ function renderizarItemVF(){
   // some sozinha depois dessa renderização (não reaparece se a tela for
   // re-renderizada por outro motivo)
   const avisoRodeiTudoHtml = estadoVF.avisoRodeiTudoPendenteVF
-    ? `<div style="background:#EAF3E4;color:#3B6D11;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:var(--fs-c);line-height:1.4;text-align:center">${escapeHtml(estadoVF.avisoRodeiTudoPendenteVF)}</div>`
+    ? `<div class="vf-aviso-rodei-tudo" style="background:#EAF3E4;color:#3B6D11;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:var(--fs-c);line-height:1.5;text-align:center;white-space:pre-line">${escapeHtml(estadoVF.avisoRodeiTudoPendenteVF)}</div>`
     : '';
   estadoVF.avisoRodeiTudoPendenteVF = null;
 
@@ -17736,7 +17814,10 @@ async function responderVF(resposta){
     vfAvisosRodeiTudoMostradosVF.add(chaveFiltro);
     const motivo = vfMontarMotivoEsgotadoVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal);
     const espera = motivo.menorEsperaRevisaoH != null ? ` – as próximas vencem em ${vfFormatarHorasVF(motivo.menorEsperaRevisaoH)}.` : '.';
-    estadoVF.avisoRodeiTudoPendenteVF = `Você rodou todas as novas deste filtro (${vfNomeFiltroAtualVF()}: ${estadoVF.pool.length} afirmações). Daqui em diante só revisões${espera}`;
+    // duas linhas: a primeira fecha o que acabou, a segunda diz o que vem
+    // agora. A quebra e um \n de verdade - quem renderiza usa white-space:
+    // pre-line, entao continua passando por escapeHtml sem virar HTML
+    estadoVF.avisoRodeiTudoPendenteVF = `Você rodou todas as novas deste filtro (${vfNomeFiltroAtualVF()}: ${estadoVF.pool.length} afirmações).\nDaqui em diante só revisões${espera}`;
   }
   estadoVF.contadorGlobal = contadorNoMomento + 1; // otimista, sincroniza com o servidor abaixo
 
