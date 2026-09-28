@@ -761,18 +761,140 @@ html[data-tema="escuro"] ::placeholder{color:#7C7A74 !important}
 html[data-tema="escuro"] hr{border-color:#2E2E2B !important}
 html[data-tema="escuro"] input[type=range]{color-scheme:dark}
 
-/* --- cores que o JS pinta em tempo real ---
-   Quando o codigo faz el.style.background = '#fff', o navegador guarda
-   no atributo style a forma serializada "background: rgb(255, 255, 255)".
-   Os seletores por hex acima nao casam com isso - por isso os botoes de
-   filtro do Flash (Tipo / Novas), que sao pintados por JS, continuavam
-   brancos no escuro. */
-html[data-tema="escuro"] [style*="background: rgb(255, 255, 255)"]{background-color:#1E1E1C !important}
-html[data-tema="escuro"] [style*="background: rgb(238, 238, 238)"]{background-color:#262622 !important}
-html[data-tema="escuro"] [style*="background: rgb(252, 235, 235)"]{background-color:#3A2523 !important}
-html[data-tema="escuro"] [style*="background: rgb(178, 58, 52)"]{background-color:#7A2F2A !important}
-html[data-tema="escuro"] [style*="color: rgb(136, 136, 136)"]{color:#9D9A93 !important}
-html[data-tema="escuro"] [style*="border-color: rgb(221, 221, 221)"]{border-color:#3A3A36 !important}
+/* Linha marcada no pop-up "o que excluir": no claro o rosa #FCEBEB e
+   quase um sussurro sobre o branco. Traduzido pela tabela geral virava
+   um bloco vinho cheio - pesado demais pra um estado de selecao, ainda
+   mais com duas ou tres linhas empilhadas. Aqui e so um calor de fundo:
+   quem sinaliza "marcada" e o quadradinho vermelho do check, nao a faixa. */
+html[data-tema="escuro"] .vf-irma-exclusao[style*="background: rgb(252, 235, 235)"]{background-color:#231D1C !important}
+
+/* ============================================================
+   TABELAS (\begin{array}) e o card que as embrulha.
+   A tabela monta o proprio cartao em style inline - fundo claro,
+   borda clara, faixa de cabecalho clara e fios finos entre as linhas.
+   Aqui as regras miram a ESTRUTURA (.vf-tabela-bloco), nao o tom exato
+   de cada inline: assim, se algum desses tons mudar no codigo, a versao
+   escura continua valendo. Sem isso o cartao ficava claro com o texto
+   ja clareado por cima - o pior dos dois mundos, ilegivel. */
+html[data-tema="escuro"] .vf-tabela-bloco > div{
+  background-color:#1E1E1C !important;
+  border-color:#33322D !important;
+  box-shadow:none !important;
+}
+html[data-tema="escuro"] .vf-tabela-bloco table{color:#E4E0D8}
+html[data-tema="escuro"] .vf-tabela-bloco td,
+html[data-tema="escuro"] .vf-tabela-bloco th{border-color:#33322D !important}
+/* fio entre linhas, quando vem inline */
+html[data-tema="escuro"] [style*="solid #EAEAE7"]{border-color:#33322D !important}
+/* faixa de cabecalho da tabela */
+html[data-tema="escuro"] .vf-tabela-bloco tr:first-child td[style*="background:#F2F1EC"],
+html[data-tema="escuro"] [style*="background:#F2F1EC"]{background-color:#2A2925 !important}
+/* moldura de ajuste (quando esta redimensionando a coluna) */
+html[data-tema="escuro"] .vf-tabela-ajustando td{box-shadow:inset 0 0 0 0.5px #4A4942 !important}
+/* legenda da tabela e textos auxiliares cinza-medio */
+html[data-tema="escuro"] [style*="color:#7A7A74"]{color:#9D9A93 !important}
+
+/* card da nota fixada quando ela NAO e tabela (ai ela usa .card-questao,
+   ja coberto) - aqui so garante o fundo de quem monta o card na mao */
+html[data-tema="escuro"] .vf-nota-preview-item > div[style*="background:#FBFBFA"],
+html[data-tema="escuro"] .vf-nota-preview-item > div[style*="background:#fff"]{background-color:#1E1E1C !important}
+
+/* ============================================================
+   CORES QUE O JS PINTA EM TEMPO REAL - tabela completa.
+
+   Quando o codigo faz  el.style.color = '#333'  o navegador guarda no
+   atributo style a forma serializada  "color: rgb(51, 51, 51)"  - os
+   seletores por hex nao casam com isso. Ja tinha acontecido duas vezes
+   (botoes de filtro do Flash, e a lista de irmas do pop-up de excluir,
+   onde o fundo escurecia mas o texto continuava escuro por cima).
+   Em vez de caçar caso a caso, aqui esta a tabela inteira das cores que
+   o app pinta por JS, nas duas formas.
+
+   Os seletores de TEXTO sao ancorados em "; color:" ou no inicio do
+   atributo de proposito: "background-color: rgb(17, 17, 17)" contem
+   "color: rgb(17, 17, 17)" como pedaço, e sem a ancora um fundo preto
+   viraria texto claro por engano.
+   ============================================================ */
+html[data-tema="escuro"] [style^="color: rgb(17, 17, 17)"],
+html[data-tema="escuro"] [style*="; color: rgb(17, 17, 17)"]{color:#EDEAE3 !important}
+html[data-tema="escuro"] [style^="color: rgb(51, 51, 51)"],
+html[data-tema="escuro"] [style*="; color: rgb(51, 51, 51)"],
+html[data-tema="escuro"] [style^="color: rgb(68, 68, 68)"],
+html[data-tema="escuro"] [style*="; color: rgb(68, 68, 68)"]{color:#DCD8D0 !important}
+html[data-tema="escuro"] [style^="color: rgb(85, 85, 85)"],
+html[data-tema="escuro"] [style*="; color: rgb(85, 85, 85)"],
+html[data-tema="escuro"] [style^="color: rgb(102, 102, 102)"],
+html[data-tema="escuro"] [style*="; color: rgb(102, 102, 102)"],
+html[data-tema="escuro"] [style^="color: rgb(119, 119, 119)"],
+html[data-tema="escuro"] [style*="; color: rgb(119, 119, 119)"]{color:#B4B0A8 !important}
+html[data-tema="escuro"] [style^="color: rgb(136, 136, 136)"],
+html[data-tema="escuro"] [style*="; color: rgb(136, 136, 136)"],
+html[data-tema="escuro"] [style^="color: rgb(153, 153, 153)"],
+html[data-tema="escuro"] [style*="; color: rgb(153, 153, 153)"],
+html[data-tema="escuro"] [style^="color: rgb(170, 170, 170)"],
+html[data-tema="escuro"] [style*="; color: rgb(170, 170, 170)"],
+html[data-tema="escuro"] [style^="color: rgb(187, 187, 187)"],
+html[data-tema="escuro"] [style*="; color: rgb(187, 187, 187)"],
+html[data-tema="escuro"] [style^="color: rgb(204, 204, 204)"],
+html[data-tema="escuro"] [style*="; color: rgb(204, 204, 204)"]{color:#9D9A93 !important}
+html[data-tema="escuro"] [style^="color: rgb(178, 58, 52)"],
+html[data-tema="escuro"] [style*="; color: rgb(178, 58, 52)"]{color:#E07C6F !important}
+html[data-tema="escuro"] [style^="color: rgb(163, 45, 45)"],
+html[data-tema="escuro"] [style*="; color: rgb(163, 45, 45)"],
+html[data-tema="escuro"] [style^="color: rgb(176, 0, 32)"],
+html[data-tema="escuro"] [style*="; color: rgb(176, 0, 32)"]{color:#EBA09A !important}
+html[data-tema="escuro"] [style^="color: rgb(46, 125, 50)"],
+html[data-tema="escuro"] [style*="; color: rgb(46, 125, 50)"],
+html[data-tema="escuro"] [style^="color: rgb(59, 109, 17)"],
+html[data-tema="escuro"] [style*="; color: rgb(59, 109, 17)"]{color:#8FC35C !important}
+html[data-tema="escuro"] [style^="color: rgb(133, 79, 11)"],
+html[data-tema="escuro"] [style*="; color: rgb(133, 79, 11)"]{color:#E8BE7A !important}
+html[data-tema="escuro"] [style*="background: rgb(255, 255, 255)"],
+html[data-tema="escuro"] [style*="background-color: rgb(255, 255, 255)"],
+html[data-tema="escuro"] [style*="background: rgb(255, 255, 255)"],
+html[data-tema="escuro"] [style*="background-color: rgb(255, 255, 255)"]{background-color:#1E1E1C !important}
+html[data-tema="escuro"] [style*="background: rgb(247, 247, 245)"],
+html[data-tema="escuro"] [style*="background-color: rgb(247, 247, 245)"],
+html[data-tema="escuro"] [style*="background: rgb(240, 240, 238)"],
+html[data-tema="escuro"] [style*="background-color: rgb(240, 240, 238)"],
+html[data-tema="escuro"] [style*="background: rgb(238, 238, 238)"],
+html[data-tema="escuro"] [style*="background-color: rgb(238, 238, 238)"],
+html[data-tema="escuro"] [style*="background: rgb(242, 241, 236)"],
+html[data-tema="escuro"] [style*="background-color: rgb(242, 241, 236)"],
+html[data-tema="escuro"] [style*="background: rgb(245, 245, 244)"],
+html[data-tema="escuro"] [style*="background-color: rgb(245, 245, 244)"]{background-color:#262622 !important}
+html[data-tema="escuro"] [style*="background: rgb(221, 221, 221)"],
+html[data-tema="escuro"] [style*="background-color: rgb(221, 221, 221)"],
+html[data-tema="escuro"] [style*="background: rgb(204, 204, 204)"],
+html[data-tema="escuro"] [style*="background-color: rgb(204, 204, 204)"]{background-color:#3A3A36 !important}
+html[data-tema="escuro"] [style*="background: rgb(17, 17, 17)"],
+html[data-tema="escuro"] [style*="background-color: rgb(17, 17, 17)"]{background-color:#4A4A45 !important}
+html[data-tema="escuro"] [style*="background: rgb(252, 235, 235)"],
+html[data-tema="escuro"] [style*="background-color: rgb(252, 235, 235)"],
+html[data-tema="escuro"] [style*="background: rgb(242, 218, 216)"],
+html[data-tema="escuro"] [style*="background-color: rgb(242, 218, 216)"]{background-color:#3A2523 !important}
+html[data-tema="escuro"] [style*="background: rgb(234, 243, 222)"],
+html[data-tema="escuro"] [style*="background-color: rgb(234, 243, 222)"],
+html[data-tema="escuro"] [style*="background: rgb(234, 243, 228)"],
+html[data-tema="escuro"] [style*="background-color: rgb(234, 243, 228)"]{background-color:#23301B !important}
+html[data-tema="escuro"] [style*="background: rgb(250, 238, 218)"],
+html[data-tema="escuro"] [style*="background-color: rgb(250, 238, 218)"],
+html[data-tema="escuro"] [style*="background: rgb(255, 243, 205)"],
+html[data-tema="escuro"] [style*="background-color: rgb(255, 243, 205)"]{background-color:#3A2F1C !important}
+html[data-tema="escuro"] [style*="background: rgb(230, 241, 251)"],
+html[data-tema="escuro"] [style*="background-color: rgb(230, 241, 251)"]{background-color:#1C2837 !important}
+html[data-tema="escuro"] [style*="background: rgb(178, 58, 52)"],
+html[data-tema="escuro"] [style*="background-color: rgb(178, 58, 52)"]{background-color:#7A2F2A !important}
+html[data-tema="escuro"] [style*="solid rgb(221, 221, 221)"],
+html[data-tema="escuro"] [style*="border-color: rgb(221, 221, 221)"],
+html[data-tema="escuro"] [style*="solid rgb(204, 204, 204)"],
+html[data-tema="escuro"] [style*="border-color: rgb(204, 204, 204)"],
+html[data-tema="escuro"] [style*="solid rgb(238, 238, 238)"],
+html[data-tema="escuro"] [style*="border-color: rgb(238, 238, 238)"],
+html[data-tema="escuro"] [style*="solid rgb(240, 240, 238)"],
+html[data-tema="escuro"] [style*="border-color: rgb(240, 240, 238)"],
+html[data-tema="escuro"] [style*="solid rgb(224, 224, 224)"],
+html[data-tema="escuro"] [style*="border-color: rgb(224, 224, 224)"]{border-color:#3A3A36 !important}
 
 /* Texto dentro de botao: branco cheio pesa ao lado do menu lateral, que
    usa um cinza mais leve. Os botoes ficam um degrau abaixo do branco. */
@@ -987,6 +1109,8 @@ html[data-tema="escuro"] [style*="background:#EAF3DE"]{background-color:#23301B 
 /* aviso "rodou todas as novas": verde bem claro no tema claro; no escuro
    vira o mesmo verde em versao de fundo, com o texto claro por cima */
 html[data-tema="escuro"] .vf-aviso-rodei-tudo{background-color:#22301A !important;color:#A9CE82 !important}
+html[data-tema="escuro"] [style^="color:#2E7D32"],
+html[data-tema="escuro"] [style*=";color:#2E7D32"],
 html[data-tema="escuro"] [style^="color:#27500A"],
 html[data-tema="escuro"] [style*=";color:#27500A"],
 html[data-tema="escuro"] [style^="color:#3B6D11"],
@@ -2810,7 +2934,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-28-213';
+const VERSAO_APP = '2026-09-28-217';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
