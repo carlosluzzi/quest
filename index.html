@@ -2810,7 +2810,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-28-212';
+const VERSAO_APP = '2026-09-28-213';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -12128,8 +12128,8 @@ function abrirPainelCanetaVF(){
     vfReposicionarPainelSobreBarraVF('vf-swatch-cor-atual-btn', 'vf-painel-caneta');
     // mesma sincronização do painel de destaque - sem isso o slider podia
     // abrir com a cor de antes, não a atualmente selecionada
-    document.getElementById('vf-preview-espessura').style.background = vfCorDesenhoAtual;
-    vfAtualizarPreenchimentoSliderVF('vf-slider-espessura', '--preenchimento-slider-caneta', vfCorDesenhoAtual);
+    document.getElementById('vf-preview-espessura').style.background = vfCorNaTelaVF(vfCorDesenhoAtual);
+    vfAtualizarPreenchimentoSliderVF('vf-slider-espessura', '--preenchimento-slider-caneta', vfCorNaTelaVF(vfCorDesenhoAtual));
   }
 }
 
@@ -12200,7 +12200,12 @@ function vfHslParaHex(h, s, l){
 // diferença relativa de saturação/luminosidade que tinham em relação à
 // principal, pra manter alguma sombra/luz sem nunca desviar da cor pedida
 function vfRecolorirIconeMarcador(corAlvoHex){
-  const alvo = vfHexParaHSL(corAlvoHex);
+  // A conversao tinha que ficar AQUI DENTRO, e nao em quem chama: essa
+  // funcao e chamada de varios lugares (escolher cor, abrir a barra,
+  // comecar a riscar...) e basta um desses passar a tinta crua pro icone
+  // voltar pro azul escuro - foi exatamente o que aconteceu. Convertendo
+  // no unico ponto que pinta, todo caminho chega certo.
+  const alvo = vfHexParaHSL(vfCorNaTelaVF(corAlvoHex));
   const grupos = new Map();
   document.querySelectorAll('.vf-tinta-marcador').forEach(path => {
     const svgPai = path.closest('svg');
@@ -12351,7 +12356,7 @@ function selecionarCorDesenhoVF(cor){
   // o marcador, e agora também os ícones de Persistente/Variável, seguem
   // a cor escolhida de verdade, girando a matiz de cada tom (mantém toda
   // a sombra/luz dos ícones reais)
-  vfRecolorirIconeMarcador(corNaTelaVF);
+  vfRecolorirIconeMarcador(cor);
 }
 
 
@@ -12397,7 +12402,7 @@ function corNativaEscolhidaVF(valor){
 function mudarEspessuraSliderVF(valor){
   vfEspessuraDesenhoAtual = parseFloat(valor);
   document.getElementById('vf-espessura-valor').textContent = vfEspessuraDesenhoAtual.toFixed(1).replace('.', ',') + ' pt';
-  vfAtualizarPreenchimentoSliderVF('vf-slider-espessura', '--preenchimento-slider-caneta', vfCorDesenhoAtual);
+  vfAtualizarPreenchimentoSliderVF('vf-slider-espessura', '--preenchimento-slider-caneta', vfCorNaTelaVF(vfCorDesenhoAtual));
 }
 
 // Persistente = espessura fixa, ignora a força da caneta. Variável = a
