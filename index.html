@@ -449,7 +449,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-btn-recorte-wrap{display:flex;flex-direction:column;align-items:center;gap:1px}
 .vf-btn-recorte-n{font-size:var(--fs-a);color:#aaa;line-height:1}
 .vf-painel-inconsistencia{background:#fff;border:0.5px solid #E6E6E3;box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:16px 18px;box-sizing:border-box;font-family:inherit}
-.vf-painel-inconsistencia.popover{position:absolute;z-index:145;border-radius:14px}
+.vf-painel-inconsistencia.popover{position:absolute;z-index:145;border-radius:14px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .vf-painel-inconsistencia.sheet{position:fixed;left:0;right:0;bottom:0;z-index:320;border-radius:16px 16px 0 0;max-height:72vh;overflow-y:auto;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
 .vf-painel-inconsistencia.hidden{display:none}
 .vf-nota-clicavel{border-bottom:1.5px dotted #888;cursor:pointer}
@@ -998,11 +998,11 @@ html[data-tema="escuro"] #vf-painel-marcacao-texto{
    o negrito sobe pro branco puro e o texto em volta desce um degrau.
    Sem pastilha, sem cor: so a distancia entre os dois tons. */
 html[data-tema="escuro"] #vf-correcao-atual,
-html[data-tema="escuro"] [id^="vf-bib-correcao-"]{color:#BFBBB3 !important}
+html[data-tema="escuro"] [id^="vf-bib-correcao-"]{color:#D9D5CD !important}
 html[data-tema="escuro"] #vf-correcao-atual strong,
 html[data-tema="escuro"] #vf-correcao-atual b,
 html[data-tema="escuro"] [id^="vf-bib-correcao-"] strong,
-html[data-tema="escuro"] [id^="vf-bib-correcao-"] b{color:#FFFFFF !important}
+html[data-tema="escuro"] [id^="vf-bib-correcao-"] b{color:#FFFFFF !important;font-weight:800}
 html[data-tema="escuro"] .vf-nota-clicavel{border-bottom-color:#8C8A83 !important}
 html[data-tema="escuro"] .vf-editor-nota{background:#3A2F1C !important;color:#E8BE7A !important}
 
@@ -2934,7 +2934,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-28-217';
+const VERSAO_APP = '2026-09-29-224';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3084,19 +3084,19 @@ function formatarEnunciadoInterno(texto){
   let escapedCompleto = escapeHtml(texto).replace(/\s+/g, ' ').trim();
   escapedCompleto = vfAplicarMarcacaoMatematicaVF(escapedCompleto); // gregas, operadores, sqrt, sobrescrito com chaves - mesmo padrão do V/F
   escapedCompleto = escapedCompleto
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞Ā-ſḀ-ỿ\)\]\}]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
       if(!abreNegrito && !fechaNegrito) return base + vfSobrescritoOuTagVF(exp); // sem negrito envolvendo - pode tentar Unicode puro
       return base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>'; // com negrito - Unicode perderia o negrito, mantém <sup> de sempre
     }) // transforma o marcador de sobrescrito/expoente (ex: "m^2", "10^-6") em sobrescrito visual de verdade
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // subscrito com chaves explícitas (ex: "N_{v(Munk)}", "Y'_{v(L)}") — permite parênteses/letras/números dentro, sem limite de 6 caracteres da regra de baixo
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψωĀ-ſḀ-ỿ])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // caso "N'_v" — base com apóstrofo pega só 1 letra de subscrito. O (?!...) no final é o reforço: se vier mais minúscula colada (tipo "d'_Alembert", "o'_clock"), não é subscrito de verdade, é nome/palavra comum com apóstrofo — não transforma
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)) // subscrito com chaves explícitas (ex: "N_{v(Munk)}", "Y'_{v(L)}") — permite parênteses/letras/números dentro, sem limite de 6 caracteres da regra de baixo
     .replace(/([)\]>])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     // ...e o subscrito/expoente SEM chaves logo depois de um bloco montado
     // (\vec{R}_0, \sqrt{x}^2): o caractere anterior é o ">" do fim da tag,
     // que as regras de base por letra nunca pegam (achado real, 23/09)
-    .replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯĀ-ſḀ-ỿ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/(>)\^((?:[Α-Ωα-ω∞]|[A-Za-z0-9+\-]{1,4}))/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp)) // subscrito logo depois de um grupo fechando - ex: (Yv·v)_{popa}, aplica ao grupo inteiro, não a uma letra isolada
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F\u0100-\u017F\u1E00-\u1EFF]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)); // transforma o marcador de subscrito (ex: "C_D0", "V_∞") em subscrito visual de verdade
 
   // isola a seção "TRECHOS DA FONTE" ANTES de qualquer divisão em
   // alternativas (a, b, c...) — sem isso, menções tipo "Alternativas a) e
@@ -3317,19 +3317,19 @@ function extrairAlternativas(alternativasTexto){
   // → subscrito/expoente. Achado real: 78 questões do Quest tinham LaTeX
   // cru nas alternativas ("\le 10m/s") enquanto o enunciado renderizava
   const escaped = vfAplicarMarcacaoMatematicaVF(escapeHtml(alternativasTexto).replace(/\s+/g, ' ').trim())
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞Ā-ſḀ-ỿ\)\]\}]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
       if(!abreNegrito && !fechaNegrito) return base + vfSobrescritoOuTagVF(exp);
       return base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>';
     })
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψωĀ-ſḀ-ỿ])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/([)\]>])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     // ...e o subscrito/expoente SEM chaves logo depois de um bloco montado
     // (\vec{R}_0, \sqrt{x}^2): o caractere anterior é o ">" do fim da tag,
     // que as regras de base por letra nunca pegam (achado real, 23/09)
-    .replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯĀ-ſḀ-ỿ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/(>)\^((?:[Α-Ωα-ω∞]|[A-Za-z0-9+\-]{1,4}))/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F\u0100-\u017F\u1E00-\u1EFF]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   const partes = escaped.split(/(?=\([a-e]\))/).map(p=>p.trim()).filter(Boolean);
   return partes.map(p=>{
     const m = p.match(/^\(([a-e])\)\s*(.*)$/s);
@@ -5793,10 +5793,10 @@ function vfFormatarCelulaArrayVF(celula){
   c = c.replace(/\*([^\s*][^*]*?[^\s*]|[^\s*])\*/g, '<em>$1</em>');
   c = vfAplicarSobrescritoESubscritoJuntosVF(c); // b^2_{crit} dentro de tabela/árvore também
   c = vfAplicarMarcacaoMatematicaVF(c);
-  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp));
-  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
-  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
-  c = c.replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)); // depois de bloco montado (\vec{R}_0 dentro de tabela)
+  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞Ā-ſḀ-ỿ\)\]\}]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|-?[A-Za-z0-9∞]{1,6})/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp));
+  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
+  c = c.replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F\u0100-\u017F\u1E00-\u1EFF]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
+  c = c.replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯĀ-ſḀ-ỿ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub)); // depois de bloco montado (\vec{R}_0 dentro de tabela)
   c = c.replace(/(>)\^((?:[Α-Ωα-ω∞]|[A-Za-z0-9+\-]{1,4}))/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp));
   // devolve as explicações do \nota{}{} guardadas lá em cima, aplicando
   // só as limpezas que NÃO geram HTML (o que a célula já fazia nelas
@@ -6833,7 +6833,14 @@ const VF_MARCADOR_LISTA_NUMERADA_VF = /^\s*((?:\d{1,2}|[a-zA-Z]|[IVXLivxl]{1,5})
 // qualquer texto formatado (nota, explicação, complementar), inclusive
 // onde a lista numerada automática está desligada: as cerquilhas são
 // explícitas, não tem como disparar sem querer
-const VF_MARCADOR_LISTA_LIVRE_VF = /^#([^#\n]{1,24})#\s*(.+)$/;
+// (29/09) o apostrofo vira &#39; no escapeHtml, e esse "#" do meio da
+// entidade era lido como a cerquilha de FECHAMENTO do marcador: a linha
+// "#Y_v'# e o coeficiente..." virava marcador "Y_v&" com o resto ("39;#
+// e o coeficiente") jogado como texto solto. Por isso a lista so quebrava
+// quando o simbolo tinha apostrofo. A classe agora aceita entidades
+// numericas inteiras (&#NN;) como um caractere so, sem deixar o "#" delas
+// terminar o marcador
+const VF_MARCADOR_LISTA_LIVRE_VF = /^#((?:&#\d+;|[^#\n]){1,24})#\s*(.+)$/;
 function vfProcessarListasNotaVF(texto, aceitarNumeracao){
   const linhas = texto.split('\n');
   const blocos = [];
@@ -7336,19 +7343,19 @@ function formatarTextoItemVF(texto, opcoes){
   resultado = vfAplicarSobrescritoESubscritoJuntosVF(resultado); // b^2_{crit} - os dois no mesmo símbolo, empilhados
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
   resultado = resultado
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞Ā-ſḀ-ỿ\)\]\}]+)\^(<strong>)?(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-z0-9∞]{1,6})(<\/strong>)?/g, (m, base, abreNegrito, exp, fechaNegrito) => {
       if(!abreNegrito && !fechaNegrito) return base + vfSobrescritoOuTagVF(exp);
       return base + '<sup>' + (abreNegrito?'<strong>':'') + exp + (fechaNegrito?'</strong>':'') + '</sup>';
     })
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+(?:['′]{1,2}|&#39;))_([A-Za-zαβγδεζηθικλμνξοπρστυφχψωĀ-ſḀ-ỿ])(?![a-zà-ÿ])/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+(?:['′]{1,2}|&#39;)?)_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/([)\]>])_\{([^{}]+)\}/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     // ...e o subscrito/expoente SEM chaves logo depois de um bloco montado
     // (\vec{R}_0, \sqrt{x}^2): o caractere anterior é o ">" do fim da tag,
     // que as regras de base por letra nunca pegam (achado real, 23/09)
-    .replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
+    .replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯĀ-ſḀ-ỿ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/(>)\^((?:[Α-Ωα-ω∞]|[A-Za-z0-9+\-]{1,4}))/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F\u0100-\u017F\u1E00-\u1EFF]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
   return vfReinserirTabelasVF(vfProcessarAlinhamentoTrechoVF(resultado), tabelas);
 }
 
@@ -13789,6 +13796,16 @@ function vfFormatarTempoSessaoVF(ms){
 }
 
 async function vfIniciarSessaoFlashVF(){
+  // (29/09) apertou "iniciar": o relógio SEMPRE aparece. Ocultar o tempo
+  // continua salvo no aparelho, mas só vale dentro da sessão - esconde,
+  // troca de aba, volta, continua escondido; iniciou de novo, reaparece.
+  // Antes a preferência era permanente, então um toque no olho (fácil de
+  // acontecer sem querer: o balão fica no canto e é arrastável) deixava
+  // TODA sessão futura começando com o tempo escondido, sem nada na tela
+  // explicando além do ícone de olho fechado. Vale pros dois caminhos
+  // daqui de baixo - sessão nova e continuação de uma já aberta -, porque
+  // dos dois lados quem apertou iniciar espera ver o relógio
+  try{ localStorage.setItem('pscpp_vf_ocultar_tempo_balao', '0'); }catch(e){}
   // se outro aparelho já tem uma sessão aberta, continua ELA em vez de
   // abrir uma segunda - é a mesma pessoa estudando
   const aberta = await vfBuscarSessaoAbertaNoBancoVF();
@@ -19163,7 +19180,37 @@ function vfAbrirPainelInconsistenciaVF(btn, questaoVfId){
     let left = rb.right - rc.left + content.scrollLeft - largura;
     left = Math.max(10, Math.min(left, content.clientWidth - largura - 10));
     painel.style.left = left + 'px';
-    painel.style.top = (rb.bottom - rc.top + content.scrollTop + 8) + 'px';
+    // ALTURA: o painel tem ate 6 secoes e o badge fica no ALTO do card -
+    // abrindo sempre pra baixo, o fim do texto saia da area visivel e
+    // ficava escondido atras da barra de baixo (sem nada pra rolar,
+    // porque abaixo do card nao ha conteudo nenhum). Mede o espaco real
+    // dos dois lados do badge: se couber inteiro embaixo, abre embaixo;
+    // se nao couber mas couber em cima, sobe; se nao couber em lugar
+    // nenhum, fica no lado maior e rola por dentro.
+    const folgaPainelVF = 12;
+    painel.style.maxHeight = 'none';
+    painel.style.overflowY = 'visible';
+    const alturaNaturalVF = painel.offsetHeight;
+    const espacoAbaixoVF = rc.bottom - rb.bottom - folgaPainelVF * 2;
+    const espacoAcimaVF  = rb.top - rc.top - folgaPainelVF * 2;
+    const baseAbaixoVF = rb.bottom - rc.top + content.scrollTop + 8;
+    const baseAcimaVF  = rb.top - rc.top + content.scrollTop - 8;
+    let topPainelVF;
+    if(alturaNaturalVF <= espacoAbaixoVF){
+      topPainelVF = baseAbaixoVF;
+    }else if(alturaNaturalVF <= espacoAcimaVF){
+      topPainelVF = baseAcimaVF - alturaNaturalVF;
+    }else if(espacoAbaixoVF >= espacoAcimaVF){
+      painel.style.maxHeight = Math.max(160, espacoAbaixoVF) + 'px';
+      painel.style.overflowY = 'auto';
+      topPainelVF = baseAbaixoVF;
+    }else{
+      const alturaUsadaVF = Math.max(160, espacoAcimaVF);
+      painel.style.maxHeight = alturaUsadaVF + 'px';
+      painel.style.overflowY = 'auto';
+      topPainelVF = baseAcimaVF - alturaUsadaVF;
+    }
+    painel.style.top = Math.max(content.scrollTop + 8, topPainelVF) + 'px';
   }else{
     // bottom sheet
     if(painel.parentElement !== document.body) document.body.appendChild(painel);
@@ -24989,9 +25036,9 @@ async function verificarMaioriaTopico(topicoId){
 // roda de novo e recoloca os marcadores certos automaticamente
 function removerMarcadoresSubscrito(texto){
   return (texto||'')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_\{([^{}]+)\}/g, '$1$2')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω]+['′]{0,2})_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F]{1,6}))/g, '$1$2')
-    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞\)\]\}]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+['′]{0,2})_\{([^{}]+)\}/g, '$1$2')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+['′]{0,2})_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F\u0100-\u017F\u1E00-\u1EFF]{1,6}))/g, '$1$2')
+    .replace(/([A-Za-zÀ-úΑ-Ωα-ω0-9∞Ā-ſḀ-ỿ\)\]\}]+)\^(\(-?[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\/[0-9A-Za-zαβγδεζηθικλμνξοπρστυφχψω]{1,4}\)|\(-?[0-9]{1,4}\.[0-9]{1,4}\)|-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})/g, '$1$2');
 }
 async function abrirFormularioEdicao(questaoId, topicoId){
   const {data: q} = await sb.from('questoes').select('*').eq('id', questaoId).single();
@@ -25635,7 +25682,7 @@ function mesclarSubscritosQuebrados(texto){
   // "∆ VP" que deveria ser "∆VP", ou "√ (AM)" que deveria ser "√(AM)"
   // e também espaço ANTES do símbolo, tipo "V/ √(gl)" que deveria ser "V/√(gl)"
   const semEspacoSobrando = texto
-    .replace(/([A-Za-zαβγδεζηθικλμνξοπρστυφχψω])\s+(['′])/g, '$1$2')
+    .replace(/([A-Za-zαβγδεζηθικλμνξοπρστυφχψωĀ-ſḀ-ỿ])\s+(['′])/g, '$1$2')
     .replace(/([∆√])\s+(?=[A-Za-zΑ-Ωα-ω(])/g, '$1')
     .replace(/\/\s+(?=[∆√])/g, '/')
     .replace(/\( +/g, '(');
@@ -25655,7 +25702,7 @@ function mesclarSubscritosQuebrados(texto){
       .replace(/\s+$/, '');
     return fn + '(' + limpo + ')';
   });
-  const comQuebraDeLinha = comExpressoesLimpa.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψω]['′]{0,2}|\d+)\n\s*(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})\s*\n/g, (m, principal, candidato) => {
+  const comQuebraDeLinha = comExpressoesLimpa.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψωĀ-ſḀ-ỿ]['′]{0,2}|\d+)\n\s*(-?[A-Za-zαβγδεζηθικλμνξοπρστυφχψω0-9∞]{1,6})\s*\n/g, (m, principal, candidato) => {
     if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
     // sobrescrito (expoente), não subscrito: número negativo (notação
     // científica, ex: "10^-6"), base numérica (mesmo caso), ou letra de
@@ -25667,7 +25714,7 @@ function mesclarSubscritosQuebrados(texto){
   // nenhuma (ex: "N'v", "N'δ") — o apóstrofo é sinal forte o bastante de
   // notação de derivada hidrodinâmica pra tratar sempre como subscrito,
   // mesmo que a questão original não tenha vindo com quebra de linha
-  return comQuebraDeLinha.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψω]['′]{1,2})\s?([a-zA-Zαβγδεζηθικλμνξοπρστυφχψω])(?![A-Za-zÀ-ÿ])/g, (m, principal, candidato) => {
+  return comQuebraDeLinha.replace(/(?<![A-Za-zÀ-ÿ])([A-Za-zαβγδεζηθικλμνξοπρστυφχψωĀ-ſḀ-ỿ]['′]{1,2})\s?([a-zA-Zαβγδεζηθικλμνξοπρστυφχψω])(?![A-Za-zÀ-ÿ])/g, (m, principal, candidato) => {
     if(PALAVRAS_CURTAS_COMUNS_SUBSCRITO.has(candidato.toLowerCase())) return m;
     return `${principal}_${candidato}`;
   }).replace(/\b([xy])0\b/g, '$1_0'); // notação de posição/referência (deslocamento em x0/y0 da linha de centro), comum em manobrabilidade
