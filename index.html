@@ -2934,7 +2934,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-29-224';
+const VERSAO_APP = '2026-09-30-225';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -26879,7 +26879,23 @@ function parsearArquivoVF(textoCompleto){
   // o capítulo aparece uma vez só, no cabeçalho do arquivo (ex: "PSCPP –
   // VERDADEIRO OU FALSO · Practical Ship Hydrodynamics, Capítulo 2") —
   // vale pra todas as questões desse upload, não repete por afirmação
-  const capituloMatch = texto.match(/Cap[ií]tulo\s+(\S+)/i);
+  // (30/09) dois problemas reais aconteceram aqui de uma vez, no upload
+  // do Bridge Procedures Guide:
+  //  1. o rotulo so era reconhecido em portugues. Os arquivos do livro em
+  //     ingles vinham "..., Chapter 5" e nao casavam - 190 afirmacoes
+  //     entraram sem capitulo nenhum;
+  //  2. o valor capturado era \S+, qualquer coisa depois da palavra. Como
+  //     o cabecalho nao casava, o regex seguia procurando no CORPO do
+  //     texto, achava um "capitulo" solto no meio de uma frase e pegava a
+  //     palavra seguinte - foi assim que 100 afirmacoes entraram com
+  //     capitulo = "como".
+  // Agora: aceita os dois rotulos, so aceita valor de capitulo de
+  // verdade (numero, romano ou Unico), e procura primeiro na LINHA do
+  // cabecalho, que e onde o capitulo realmente mora - o corpo do texto
+  // vira so um ultimo recurso
+  const RE_CAPITULO_ARQUIVO_VF = /\b(?:Cap[íi]tulos?|Cap\.|Chapters?|Ch\.)\s*n?º?\s*(\d{1,2}|[IVXLivxl]{1,6}|[ÚUúu]nico)\b/i;
+  const linhaCabecalhoVF = (texto.match(/PSCPP\s*[–-]\s*VERDADEIRO OU FALSO[^\r\n]*/i) || [''])[0];
+  const capituloMatch = linhaCabecalhoVF.match(RE_CAPITULO_ARQUIVO_VF) || texto.match(RE_CAPITULO_ARQUIVO_VF);
   const capituloDoArquivo = capituloMatch ? capituloMatch[1].replace(/[.,;:]$/, '') : null;
   // título do cabeçalho geral do arquivo (a parte depois do "·") - usado
   // na identificação de bibliografia EM VEZ do texto completo do campo
