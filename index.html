@@ -2957,7 +2957,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-01-234';
+const VERSAO_APP = '2026-10-01-235';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8215,7 +8215,7 @@ function vfRestaurarDesenhoDaTelaAnteriorVF(){
   const content = document.getElementById('content');
   if(!canvas) return;
   const geracao = vfGeracaoCanvasVF;
-  const dpr = vfDprCanvasVF();
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
   const img = new Image();
   img.onload = () => {
     if(geracao !== vfGeracaoCanvasVF || vfTelaAtualVF() !== guardado.tela || !vfCtxDesenho) return;
@@ -8224,11 +8224,8 @@ function vfRestaurarDesenhoDaTelaAnteriorVF(){
     let larguraDestino = img.width/dpr, alturaDestino = img.height/dpr;
     if(content && guardado.largura && guardado.altura){
       const alturaAgora = parseFloat(canvas.style.height) || guardado.altura;
-      // (01/10) destino = tamanho atual direto, sem passar pela escala do
-      // snapshot: desenhos gravados na escala antiga (DPR × 1.5) restauram
-      // no tamanho certo mesmo com a escala nova
-      larguraDestino = content.clientWidth;
-      alturaDestino = alturaAgora;
+      larguraDestino = (img.width/dpr) * (content.clientWidth / guardado.largura);
+      alturaDestino = (img.height/dpr) * (alturaAgora / guardado.altura);
     }
     vfCtxDesenho.drawImage(img, 0, 0, larguraDestino, alturaDestino);
     vfCanvasPodeTerConteudoVF = true;
@@ -8313,20 +8310,6 @@ document.addEventListener('touchstart', vfDesmarcarSeletorCorAbertoVF, {capture:
 let vfTouchIdAtivo = null;
 let vfCorDesenhoAtual = '#1A40A1';
 let vfEspessuraDesenhoAtual = 4.5;
-// (01/10) escala dos canvases da caneta. Era (DPR × 1.5) em TODOS - no
-// iPad (DPR 2) dava 3 px de buffer por px de tela, e o canvas cobre até
-// 4 telas de altura: ~200 MB num canvas só, × 4 canvases (principal,
-// snapshot, traço temporário, prévia). O Safari tem um teto de memória
-// de canvas e, passando dele, simplesmente para de desenhar - era o
-// "daqui a pouco a caneta não escreve mais". DPR nativo (2 px por px
-// numa Retina) já é indistinguível a olho; 2,25× menos memória e menos
-// pixels pra encher a cada traço (mais fluido). Teto 2 por segurança em
-// telas com DPR 3
-// (01/10, mesmo dia) VOLTOU pra DPR × 1.5: testado no iPad, o buffer
-// maior rebaixado pra tela é o que deixa a borda do traço lisa - em DPR
-// nativo apareceram "pontinhas" ao longo de toda linha. A memória se
-// resolve por outro caminho (altura do canvas), não pela escala
-function vfDprCanvasVF(){ return (window.devicePixelRatio || 1) * 1.5; }
 let vfForcaSuavizada = 0.5; // suaviza a força entre um touchmove e outro, evita a espessura "pulando" abrupto
 let vfModoBorracha = false;
 let vfModoDestaque = false; // highlighter - traço translúcido, tipo marca-texto de verdade
@@ -8467,7 +8450,7 @@ function vfRedimensionarCanvasDesenhoInternoVF(){
   // pede, e deixa o navegador comprimir na exibição — isso deixa curvas e
   // bordas mais suaves/nítidas do que renderizar exatamente 1:1 com os
   // pixels físicos, principalmente em curvas (menos serrilhado)
-  const dpr = vfDprCanvasVF();
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
   // {desynchronized:true} reduz a latência de render — recomendado pra
@@ -8532,8 +8515,10 @@ function vfRedimensionarCanvasDesenhoInternoVF(){
         const noRascunhoDepois = !document.getElementById('aba-rascunho-livre-vf')?.classList.contains('hidden');
         const novaLargura = noRascunhoDepois ? window.innerWidth : content.clientWidth;
         const novaAltura = noRascunhoDepois ? window.innerHeight : Math.min(Math.max(content.scrollHeight, content.offsetHeight), window.innerHeight * 8);
-        larguraDestino = novaLargura; // (01/10) independente da escala do snapshot - ver vfDprCanvasVF
-        alturaDestino = novaAltura;
+        const fatorX = novaLargura / origemRestauracao.larguraConteudo;
+        const fatorY = novaAltura / origemRestauracao.alturaConteudo;
+        larguraDestino = (img.width/dpr) * fatorX;
+        alturaDestino = (img.height/dpr) * fatorY;
       }
       ctx.drawImage(img, 0, 0, larguraDestino, alturaDestino);
     };
@@ -8561,7 +8546,7 @@ function vfAbrirCanvasExplicacaoVF(){
   canvas.style.display = 'block';
   const rect = canvas.getBoundingClientRect();
   if(rect.width === 0 || rect.height === 0) return;
-  const dpr = vfDprCanvasVF();
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
   const ctx = canvas.getContext('2d', {desynchronized: true});
@@ -8831,7 +8816,7 @@ document.addEventListener('touchstart', (e) => {
   // o toque antes do touchend perceber que era só um tap
   try{
     const ctxAtivoSnapshot = vfCtxDesenhoAtivoAgoraVF();
-    const dprSnapshot = vfDprCanvasVF();
+    const dprSnapshot = (window.devicePixelRatio || 1) * 1.5;
     const ladoSnapshot = 120 * dprSnapshot; // margem generosa - um tap leve não deveria se mover mais que isso
     const xSnapshot = Math.round(ponto.x * dprSnapshot - ladoSnapshot/2);
     const ySnapshot = Math.round(ponto.y * dprSnapshot - ladoSnapshot/2);
@@ -8863,7 +8848,7 @@ document.addEventListener('touchstart', (e) => {
     // caro - só em retrato o desenho ficava mais lento. Um traço de
     // destaque raramente precisa de mais altura que isso de qualquer forma
     const alturaVisivel = Math.min(alturaVisivelBruta, Math.min(window.innerWidth, window.innerHeight));
-    const dpr = vfDprCanvasVF();
+    const dpr = (window.devicePixelRatio || 1) * 1.5;
     const alturaBufferDestaque = alturaVisivel * dpr;
     const canvasPrep = vfPrepararCanvasDestaqueVF(canvas.width, alturaBufferDestaque);
     vfCanvasTracoTemp = canvasPrep.tracoTemp;
@@ -8967,7 +8952,7 @@ document.addEventListener('touchmove', (e) => {
             vfScrollTopNoInicioTracoVF = contentParaDestaque2 ? contentParaDestaque2.scrollTop : 0;
             const alturaVisivel2Bruta = contentParaDestaque2 ? contentParaDestaque2.clientHeight : canvas.height;
             const alturaVisivel2 = Math.min(alturaVisivel2Bruta, Math.min(window.innerWidth, window.innerHeight));
-            const dpr = vfDprCanvasVF();
+            const dpr = (window.devicePixelRatio || 1) * 1.5;
             const alturaBufferDestaque2 = alturaVisivel2 * dpr;
             const canvasPrep2 = vfPrepararCanvasDestaqueVF(canvas.width, alturaBufferDestaque2);
             vfCanvasTracoTemp = canvasPrep2.tracoTemp;
@@ -9239,7 +9224,7 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect, dentroDeL
 // traços já existentes "sumiam" até o traço atual passar por cima deles
 function vfDesenharSnapshotCompletoNoPreviewVF(){
   if(!vfCanvasBaseSnapshot || !vfCtxPreviewDestaque) return;
-  const dpr = vfDprCanvasVF();
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
   const larguraTotal = vfCanvasBaseSnapshot.width/dpr;
   const alturaVisivel = vfCanvasBaseSnapshot.height/dpr;
   vfCtxPreviewDestaque.globalCompositeOperation = 'source-over';
@@ -9249,7 +9234,7 @@ function vfDesenharSnapshotCompletoNoPreviewVF(){
 
 function vfAtualizarPreviewDestaqueVF(){
   if(vfModoDestaque && vfCanvasTracoTemp && vfCtxPreviewDestaque){
-    const dpr = vfDprCanvasVF();
+    const dpr = (window.devicePixelRatio || 1) * 1.5;
     const larguraTotal = vfCanvasTracoTemp.width/dpr;
     const alturaVisivelBuffer = vfCanvasTracoTemp.height/dpr;
     // acumulada em vfProcessarPontoDesenhoVF - a bounding box (com
@@ -9446,7 +9431,7 @@ function vfFinalizarTracoDesenho(e){
       const canvasRasurao = document.getElementById('vf-canvas-desenho');
       const ctxRasurao = vfCtxDesenhoAtivoAgoraVF();
       if(canvasRasurao && ctxRasurao){
-        const dprRasurao = vfDprCanvasVF();
+        const dprRasurao = (window.devicePixelRatio || 1) * 1.5;
         ctxRasurao.globalCompositeOperation = 'source-over';
         ctxRasurao.globalAlpha = 1;
         const antesDoRasurao = canvasRasurao.toDataURL(); // raro - só aqui vale pagar o toDataURL do canvas inteiro
@@ -9459,7 +9444,7 @@ function vfFinalizarTracoDesenho(e){
       vfCanvasBaseSnapshot = null;
       const canvasPreviewRasurao = document.getElementById('vf-canvas-preview-destaque');
       if(canvasPreviewRasurao && vfCtxPreviewDestaque){
-        const dprPreviewRasurao = vfDprCanvasVF();
+        const dprPreviewRasurao = (window.devicePixelRatio || 1) * 1.5;
         vfCtxPreviewDestaque.clearRect(0, 0, canvasPreviewRasurao.width/dprPreviewRasurao, canvasPreviewRasurao.height/dprPreviewRasurao);
       }
       fecharBarraDesenhoVF();
@@ -9490,7 +9475,7 @@ function vfFinalizarTracoDesenho(e){
     const ctxDestino = vfCtxDesenhoAtivoAgoraVF();
     ctxDestino.globalCompositeOperation = 'multiply';
     ctxDestino.globalAlpha = vfOpacidadeDestaqueAtual;
-    const dpr = vfDprCanvasVF();
+    const dpr = (window.devicePixelRatio || 1) * 1.5;
     ctxDestino.drawImage(vfCanvasTracoTemp, 0, vfScrollTopNoInicioTracoVF, vfCanvasTracoTemp.width/dpr, vfCanvasTracoTemp.height/dpr);
     ctxDestino.globalAlpha = 1;
     vfCanvasTracoTemp = null;
@@ -9560,7 +9545,7 @@ let vfRegiaoAntesDoTracoVF = null;     // {sx, sy, sw, sh} em pixels do canvas, 
 let vfRegiaoTracoPendenteVF = null;    // região do último traço terminado, esperando virar entrada
 function vfEscalaCanvasVF(canvas){
   const rect = canvas.getBoundingClientRect();
-  return rect.width ? canvas.width / rect.width : vfDprCanvasVF();
+  return rect.width ? canvas.width / rect.width : (window.devicePixelRatio || 1) * 1.5;
 }
 // copia (GPU→GPU) a parte VISÍVEL do canvas pra um canvas de rascunho
 // reutilizado - o traço que vai começar só pode acontecer dentro da tela
@@ -9685,7 +9670,7 @@ function vfAplicarEntradaHistoricoVF(entrada, lado){
   const canvas = document.getElementById(naExplicacao ? 'vf-canvas-desenho-explicacao' : 'vf-canvas-desenho');
   const ctx = naExplicacao ? vfCtxDesenhoExplicacaoVF : vfCtxDesenho;
   if(!canvas || !ctx || !entrada) return;
-  const dpr = vfDprCanvasVF();
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
   if(entrada.tipo === 'regiao'){
     vfColarRegiaoVF(ctx, entrada[lado], entrada.x, entrada.y);
     vfAtualizarBotoesHistoricoVF();
@@ -9933,7 +9918,7 @@ function vfSalvarEClimparAnotacaoVF(entrada){
   // de verdade, com uma margem) - o canvas inteiro agora é do tamanho do
   // conteúdo rolável, capturar tudo geraria uma imagem enorme e majoritariamente em branco
   entrada.anotacaoDataUrl = vfRecortarAreaDesenhadaVF(canvas);
-  const dpr = vfDprCanvasVF();
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
   vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
   vfLimparHistoricoVF();
 }
@@ -12947,7 +12932,7 @@ function limparCanvasDesenhoVF(){
   vfLimparHistoricoVF();
   vfGeracaoCanvasVF++; // invalida qualquer restauração assíncrona ainda a caminho (ver vfGeracaoCanvasVF)
   if(!canvas || !vfCtxDesenho) return;
-  const dpr = vfDprCanvasVF();
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
   vfCtxDesenho.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
   vfCanvasPodeTerConteudoVF = false;
   vfModoBorracha = false;
@@ -23548,7 +23533,7 @@ function vfRestaurarDesenhoQuestaoQuestVF(questaoId){
   if(!salvo || !vfCtxDesenho) return;
   const canvas = document.getElementById('vf-canvas-desenho');
   const content = document.getElementById('content');
-  const dpr = vfDprCanvasVF();
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
   const geracaoRestauroVF = vfGeracaoCanvasVF; // ver vfGeracaoCanvasVF
   const img = new Image();
   img.onload = () => {
@@ -23559,8 +23544,8 @@ function vfRestaurarDesenhoQuestaoQuestVF(questaoId){
     if(content && salvo.larguraConteudo && salvo.alturaConteudo){
       const novaLargura = content.clientWidth;
       const novaAltura = Math.min(Math.max(content.scrollHeight, content.offsetHeight), window.innerHeight * 8);
-      larguraDestino = novaLargura; // (01/10) independente da escala do snapshot - ver vfDprCanvasVF
-      alturaDestino = novaAltura;
+      larguraDestino = (img.width/dpr) * (novaLargura / salvo.larguraConteudo);
+      alturaDestino = (img.height/dpr) * (novaAltura / salvo.alturaConteudo);
     }
     vfCtxDesenho.drawImage(img, 0, 0, larguraDestino, alturaDestino);
     vfCanvasPodeTerConteudoVF = true; // desenho restaurado - precisa da mesma proteção contra apagar num resize futuro
@@ -23715,7 +23700,7 @@ function vfRestaurarRascunhoLivreVF(){
     (salvo.caixas || []).forEach(c => vfCriarCaixaTextoRascunhoVF(c.x * escalaX, c.y * escalaY, c.texto, c.l ? c.l * escalaX : null, c.a ? c.a * escalaY : null));
   }
   if(!salvo.dataUrl) return;
-  const dpr = vfDprCanvasVF();
+  const dpr = (window.devicePixelRatio || 1) * 1.5;
   const geracaoRestauroVF = vfGeracaoCanvasVF; // ver vfGeracaoCanvasVF
   const img = new Image();
   img.onload = () => {
@@ -23724,8 +23709,8 @@ function vfRestaurarRascunhoLivreVF(){
     vfCtxDesenho.globalAlpha = 1;
     let larguraDestino = img.width/dpr, alturaDestino = img.height/dpr;
     if(papel && salvo.largura && salvo.altura){
-      larguraDestino = papel.clientWidth; // (01/10) independente da escala do snapshot - ver vfDprCanvasVF
-      alturaDestino = papel.clientHeight;
+      larguraDestino = (img.width/dpr) * (papel.clientWidth / salvo.largura);
+      alturaDestino = (img.height/dpr) * (papel.clientHeight / salvo.altura);
     }
     vfCtxDesenho.drawImage(img, 0, 0, larguraDestino, alturaDestino);
     vfCanvasPodeTerConteudoVF = true; // mesma proteção do outro caminho de restauração
