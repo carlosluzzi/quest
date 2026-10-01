@@ -78,8 +78,8 @@ body{margin:0;font-family:'PQMatematica',-apple-system,BlinkMacSystemFont,"Segoe
 /* variante menor - título de topico dentro de uma tela (não é o título
    principal de um modal/página) */
 .config-title-menor{font-size:var(--fs-e)}
-.modal-conteudo p{margin:0 0 20px 0;line-height:1.5}
-.textarea-padrao{width:100%;min-height:100px;font-size:16px;padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;font-family:inherit;color:#111;resize:vertical;line-height:1.5;margin-bottom:14px}
+.modal-conteudo p{margin:0 0 20px 0;line-height:1.4}
+.textarea-padrao{width:100%;min-height:100px;font-size:16px;padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;font-family:inherit;color:#111;resize:vertical;line-height:1.4;margin-bottom:14px}
 /* foco em caixa de texto dentro de um container com overflow:hidden (ex:
 lista de notas, que precisa do overflow pra animar expandir/colapsar) -
 o outline/focus-ring padrão do navegador se estende pra FORA das bordas
@@ -432,7 +432,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-arvore-bloco li::before{content:'';position:absolute;left:0;top:0;height:0.85em;width:13px;border-left:1px solid #C9C9C4;border-bottom:1px solid #C9C9C4;border-bottom-left-radius:5px}
 .vf-arvore-bloco li:not(:last-child)::after{content:'';position:absolute;left:0;top:0.85em;bottom:0;border-left:1px solid #C9C9C4}
 .vf-arvore-nome{font-weight:700;color:#111;font-size:var(--fs-d)}
-.vf-arvore-exp{color:#6B6B66;font-size:var(--fs-c);line-height:1.45;font-style:italic;margin-top:4px}
+.vf-arvore-exp{color:#6B6B66;font-size:var(--fs-c);line-height:1.4;font-style:italic;margin-top:4px}
 .vf-arvore-titulo{font-weight:700;color:#111;font-size:var(--fs-e)}
 .vf-arvore-bloco + .vf-tabela-bloco,.vf-arvore-bloco + .vf-svg-bloco,.vf-arvore-bloco + .vf-arvore-bloco,
 .vf-tabela-bloco + .vf-arvore-bloco,.vf-svg-bloco + .vf-arvore-bloco{margin-top:34px !important}
@@ -445,6 +445,18 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-tabela-alinhamento,.vf-tabela-alinhamento *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .vf-tabela-bloco,.vf-tabela-bloco *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .vf-tabela-ajustando td{box-shadow:inset 0 0 0 0.5px #CFCFCA}
+/* (01/10) quinas da tabela: o cartao tem border-radius 10px, mas a faixa
+   de cabecalho e pintada no FUNDO das celulas da primeira linha - e com
+   display:table + overflow-x:auto o Safari nao recorta o fundo das
+   celulas no raio do cartao, entao as quinas quadradas aparecem por fora
+   dos cantos arredondados. No tema claro passa batido (a faixa #F2F1EC e
+   quase a cor do cartao #FBFBFA); no escuro (#2A2925 sobre #1E1E1C) fica
+   evidente. Arredonda a propria celula: 9px = os 10px do cartao menos
+   o 1px da borda. Vale nos dois temas - e estrutura, nao cor */
+.vf-tabela-cartao > table tr:first-child > td:first-child{border-top-left-radius:9px}
+.vf-tabela-cartao > table tr:first-child > td:last-child{border-top-right-radius:9px}
+.vf-tabela-cartao > table tr:last-child > td:first-child{border-bottom-left-radius:9px}
+.vf-tabela-cartao > table tr:last-child > td:last-child{border-bottom-right-radius:9px}
 #vf-recortes-grupo.hidden{display:none !important}
 .vf-btn-recorte-wrap{display:flex;flex-direction:column;align-items:center;gap:1px}
 .vf-btn-recorte-n{font-size:var(--fs-a);color:#aaa;line-height:1}
@@ -494,7 +506,7 @@ sub{top:0.22em}
 .item-lista-modulo{padding:9px 8px;font-size:var(--fs-d);line-height:1.3;color:#111;cursor:pointer;border-bottom:0.5px solid #eee}
 .item-lista-modulo:last-child{border-bottom:none}
 .item-lista-modulo:active{background:#F5F5F4}
-.card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.6;margin:25px 0 0 0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.card-questao .enunciado{font-size:var(--fs-d);color:#111;line-height:1.4;margin:25px 0 0 0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado,body.vf-marcacao-texto-ativa #aba-vf .card-questao .enunciado *,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado,body.vf-marcacao-texto-ativa #quests-resolucao .card-questao .enunciado *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:none}
 body.vf-marcacao-texto-ativa .vf-numeral-item-nao-marcavel,body.vf-marcacao-texto-ativa .linha-marcador{-webkit-user-select:none;user-select:none}
 #vf-correcao-atual{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -581,7 +593,7 @@ tarja por cima não tapa nada */
 
 /* --- Alternativas de questão (padrão herdado do app pessoal) --- */
 .banco-alternativas{display:flex;flex-direction:column;gap:8px;margin-top:14px}
-.banco-alt-btn{text-align:left;font-size:var(--fs-d);padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#111;line-height:1.5;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.banco-alt-btn{text-align:left;font-size:var(--fs-d);padding:12px 14px;border-radius:10px;border:0.5px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;color:#111;line-height:1.4;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .banco-alt-btn:disabled:active{transform:none}
 .banco-alt-btn:disabled{cursor:default;opacity:0.9}
 .banco-resultado{font-size:var(--fs-e);font-weight:600;margin-top:14px;padding:10px 0;text-align:center;height:44px;box-sizing:border-box}
@@ -788,7 +800,16 @@ html[data-tema="escuro"] .vf-tabela-bloco th{border-color:#33322D !important}
 html[data-tema="escuro"] [style*="solid #EAEAE7"]{border-color:#33322D !important}
 /* faixa de cabecalho da tabela */
 html[data-tema="escuro"] .vf-tabela-bloco tr:first-child td[style*="background:#F2F1EC"],
+html[data-tema="escuro"] .vf-tabela-bloco td[style*="background: rgb(242, 241, 236)"],
 html[data-tema="escuro"] [style*="background:#F2F1EC"]{background-color:#2A2925 !important}
+/* texto do cabecalho da tabela: no claro ele e um grafite quente (#44443F)
+   de proposito mais suave que o corpo; no escuro precisa do caminho
+   inverso - um pouco mais apagado que o corpo (#E4E0D8), nunca o grafite,
+   que no fundo #2A2925 fica praticamente invisivel. Ancorado na faixa de
+   cabecalho (a celula so tem esse fundo quando e cabecalho), entao linha
+   comum e tabela sem cabecalho nao sao afetadas */
+html[data-tema="escuro"] .vf-tabela-bloco td[style*="background:#F2F1EC"],
+html[data-tema="escuro"] .vf-tabela-bloco td[style*="background: rgb(242, 241, 236)"]{color:#B8B3A9 !important}
 /* moldura de ajuste (quando esta redimensionando a coluna) */
 html[data-tema="escuro"] .vf-tabela-ajustando td{box-shadow:inset 0 0 0 0.5px #4A4942 !important}
 /* legenda da tabela e textos auxiliares cinza-medio */
@@ -1624,7 +1645,7 @@ html[data-tema="escuro"] .config-tema-dica{color:#7C7A74 !important}
            próprias caixas - a caneta continua desenhando na folha toda -->
       <div id="rascunho-livre-textos" style="position:absolute;inset:0;z-index:300;pointer-events:none"></div>
       <div style="position:absolute;bottom:14px;right:18px;text-align:right;pointer-events:none">
-        <div style="font-family:ui-monospace,monospace;font-size:10px;color:#8A8375;opacity:0.65;line-height:1.5;border-top:1px solid #C9A876;padding-top:5px">
+        <div style="font-family:ui-monospace,monospace;font-size:10px;color:#8A8375;opacity:0.65;line-height:1.4;border-top:1px solid #C9A876;padding-top:5px">
           <b style="color:#2B2620;opacity:0.85">Pilotquest</b> · Rascunho pessoal<br>não salvo no seu histórico de questões
         </div>
       </div>
@@ -2460,7 +2481,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-info-progresso-vf" onclick="if(event.target===this) fecharModal('modal-info-progresso-vf')">
   <div class="modal-conteudo" style="max-height:80vh;overflow-y:auto">
     <h3 class="config-title">Definições</h3>
-    <div style="font-size:var(--fs-c);color:#333;line-height:1.5;display:flex;flex-direction:column;gap:8px">
+    <div style="font-size:var(--fs-c);color:#333;line-height:1.4;display:flex;flex-direction:column;gap:8px">
       <p style="margin:0"><b>Nova</b>: a afirmação nunca tinha aparecido pra você antes dessa resposta.</p>
       <p style="margin:0"><b>Repetida</b>: escada (afirmação recém-errada/recém-vista, ainda subindo os degraus) ou revisão (já saiu da escada e volta em intervalos crescentes).</p>
       <p style="margin:0"><b>Acerto</b>: respostas certas ÷ respostas. O de novas é o que mais diz sobre leitura; o de revisões, sobre retenção.</p>
@@ -2629,7 +2650,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
     <div id="vf-nota-conteudo-questao">
       <div id="lista-notas-vf" style="transition:max-height 0.25s ease;overflow:hidden;max-height:0"></div>
       <div id="vf-notas-irmas-vf" class="hidden" style="margin-bottom:14px"></div>
-      <div id="vf-nota-previa" class="hidden" style="background:#fff;border:0.5px solid #E6E6E3;border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:var(--fs-d);line-height:1.5;color:#111;max-height:260px;overflow-y:auto"></div>
+      <div id="vf-nota-previa" class="hidden" style="background:#fff;border:0.5px solid #E6E6E3;border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:var(--fs-d);line-height:1.4;color:#111;max-height:260px;overflow-y:auto"></div>
       <div id="vf-barra-ferramentas-nota-nova" style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;flex-wrap:wrap"></div>
       <textarea id="texto-nota-vf" class="textarea-padrao vf-foco-interno-vf" placeholder="Adicionar nova nota" style="min-height:140px" oninput="vfAgendarPreviaNotaVF()" onkeydown="vfTeclaTabNotaVF(event)"></textarea>
       <button id="vf-nota-btn-adicionar" class="btn-primario" style="width:100%" onclick="adicionarNotaVF()">Adicionar nota</button>
@@ -2934,7 +2955,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-09-30-225';
+const VERSAO_APP = '2026-10-01-231';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5834,7 +5855,7 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, la
     const celulasHtml = celulas.map((c, i) => {
       const alinhamento = alinhamentos[i] || 'center';
       const pesoTexto = ehCabecalho ? 600 : 400;
-      const corCabecalho = ehCabecalho ? `color:${VF_COR_TEXTO_CABECALHO_TABELA_VF};` : '';
+      const corCabecalho = ehCabecalho ? `color:${VF_COR_TEXTO_CABECALHO_TABELA_VF};background:${VF_COR_FUNDO_CABECALHO_TABELA_VF};` : '';
       const bordaSuperior = indiceLinha > 0 ? 'border-top:1px solid #EAEAE7;' : '';
       const conteudoCelula = vfFormatarCelulaArrayVF(c);
       // célula com só um traço solto (vazio/não se aplica) vira cinza
@@ -5858,14 +5879,16 @@ function vfGerarTabelaInternaVF(colunasStr, conteudo, compacta, temCabecalho, la
       // valor inline mas cai de volta na regra da classe)
       return `<td class="vf-tabela-celula" data-linha="${indiceLinha}" data-coluna="${i}" style="padding:7px ${paddingH};text-align:${alinhamento};font-size:var(--fs-d);font-weight:${pesoTexto};${corCabecalho}${bordaSuperior}${corTraco}${estiloLargura}${posicaoRelativa}">${conteudoCelula}${alca}</td>`;
     }).join('');
-    const estiloLinha = ehCabecalho ? `background:${VF_COR_FUNDO_CABECALHO_TABELA_VF}` : '';
-    return `<tr style="${estiloLinha}">${celulasHtml}</tr>`;
+    // a faixa do cabecalho e pintada nas CELULAS (ver corCabecalho), nao
+    // aqui no <tr>: fundo de linha ignora o border-radius das celulas de
+    // canto e vaza por cima dos cantos arredondados do cartao
+    return `<tr>${celulasHtml}</tr>`;
   }).join('');
   // a tabela SEMPRE nasce no tamanho natural do conteúdo. Quem decide se
   // ela estica pra 100% (conteúdo passa de 80% do card) ou fica pequena
   // com colunas iguais é vfAjustarLarguraTabelaVF, depois de medir na
   // tela. [larguras:...] só vale como proporção quando ela está esticada
-  const estiloTabela = 'width:auto;max-width:100%;border-collapse:collapse';
+  const estiloTabela = 'width:auto;max-width:100%;border-collapse:separate;border-spacing:0';
   const dataLarguras = larguras ? ` data-larguras="${larguras.join(',')}"` : '';
   const dataLarguraTotal = larguraTotal ? ` data-largura-total="${larguraTotal}"` : '';
   return `<table style="${estiloTabela}"${dataLarguras}${dataLarguraTotal}>${linhasHtml}</table>`;
@@ -6158,7 +6181,7 @@ else vfIniciarObservacaoTabelasVF();
 
 // envolve uma tabela interna no cartão padrão (borda, cantos, sombra)
 function vfEnvolverEmCartaoVF(tabelaHtml){
-  return `<div style="display:table;max-width:100%;border:1px solid #E6E6E3;border-radius:10px;overflow-x:auto;overflow-y:hidden;background:#FBFBFA;box-shadow:0 1px 3px rgba(0,0,0,0.04)">${tabelaHtml}</div>`;
+  return `<div class="vf-tabela-cartao" style="display:block;width:fit-content;max-width:100%;border:1px solid #E6E6E3;border-radius:10px;overflow-x:auto;overflow-y:hidden;background:#FBFBFA;box-shadow:0 1px 3px rgba(0,0,0,0.04)">${tabelaHtml}</div>`;
 }
 // acha o conteúdo entre chaves balanceadas a partir de uma posição que
 // aponta pro { de abertura - necessário porque o conteúdo interno (um
@@ -10434,8 +10457,8 @@ function vfHtmlCardBibliotecaVF(q){
         </div>
         ${excluida ? '<span style="background:#F1EFE8;color:#666;font-size:var(--fs-a);font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.03em;flex-shrink:0">EXCLUÍDA</span>' : ''}
       </div>
-      <div style="color:#111;font-size:var(--fs-d);line-height:1.6">${selo}<span id="vf-bib-texto-${q.id}">${textoHtml}</span></div>
-      ${correcaoHtml ? `<div id="vf-bib-correcao-${q.id}" style="background:#f7f7f5;border:0.5px solid #eee;border-radius:10px;padding:8px;margin-top:10px;color:#111;font-size:var(--fs-d);line-height:1.6">${correcaoHtml}</div>` : ''}
+      <div style="color:#111;font-size:var(--fs-d);line-height:1.4">${selo}<span id="vf-bib-texto-${q.id}">${textoHtml}</span></div>
+      ${correcaoHtml ? `<div id="vf-bib-correcao-${q.id}" style="background:#f7f7f5;border:0.5px solid #eee;border-radius:10px;padding:8px;margin-top:10px;color:#111;font-size:var(--fs-d);line-height:1.4">${correcaoHtml}</div>` : ''}
       ${grifo && grifo.passadas > 1 ? `<p style="color:#999;font-size:var(--fs-a);margin:8px 0 0 0">Grifada em ${grifo.passadas} passadas · mostrando a última</p>` : ''}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
         <button id="vf-bib-btn-abrir-${q.id}" style="${estiloAcao};color:#B23A34;border-color:#E8C4C2;font-weight:600" onclick="vfAbrirNoFlashDaBibliotecaVF('${q.id}')">Abrir</button>
@@ -16207,7 +16230,7 @@ function renderizarItemVF(){
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
       </div>
-      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;margin-left:-8px;margin-right:-8px;margin-bottom:-8px;text-align:left;font-weight:400;position:relative" ${atributosEdicaoCorrecao}>${(() => {
+      ${!item.resposta ? `<div style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;color:#111;margin-top:14px;margin-left:-8px;margin-right:-8px;margin-bottom:-8px;text-align:left;font-weight:400;line-height:1.4;position:relative" ${atributosEdicaoCorrecao}>${(() => {
         vfContextoRenderizacaoSvgVF = {tipo: 'campo-vf', questaoId: item.id, campo: item.correcao ? 'correcao' : 'texto'};
         const html = formatarTextoItemVF(item.correcao || item.texto);
         vfContextoRenderizacaoSvgVF = null;
@@ -16271,7 +16294,7 @@ function renderizarItemVF(){
   // some sozinha depois dessa renderização (não reaparece se a tela for
   // re-renderizada por outro motivo)
   const avisoRodeiTudoHtml = estadoVF.avisoRodeiTudoPendenteVF
-    ? `<div class="vf-aviso-rodei-tudo" style="background:#EAF3E4;color:#3B6D11;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:var(--fs-c);line-height:1.5;text-align:center;white-space:pre-line">${escapeHtml(estadoVF.avisoRodeiTudoPendenteVF)}</div>`
+    ? `<div class="vf-aviso-rodei-tudo" style="background:#EAF3E4;color:#3B6D11;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:var(--fs-c);line-height:1.4;text-align:center;white-space:pre-line">${escapeHtml(estadoVF.avisoRodeiTudoPendenteVF)}</div>`
     : '';
   estadoVF.avisoRodeiTudoPendenteVF = null;
 
@@ -17091,8 +17114,9 @@ function vfMostrarBotoesAlinhamentoTabelaVF(bloco){
       bloco.dataset.temCabecalho = novoValor;
       const primeiraLinha = bloco.querySelector('table tr:first-child');
       if(primeiraLinha){
-        primeiraLinha.style.background = novoValor ? VF_COR_FUNDO_CABECALHO_TABELA_VF : '';
+        primeiraLinha.style.background = '';
         primeiraLinha.querySelectorAll('td').forEach(td => {
+          td.style.background = novoValor ? VF_COR_FUNDO_CABECALHO_TABELA_VF : '';
           td.style.fontWeight = novoValor ? '600' : '400';
           td.style.color = novoValor ? VF_COR_TEXTO_CABECALHO_TABELA_VF : '';
         });
@@ -17530,8 +17554,9 @@ function vfDesfazerAlteracoesTabelaVF(blocoId){
   bloco.dataset.temCabecalho = temCabecalho;
   const primeiraLinha = bloco.querySelector('table tr:first-child');
   if(primeiraLinha){
-    primeiraLinha.style.background = temCabecalho ? VF_COR_FUNDO_CABECALHO_TABELA_VF : '';
+    primeiraLinha.style.background = '';
     primeiraLinha.querySelectorAll('td').forEach(td => {
+      td.style.background = temCabecalho ? VF_COR_FUNDO_CABECALHO_TABELA_VF : '';
       td.style.fontWeight = temCabecalho ? '600' : '400';
       td.style.color = temCabecalho ? VF_COR_TEXTO_CABECALHO_TABELA_VF : '';
     });
@@ -19154,7 +19179,7 @@ function vfAbrirPainelInconsistenciaVF(btn, questaoVfId){
   const secao = (rotulo, texto, extra) => texto ? `
     <div style="margin-top:12px">
       <div style="font-size:var(--fs-a);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#888;margin-bottom:3px">${rotulo}</div>
-      <div style="font-size:var(--fs-c);line-height:1.45;color:#111;${extra || ''}">${formatarTextoItemVF(texto)}</div>
+      <div style="font-size:var(--fs-c);line-height:1.4;color:#111;${extra || ''}">${formatarTextoItemVF(texto)}</div>
     </div>` : '';
   painel.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
@@ -22018,7 +22043,7 @@ function abrirExplicacaoVF(questaoVfId){
   const explicacaoFormatada = explicacao ? formatarTextoItemVF(explicacao) : '';
   vfContextoRenderizacaoSvgVF = null;
   el.innerHTML = explicacao
-    ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;line-height:1.5;color:#111;position:relative">${explicacaoFormatada}</div>`
+    ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;line-height:1.4;color:#111;position:relative">${explicacaoFormatada}</div>`
     : `<p ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;color:#666;position:relative">${souCarlos() ? 'Sem explicação cadastrada – segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
   abrirModal('modal-explicacao-vf');
   vfAbrirCanvasExplicacaoVF();
@@ -22078,7 +22103,7 @@ function vfIniciarEdicaoExplicacaoVF(){
   if(!div || div.dataset.editando === '1') return;
   div.dataset.editando = '1';
   const textoOriginal = entrada.item.explicacao || '';
-  div.innerHTML = `<textarea id="vf-textarea-explicacao" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:1.5;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default">${escapeHtml(textoOriginal)}</textarea>`;
+  div.innerHTML = `<textarea id="vf-textarea-explicacao" style="width:100%;border:none;outline:none;box-shadow:0 0 0 1.5px #B23A34;border-radius:6px;padding:6px;margin:-6px;font-family:inherit;font-size:inherit;line-height:1.4;color:#111;resize:none;overflow:hidden;box-sizing:border-box;background:transparent;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default">${escapeHtml(textoOriginal)}</textarea>`;
   const textarea = document.getElementById('vf-textarea-explicacao');
   vfAutoAlturaTextareaVF(textarea);
   textarea.addEventListener('input', () => vfAutoAlturaTextareaVF(textarea));
@@ -23778,7 +23803,7 @@ function vfCriarCaixaTextoRascunhoVF(x, y, texto, largura, altura){
   const corpo = document.createElement('div');
   corpo.className = 'rascunho-texto-corpo';
   corpo.contentEditable = 'true';
-  corpo.style.cssText = 'font-size:var(--fs-d);line-height:1.45;color:#111;white-space:pre-wrap;outline:none;min-width:44px;min-height:1.2em;padding:1px 3px;border-radius:4px;height:100%;box-sizing:border-box;overflow:hidden';
+  corpo.style.cssText = 'font-size:var(--fs-d);line-height:1.4;color:#111;white-space:pre-wrap;outline:none;min-width:44px;min-height:1.2em;padding:1px 3px;border-radius:4px;height:100%;box-sizing:border-box;overflow:hidden';
   corpo.textContent = texto || ''; // texto puro: o que vem da área de transferência nunca entra como HTML
 
   const botaoX = document.createElement('button');
@@ -24165,9 +24190,9 @@ function abrirExplicacaoQuestao(questaoId){
   if(!q){ el.innerHTML = ''; abrirModal('modal-explicacao-questao'); return; }
 
   if(q.explicacao_origem === 'fonte_original'){
-    el.innerHTML = `<div style="margin:0;line-height:1.5;color:#111">${formatarEnunciado(q.explicacao)}</div>`;
+    el.innerHTML = `<div style="margin:0;line-height:1.4;color:#111">${formatarEnunciado(q.explicacao)}</div>`;
   }else if(q.explicacao_origem === 'gerada_web'){
-    el.innerHTML = `<div style="margin:0 0 10px 0;line-height:1.5;color:#111">${formatarEnunciado(q.explicacao)}</div><span style="font-size:var(--fs-b);color:#888">(baseada em busca na web)</span>`;
+    el.innerHTML = `<div style="margin:0 0 10px 0;line-height:1.4;color:#111">${formatarEnunciado(q.explicacao)}</div><span style="font-size:var(--fs-b);color:#888">(baseada em busca na web)</span>`;
   }else{
     el.innerHTML = `<p style="margin:0 0 14px 0;color:#666">Ainda não geramos uma explicação pra essa questão.</p><button class="btn-primario" onclick="gerarExplicacao('${questaoId}')">Gerar explicação (busca na web)</button>`;
   }
@@ -24885,14 +24910,14 @@ async function renderizarTopico(topicoId){
         ${avatarMiniHtml(propostaPendente.usuarios)}
         <span style="font-size:var(--fs-d);color:#666">${escapeHtml(propostaPendente.usuarios?.nome||'Alguém')} propôs esta anulação:</span>
       </div>
-      <p style="font-size:var(--fs-d);color:#111;line-height:1.6">Quem já respondeu (de qualquer jeito) passa a ter a resposta contada como acerto. Essa ação não pode ser desfeita depois de aprovada.</p>
+      <p style="font-size:var(--fs-d);color:#111;line-height:1.4">Quem já respondeu (de qualquer jeito) passa a ter a resposta contada como acerto. Essa ação não pode ser desfeita depois de aprovada.</p>
     </div>` : `
     <div class="card-questao" style="margin-top:14px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
         ${avatarMiniHtml(propostaPendente.usuarios)}
         <span style="font-size:var(--fs-d);color:#666">${escapeHtml(propostaPendente.usuarios?.nome||'Alguém')} propôs esta edição:</span>
       </div>
-      <div style="font-size:var(--fs-d);color:#111;line-height:1.6">${formatarEnunciado(propostaPendente.enunciado)}</div>
+      <div style="font-size:var(--fs-d);color:#111;line-height:1.4">${formatarEnunciado(propostaPendente.enunciado)}</div>
       <div style="font-size:var(--fs-d);margin-top:16px">${extrairAlternativas(propostaPendente.alternativas).map(alt=>`<div class="linha-numerada"><span class="linha-marcador">${alt.letra})</span><span class="linha-texto">${alt.texto}</span></div>`).join('')}</div>
       <div style="font-size:var(--fs-d);margin-top:16px;font-weight:600">Gabarito: ${escapeHtml((propostaPendente.gabarito||'').toUpperCase())}</div>
     </div>`
@@ -24911,7 +24936,7 @@ async function renderizarTopico(topicoId){
     ${topico.questoes ? `
     <div style="background:#F7F7F5;border-left:3px solid #ccc;border-radius:8px;padding:14px 16px;margin-bottom:16px">
       <div style="font-size:var(--fs-b);color:#999;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:6px;font-weight:600">Questão desta discussão</div>
-      <div style="font-size:var(--fs-d);color:#444;margin:0;line-height:1.6">${formatarEnunciado(topico.questoes.enunciado)}</div>
+      <div style="font-size:var(--fs-d);color:#444;margin:0;line-height:1.4">${formatarEnunciado(topico.questoes.enunciado)}</div>
       ${topico.questoes.alternativas ? `<div style="font-size:var(--fs-d);color:#444;margin-top:12px">${extrairAlternativas(topico.questoes.alternativas).map(alt=>`<div class="linha-numerada"><span class="linha-marcador">${alt.letra})</span><span class="linha-texto">${alt.texto}</span></div>`).join('')}</div>` : ''}
       ${topico.questoes.gabarito ? `<div style="font-size:var(--fs-d);margin-top:12px;font-weight:600;color:#444">Gabarito: ${escapeHtml(topico.questoes.gabarito.toUpperCase())}</div>` : ''}
     </div>` : ''}
@@ -25379,7 +25404,7 @@ function mostrarInfoModulo(event, nome, textoInfo){
   if(!popup){
     popup = document.createElement('div');
     popup.id = 'popup-info-modulo';
-    popup.style.cssText = 'position:fixed;background:#111;color:#fff;padding:10px 14px;border-radius:8px;font-size:var(--fs-b);line-height:1.7;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.25);max-width:280px';
+    popup.style.cssText = 'position:fixed;background:#111;color:#fff;padding:10px 14px;border-radius:8px;font-size:var(--fs-b);line-height:1.4;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.25);max-width:280px';
     document.body.appendChild(popup);
   }
   popup.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${nome}</div>${textoInfo}`;
