@@ -2957,7 +2957,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-01-235';
+const VERSAO_APP = '2026-10-01-236';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8310,7 +8310,16 @@ document.addEventListener('touchstart', vfDesmarcarSeletorCorAbertoVF, {capture:
 let vfTouchIdAtivo = null;
 let vfCorDesenhoAtual = '#1A40A1';
 let vfEspessuraDesenhoAtual = 4.5;
-let vfForcaSuavizada = 0.5; // suaviza a força entre um touchmove e outro, evita a espessura "pulando" abrupto
+let vfForcaSuavizada = 0.5;
+// (01/10) espessura do ÚLTIMO segmento traçado - cada segmento é um
+// "capsulinha" com pontas redondas e espessura própria; quando o seguinte
+// é um pouco mais fino, a ponta redonda do anterior sobra pra fora e vira
+// um dentinho na borda. Com o ruído do sensor de pressão a 240 Hz, isso
+// dava uma textura serrilhada ao longo do traço inteiro (foto real do
+// Carlos). Limitar a variação por segmento mata o dente sem tirar a
+// resposta à pressão de verdade (ver uso em vfProcessarPontoDesenhoVF)
+let vfEspessuraSegmentoAnteriorVF = null;
+const VF_DELTA_ESPESSURA_POR_SEGMENTO_PX = 0.12; // suaviza a força entre um touchmove e outro, evita a espessura "pulando" abrupto
 let vfModoBorracha = false;
 let vfModoDestaque = false; // highlighter - traço translúcido, tipo marca-texto de verdade
 let vfCorDestaqueAtual = '#FFD84D';
@@ -8832,6 +8841,7 @@ document.addEventListener('touchstart', (e) => {
   vfPontoMedioAnterior = ponto;
   vfPosicaoSuavizada = ponto; // reseta - não herda do traço anterior, senão o primeiro ponto "saltaria"
   vfForcaSuavizada = typeof touch.force === 'number' && touch.force > 0 ? touch.force : 0.5; // começa do zero, não herda do traço anterior
+  vfEspessuraSegmentoAnteriorVF = null; // novo traço: a primeira espessura entra livre
   // modo destaque desenha num canvas TEMPORÁRIO à parte, em opacidade
   // cheia (sem transparência nenhuma durante o arrasto) - e só funde no
   // canvas de verdade quando solta o dedo, com a opacidade escolhida
@@ -8947,6 +8957,7 @@ document.addEventListener('touchmove', (e) => {
           vfFormaTracoAtualVF = {minX: vfBotaoPendenteToqueInfo.x, maxX: vfBotaoPendenteToqueInfo.x, minY: vfBotaoPendenteToqueInfo.y, maxY: vfBotaoPendenteToqueInfo.y, comprimento: 0, ultimoX: vfBotaoPendenteToqueInfo.x, ultimoY: vfBotaoPendenteToqueInfo.y};
           vfPosicaoSuavizada = ponto; // reseta - mesmo motivo do outro caminho de início de traço
           vfForcaSuavizada = typeof touchPendente.force === 'number' && touchPendente.force > 0 ? touchPendente.force : 0.5;
+          vfEspessuraSegmentoAnteriorVF = null; // novo traço: a primeira espessura entra livre
           if(vfModoDestaque){
             const contentParaDestaque2 = document.getElementById('content');
             vfScrollTopNoInicioTracoVF = contentParaDestaque2 ? contentParaDestaque2.scrollTop : 0;
@@ -9105,6 +9116,15 @@ function vfProcessarPontoDesenhoVF(clientX, clientY, forcaTouch, rect, dentroDeL
     // mais fina. Diferença mais dramática entre leve e forte
     espessuraFinal = Math.max(0.8, vfEspessuraDesenhoAtual * (0.35 + forca * 1.85));
   }
+  // trava de variação por segmento - ver vfEspessuraSegmentoAnteriorVF.
+  // Vale pra caneta, marca-texto e borracha igualmente (todos sofrem do
+  // mesmo dente). Delta proporcional pra traço grosso (4%), com piso de
+  // 0,12 px pros finos
+  if(vfEspessuraSegmentoAnteriorVF != null){
+    const deltaMax = Math.max(VF_DELTA_ESPESSURA_POR_SEGMENTO_PX, vfEspessuraSegmentoAnteriorVF * 0.04);
+    espessuraFinal = Math.min(vfEspessuraSegmentoAnteriorVF + deltaMax, Math.max(vfEspessuraSegmentoAnteriorVF - deltaMax, espessuraFinal));
+  }
+  vfEspessuraSegmentoAnteriorVF = espessuraFinal;
   ctxAtivo.lineWidth = Math.max(1, espessuraFinal);
 
   // interpolação pra traço rápido: quando a caneta se move rápido, a
