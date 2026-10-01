@@ -2957,7 +2957,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-01-233';
+const VERSAO_APP = '2026-10-01-234';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8322,7 +8322,11 @@ let vfEspessuraDesenhoAtual = 4.5;
 // numa Retina) já é indistinguível a olho; 2,25× menos memória e menos
 // pixels pra encher a cada traço (mais fluido). Teto 2 por segurança em
 // telas com DPR 3
-function vfDprCanvasVF(){ return Math.min(window.devicePixelRatio || 1, 2); }
+// (01/10, mesmo dia) VOLTOU pra DPR × 1.5: testado no iPad, o buffer
+// maior rebaixado pra tela é o que deixa a borda do traço lisa - em DPR
+// nativo apareceram "pontinhas" ao longo de toda linha. A memória se
+// resolve por outro caminho (altura do canvas), não pela escala
+function vfDprCanvasVF(){ return (window.devicePixelRatio || 1) * 1.5; }
 let vfForcaSuavizada = 0.5; // suaviza a força entre um touchmove e outro, evita a espessura "pulando" abrupto
 let vfModoBorracha = false;
 let vfModoDestaque = false; // highlighter - traço translúcido, tipo marca-texto de verdade
