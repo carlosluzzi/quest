@@ -3080,7 +3080,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-06-252';
+const VERSAO_APP = '2026-10-06-256';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6125,12 +6125,28 @@ function vfAjustarLarguraTabelaVF(bloco){
 
   if(larguraTotal > 0){
     // largura explícita ([largura:NN], vinda da alça da borda direita):
-    // NN% do card, colunas nas proporções salvas (ou nas naturais)
-    const total = Math.round(container * larguraTotal / 100);
+    // NN% do card, colunas nas proporções salvas (ou nas naturais).
+    // ACHADO REAL (06/10, print do Carlos: tabela de saturação com
+    // [largura:97.5]): a conta usava clientWidth do PAI, e clientWidth
+    // INCLUI o padding do pai. Com um pai de padding 16, "97,5% de 1000"
+    // dava 975px num espaço que de verdade só tinha 968 - a tabela saía
+    // mais larga que o próprio cartão, o overflow-x cortava o excesso e a
+    // borda direita do cartão simplesmente sumia da tela. Agora a medida
+    // é a largura que o BLOCO realmente pode ocupar (width:100% medido na
+    // hora), e o resultado ainda é limitado a ela
+    bloco.style.width = '100%';
+    const disponivel = bloco.getBoundingClientRect().width || container;
+    bloco.style.width = 'fit-content';
+    const total = Math.min(Math.round(disponivel * larguraTotal / 100), Math.floor(disponivel));
     const proporcoes = largurasOk || celulas.map(td => td.getBoundingClientRect().width);
     const soma = proporcoes.reduce((a,b) => a+b, 0) || 1;
     tabela.style.tableLayout = 'fixed';
     tabela.style.width = total + 'px';
+    // o cartão acompanha a tabela. Sem isto ele fica com width:auto (o
+    // reset lá em cima apaga o width:fit-content inline) e estica até a
+    // largura do bloco - que a legenda \small{} puxa pro máximo. Resultado:
+    // borda do cartão longe da última coluna, com uma faixa vazia à direita
+    cartao.style.width = total + 'px';
     celulas.forEach((td, i) => { td.style.width = (proporcoes[i]/soma*100).toFixed(2) + '%'; });
     vfLiberarQuebraSoNoQueNaoCabeVF(tabela);
     if(larguraTotal >= 100){ bloco.style.width = '100%'; cartao.style.width = '100%'; tabela.style.width = '100%'; }
@@ -6166,6 +6182,7 @@ function vfAjustarLarguraTabelaVF(bloco){
     const total = Math.min(totalDesejado, container);
     tabela.style.tableLayout = 'fixed';
     tabela.style.width = total + 'px';
+    cartao.style.width = total + 'px'; // idem: cartão colado na tabela, mesmo com legenda embaixo puxando o bloco
     celulas.forEach(td => { td.style.width = (100/n).toFixed(2) + '%'; });
     vfLiberarQuebraSoNoQueNaoCabeVF(tabela);
     alcas.forEach(a => { a.style.display = 'none'; });
@@ -16956,7 +16973,56 @@ function vfCopiarComProtecaoDuploToqueVF(elemento, evento){
   // toque físico real que aconteceu na tela
   const tocouComCaneta = evento?.changedTouches ? vfEhToqueDeCaneta(evento.changedTouches[0]) : vfUltimoToqueFoiCanetaVF;
   if(tocouComCaneta) return; // caneta nunca copia - só desenha
+  // ACHADO REAL (06/10, Carlos): tocar com o DEDO numa palavra que tem
+  // balãozinho (\nota{}{}) copiava o cartão e a explicação nunca aparecia.
+  // Motivo: quem copia é o touchend, e ele chama preventDefault() pra não
+  // duplicar o mouseup sintético do Safari - esse preventDefault mata o
+  // clique que abriria o balão. No mouse nunca deu: lá o mouseup vem sem
+  // evento, não tem preventDefault, e o clique acontece normal.
+  // Regra agora: primeiro toque na palavra marcada MOSTRA a explicação;
+  // tocar de novo nela copia, como em qualquer outro ponto do cartão
+  const alvoNota = vfNotaClicavelDoEventoVF(evento);
+  if(alvoNota){
+    if(vfNotaTocadaUmaVezVF === alvoNota && vfBalaoExplicacaoEstaAbertoVF()){
+      vfNotaTocadaUmaVezVF = null;
+      vfEsconderBalaoExplicacaoVF(); // segundo toque: fecha e segue pra cópia
+    }else{
+      vfNotaTocadaUmaVezVF = alvoNota;
+      vfAbrirBalaoDaNotaPorToqueVF(alvoNota, evento);
+      return;
+    }
+  }else{
+    vfNotaTocadaUmaVezVF = null; // tocou em outro lugar: a palavra volta a abrir no próximo toque
+    // ...e o balão que estivesse aberto se fecha junto. No dedo o clique
+    // sintético não chega (o touchend da cópia dá preventDefault), então
+    // o fechamento por "toquei fora" tem que ser feito aqui
+    if(vfBalaoExplicacaoEstaAbertoVF()) vfEsconderBalaoExplicacaoVF();
+  }
   vfCopiarTextoElementoVF(elemento);
+}
+let vfNotaTocadaUmaVezVF = null;
+// num touchend o alvo continua sendo onde o dedo ENCOSTOU, que é
+// exatamente o que interessa aqui. Pega tanto o \nota{}{} de texto
+// (.vf-nota-clicavel) quanto o grupo de SVG com explicação
+function vfNotaClicavelDoEventoVF(evento){
+  const alvo = evento && evento.target;
+  if(!alvo || !alvo.closest) return null;
+  return alvo.closest('.vf-nota-clicavel, [data-explicacao]');
+}
+// abre o balão a partir de um toque, montando um evento com as
+// coordenadas reais do dedo (num touchend elas estão em changedTouches,
+// não em touches, que já vem vazio)
+function vfAbrirBalaoDaNotaPorToqueVF(alvo, evento){
+  const ponto = (evento && evento.changedTouches && evento.changedTouches.length) ? evento.changedTouches[0] : evento;
+  if(vfBalaoExplicacaoEstaAbertoVF()) vfEsconderBalaoExplicacaoVF(); // trocou de palavra: fecha a anterior e já abre a nova
+  vfCliqueNotaClicavelVF({
+    touches: [],
+    currentTarget: alvo,
+    target: alvo,
+    clientX: ponto && ponto.clientX,
+    clientY: ponto && ponto.clientY,
+    stopPropagation(){}
+  });
 }
 
 // textContent puro cola TUDO numa linha só: uma nota escrita como
@@ -19701,6 +19767,7 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   balao.style.cursor = aoEditar ? 'pointer' : 'default';
   balao.onclick = aoEditar ? (e) => { e.stopPropagation(); vfEsconderBalaoExplicacaoVF(); aoEditar(); } : null;
   balao.classList.remove('hidden');
+  vfBalaoAbertoEmVF = Date.now();
   // posiciona logo abaixo do ponto tocado, mas sem estourar a tela (nem
   // embaixo nem nas laterais) - mede DEPOIS de já estar visível, senão
   // getBoundingClientRect() do próprio balão viria zerado.
@@ -19745,6 +19812,7 @@ function vfMostrarBalaoExplicacaoVF(evento, texto, aoEditar){
   requestAnimationFrame(() => vfPosicionarBalaoExplicacaoVF(ponto.clientX, ponto.clientY));
 }
 let vfBalaoAncoraVF = null;
+let vfBalaoAbertoEmVF = 0;
 // posiciona à DIREITA e ABAIXO do ponto tocado (como a dica de um mouse) -
 // se não couber à direita, vai pra esquerda do ponto; se não couber
 // embaixo (contando a barra fixa de botões), vai pra cima. Recebe
@@ -19808,6 +19876,9 @@ function vfBalaoExplicacaoEstaAbertoVF(){
 }
 document.addEventListener('click', (e) => {
   const balao = document.getElementById('vf-balao-explicacao');
+  // abriu agora mesmo (por toque): o clique sintético que o navegador
+  // manda logo depois do touchend não pode fechar o balão no mesmo gesto
+  if(Date.now() - vfBalaoAbertoEmVF < 400) return;
   if(balao && !balao.classList.contains('hidden') && !balao.contains(e.target)) vfEsconderBalaoExplicacaoVF();
 });
 
