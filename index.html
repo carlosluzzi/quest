@@ -819,6 +819,20 @@ html[data-tema="escuro"] [style*="background:#F2F1EC"]{background-color:#2A2925 
    comum e tabela sem cabecalho nao sao afetadas */
 html[data-tema="escuro"] .vf-tabela-bloco td[style*="background:#F2F1EC"],
 html[data-tema="escuro"] .vf-tabela-bloco td[style*="background: rgb(242, 241, 236)"]{color:#B8B3A9 !important}
+/* (06/10) balaozinho do \nota{}{}: o fundo dele (#F0F0ED) e cor unica no
+   app inteiro, entao nenhuma regra da camada gerada pegava - ficava claro
+   no escuro, com o texto ja clareado por cima: branco no branco, nao dava
+   pra ler nada. Tom mais claro que o cartao (#1E1E1C) e que o cartao da
+   tabela (#0F0F0E) de proposito: ele flutua POR CIMA dos dois, precisa se
+   destacar, nao se misturar */
+html[data-tema="escuro"] #vf-balao-explicacao{
+  background:#2A2925 !important;
+  color:#E4E0D8 !important;
+  border-color:#45443C !important;
+  box-shadow:0 8px 26px rgba(0,0,0,0.55) !important;
+}
+html[data-tema="escuro"] #vf-balao-explicacao strong,
+html[data-tema="escuro"] #vf-balao-explicacao b{color:#FFFFFF !important}
 /* moldura de ajuste (quando esta redimensionando a coluna) */
 html[data-tema="escuro"] .vf-tabela-ajustando td{box-shadow:inset 0 0 0 0.5px #4A4942 !important}
 /* (01/10) cor da nota no escuro: o fundo pastel do claro era engolido pelo
@@ -3080,7 +3094,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-06-258';
+const VERSAO_APP = '2026-10-06-261';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7638,9 +7652,18 @@ function vfProcessarAlinhamentoTrechoVF(texto){
 // stroke-width, data-linha, font-size viriam corrompidos) nem dentro de
 // <style>/<script>, onde "-" faz parte da sintaxe
 const VF_HIFEN_INQUEBRAVEL_VF = '\u2011';
+// (06/10, Carlos) numero e unidade nao se separam no fim da linha: "1 °C"
+// nao pode virar "1" em cima e "°C" embaixo. O espaco entre os dois vira
+// espaco inquebravel (U+00A0) - mesma largura, mesmo visual, sem ponto de
+// quebra. Vale pra qualquer unidade da lista; as mais compridas vem antes
+// na alternativa, senao "°" sozinho casaria dentro de "°C". A trava do
+// final (nao pode vir letra ou digito depois) e o que impede colar numa
+// palavra comum: "1 metro" e "1 minutos" nao entram, "1 m" e "1 min" sim
+const VF_ESPACO_INQUEBRAVEL_VF = '\u00A0';
+const VF_RE_NUMERO_UNIDADE_VF = /(\d)[ \t]+(°C|°F|ºC|ºF|km\/h|m\/s|mbar|hPa|kPa|psi|rpm|dwt|TEU|ppm|min|mL|km|cm|mm|nm|NM|mi|ft|kt|kn|kg|kW|hp|lb|oz|gal|pol|ton|bar|m²|m³|nós|nó|pés|pé|°|º|%|‰|m|g|t|s|h|d|L|V|A|W|K|J|N)(?![\p{L}\d])/gu;
 const VF_RE_HIFEN_PALAVRA_VF = /([0-9A-Za-zÀ-ÖØ-öø-ÿĀ-ſḀ-ỿΑ-Ωα-ω])-(?=[0-9A-Za-zÀ-ÖØ-öø-ÿĀ-ſḀ-ỿΑ-Ωα-ω])/g;
 function vfHifenInquebravelVF(html, preservarEspacos){
-  if(!html || (html.indexOf('-') === -1 && !preservarEspacos)) return html;
+  if(!html || (html.indexOf('-') === -1 && !preservarEspacos && !/\d/.test(html))) return html;
   let codigo = false; // dentro de <style>/<script>
   return html.replace(/<[^>]*>|[^<]+/g, (pedaco) => {
     if(pedaco.charAt(0) === '<'){
@@ -7650,6 +7673,7 @@ function vfHifenInquebravelVF(html, preservarEspacos){
     }
     if(codigo) return pedaco;
     let texto = pedaco.replace(VF_RE_HIFEN_PALAVRA_VF, '$1' + VF_HIFEN_INQUEBRAVEL_VF);
+    texto = texto.replace(VF_RE_NUMERO_UNIDADE_VF, '$1' + VF_ESPACO_INQUEBRAVEL_VF + '$2');
     // (06/10) dois ou mais espacos seguidos: o HTML junta tudo num so por
     // padrao. Cada espaco a mais vira &nbsp; e o ULTIMO continua espaco
     // normal - assim a quantidade digitada aparece na tela e a linha ainda
@@ -14301,8 +14325,25 @@ async function vfIniciarSessaoFlashVF(){
 // nova (ver vfIniciarSessaoFlashVF), pra a próxima vez que a tela de
 // filtros aparecer vir sempre limpa, não com a escolha da sessão anterior
 function vfLimparFiltroVF(){
-  filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false, data: false, inconsistente: false};
+  // ACHADO REAL (06/10, Carlos): finalizou uma sessão, abriu pra começar
+  // outra e a tela de início ainda estava com filtro aplicado. O objeto
+  // de reset aqui só tinha SETE campos - faltavam palavra-chave (termo),
+  // tag (tagId/tagNome), os filtros de capítulo (filtrosInc/filtrosExc) e
+  // a varredura. Pior: mesmo o que sumia do objeto continuava na TELA -
+  // o texto no campo de palavra-chave, o "x" dele, a linha de expansão e
+  // o chip da tag ficavam lá, dando a impressão (correta, do ponto de
+  // vista de quem olha) de que o filtro anterior continuava valendo.
+  // Agora o reset tem a mesma forma do estado inicial (ver o let filtroVF
+  // lá em cima) e limpa também o que aparece na tela
+  filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false, data: false, inconsistente: false,
+              termo: null, tagId: null, tagNome: null, filtrosInc: [], filtrosExc: [], varreduraDesde: null};
   vfSalvarFiltroNoStorageVF();
+  const elTermo = document.getElementById('vf-filtro-termo');
+  if(elTermo){ elTermo.value = ''; elTermo.style.paddingLeft = ''; }
+  document.getElementById('vf-filtro-termo-limpar')?.classList.add('hidden');
+  const elExpansao = document.getElementById('vf-filtro-termo-expansao');
+  if(elExpansao) elExpansao.innerHTML = '';
+  if(typeof vfAtualizarChipTagFiltroVF === 'function') vfAtualizarChipTagFiltroVF(); // sem tagId, ele se esconde sozinho
   const elModulo = document.getElementById('vf-filtro-modulo');
   const elPub = document.getElementById('vf-filtro-publicacao');
   const elCap = document.getElementById('vf-filtro-capitulo');
