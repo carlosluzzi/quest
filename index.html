@@ -3080,7 +3080,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-06-256';
+const VERSAO_APP = '2026-10-06-258';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5369,6 +5369,41 @@ async function selecionarFiltroSelect(nivel, valor){
   }
 
   atualizarContadorDisponiveis();
+}
+
+// (06/10, Carlos) ao FINALIZAR um caderno, os filtros voltam ao zero.
+// Mesma regra que o Flash já segue (ver vfLimparFiltroVF em
+// vfFinalizarSessaoFlashVF): limpa ao TERMINAR, nunca ao começar - assim
+// a tela de "Novo caderno" nunca nasce com o filtro do caderno anterior
+// ainda aplicado, e uma escolha feita agora, antes de clicar em "Gerar
+// caderno", continua valendo normalmente
+function limparFiltrosCadernoVF(){
+  filtroSelecionado = {usuario:null, origem:'usuarios', concurso:null, ano:null, modulo:null, publicacao:null, capitulo:null, tipoQuestao:null};
+  quantidadeSelecionada = 15;
+  const porId = (id) => document.getElementById(id);
+  const valorDe = (id, valor) => { const el = porId(id); if(el) el.value = valor; };
+  valorDe('nome-caderno', '');
+  valorDe('quantidade-customizada', '');
+  valorDe('filtro-origem', 'usuarios');
+  valorDe('filtro-usuario-admin', '');
+  valorDe('filtro-modulo', '');
+  valorDe('filtro-tipo-questao', 'todos');
+  valorDe('filtro-concurso', '');
+  const pub = porId('filtro-publicacao');
+  if(pub){ pub.innerHTML = '<option value="">Todas as publicações</option>'; pub.disabled = true; }
+  const cap = porId('filtro-capitulo');
+  if(cap){ cap.innerHTML = '<option value="">Todos os capítulos</option>'; cap.disabled = true; }
+  const ano = porId('filtro-ano-prova');
+  if(ano){ ano.innerHTML = '<option value="">Escolhe o concurso primeiro</option>'; ano.disabled = true; }
+  porId('bloco-filtro-marinha')?.classList.add('hidden');
+  const prioridade = porId('toggle-priorizar-erro'); if(prioridade) prioridade.checked = false;
+  const ineditas = porId('toggle-ineditas'); if(ineditas) ineditas.checked = false;
+  document.querySelectorAll('#filtro-quantidade .filter-btn').forEach(b => b.classList.remove('active'));
+  porId('quests-sem-resultado')?.classList.add('hidden');
+  // volta os conjuntos de módulo/publicação/tipo pro banco inteiro: o
+  // filtro de usuário (admin) reescopa esses conjuntos, e sem refazer a
+  // busca os módulos do outro usuário continuariam desabilitados na lista
+  selecionarFiltroSelect('usuario', '');
 }
 
 function selecionarQuantidade(botao, valor){
@@ -17885,6 +17920,12 @@ function vfIniciarArrastoBordaTabelaVF(evento){
     const ultima = Math.max(MIN_ULTIMA_PX, Math.min(container - somaOutras, ultimaIni + (p.clientX - xInicial)));
     larguraAtual = somaOutras + ultima;
     tabela.style.width = larguraAtual + 'px';
+    // (06/10, Carlos) o cartão encolhe JUNTO, a cada movimento. Antes só a
+    // tabela mudava durante o arrasto: o cartão ficava parado na largura
+    // antiga e aparecia como um quadro vazio atrás da tabela encolhendo,
+    // sumindo só ao soltar (quando vfAjustarLarguraTabelaVF reajustava
+    // tudo). Agora não existe esse quadro em momento nenhum
+    tabela.parentElement.style.width = larguraAtual + 'px';
     celulas.forEach((td, i) => {
       const px = i === celulas.length - 1 ? ultima : largurasIniPx[i];
       td.style.width = (px / larguraAtual * 100).toFixed(2) + '%';
@@ -24771,6 +24812,7 @@ async function finalizarCaderno(){
   questoesExcluidasAtual = new Set();
   document.getElementById('quests-resolucao').classList.add('hidden');
   document.getElementById('quests-filtros').classList.remove('hidden');
+  limparFiltrosCadernoVF(); // caderno terminado: a próxima tela de filtros nasce limpa
   await carregarCadernosExistentes();
   await verificarCadernoEmAndamento(); // recalcula a contagem certa, pode ainda sobrar outros em andamento
 
