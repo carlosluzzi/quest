@@ -48,6 +48,10 @@
 #content{
   --fs-a:calc(10px*var(--fz)); --fs-b:calc(11px*var(--fz)); --fs-c:calc(12px*var(--fz)); --fs-d:calc(14px*var(--fz));
   --fs-e:calc(16px*var(--fz)); --fs-f:calc(18px*var(--fz)); --fs-g:calc(20px*var(--fz)); --fs-h:calc(22px*var(--fz)); --fs-i:calc(25px*var(--fz));
+  /* (06/10) tamanho base do miolo JÁ escalado: quem não declara font-size
+     (ex.: a caixa de correção do Flash) herdava o valor calculado do body,
+     que fica fora do zoom, e não crescia com o slider */
+  font-size:var(--fs-d);
 }
 *{box-sizing:border-box}
 input[type=checkbox],input[type=radio]{accent-color:#B23A34}
@@ -2752,7 +2756,12 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
      comprida, um toque fora sem querer fazia perder tudo que estava
      digitado. Só o botão Fechar fecha -->
 <div class="modal-overlay hidden" id="modal-nota-vf">
-  <div class="modal-conteudo popup-formulario" style="display:flex;flex-direction:column">
+  <!-- (06/10) mais largo que os outros pop-ups de propósito: a barra de
+       ferramentas da nota tem 13 botões e pede ~550px de largura útil. Nos
+       550px do .popup-formulario ela quebrava a linha e sobrava um botão
+       sozinho embaixo. 620 dá a folga, e em tela estreita o width:100% do
+       .modal-conteudo continua mandando -->
+  <div class="modal-conteudo popup-formulario" style="max-width:620px;display:flex;flex-direction:column">
     <h3 class="config-title" style="flex-shrink:0">Notas</h3>
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-shrink:0">
       <button id="vf-nota-aba-questao" class="btn-secundario active" style="flex:1" onclick="vfMudarAbaNotaVF('questao')">Nessa questão</button>
@@ -3071,7 +3080,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-06-249';
+const VERSAO_APP = '2026-10-06-252';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7578,8 +7587,8 @@ function vfProcessarAlinhamentoTrechoVF(texto){
 // <style>/<script>, onde "-" faz parte da sintaxe
 const VF_HIFEN_INQUEBRAVEL_VF = '\u2011';
 const VF_RE_HIFEN_PALAVRA_VF = /([0-9A-Za-zÀ-ÖØ-öø-ÿĀ-ſḀ-ỿΑ-Ωα-ω])-(?=[0-9A-Za-zÀ-ÖØ-öø-ÿĀ-ſḀ-ỿΑ-Ωα-ω])/g;
-function vfHifenInquebravelVF(html){
-  if(!html || html.indexOf('-') === -1) return html;
+function vfHifenInquebravelVF(html, preservarEspacos){
+  if(!html || (html.indexOf('-') === -1 && !preservarEspacos)) return html;
   let codigo = false; // dentro de <style>/<script>
   return html.replace(/<[^>]*>|[^<]+/g, (pedaco) => {
     if(pedaco.charAt(0) === '<'){
@@ -7588,7 +7597,13 @@ function vfHifenInquebravelVF(html){
       return pedaco;
     }
     if(codigo) return pedaco;
-    return pedaco.replace(VF_RE_HIFEN_PALAVRA_VF, '$1' + VF_HIFEN_INQUEBRAVEL_VF);
+    let texto = pedaco.replace(VF_RE_HIFEN_PALAVRA_VF, '$1' + VF_HIFEN_INQUEBRAVEL_VF);
+    // (06/10) dois ou mais espacos seguidos: o HTML junta tudo num so por
+    // padrao. Cada espaco a mais vira &nbsp; e o ULTIMO continua espaco
+    // normal - assim a quantidade digitada aparece na tela e a linha ainda
+    // pode quebrar ali, se precisar
+    if(preservarEspacos) texto = texto.replace(/ {2,}/g, (m) => '&nbsp;'.repeat(m.length - 1) + ' ');
+    return texto;
   });
 }
 function formatarTextoItemVF(texto, opcoes){
@@ -7625,8 +7640,8 @@ function formatarTextoItemVF(texto, opcoes){
     // \quebra valem como sinônimos de \linha - \newline já existia
     // dentro de célula de tabela e continua igual
     .replace(/\\(?:linha|quebra|newline)\b/g, '<br>')
-    .replace(/\\espa[cç]o\{\s*([0-9]+(?:[.,][0-9]+)?)\s*\}/g, (m, n) => `<span style="display:block;height:${vfAlturaEspacoVF(n)}"></span>`) // \espaco{N}: N em linhas. Vem ANTES do \espaco solto - o \b dele casa antes da chave e comeria o comando, deixando o {N} na tela
-    .replace(/\\espa[cç]o\b/g, '<span style="display:block;height:0.6em"></span>')
+    .replace(/\\espa[cç]o\{\s*([0-9]+(?:[.,][0-9]+)?)\s*\}/g, (m, n) => `<span class="vf-espaco-nota" style="display:block;height:${vfAlturaEspacoVF(n)}"></span><!--ESPFIM-->`) // \espaco{N}: N em linhas. Vem ANTES do \espaco solto - o \b dele casa antes da chave e comeria o comando, deixando o {N} na tela
+    .replace(/\\espa[cç]o\b/g, '<span class="vf-espaco-nota" style="display:block;height:0.6em"></span><!--ESPFIM-->')
     .replace(/\n/g, '<br>')
     // tabela e desenho já são blocos: o <br> logo depois deles só somava
     // uma linha em branco (~24px) ao espaço que o bloco já tem. Era o que
@@ -7643,13 +7658,20 @@ function formatarTextoItemVF(texto, opcoes){
     // propósito continua tendo a linha em branco que pediu
     .replace(/(<\/(?:ul|ol)>)<br>/g, '$1')
     .replace(/(<!--COLFIM-->)<br>/g, '$1') // idem pra grade de colunas: ela ja e bloco, o <br> do enter so somava linha em branco
+    // ACHADO REAL (06/10, print do Carlos): "Carlos \espaco{0.5}" + enter dava
+    // MAIS de uma linha de folga. A folga e um bloco (display:block), ou seja,
+    // ja quebra a linha sozinha - o <br> do enter logo depois somava uma linha
+    // inteira por cima dela. Agora a folga SUBSTITUI a quebra: \espaco{0.5} e
+    // meia linha de folga, \espaco{1} e uma linha, e por ai vai
+    .replace(/(<!--ESPFIM-->)<br>/g, '$1')
+    .replace(/((?:<br>)+)(<span class="vf-espaco-nota")/g, (m, quebras, bloco) => (quebras.length === 4 ? '' : quebras) + bloco)
     // ...e só quando foi UM enter. Dois enters antes de uma lista/bloco
     // continuam valendo linha em branco de verdade (23/09): engolir um
     // dos dois deixava a linha sumir, porque a que sobra é justamente a
     // que o bloco já daria sozinho
     .replace(/((?:<br>)+)(<(?:ul|ol)[ >])/g, (m, quebras, bloco) => (quebras.length === 4 ? '' : quebras) + bloco)
     .replace(/((?:<br>)+)(<div class="vf-colunas-nota")/g, (m, quebras, bloco) => (quebras.length === 4 ? '' : quebras) + bloco)
-    .replace(/<!--COLFIM-->/g, '');
+    .replace(/<!--COLFIM-->|<!--ESPFIM-->/g, '');
   resultado = vfAplicarSobrescritoESubscritoJuntosVF(resultado); // b^2_{crit} - os dois no mesmo símbolo, empilhados
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
   resultado = resultado
@@ -7666,7 +7688,7 @@ function formatarTextoItemVF(texto, opcoes){
     .replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯĀ-ſḀ-ỿ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/(>)\^((?:[Α-Ωα-ω∞]|[A-Za-z0-9+\-]{1,4}))/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
     .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F\u0100-\u017F\u1E00-\u1EFF]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
-  return vfHifenInquebravelVF(vfReinserirTabelasVF(vfProcessarAlinhamentoTrechoVF(resultado), tabelas));
+  return vfHifenInquebravelVF(vfReinserirTabelasVF(vfProcessarAlinhamentoTrechoVF(resultado), tabelas), true); // true = respeita espacos seguidos (nota escrita a mao); o enunciado do Quest colapsa de proposito e nao passa true
 }
 
 // ============================================================
