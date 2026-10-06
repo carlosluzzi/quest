@@ -3071,7 +3071,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-02-246';
+const VERSAO_APP = '2026-10-06-248';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3208,7 +3208,7 @@ function vfLimparApostrofoUnderscoreVF(texto){
 function formatarEnunciado(texto){
   if(!texto) return formatarEnunciadoInterno(texto);
   const {textoComPlaceholder, tabelas} = vfExtrairTabelasComoPlaceholderVF(texto);
-  return vfReinserirTabelasVF(formatarEnunciadoInterno(textoComPlaceholder), tabelas);
+  return vfHifenInquebravelVF(vfReinserirTabelasVF(formatarEnunciadoInterno(textoComPlaceholder), tabelas));
 }
 function formatarEnunciadoInterno(texto){
   if(!texto) return '(enunciado vazio – questão pode estar malformada)';
@@ -5926,6 +5926,7 @@ function vfFormatarCelulaArrayVF(celula){
   // comando LaTeX padrão diferente de \\ (que já é o separador ENTRE
   // linhas da tabela, não pode ser reaproveitado sem ambiguidade)
   c = c.replace(/\\(?:linha|quebra|newline)\b/g, '<br>');
+  c = vfTrocarEspacoComMedidaVF(c); // \espaco{N} (medida escolhida) antes do \espaco solto - senao o \b do solto comeria o comando e deixaria o {N} como texto
   c = c.replace(/\\espa[cç]o\b/g, '<span style="display:block;height:0.6em"></span>'); // mesma dupla do texto normal, ver formatarTextoItemVF
   // enter DE VERDADE digitado na edição da célula vale o mesmo que
   // \newline. Precisa virar <br> mesmo com white-space:pre-wrap na
@@ -7071,6 +7072,8 @@ function vfHtmlBarraFerramentasNotaVF(idCampo, altura){
   const botao = (titulo, chamada, miolo) => `<button type="button" title="${titulo}" onpointerdown="${chamada}" style="min-width:34px;height:${alt}px;padding:0 7px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#666;cursor:pointer;font-size:var(--fs-e);line-height:1;display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">${miolo}</button>`;
   const iconeAlinhar = (x1, x2) => `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="${x1}" y1="17" x2="${x2}" y2="17"/></svg>`;
   const iconeBalao = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+  // duas linhas de texto com a seta dupla entre elas: "quanto respira aqui"
+  const iconeEspaco = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="4" x2="20" y2="4"/><line x1="4" y1="20" x2="20" y2="20"/><polyline points="9.5 9 12 6.5 14.5 9"/><polyline points="9.5 15 12 17.5 14.5 15"/><line x1="12" y1="6.5" x2="12" y2="17.5"/></svg>';
   const iconeLista = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="7" r="1.4" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="5" cy="17" r="1.4" fill="currentColor" stroke="none"/><line x1="10" y1="7" x2="20" y2="7"/><line x1="10" y1="12" x2="20" y2="12"/><line x1="10" y1="17" x2="20" y2="17"/></svg>';
   const separador = '<span style="width:1px;background:#e4e4e0;margin:3px 2px"></span>';
   return botao('Negrito', `vfBotaoMarcacaoNotaVF(event,'negrito','${idCampo}')`, '<b style="font-size:var(--fs-e)">B</b>')
@@ -7080,6 +7083,7 @@ function vfHtmlBarraFerramentasNotaVF(idCampo, altura){
        + botao('Tirar recuo da linha', `vfBotaoRecuoNotaVF(event,true,'${idCampo}')`, '⇤')
        + botao('Recuar a linha', `vfBotaoRecuoNotaVF(event,false,'${idCampo}')`, '⇥')
        + botao('Lista com bolinhas', `vfBotaoMarcacaoNotaVF(event,'lista','${idCampo}')`, iconeLista)
+       + botao('Espaço entre linhas', `vfBotaoPainelNotaVF(event,'espaco','${idCampo}')`, iconeEspaco)
        + separador
        + botao('Alinhar à esquerda', `vfBotaoAlinharNotaVF(event,'esquerda','${idCampo}')`, iconeAlinhar(4, 14))
        + botao('Centralizar', `vfBotaoAlinharNotaVF(event,'centro','${idCampo}')`, iconeAlinhar(7, 17))
@@ -7194,6 +7198,21 @@ function vfAplicarFracaoNotaVF(ta){
   ta.dispatchEvent(new Event('input', {bubbles: true}));
 }
 // insere um texto solto (símbolo, \linha, \espaco) na posição do cursor
+// (06/10) \espaco{N} - folga escolhida no ponto, N em LINHAS (aceita
+// 0,5 / 1 / 1,5 / 2 / 3; vírgula ou ponto). \espaco sem chaves continua
+// valendo o que sempre valeu (meia linha), pra nao mexer no que ja esta
+// escrito. A altura sai de N x 1.4em porque 1.4 e o line-height de todo
+// texto de leitura do app: assim "1" e mesmo UMA linha de folga, nao um
+// numero solto que so o CSS entende
+const VF_ESPACO_MAX_LINHAS_VF = 6;
+function vfAlturaEspacoVF(n){
+  const linhas = Math.min(VF_ESPACO_MAX_LINHAS_VF, Math.max(0, parseFloat(String(n).replace(',', '.')) || 0));
+  return (linhas * 1.4).toFixed(2) + 'em';
+}
+function vfTrocarEspacoComMedidaVF(html){
+  return html.replace(/\\espa[cç]o\{\s*([0-9]+(?:[.,][0-9]+)?)\s*\}/g,
+    (m, n) => `<span style="display:block;height:${vfAlturaEspacoVF(n)}"></span>`);
+}
 function vfInserirTextoNotaVF(ta, texto){
   const valor = ta.value;
   const ini = ta.selectionStart, fim = ta.selectionEnd;
@@ -7229,7 +7248,16 @@ function vfBotaoPainelNotaVF(evento, qual, idCampoPadrao){
   existente?.remove();
   const botaoHtml = (rotulo, acao, dica, extra) => `<button type="button" title="${dica || rotulo}" onpointerdown="vfAcaoPainelNotaVF(event,'${acao.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" style="min-width:38px;height:36px;padding:0 8px;border-radius:8px;border:0.5px solid #e2e2df;background:#fff;color:#333;cursor:pointer;font-size:var(--fs-e);display:inline-flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;${extra || ''}">${rotulo}</button>`;
   let corpo;
-  if(qual === 'cor'){
+  if(qual === 'espaco'){
+    // folga MEDIDA, escolhida no ponto - nao e estilo do bloco inteiro.
+    // "Tirar" some com a folga que estiver no cursor; os outros trocam a
+    // que ja estava ali em vez de empilhar uma segunda (ver
+    // vfAplicarEspacoNotaVF)
+    corpo = `<div style="display:flex;gap:6px;flex-wrap:wrap">` +
+      [['0','Tirar'],['0.5','½ linha'],['1','1 linha'],['1.5','1½ linha'],['2','2 linhas'],['3','3 linhas']]
+        .map(([n, rotulo]) => botaoHtml(rotulo, 'espaco:' + n, n === '0' ? 'Tirar a folga daqui' : 'Folga de ' + rotulo.toLowerCase() + ' neste ponto', 'font-size:var(--fs-c)'))
+        .join('') + `</div>`;
+  }else if(qual === 'cor'){
     corpo = `<div style="display:flex;gap:6px;flex-wrap:wrap">` +
       Object.entries(VF_CORES_NOTA_VF).map(([chave, c]) =>
         botaoHtml(c.nome, 'marcacao:' + chave, 'Pintar de ' + c.nome.toLowerCase(), `color:${c.texto};background:${c.fundo};border-color:${c.borda};font-weight:600`)
@@ -7244,7 +7272,7 @@ function vfBotaoPainelNotaVF(evento, qual, idCampoPadrao){
   document.body.insertAdjacentHTML('beforeend', `
     <div id="vf-painel-barra-nota" data-qual="${qual}" style="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom, 0px) + 16px);width:calc(100% - 24px);max-width:440px;box-sizing:border-box;background:#fff;border-radius:14px;box-shadow:0 18px 44px rgba(0,0,0,0.28);padding:12px 14px;z-index:600">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-size:var(--fs-c);color:#888">${qual === 'cor' ? 'Cor do trecho' : 'Símbolos e fórmulas'}</span>
+        <span style="font-size:var(--fs-c);color:#888">${qual === 'cor' ? 'Cor do trecho' : qual === 'espaco' ? 'Espaço entre linhas' : 'Símbolos e fórmulas'}</span>
         <button type="button" onpointerdown="event.preventDefault();vfFecharPainelBarraNotaVF()" style="background:none;border:none;color:#888;font-size:var(--fs-e);cursor:pointer;padding:2px 6px;line-height:1">✕</button>
       </div>
       ${corpo}
@@ -7258,10 +7286,38 @@ function vfAcaoPainelNotaVF(evento, acao){
   ta.focus();
   const [tipo, ...resto] = acao.split(':');
   const valor = resto.join(':');
-  if(tipo === 'texto') vfInserirTextoNotaVF(ta, valor);
+  if(tipo === 'espaco') vfAplicarEspacoNotaVF(ta, valor);
+  else if(tipo === 'texto') vfInserirTextoNotaVF(ta, valor);
   else if(valor === 'lista') vfAplicarListaNotaVF(ta);
   else if(valor === 'fracao') vfAplicarFracaoNotaVF(ta);
   else { const m = VF_MARCACOES_NOTA_VF[valor]; if(m) vfEnvolverSelecaoNotaVF(ta, m.antes, m.depois); }
+}
+// aplica a folga NO PONTO do cursor. Se o cursor ja esta em cima (ou
+// encostado) num \espaco que ja existe, TROCA a medida dele em vez de
+// enfiar um segundo ao lado - e o mesmo espirito dos outros botoes da
+// barra, onde tocar de novo ajusta em vez de empilhar. Medida 0 = tira a
+// folga que esta ali. Sem folga por perto e medida 0, nao faz nada
+const VF_RE_ESPACO_NOTA_VF = /\\espa[cç]o(?:\{\s*[0-9]+(?:[.,][0-9]+)?\s*\})?[ \t]?/g;
+function vfAplicarEspacoNotaVF(ta, medida){
+  if(!ta || ta.value === undefined) return;
+  const n = String(medida).replace(',', '.');
+  const novo = (parseFloat(n) > 0) ? `\\espaco{${n}} ` : '';
+  const valor = ta.value;
+  const cursor = ta.selectionStart;
+  let alvo = null;
+  VF_RE_ESPACO_NOTA_VF.lastIndex = 0;
+  let m;
+  while((m = VF_RE_ESPACO_NOTA_VF.exec(valor)) !== null){
+    if(cursor >= m.index && cursor <= m.index + m[0].length){ alvo = m; break; }
+  }
+  if(alvo){
+    ta.value = valor.slice(0, alvo.index) + novo + valor.slice(alvo.index + alvo[0].length);
+    ta.selectionStart = ta.selectionEnd = alvo.index + novo.length;
+    ta.dispatchEvent(new Event('input', {bubbles: true}));
+    return;
+  }
+  if(!novo) return; // "Tirar" sem nenhuma folga por perto: nada a fazer
+  vfInserirTextoNotaVF(ta, novo);
 }
 function vfFecharPainelBarraNotaVF(){
   document.getElementById('vf-painel-barra-nota')?.remove();
@@ -7271,7 +7327,7 @@ function vfFecharPainelBarraNotaSeForaVF(evento){
   const painel = document.getElementById('vf-painel-barra-nota');
   if(!painel) return;
   if(painel.contains(evento.target)) return;
-  if(evento.target.closest && evento.target.closest('button[title="Símbolos e fórmulas"], button[title="Cor do trecho"]')) return;
+  if(evento.target.closest && evento.target.closest('button[title="Símbolos e fórmulas"], button[title="Cor do trecho"], button[title="Espaço entre linhas"]')) return;
   vfFecharPainelBarraNotaVF();
 }
 // preventDefault no pointerdown segura o foco no campo (mesmo motivo do
@@ -7441,6 +7497,33 @@ function vfProcessarAlinhamentoTrechoVF(texto){
   return resultado;
 }
 
+// (06/10) palavra com hífen nao pode partir no fim da linha: "dá-se" desce
+// inteira pra próxima linha, nunca vira "dá-" em cima e "se" embaixo. O
+// navegador SEMPRE oferece ponto de quebra depois de um hífen comum
+// (U+002D) e nao existe CSS que desligue isso (hyphens:none só vale pra
+// hifenizacao automática; word-break/keep-all só vale pra CJK). A saída é
+// trocar, só na EXIBICAO, o hífen que está ENTRE letras/números pelo
+// hífen nao separável (U+2011) - mesmo desenho, mesma largura, sem ponto
+// de quebra. O texto no banco continua com o hífen normal: isto aqui é
+// camada de pintura, nada é gravado assim.
+// Mexe só no TEXTO entre tags - nunca dentro de <...> (atributos tipo
+// stroke-width, data-linha, font-size viriam corrompidos) nem dentro de
+// <style>/<script>, onde "-" faz parte da sintaxe
+const VF_HIFEN_INQUEBRAVEL_VF = '\u2011';
+const VF_RE_HIFEN_PALAVRA_VF = /([0-9A-Za-zÀ-ÖØ-öø-ÿĀ-ſḀ-ỿΑ-Ωα-ω])-(?=[0-9A-Za-zÀ-ÖØ-öø-ÿĀ-ſḀ-ỿΑ-Ωα-ω])/g;
+function vfHifenInquebravelVF(html){
+  if(!html || html.indexOf('-') === -1) return html;
+  let codigo = false; // dentro de <style>/<script>
+  return html.replace(/<[^>]*>|[^<]+/g, (pedaco) => {
+    if(pedaco.charAt(0) === '<'){
+      if(/^<\s*(style|script)[\s>]/i.test(pedaco)) codigo = true;
+      else if(/^<\s*\/\s*(style|script)\s*>/i.test(pedaco)) codigo = false;
+      return pedaco;
+    }
+    if(codigo) return pedaco;
+    return pedaco.replace(VF_RE_HIFEN_PALAVRA_VF, '$1' + VF_HIFEN_INQUEBRAVEL_VF);
+  });
+}
 function formatarTextoItemVF(texto, opcoes){
   if(!texto) return '';
   texto = vfLimparApostrofoUnderscoreVF(texto);
@@ -7474,6 +7557,7 @@ function formatarTextoItemVF(texto, opcoes){
     // \quebra valem como sinônimos de \linha - \newline já existia
     // dentro de célula de tabela e continua igual
     .replace(/\\(?:linha|quebra|newline)\b/g, '<br>')
+    .replace(/\\espa[cç]o\{\s*([0-9]+(?:[.,][0-9]+)?)\s*\}/g, (m, n) => `<span style="display:block;height:${vfAlturaEspacoVF(n)}"></span>`) // \espaco{N}: N em linhas. Vem ANTES do \espaco solto - o \b dele casa antes da chave e comeria o comando, deixando o {N} na tela
     .replace(/\\espa[cç]o\b/g, '<span style="display:block;height:0.6em"></span>')
     .replace(/\n/g, '<br>')
     // tabela e desenho já são blocos: o <br> logo depois deles só somava
@@ -7511,7 +7595,7 @@ function formatarTextoItemVF(texto, opcoes){
     .replace(/(>)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9̀-ͯĀ-ſḀ-ỿ]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub))
     .replace(/(>)\^((?:[Α-Ωα-ω∞]|[A-Za-z0-9+\-]{1,4}))/g, (m, base, exp) => base + vfSobrescritoOuTagVF(exp))
     .replace(/([A-Za-zÀ-úΑ-Ωα-ωĀ-ſḀ-ỿ]+)_((?:[Α-Ωα-ω∞]|[A-Za-z0-9\u0300-\u036F\u0100-\u017F\u1E00-\u1EFF]{1,6}))/g, (m, base, sub) => base + vfSubscritoOuTagVF(sub));
-  return vfReinserirTabelasVF(vfProcessarAlinhamentoTrechoVF(resultado), tabelas);
+  return vfHifenInquebravelVF(vfReinserirTabelasVF(vfProcessarAlinhamentoTrechoVF(resultado), tabelas));
 }
 
 // ============================================================
