@@ -499,6 +499,12 @@ inline seria apagado nessa hora - na classe, o "" volta pra cá */
    o que muda é o texto que mora em volta */
 .vf-elemento-html-bloco,.vf-complementar-conteudo{font-family:'Charter','Iowan Old Style',Georgia,'Times New Roman',serif}
 .vf-selo-mnemonico-icone svg{width:10px;height:10px}
+/* (06/10) qualquer ícone dentro de um selo de nota tem 10px. O do
+   MNEMÔNICO já tinha a regra por classe própria; o do BIZU não, e ficava
+   com os 16px do SVG original - quase saindo da pílula, que tem só ~19px
+   de altura. Agora a regra é do SELO, não de um ícone específico: selo
+   novo já nasce certo */
+.vf-selo-nota svg{width:10px;height:10px}
 /* sobrescrito/subscrito sem esticar a linha: vertical-align:super (o
    padrão do navegador pro <sup>) empurra a caixa da linha pra cima e a
    linha inteira fica mais alta que as vizinhas - numa tabela, a linha
@@ -822,14 +828,16 @@ html[data-tema="escuro"] .vf-tabela-bloco td[style*="background: rgb(242, 241, 2
 /* (06/10) balaozinho do \nota{}{}: o fundo dele (#F0F0ED) e cor unica no
    app inteiro, entao nenhuma regra da camada gerada pegava - ficava claro
    no escuro, com o texto ja clareado por cima: branco no branco, nao dava
-   pra ler nada. Tom mais claro que o cartao (#1E1E1C) e que o cartao da
-   tabela (#0F0F0E) de proposito: ele flutua POR CIMA dos dois, precisa se
-   destacar, nao se misturar */
+   pra ler nada. O tom e UM passo acima do cartao (#0F0F0E), nao mais que
+   isso: o app no escuro tem fundo preto, e um balao claro demais gritava
+   no meio dele (primeira tentativa foi #2A2925 e ficou destoando). Quem
+   separa o balao do que esta embaixo e a borda mais a sombra funda, nao
+   o brilho do fundo */
 html[data-tema="escuro"] #vf-balao-explicacao{
-  background:#2A2925 !important;
+  background:#1A1A18 !important;
   color:#E4E0D8 !important;
-  border-color:#45443C !important;
-  box-shadow:0 8px 26px rgba(0,0,0,0.55) !important;
+  border-color:#343431 !important;
+  box-shadow:0 10px 30px rgba(0,0,0,0.75) !important;
 }
 html[data-tema="escuro"] #vf-balao-explicacao strong,
 html[data-tema="escuro"] #vf-balao-explicacao b{color:#FFFFFF !important}
@@ -2267,13 +2275,13 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       <div>
         <div style="font-size:var(--fs-a);letter-spacing:.04em;color:#8E8E8E;font-weight:600;text-transform:uppercase;margin-bottom:8px">Modo</div>
         <div style="display:flex;gap:8px">
-          <button id="vf-btn-borracha-total" onclick="selecionarModoBorrachaVF('total')" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-c)">
+          <button id="vf-btn-borracha-total" onclick="selecionarModoBorrachaVF('total')" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-c)">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1212 990" width="20" height="14">	
 <path d="M1178.77 1.45C1197.59 -0.57 1213.43 16.95 1210.66 35.36C1209.78 41.21 1207.8 47.04 1206.4 52.79C1202.72 67.9 1198.52 82.85 1194.44 97.86C1185.56 130.51 1176.01 163.39 1164.74 195.3C1155.88 220.37 1147.28 245.48 1137.81 270.34C1130.12 290.52 1121.22 310.22 1112.51 329.96C1097.98 362.86 1080.61 394.53 1061.51 424.99C1016.62 496.55 954.34 560.97 869.45 580.86C848.15 585.85 826.33 587.28 804.5 586.78C786.52 586.37 768.88 583.35 751.45 579.17C638.54 552.13 573.32 452.52 502.05 370.45C480.52 345.66 456.72 320.78 427.54 304.97C370.77 274.22 301.22 279.49 248.19 315.65C202.35 346.91 169.06 394.45 145.47 443.97C109.05 520.39 90.85 603.03 79.26 686.54C75.24 715.52 72.86 744.67 69.42 773.71C68.09 784.9 67.66 796.26 66.83 807.5C64.47 839.45 62.76 871.46 62.09 903.5C61.81 916.84 61.4 930.16 61.25 943.5C61.17 950.4 61.89 957.66 60.9 964.5C57.4 988.67 26.18 997.74 10.25 979.26C-0.18 967.16 3.8 937.09 4.19 921.5C5.43 872.39 7.67 823.45 11.88 774.5C14.95 738.81 18.97 703.26 24.46 667.87C28.79 639.93 33.69 612.06 40.01 584.5C44.85 563.43 49.93 542.36 56.24 521.68C92.38 403.08 159.53 268.47 289.88 234.46C311.29 228.87 333.86 226.63 355.96 227.5C373.84 228.21 391.82 230.67 409.08 235.48C485.11 256.67 530.35 311.93 578.68 369.82C599.75 395.07 620.68 420.29 643.39 444.1C679.37 481.82 722.66 515.7 774.73 526.61C794.31 530.72 814.68 530.8 834.5 528.9C851.11 527.32 867.97 523.39 883.36 516.83C933.04 495.64 969.83 456.27 1000.33 412.8C1052.01 339.14 1085.43 249.82 1113.44 164.89C1126.69 124.72 1137.14 83.47 1146.64 42.27C1150.89 23.81 1156.46 3.85 1178.77 1.45Z" fill="#232324" fill-rule="evenodd" stroke="#232324" stroke-width="0.25" stroke-linejoin="round"/>	
 </svg>
             Total
           </button>
-          <button id="vf-btn-borracha-parcial" onclick="selecionarModoBorrachaVF('parcial')" style="flex:1;border-radius:10px;border:1.5px solid #5B9BD5;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-c)">
+          <button id="vf-btn-borracha-parcial" onclick="selecionarModoBorrachaVF('parcial')" style="flex:1;border-radius:10px;border:1.5px solid #ddd;background:#fff;color:#333;padding:10px 4px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;font-size:var(--fs-c)">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1215 988" width="20" height="14">	
 <path d="M1178.71 2.33C1193.59 -0.86 1209.38 9.24 1212.02 24.5C1214.07 36.31 1211.42 49.67 1210.3 61.5C1208.29 82.65 1205.07 103.65 1201.13 124.51C1199.95 130.74 1199.37 137.24 1197.79 143.37C1194.48 156.23 1181.86 166.02 1168.5 165.25C1154.35 164.43 1144.39 153.26 1143.25 139.48C1142.81 134.11 1144.19 128.8 1144.88 123.5C1146.62 110.12 1148.94 96.84 1150.68 83.45C1152.28 71.18 1153.78 58.84 1154.77 46.5C1155.39 38.69 1155.08 30.12 1157.15 22.56C1159.91 12.5 1168.55 4.5 1178.71 2.33ZM1090.6 249.24C1110.56 244.76 1127.12 261.88 1124.8 281.48C1123.09 295.97 1116.14 313.8 1111.24 327.68C1100.85 357.1 1089.05 386.3 1074.41 413.88C1065.25 431.15 1054.39 451.11 1030.69 443.73C1017.13 439.51 1008.89 425.48 1011.3 411.58C1013.48 399.06 1025.7 380.22 1031.4 367.88C1043.78 341.05 1054.84 313.88 1064.44 285.92C1069.75 270.41 1071.47 253.54 1090.6 249.24ZM347.78 273.49C423.88 271.21 491.26 314.2 542.05 367.45C556.58 382.68 569.86 399.03 583.07 415.4C594.72 429.83 606.16 444.55 616.6 459.88C620.37 465.42 624.98 470.59 627.83 476.68C632.34 486.3 631.64 497.94 624.74 506.25C614.01 519.17 595.53 517.19 584.67 505.82C581.54 502.54 579.42 498.4 576.88 494.65C571.64 486.94 566.39 479.17 560.79 471.72C541.15 445.62 520.91 419.83 498.02 396.48C470.16 368.05 436.05 340.68 397.2 329.4C385.93 326.13 374.24 323.64 362.5 323.14C299.11 320.41 245.54 358.36 206.66 405.17C178.09 439.56 156.06 480.22 138.7 521.24C102.4 607.04 85.11 699.23 72.53 791.1C67.06 831.04 63.48 871.32 60.27 911.5C58.95 928.08 58.99 945.01 56.91 961.5C54.75 978.56 35.93 988.9 20.22 982.33C-2.15 972.97 5.16 944.12 6.57 925.4C10.65 870.94 16.08 816.57 23.84 762.5C28.71 728.62 34.51 694.91 41.88 661.49C47.87 634.3 54.59 607.45 62.3 580.7C68.4 559.55 75.76 538.72 83.6 518.18C89.83 501.86 97.12 485.97 104.75 470.27C151.42 374.27 232.29 276.96 347.78 273.49ZM894.79 533.44C922.53 528.71 942.65 561.7 921.93 582.43C912.64 591.72 898.75 593.53 886.65 597.26C855.55 606.85 822.03 611.41 789.5 610.14C772.13 609.46 752.3 609.9 745.37 590.2C740.24 575.63 747.17 558.94 761.75 553.29C769.43 550.32 776.57 551.63 784.5 551.88C795.5 552.22 806.55 551.89 817.5 550.84C835.37 549.13 853.01 545.56 870.27 540.66C878.38 538.36 886.46 534.86 894.79 533.44Z" fill="#303030" fill-rule="evenodd" stroke="#303030" stroke-width="0.25" stroke-linejoin="round"/>	
 </svg>
@@ -3094,7 +3102,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-06-261';
+const VERSAO_APP = '2026-10-06-263';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -13035,7 +13043,7 @@ function selecionarSensibilidadeVF(modo){
 // Modo da borracha — Total (apaga tudo que a ponta encostar, mais forte) e
 // Parcial (mais sutil, tira só um pouco por passada). Vistas nas fotos do
 // PDF Expert como um painel próprio da Borracha, separado da Caneta
-let vfModoErasePDF = 'parcial';
+let vfModoErasePDF = 'total'; // (06/10, Carlos) padrao ao abrir o app e a borracha TOTAL, nao a parcial
 function selecionarModoBorrachaVF(modo){
   vfModoErasePDF = modo;
   const btnTotal = document.getElementById('vf-btn-borracha-total');
@@ -19102,7 +19110,7 @@ async function vfSalvarCorNotaVF(notaId, cor, questaoVfId){
   const listaCompleta = questaoVfId ? vfListaNotasCacheVF.get(questaoVfId) : null;
   const notaCompleta = listaCompleta?.find(n => n.id === notaId);
   if(notaCompleta) notaCompleta.cor = cor || null;
-  const {error} = await sb.from('notas_vf').update({cor: cor || null}).eq('id', notaId);
+  const {error} = await vfAtualizarNotaFamiliaVF(notaId, {cor: cor || null}); // cor é da família (ver vfAtualizarNotaFamiliaVF)
   if(error) vfMostrarAvisoVF('Não consegui salvar a cor. Tenta de novo.');
 }
 // aplica a cor num card de nota já desenhado (preview da página ou item
@@ -19362,7 +19370,7 @@ async function vfSalvarNotaEditadaNaPaginaVF(notaId, textoOriginal){
     if(container && questaoId) vfMontarPreviewNotasVF(container, vfNotaPreviewCacheVF.get(questaoId) || [], questaoId);
   };
   if(!textoNovo || textoNovo === textoOriginal){ repintar(); return; } // nota vazia não é válida - volta como estava
-  const {error} = await sb.from('notas_vf').update({texto: textoNovo}).eq('id', notaId);
+  const {error} = await vfAtualizarNotaFamiliaVF(notaId, {texto: textoNovo}); // texto é da família: editar aqui edita em todas as irmãs
   if(error){ vfMostrarAvisoVF('Não consegui salvar a nota. Tenta de novo.'); repintar(); return; }
   const lista = vfNotaPreviewCacheVF.get(questaoId) || [];
   const nota = lista.find(n => n.id === notaId);
@@ -19383,7 +19391,7 @@ async function vfSalvarAlinhamentoNotaVF(notaId, alinhamento, questaoVfId){
   const listaFixadas = questaoVfId ? vfNotaPreviewCacheVF.get(questaoVfId) : null;
   const notaFixada = listaFixadas?.find(n => n.id === notaId);
   if(notaFixada) notaFixada.alinhamento = alinhamento;
-  const {error} = await sb.from('notas_vf').update({alinhamento}).eq('id', notaId);
+  const {error} = await vfAtualizarNotaFamiliaVF(notaId, {alinhamento}); // alinhamento é da família
   if(error) vfMostrarAvisoVF('Não consegui salvar o alinhamento. Tenta de novo.');
 }
 
@@ -21905,7 +21913,7 @@ async function vfTrazerNotaDaBibliotecaVF(notaId, pref){
     eh_mnemonico: !!origem.eh_mnemonico, eh_bizu: !!origem.eh_bizu,
     fixada: true,
     ordem_fixacao: ordemFixacao,
-    origem_nota_id: origem.id
+    origem_nota_id: vfRaizNotaVF(origem) // sempre a RAIZ da família, nunca uma cópia: senão a corrente arrebenta em dois grupos
   }).select('id, texto, criado_em, fixada, eh_mnemonico, eh_bizu, cor, alinhamento, ordem_fixacao, questao_vf_id, origem_nota_id').single();
   if(error || !data){
     if(btn){ btn.disabled = false; btn.textContent = '+'; btn.style.color = '#B23A34'; }
@@ -21948,7 +21956,7 @@ async function vfSalvarEdicaoNotaBibliotecaVF(notaId, pref, textoOriginal){
   if(!textarea) return;
   const textoNovo = textarea.value.trim();
   if(!textoNovo || textoNovo === textoOriginal){ vfFiltrarNotasBibliotecaVF(pref); return; } // nota vazia não é válida - volta como estava
-  const {error} = await sb.from('notas_vf').update({texto: textoNovo}).eq('id', notaId);
+  const {error} = await vfAtualizarNotaFamiliaVF(notaId, {texto: textoNovo}); // texto é da família: editar aqui edita em todas as irmãs
   if(error){ vfMostrarAvisoVF('Não consegui salvar a nota. Tenta de novo.'); vfFiltrarNotasBibliotecaVF(pref); return; }
   const nota = (vfNotasBibliotecaCacheVF || []).find(x => x.id === notaId);
   if(nota) nota.texto = textoNovo;
@@ -22054,25 +22062,19 @@ async function vfCarregarNotasIrmasVF(questaoVfId){
   const jaAqui = new Set(Object.values(vfNotasTextoBrutoCacheVF || {}).map(t => (t || '').trim()));
   const listaDaqui = vfListaNotasCacheVF.get(questaoVfId) || [];
   listaDaqui.forEach(n => jaAqui.add((n.texto || '').trim()));
-  const jaTrazidas = new Set(listaDaqui.map(n => n.origem_nota_id).filter(Boolean)); // ver origem_nota_id em vfCarregarNotasFixadasIrmasVF
-  // a MESMA nota costuma existir em várias irmãs (foi copiada de uma pra
-  // outra, e a cópia é independente). A oferta é por TEXTO, não por
-  // linha: com três irmãs e a nota já copiada em duas, aparecia duas
-  // vezes o mesmo "+" pra adicionar aqui (achado real, 22/09). Fica a
-  // mais antiga da corrente - é ela que as cópias apontam em
-  // origem_nota_id, então continua valendo o "já trazida" de antes
-  const porTexto = new Map();
+  // mesma regra da pilha fixada: identidade de FAMÍLIA, não texto (ver
+  // vfRaizNotaVF). A mesma nota existe em várias irmãs, e é UMA só - uma
+  // oferta por família, e nenhuma oferta do que já está aqui
+  const raizesAqui = new Set(listaDaqui.map(vfRaizNotaVF).filter(Boolean));
+  const porFamilia = new Map();
   (data || []).forEach(n => {
-    const chave = (n.texto || '').trim();
-    if(!chave || porTexto.has(chave)) return;
-    porTexto.set(chave, n);
+    const chave = vfRaizNotaVF(n);
+    if(!chave || porFamilia.has(chave)) return;
+    porFamilia.set(chave, n);
   });
-  vfNotasIrmasAtuaisVF = [...porTexto.values()].filter(n =>
-    !jaAqui.has((n.texto || '').trim())
-    && !jaTrazidas.has(n.id)
-    // cópia de uma nota que já foi trazida pra cá por outro caminho:
-    // origem igual = mesma nota, mesmo com id diferente
-    && !(n.origem_nota_id && jaTrazidas.has(n.origem_nota_id)));
+  vfNotasIrmasAtuaisVF = [...porFamilia.values()].filter(n =>
+    !raizesAqui.has(vfRaizNotaVF(n))
+    && !jaAqui.has((n.texto || '').trim()));
   if(!vfNotasIrmasAtuaisVF.length) return;
   vfRenderizarNotasIrmasVF();
 }
@@ -22106,7 +22108,7 @@ async function vfCopiarNotaDaIrmaVF(notaId){
     texto: origem.texto,
     cor: origem.cor || null,
     eh_mnemonico: !!origem.eh_mnemonico, eh_bizu: !!origem.eh_bizu,
-    origem_nota_id: origem.id // só pra não reoferecer a mesma nota - a cópia é independente
+    origem_nota_id: vfRaizNotaVF(origem) // raiz da família: a nota é a MESMA nos dois lugares, não uma cópia
   });
   if(error){
     vfNotasIrmasAtuaisVF.push(origem);
@@ -22155,30 +22157,65 @@ function vfCarregarNotasFixadasIrmasVF(questaoVfId){
     vfMontarNotasFixadasIrmasVF(questaoVfId, lista);
   });
 }
+// ---- nota trazida de uma irmã é a MESMA nota, não uma cópia (06/10) ----
+// Era cópia independente de propósito: editar aqui não mexia lá. Na
+// prática isso dava exatamente o que o Carlos não queria - corrigia um
+// errinho na nota trazida e passava a ter DUAS notas diferentes com o
+// mesmo assunto, uma em cada irmã, e a da irmã voltava a ser oferecida
+// como se fosse outra coisa. Agora as cópias formam uma FAMÍLIA: a linha
+// de origem (a raiz) mais todas as que vieram dela. Conteúdo (texto, cor,
+// alinhamento, mnemônico, bizu) é da família inteira - editar em qualquer
+// questão edita em todas. O que continua sendo de CADA questão: estar
+// fixada ou não, a ordem na pilha, e excluir (tirar daqui não tira de lá)
+function vfRaizNotaVF(nota){
+  if(!nota) return null;
+  return nota.origem_nota_id || nota.id;
+}
+// atualiza a família inteira no banco e nos caches da tela. Os caches das
+// OUTRAS questões são zerados (não dá pra remendar um por um sem risco de
+// deixar algum desatualizado): a próxima vez que uma irmã aparecer, ela
+// relê do banco e já vem com o texto novo
+async function vfAtualizarNotaFamiliaVF(notaId, campos){
+  if(!notaId || String(notaId).startsWith('nova-')) return {error: null}; // ainda sem id real (inserção em voo)
+  const {data: linha} = await sb.from('notas_vf').select('id, origem_nota_id').eq('id', notaId).maybeSingle();
+  const raiz = (linha && linha.origem_nota_id) || notaId;
+  const [r1, r2] = await Promise.all([
+    sb.from('notas_vf').update(campos).eq('id', raiz),
+    sb.from('notas_vf').update(campos).eq('origem_nota_id', raiz)
+  ]);
+  const erro = r1.error || r2.error;
+  if(!erro) vfRefletirFamiliaNosCachesVF(raiz, campos);
+  return {error: erro};
+}
+// espelha a mudança nas listas que já estão em memória, pra não precisar
+// recarregar a questão atual, e limpa o resto
+function vfRefletirFamiliaNosCachesVF(raiz, campos){
+  const daFamilia = (n) => n && (n.id === raiz || n.origem_nota_id === raiz);
+  vfNotaPreviewCacheVF.forEach(lista => (lista || []).forEach(n => { if(daFamilia(n)) Object.assign(n, campos); }));
+  vfListaNotasCacheVF.forEach(lista => (lista || []).forEach(n => { if(daFamilia(n)) Object.assign(n, campos); }));
+  if(Array.isArray(vfNotasBibliotecaCacheVF)) vfNotasBibliotecaCacheVF.forEach(n => { if(daFamilia(n)) Object.assign(n, campos); });
+}
 function vfMontarNotasFixadasIrmasVF(questaoVfId, data){
   if(!data || !data.length) return;
   const fixadasDaqui = vfNotaPreviewCacheVF.get(questaoVfId) || [];
-  const jaAqui = new Set(fixadasDaqui.map(n => (n.texto || '').trim()));
-  // origem_nota_id: a cópia é uma nota INDEPENDENTE (apagar ou editar uma
-  // nunca mexe na outra), mas guarda de qual nota da irmã ela veio. Sem
-  // isso, bastava editar a cópia aqui pra a oferta da irmã voltar a
-  // aparecer, já que a comparação era só pelo texto
-  const jaTrazidas = new Set(fixadasDaqui.map(n => n.origem_nota_id).filter(Boolean));
-  // uma oferta por TEXTO, não uma por irmã: depois de copiar a nota pra
-  // uma segunda irmã, ela passa a existir em duas questões e o mesmo "+"
-  // aparecia duplicado na terceira (achado real, 22/09)
-  const porTexto = new Map();
+  // quem manda agora é a FAMÍLIA (ver vfRaizNotaVF): a nota trazida é a
+  // mesma dos dois lados, então "já está aqui" é uma pergunta de
+  // identidade, não de texto. Antes era por texto, e bastava corrigir uma
+  // vírgula na nota de cá pra a mesma nota reaparecer do outro lado como
+  // se fosse uma oferta nova - era esse o "fantasma"
+  const raizesAqui = new Set(fixadasDaqui.map(vfRaizNotaVF).filter(Boolean));
+  const jaAqui = new Set(fixadasDaqui.map(n => (n.texto || '').trim())); // rede de segurança pras notas antigas, criadas soltas antes da família existir
+  // uma oferta por FAMÍLIA, não uma por irmã: a mesma nota em duas irmãs
+  // aparecia como dois "+" na terceira (achado real, 22/09)
+  const porFamilia = new Map();
   (data || []).forEach(n => {
-    const chave = (n.texto || '').trim();
-    if(!chave || porTexto.has(chave)) return;
-    porTexto.set(chave, n);
+    const chave = vfRaizNotaVF(n);
+    if(!chave || porFamilia.has(chave)) return;
+    porFamilia.set(chave, n);
   });
-  vfNotasFixadasIrmasVF = [...porTexto.values()].filter(n =>
-    !jaAqui.has((n.texto || '').trim())
-    && !jaTrazidas.has(n.id)
-    // cópia de uma nota que já veio pra cá por outro caminho: mesma
-    // origem = mesma nota, mesmo com id diferente
-    && !(n.origem_nota_id && jaTrazidas.has(n.origem_nota_id)));
+  vfNotasFixadasIrmasVF = [...porFamilia.values()].filter(n =>
+    !raizesAqui.has(vfRaizNotaVF(n))
+    && !jaAqui.has((n.texto || '').trim()));
   if(!vfNotasFixadasIrmasVF.length) return;
   const atual = document.getElementById('vf-preview-notas-irmas-container');
   if(!atual) return;
@@ -22244,7 +22281,7 @@ async function vfAdicionarNotaFixadaDaIrmaVF(notaId){
     eh_mnemonico: !!origem.eh_mnemonico, eh_bizu: !!origem.eh_bizu,
     fixada: true,
     ordem_fixacao: fixadasAtuais.length,
-    origem_nota_id: origem.id // só pra não reoferecer a mesma nota - a cópia é independente
+    origem_nota_id: vfRaizNotaVF(origem) // raiz da família: a nota é a MESMA nos dois lugares, não uma cópia
   }).select('id, texto, ordem_fixacao, alinhamento, cor, origem_nota_id, eh_mnemonico, eh_bizu').single();
 
   if(error || !data){
@@ -22430,7 +22467,7 @@ async function vfSalvarNotaDoQuadroVF(){
   }
   vfListaNotasCacheVF.delete(questaoNotaVfAtual);
   vfNotasBibliotecaCacheVF = null;
-  const {error} = await sb.from('notas_vf').update({texto: textoNovo}).eq('id', notaId);
+  const {error} = await vfAtualizarNotaFamiliaVF(notaId, {texto: textoNovo}); // texto é da família: editar aqui edita em todas as irmãs
   if(error){
     vfNotasTextoBrutoCacheVF[notaId] = textoOriginal;
     const voltando = document.getElementById(`vf-nota-texto-${notaId}`);
@@ -22540,7 +22577,7 @@ async function vfSalvarEdicaoNotaVF(notaId){
   }
   vfListaNotasCacheVF.delete(questaoNotaVfAtual); // essa sim pode recarregar tranquilamente depois - não é lida logo em seguida
 
-  const {error} = await sb.from('notas_vf').update({texto: textoNovo}).eq('id', notaId);
+  const {error} = await vfAtualizarNotaFamiliaVF(notaId, {texto: textoNovo}); // texto é da família: editar aqui edita em todas as irmãs
   if(error){
     // reverte pro texto antigo
     vfNotasTextoBrutoCacheVF[notaId] = textoOriginal;
@@ -22885,7 +22922,7 @@ async function vfAlternarMnemonicoNotaVF(notaId, mnemonicoAtual){
     const container = document.getElementById('vf-preview-notas-container');
     if(container && container.dataset.questaoId === questaoNotaVfAtual) vfMontarPreviewNotasVF(container, fixadas, questaoNotaVfAtual);
   }
-  await sb.from('notas_vf').update({eh_mnemonico: novoValor}).eq('id', notaId);
+  await vfAtualizarNotaFamiliaVF(notaId, {eh_mnemonico: novoValor}); // selo é da família
 }
 // (01/10) espelho de vfAlternarMnemonicoNotaVF pra marcação "bizu"
 async function vfAlternarBizuNotaVF(notaId, bizuAtual){
@@ -22910,7 +22947,7 @@ async function vfAlternarBizuNotaVF(notaId, bizuAtual){
     const container = document.getElementById('vf-preview-notas-container');
     if(container && container.dataset.questaoId === questaoNotaVfAtual) vfMontarPreviewNotasVF(container, fixadas, questaoNotaVfAtual);
   }
-  await sb.from('notas_vf').update({eh_bizu: novoValor}).eq('id', notaId);
+  await vfAtualizarNotaFamiliaVF(notaId, {eh_bizu: novoValor}); // selo é da família
 }
 
 let questaoVfParaExcluir = null;
