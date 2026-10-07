@@ -1306,6 +1306,11 @@ html[data-tema="escuro"] [style*="border-color: rgb(178, 58, 52)"]{border-color:
 html[data-tema="escuro"] [style*="border:1.5px solid #bbb"]{border-color:#3A3A36 !important;color:#9D9A93 !important}
 /* (07/10) segurar pra editar: o campo "pegou", solta pra abrir a caixa */
 body.vf-edicao-armada [data-editavel-vf], body.vf-edicao-armada #vf-enunciado-atual{outline:1.5px dashed #B23A34;outline-offset:4px;border-radius:6px}
+/* (07/10) teclado do iPad: um campo de texto dentro de um bloco com
+   user-select:none (enunciado, correção, notas - pra o toque não selecionar
+   texto) recebe o cursor mas o iOS NÃO abre o teclado. Campos de digitação
+   sempre selecionáveis, estejam onde estiverem */
+textarea, input[type="text"], input[type="search"], input[type="number"], input[type="email"], input[type="password"], [contenteditable="true"]{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default}
 </style>
 <script>
 /* ============================================================
@@ -1912,12 +1917,13 @@ body.vf-edicao-armada [data-editavel-vf], body.vf-edicao-armada #vf-enunciado-at
     fazer em vez de reabrir o balão sozinho -->
     <div id="vf-overlay-retomar-sessao" class="vf-overlay-sessao hidden" style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:-8px;right:-8px;bottom:var(--nav-height, 76px);background:#FBFBFA;z-index:250;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;gap:16px">
       <div>
-        <div style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Você tinha uma sessão pausada</div>
+        <div id="vf-overlay-retomar-titulo" style="font-size:var(--fs-b);color:#888;margin-bottom:4px">Você tinha uma sessão pausada</div>
         <div id="vf-overlay-retomar-tempo" style="font-size:var(--fs-h);font-weight:700;font-variant-numeric:tabular-nums;color:#B23A34"></div>
       </div>
       <div style="display:flex;gap:10px">
-        <button class="btn-secundario" onclick="vfConfirmarFinalizarSessaoFlashVF()" style="width:auto;padding:12px 24px">Finalizar</button>
-        <button class="btn-primario" onclick="vfRetomarSessaoRestauradaVF()" style="width:auto;padding:12px 24px">Retomar</button>
+        <button class="btn-secundario" onclick="vfConfirmarFinalizarSessaoFlashVF()" style="width:170px;padding:12px 0">Finalizar</button>
+        <button id="vf-overlay-btn-retomar" class="btn-primario" onclick="vfRetomarSessaoRestauradaVF()" style="width:170px;padding:12px 0">Retomar</button>
+        <button id="vf-overlay-btn-transferir" class="btn-primario hidden" onclick="vfTransferirSessaoParaCaVF()" style="width:170px;padding:12px 0">Transferir para cá</button>
       </div>
     </div>
     <div id="vf-filtros" style="margin-bottom:16px;background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:14px 16px">
@@ -3104,7 +3110,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-07-266';
+const VERSAO_APP = '2026-10-07-268';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -14087,7 +14093,43 @@ async function carregarPoolVF(incluirDadosEntradaVF){
 // nenhum tick de setInterval rodar de verdade (testado isoladamente
 // antes de aplicar: perder ticks intermediários não afeta o resultado)
 const VF_SESSAO_LOCALSTORAGE_KEY = 'vf_sessao_ativa';
-let vfSessaoAtivaVF = null; // {iniciadoEm, pausado, tempoAcumuladoMs, ultimoResumeEm} ou null
+let vfSessaoAtivaVF = null; // {iniciadoEm, pausado, tempoAcumuladoMs, ultimoResumeEm, dispositivoAtivoId, dispositivoAtivo} ou null
+// ---- (07/10) sessão com DONO: um aparelho por vez segura o cronômetro ----
+// A sessão é uma só (linha em sessoes_vf), mas só o aparelho dono
+// sincroniza o tempo. Os outros, ao abrir o Flash, veem "Sessão rodando
+// no iPad" com o relógio correndo e um botão "Transferir para cá" - que
+// passa a posse sem pausar nada; o aparelho anterior recebe pelo realtime
+// e cai na mesma cortina (pode puxar de volta). Antes, qualquer aparelho
+// que abrisse o Flash tratava a sessão como órfã: pausava e contava só
+// até a última resposta - era o "sessão pausada 00:00:00" no Mac com o
+// iPad rodando ao lado
+const VF_DISPOSITIVO_ID_VF = (() => {
+  try{
+    let v = localStorage.getItem('pq_dispositivo_id');
+    if(!v){ v = 'd-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); localStorage.setItem('pq_dispositivo_id', v); }
+    return v;
+  }catch(e){ return 'd-sess-' + Math.random().toString(36).slice(2, 10); }
+})();
+function vfNomeDispositivoVF(){
+  const ua = navigator.userAgent || '';
+  const toque = (navigator.maxTouchPoints || 0) > 1;
+  if(/iPad/.test(ua) || (/Macintosh/.test(ua) && toque)) return 'iPad';
+  if(/iPhone/.test(ua)) return 'iPhone';
+  if(/Macintosh/.test(ua)) return 'Mac';
+  if(/Android/.test(ua)) return 'Android';
+  if(/Windows/.test(ua)) return 'PC';
+  return 'outro aparelho';
+}
+// dono = este aparelho, ou ninguém ainda (linha antiga, sem dono gravado:
+// quem estiver com ela rodando assume na próxima sincronização)
+function vfSouDonoSessaoVF(sess){
+  sess = sess || vfSessaoAtivaVF;
+  return !!sess && (!sess.dispositivoAtivoId || sess.dispositivoAtivoId === VF_DISPOSITIVO_ID_VF);
+}
+const VF_DONO_VIVO_MS = 5 * 60 * 1000; // dono deu sinal (resposta/pausa/retomada) há menos que isso = sessão está rodando lá de verdade
+let vfSessaoRodandoEmOutroVF = false;   // este aparelho está vendo a cortina "rodando em outro"
+let vfSessaoReivindicandoVF = false;    // estou assumindo a posse agora (não deixar uma mesclagem devolver o dono antigo)
+let vfIntervalOverlaySessaoVF = null;   // relógio da cortina "rodando em outro" 
 let vfIntervalSessaoVF = null;
 let vfSessaoBalaoEscondidoTimeoutVF = null;
 
@@ -14121,6 +14163,9 @@ function vfSincronizarSessaoComBancoVF(){
   vfSessaoSyncTimerVF = setTimeout(async () => {
     const sess = vfSessaoAtivaVF;
     if(!sess || !sess.id) return;
+    // (07/10) quem não é dono nunca grava o cronômetro - a cópia daqui é
+    // só espelho do que o dono manda pelo realtime
+    if(!vfSouDonoSessaoVF(sess) && !vfSessaoReivindicandoVF) return;
     // ACHADO REAL (22/09, mesmo dia): com a sessão rodando, o banco só tinha
     // o acumulado até a última pausa - fechar o app e reabrir depois de 1 h
     // estudando mostrava 19 min. Agora, a cada escrita, o tempo corrido
@@ -14146,17 +14191,22 @@ function vfSincronizarSessaoComBancoVF(){
     let consulta = sb.from('sessoes_vf').update({
       pausado: !!sess.pausado,
       tempo_acumulado_ms: Math.round(sess.tempoAcumuladoMs || 0),
-      ultimo_resume_em: new Date(sess.ultimoResumeEm || sess.iniciadoEm).toISOString()
+      ultimo_resume_em: new Date(sess.ultimoResumeEm || sess.iniciadoEm).toISOString(),
+      dispositivo_ativo_id: VF_DISPOSITIVO_ID_VF,
+      dispositivo_ativo: vfNomeDispositivoVF()
     }).eq('id', sess.id).is('finalizado_em', null);
     if(sess.atualizadoEmBruto) consulta = consulta.eq('atualizado_em', sess.atualizadoEmBruto);
     const {data, error} = await consulta.select('atualizado_em').maybeSingle();
     vfSessaoSyncPendenteVF = false;
-    if(error){ console.warn('sessão: não sincronizou com o banco', error.message); return; }
+    if(error){ console.warn('sessão: não sincronizou com o banco', error.message); vfSessaoReivindicandoVF = false; return; }
     if(data && data.atualizado_em){
       if(vfSessaoAtivaVF && vfSessaoAtivaVF.id === sess.id){
         vfSessaoAtivaVF.atualizadoEmBruto = data.atualizado_em;
         vfSessaoAtivaVF.atualizadoEm = new Date(data.atualizado_em).getTime();
+        vfSessaoAtivaVF.dispositivoAtivoId = VF_DISPOSITIVO_ID_VF;
+        vfSessaoAtivaVF.dispositivoAtivo = vfNomeDispositivoVF();
       }
+      vfSessaoReivindicandoVF = false; // posse gravada
       return;
     }
     // nada gravado: a linha mudou por outro aparelho (ou foi fechada)
@@ -14185,6 +14235,8 @@ function vfMesclarSessaoRemotaVF(remota){
   sess.pausado = remota.pausado;
   sess.atualizadoEm = remota.atualizadoEm;
   sess.atualizadoEmBruto = remota.atualizadoEmBruto;
+  if(vfSessaoReivindicandoVF){ sess.dispositivoAtivoId = VF_DISPOSITIVO_ID_VF; sess.dispositivoAtivo = vfNomeDispositivoVF(); }
+  else { sess.dispositivoAtivoId = remota.dispositivoAtivoId; sess.dispositivoAtivo = remota.dispositivoAtivo; }
   if(queriaPausar && !remota.pausado){
     sess.tempoAcumuladoMs += Math.max(0, agora - remota.ultimoResumeEm);
     sess.pausado = true;
@@ -14205,13 +14257,15 @@ function vfSessaoDaLinhaVF(l){
     tempoAcumuladoMs: Number(l.tempo_acumulado_ms) || 0,
     ultimoResumeEm: l.ultimo_resume_em ? new Date(l.ultimo_resume_em).getTime() : new Date(l.iniciado_em).getTime(),
     atualizadoEm: l.atualizado_em ? new Date(l.atualizado_em).getTime() : null,
-    atualizadoEmBruto: l.atualizado_em || null
+    atualizadoEmBruto: l.atualizado_em || null,
+    dispositivoAtivoId: l.dispositivo_ativo_id || null,
+    dispositivoAtivo: l.dispositivo_ativo || null
   };
 }
 async function vfBuscarSessaoAbertaNoBancoVF(){
   if(!usuarioAtual) return null;
   const {data, error} = await sb.from('sessoes_vf')
-    .select('id, iniciado_em, pausado, tempo_acumulado_ms, ultimo_resume_em, atualizado_em')
+    .select('id, iniciado_em, pausado, tempo_acumulado_ms, ultimo_resume_em, atualizado_em, dispositivo_ativo_id, dispositivo_ativo')
     .eq('usuario_id', usuarioAtual.id).is('finalizado_em', null)
     .order('iniciado_em', {ascending: false}).limit(1).maybeSingle();
   if(error){ console.warn('sessão aberta: erro ao buscar', error.message); return null; }
@@ -14222,21 +14276,66 @@ async function vfBuscarSessaoAbertaNoBancoVF(){
 function vfAplicarSessaoRemotaVF(remota){
   if(!vfSessaoAtivaVF || !remota || remota.id !== vfSessaoAtivaVF.id) return;
   if(vfSessaoSyncPendenteVF) return; // a minha escrita ainda está indo - a resposta do banco é mais nova que isso
+  if(vfSessaoReivindicandoVF) return; // estou assumindo a posse - o que chega agora ainda é o estado anterior
+  const euEraDono = vfSouDonoSessaoVF(vfSessaoAtivaVF);
   const mudouPausa = !!remota.pausado !== !!vfSessaoAtivaVF.pausado;
   vfSessaoAtivaVF.pausado = remota.pausado;
   vfSessaoAtivaVF.tempoAcumuladoMs = remota.tempoAcumuladoMs;
   vfSessaoAtivaVF.ultimoResumeEm = remota.ultimoResumeEm;
   vfSessaoAtivaVF.atualizadoEm = remota.atualizadoEm;
   vfSessaoAtivaVF.atualizadoEmBruto = remota.atualizadoEmBruto;
+  vfSessaoAtivaVF.dispositivoAtivoId = remota.dispositivoAtivoId;
+  vfSessaoAtivaVF.dispositivoAtivo = remota.dispositivoAtivo;
   try{ localStorage.setItem(VF_SESSAO_LOCALSTORAGE_KEY, JSON.stringify(vfSessaoAtivaVF)); }catch(e){}
+  // (07/10) outro aparelho puxou a sessão: aqui vira a cortina "rodando no X"
+  const outroAssumiu = remota.dispositivoAtivoId && remota.dispositivoAtivoId !== VF_DISPOSITIVO_ID_VF;
+  if(euEraDono && outroAssumiu && !vfSessaoRestauradaAguardandoDecisaoVF){
+    vfSessaoPuxadaPorOutroVF(remota.dispositivoAtivo);
+    return;
+  }
   if(typeof vfAtualizarDisplayBalaoSessaoVF === 'function') vfAtualizarDisplayBalaoSessaoVF();
+  if(vfSessaoRestauradaAguardandoDecisaoVF){
+    // na cortina: acompanha pausa/retomada e troca de dono em tempo real
+    vfSessaoRodandoEmOutroVF = !remota.pausado && !!outroAssumiu;
+    vfAtualizarOverlaySessaoVF();
+    return;
+  }
   if(mudouPausa && typeof vfMostrarToastLeveVF === 'function') vfMostrarToastLeveVF(remota.pausado ? 'Sessão pausada em outro aparelho' : 'Sessão retomada em outro aparelho');
+}
+// este aparelho era o dono e outro puxou a sessão: esconde o balão, guarda
+// o que está na memória (fila, histórico) e mostra a cortina - dá pra
+// puxar de volta a qualquer momento
+function vfSessaoPuxadaPorOutroVF(nomeOutro){
+  vfSessaoRodandoEmOutroVF = true;
+  vfSessaoRestauradaAguardandoDecisaoVF = true;
+  if(vfIntervalSessaoVF){ clearInterval(vfIntervalSessaoVF); vfIntervalSessaoVF = null; }
+  const balao = document.getElementById('vf-sessao-balao');
+  if(balao) balao.classList.add('hidden');
+  vfAtualizarOverlaySessaoVF();
+  if(typeof vfMostrarToastLeveVF === 'function') vfMostrarToastLeveVF(`Sessão transferida para o ${nomeOutro || 'outro aparelho'}`);
+}
+// "Transferir para cá": assume a posse SEM pausar - o relógio segue
+// contando, é a mesma sessão. O outro aparelho recebe pelo realtime
+function vfTransferirSessaoParaCaVF(){
+  if(!vfSessaoAtivaVF) return;
+  vfSessaoReivindicandoVF = true;
+  vfSessaoAtivaVF.dispositivoAtivoId = VF_DISPOSITIVO_ID_VF;
+  vfSessaoAtivaVF.dispositivoAtivo = vfNomeDispositivoVF();
+  if(vfSessaoAtivaVF.pausado){ vfSessaoAtivaVF.pausado = false; vfSessaoAtivaVF.ultimoResumeEm = Date.now(); }
+  vfSessaoRodandoEmOutroVF = false;
+  vfSessaoRestauradaAguardandoDecisaoVF = false;
+  vfSalvarSessaoNoStorageVF();
+  vfMostrarBalaoSessaoFlashVF();
+  vfAtualizarOverlaySessaoVF();
+  if(!estadoVF || estadoVF.posicao < 0) vfCarregarPoolInicialVF();
 }
 // outro aparelho finalizou (ou apagou) a sessão: encerra aqui sem gravar nada
 function vfSessaoEncerradaRemotamenteVF(){
   if(!vfSessaoAtivaVF) return;
   vfSessaoAtivaVF = null;
   vfSessaoRestauradaAguardandoDecisaoVF = false;
+  vfSessaoRodandoEmOutroVF = false;
+  vfSessaoReivindicandoVF = false;
   estadoVF = null;
   try{ localStorage.removeItem(VF_SESSAO_LOCALSTORAGE_KEY); }catch(e){}
   if(vfIntervalSessaoVF){ clearInterval(vfIntervalSessaoVF); vfIntervalSessaoVF = null; }
@@ -14270,6 +14369,7 @@ function vfLigarRealtimeSessaoVF(){
           vfSessaoAtivaVF.recarregada = true;
           try{ localStorage.setItem(VF_SESSAO_LOCALSTORAGE_KEY, JSON.stringify(vfSessaoAtivaVF)); }catch(e){}
           vfSessaoRestauradaAguardandoDecisaoVF = true;
+          vfSessaoRodandoEmOutroVF = !vfSessaoAtivaVF.pausado && !!vfSessaoAtivaVF.dispositivoAtivoId && vfSessaoAtivaVF.dispositivoAtivoId !== VF_DISPOSITIVO_ID_VF;
           vfAtualizarOverlaySessaoVF();
         }
       })
@@ -14310,13 +14410,17 @@ async function vfIniciarSessaoFlashVF(){
   if(aberta){
     vfSessaoAtivaVF = aberta; vfSessaoAtivaVF.recarregada = true;
     if(vfSessaoAtivaVF.pausado){ vfSessaoAtivaVF.pausado = false; vfSessaoAtivaVF.ultimoResumeEm = Date.now(); }
+    vfSessaoReivindicandoVF = true; // (07/10) continuar = assumir a posse
+    vfSessaoAtivaVF.dispositivoAtivoId = VF_DISPOSITIVO_ID_VF; vfSessaoAtivaVF.dispositivoAtivo = vfNomeDispositivoVF();
+    vfSessaoRodandoEmOutroVF = false;
   }else{
     const agora = Date.now();
-    vfSessaoAtivaVF = {iniciadoEm: agora, pausado: false, tempoAcumuladoMs: 0, ultimoResumeEm: agora};
+    vfSessaoAtivaVF = {iniciadoEm: agora, pausado: false, tempoAcumuladoMs: 0, ultimoResumeEm: agora, dispositivoAtivoId: VF_DISPOSITIVO_ID_VF, dispositivoAtivo: vfNomeDispositivoVF()};
     const {data, error} = await sb.from('sessoes_vf').insert({
       usuario_id: usuarioAtual.id, iniciado_em: new Date(agora).toISOString(), finalizado_em: null,
       pausado: false, tempo_acumulado_ms: 0, ultimo_resume_em: new Date(agora).toISOString(),
-      tempo_efetivo_ms: 0, total_questoes_respondidas: 0
+      tempo_efetivo_ms: 0, total_questoes_respondidas: 0,
+      dispositivo_ativo_id: VF_DISPOSITIVO_ID_VF, dispositivo_ativo: vfNomeDispositivoVF()
     }).select('id').single();
     if(error) console.error('[Flash] não consegui abrir a sessão no banco:', error); else vfSessaoAtivaVF.id = data.id;
   }
@@ -14706,11 +14810,22 @@ function vfAtualizarOverlaySessaoVF(){
     if(overlayIniciar) overlayIniciar.classList.add('hidden');
     if(overlayRetomar){
       overlayRetomar.classList.remove('hidden');
+      // (07/10) dois modos: pausada (Retomar) ou rodando em outro aparelho
+      // (relógio ao vivo + Transferir para cá)
+      const emOutro = vfSessaoRodandoEmOutroVF && !vfSessaoAtivaVF.pausado && !vfSouDonoSessaoVF();
+      const titulo = document.getElementById('vf-overlay-retomar-titulo');
+      if(titulo) titulo.textContent = emOutro ? `Sessão rodando no ${vfSessaoAtivaVF.dispositivoAtivo || 'outro aparelho'}` : 'Você tinha uma sessão pausada';
+      document.getElementById('vf-overlay-btn-retomar')?.classList.toggle('hidden', emOutro);
+      document.getElementById('vf-overlay-btn-transferir')?.classList.toggle('hidden', !emOutro);
       const spanTempo = document.getElementById('vf-overlay-retomar-tempo');
-      if(spanTempo) spanTempo.textContent = vfFormatarTempoSessaoVF(vfCalcularElapsedMsVF());
+      const pintar = () => { if(spanTempo && vfSessaoAtivaVF) spanTempo.textContent = vfFormatarTempoSessaoVF(vfCalcularElapsedMsVF()); };
+      pintar();
+      if(vfIntervalOverlaySessaoVF){ clearInterval(vfIntervalOverlaySessaoVF); vfIntervalOverlaySessaoVF = null; }
+      if(emOutro) vfIntervalOverlaySessaoVF = setInterval(pintar, 1000);
     }
     return;
   }
+  if(vfIntervalOverlaySessaoVF){ clearInterval(vfIntervalOverlaySessaoVF); vfIntervalOverlaySessaoVF = null; }
   if(overlayRetomar) overlayRetomar.classList.add('hidden');
   if(overlayIniciar) overlayIniciar.classList.toggle('hidden', !!vfSessaoAtivaVF);
 }
@@ -14718,6 +14833,8 @@ function vfAtualizarOverlaySessaoVF(){
 // de vez é decidido dentro do próprio balão, que já tem esse botão
 function vfRetomarSessaoRestauradaVF(){
   vfSessaoRestauradaAguardandoDecisaoVF = false;
+  vfSessaoRodandoEmOutroVF = false;
+  if(vfSessaoAtivaVF){ vfSessaoReivindicandoVF = true; vfSessaoAtivaVF.dispositivoAtivoId = VF_DISPOSITIVO_ID_VF; vfSessaoAtivaVF.dispositivoAtivo = vfNomeDispositivoVF(); } // (07/10) retomar = assumir a posse
   if(vfSessaoAtivaVF && vfSessaoAtivaVF.pausado) vfTogglePausarSessaoFlashVF(); // "Retomar" tem que retomar de verdade - despausa, não só mostra o balão ainda parado
   vfMostrarBalaoSessaoFlashVF();
   vfAtualizarOverlaySessaoVF();
@@ -15161,6 +15278,12 @@ async function vfRestaurarSessaoFlashVF(){
     // acima dela, o intervalo não conta
     salva.tempoAcumuladoMs += Math.min(Math.max(0, agora - salva.ultimoResumeEm), VF_TOLERANCIA_SEGUNDO_PLANO_MS);
     salva.pausado = true;
+  }else if(!salva.pausado && salva.id && salva.dispositivoAtivoId && salva.dispositivoAtivoId !== VF_DISPOSITIVO_ID_VF
+           && salva.atualizadoEm && (agora - salva.atualizadoEm) < VF_DONO_VIVO_MS){
+    // (07/10) está RODANDO em outro aparelho, que deu sinal de vida há
+    // pouco: não é órfã. Não pausa, não mexe no tempo - só mostra a cortina
+    // "rodando no X" com o relógio correndo e o botão de transferir
+    vfSessaoRodandoEmOutroVF = true;
   }else if(!salva.pausado && salva.id){
     // sessão do banco ainda "rodando" (ninguém pausou): o tempo desde o
     // último resume conta até a ÚLTIMA RESPOSTA (+ 2 min de tolerância) -
@@ -15211,7 +15334,7 @@ window.addEventListener('pagehide', () => {
   }catch(e){}
 });
 window.addEventListener('pagehide', () => {
-  if(vfSessaoAtivaVF && !vfSessaoAtivaVF.pausado){
+  if(vfSessaoAtivaVF && !vfSessaoAtivaVF.pausado && vfSouDonoSessaoVF() && !vfSessaoRodandoEmOutroVF){
     const agora = Date.now();
     vfSessaoAtivaVF.tempoAcumuladoMs += (agora - vfSessaoAtivaVF.ultimoResumeEm);
     vfSessaoAtivaVF.pausado = true;
@@ -15250,6 +15373,7 @@ async function vfVoltarDoSegundoPlanoSessaoVF(escondidoEm){
     if(remota.atualizadoEm && (!vfSessaoAtivaVF.atualizadoEm || remota.atualizadoEm > vfSessaoAtivaVF.atualizadoEm)) vfAplicarSessaoRemotaVF(remota);
   }
   if(!vfSessaoAtivaVF || vfSessaoAtivaVF.pausado) return;
+  if(!vfSouDonoSessaoVF() || vfSessaoRodandoEmOutroVF) return; // (07/10) não é meu relógio pra descontar
   const agora = Date.now();
   if(agora - escondidoEm > VF_TOLERANCIA_SEGUNDO_PLANO_MS){
     // conta só até o momento em que saiu; recomeça a contar agora. Se o
