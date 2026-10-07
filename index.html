@@ -3108,7 +3108,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-07-269';
+const VERSAO_APP = '2026-10-07-270';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5371,7 +5371,7 @@ async function selecionarFiltroSelect(nivel, valor){
         // idioma - usa o rótulo da primeira como aproximação razoável
         const primeiraPubDoTema = bibliografiaCache.find(b => idsPublicacoes.includes(b.id));
         const rotuloTema = rotuloCapituloDoLivro(primeiraPubDoTema?.titulo);
-        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotuloTema + ' ' + c)}</option>`).join('');
+        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotuloTema, c))}</option>`).join('');
         elCap.disabled = false;
         atualizarContadorDisponiveis();
       });
@@ -5386,7 +5386,7 @@ async function selecionarFiltroSelect(nivel, valor){
         const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>vfOrdemCapituloVF(a)-vfOrdemCapituloVF(b)||a.localeCompare(b,'pt'));
         const livro = bibliografiaCache.find(b=>b.id===valor);
         const rotulo = rotuloCapituloDoLivro(livro?.titulo);
-        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + ' ' + c)}</option>`).join('');
+        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`).join('');
         elCap.disabled = false;
         atualizarContadorDisponiveis();
       });
@@ -10491,7 +10491,7 @@ function vfPopularCapitulosFavoritosVF(){
     .map(c => String(c).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')))]
     .sort((a, b) => vfOrdemCapituloVF(a) - vfOrdemCapituloVF(b) || a.localeCompare(b, 'pt'));
   elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c =>
-    `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
+    `<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`
   ).join('');
 }
 
@@ -10531,7 +10531,7 @@ function vfRenderizarFavoritosVF(){
     // capítulo com o rótulo do próprio livro (Chapter / Capítulo / Section)
     const capituloLimpo = semPrefixo(f.questoes_vf?.capitulo);
     const capituloTexto = capituloLimpo
-      ? (capituloLimpo === 'Único' ? capituloLimpo : `${rotuloCapituloDoLivro(f.questoes_vf?.bibliografia?.titulo)} ${capituloLimpo}`)
+      ? vfEtiquetaCapituloVF(rotuloCapituloDoLivro(f.questoes_vf?.bibliografia?.titulo), capituloLimpo)
       : '';
     const dataFormatada = new Date(f.criado_em).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
     return `
@@ -10678,7 +10678,7 @@ async function vfBibliotecaMudarPublicacaoVF(){
   const capitulos = [...new Set((data || []).map(q => q.capitulo).filter(Boolean))]
     .sort((a, b) => vfOrdemCapituloVF(a) - vfOrdemCapituloVF(b) || a.localeCompare(b, 'pt'));
   elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c =>
-    `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
+    `<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`
   ).join('');
 }
 
@@ -10723,7 +10723,7 @@ async function vfBuscarBibliotecaVF(){
   vfBibliotecaTermoVF = termo;
   vfBibliotecaDescricaoFiltroVF = [
     publicacao ? (() => { const b = (bibliografiaCache || []).find(x => x.id === publicacao); return b ? (b.nome_exibicao || b.titulo) : null; })() : modulo,
-    capitulo ? (capitulo === 'Único' ? capitulo : rotuloCapituloDoLivro(((bibliografiaCache || []).find(x => x.id === publicacao) || {}).titulo) + ' ' + capitulo) : null,
+    capitulo ? vfEtiquetaCapituloVF(rotuloCapituloDoLivro(((bibliografiaCache || []).find(x => x.id === publicacao) || {}).titulo), capitulo) : null,
     [vfBibliotecaTipoVF.numero ? 'Número' : null, vfBibliotecaTipoVF.lista ? 'Lista' : null, vfBibliotecaTipoVF.data ? 'Data' : null, vfBibliotecaTipoVF.inconsistente ? 'Inconsistente' : null].filter(Boolean).join(' + ') || null
   ].filter(Boolean).join(' · ');
   resumo.textContent = 'Procurando…';
@@ -10903,7 +10903,7 @@ function vfHtmlCardBibliotecaVF(q){
   const rotulo = rotuloCapituloDoLivro(bib?.titulo);
   const capituloLimpo = q.capitulo ? String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '') : '';
   const capituloHtml = capituloLimpo
-    ? `<p style="color:#999;font-size:var(--fs-c);margin:1px 0 0 0;line-height:1.25">${escapeHtml(capituloLimpo === 'Único' ? capituloLimpo : rotulo + ' ' + capituloLimpo)}</p>`
+    ? `<p style="color:#999;font-size:var(--fs-c);margin:1px 0 0 0;line-height:1.25">${escapeHtml(vfEtiquetaCapituloVF(rotulo, capituloLimpo))}</p>`
     : '';
   const excluida = vfBibliotecaExcluidasVF.has(q.id);
   const favorita = favoritosVF.has(q.id);
@@ -15043,7 +15043,7 @@ function vfNomeFiltroAtualVF(){
   else if(filtroVF.modulo) partes.push(filtroVF.modulo);
   if(filtroVF.capitulo){
     const rotulo = nomePublicacao ? rotuloCapituloDoLivro(bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.titulo) : 'cap.';
-    partes.push(`${rotulo} ${filtroVF.capitulo}`.trim());
+    partes.push(vfEtiquetaCapituloVF(rotulo, filtroVF.capitulo));
   }
   return partes.length ? partes.join(', ') : 'Esse filtro';
 }
@@ -15894,7 +15894,7 @@ async function mudarFiltroPublicacaoVF(){
     const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
       .sort((a,b) => vfOrdemCapituloVF(a) - vfOrdemCapituloVF(b) || a.localeCompare(b,'pt'));
     elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
-      `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
+      `<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`
     ).join('');
     elCap.disabled = false;
   }
@@ -16768,7 +16768,7 @@ async function vfRestaurarUIFiltroVF(){
     const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
       .sort((a,b) => vfOrdemCapituloVF(a) - vfOrdemCapituloVF(b) || a.localeCompare(b,'pt'));
     elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
-      `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
+      `<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`
     ).join('');
     elCap.disabled = false;
     if(capitulo) elCap.value = capitulo;
@@ -16930,7 +16930,7 @@ function renderizarItemVF(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 6px">
         <div>
           <p style="font-weight:700;color:#B23A34;font-size:var(--fs-d);margin:0;line-height:1.25">${escapeHtml(publicacao)}</p>
-          ${item.capitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:1px 0 0 0;line-height:1.25">${rotuloCapituloDoLivro(publicacao)} ${escapeHtml(String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))}</p>` : ''}
+          ${item.capitulo ? `<p style="color:#999;font-size:var(--fs-c);margin:1px 0 0 0;line-height:1.25">${escapeHtml(vfEtiquetaCapituloVF(rotuloCapituloDoLivro(publicacao), String(item.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')))}</p>` : ''}
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center;flex-shrink:0;max-width:60%">
           ${tagsPublicacao}
@@ -23529,7 +23529,7 @@ async function montarCaderno(){
   }
   if(filtroSelecionado.capitulo){
     const rotuloCap = rotuloCapituloDoLivro(baseNome);
-    baseNome += ` – ${rotuloCap} ${filtroSelecionado.capitulo}`; // travessão curto (–), não longo (—)
+    baseNome += ` – ${vfEtiquetaCapituloVF(rotuloCap, filtroSelecionado.capitulo)}`; // travessão curto (–), não longo (—)
   }
   if(document.getElementById('toggle-priorizar-erro').checked){
     baseNome += ' · Reforço';
@@ -24768,7 +24768,7 @@ async function abrirInfoQuestao(questaoId){
   if(q.bibliografia_id && mapaBibliografiaTitulo[q.bibliografia_id]) partes.push(mapaBibliografiaTitulo[q.bibliografia_id]);
   if(q.capitulo){
     const rotulo = rotuloCapituloDoLivro(q.bibliografia_id ? mapaBibliografiaTitulo[q.bibliografia_id] : null);
-    partes.push(`${rotulo} ${q.capitulo}`);
+    partes.push(vfEtiquetaCapituloVF(rotulo, q.capitulo));
   }
   if(partes.length) texto += `\n${partes.join(' · ')}`;
 
@@ -25385,7 +25385,7 @@ function renderizarListaForum(){
     const partes = [];
     if(q?.modulo_pscpp) partes.push(escapeHtml(q.modulo_pscpp));
     if(q?.bibliografia_id && mapaBibliografiaTitulo[q.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[q.bibliografia_id]));
-    if(q?.capitulo) partes.push(rotuloCapituloDoLivro(q?.bibliografia_id ? mapaBibliografiaTitulo[q.bibliografia_id] : null) + ' ' + escapeHtml(String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
+    if(q?.capitulo) partes.push(escapeHtml(vfEtiquetaCapituloVF(rotuloCapituloDoLivro(q?.bibliografia_id ? mapaBibliografiaTitulo[q.bibliografia_id] : null), String(q.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))));
     return `
     <div class="card-questao" style="cursor:pointer" onclick="abrirTopicoDoForum('${f.id}')">
       <div style="margin-bottom:6px">
@@ -26873,15 +26873,36 @@ function ehNumeralRomanoValido(s){ return s.length > 0 && REGEX_ROMANO_VALIDO.te
 // e erra a partir do IX, que viria antes do V. Usado pelas publicações
 // divididas em romano (SOLAS cap. V, Lei 2.180 por título). Valor não
 // numérico e não romano (ex: "Único") continua valendo 0, igual antes
+// capítulo auto-rotulado: o valor já traz o próprio rótulo dentro dele
+// ("Único", "Appendix E", "Anexo G"). Publicações como a PIANC 121 pedem
+// capítulos E anexos (caps. 1 a 3 + Appendix E e G), e o anexo não é
+// "Chapter 4" - é outra numeração, com rótulo próprio
+const VF_RE_CAP_AUTOROTULADO_VF = /^(?:[ÚUúu]nico|anexos?|annexe?s?|ap[êe]ndices?|appendix|appendices)\b/i;
 function vfOrdemCapituloVF(c){
   const s = String(c == null ? '' : c).trim();
   const n = parseFloat(s);
   if(!isNaN(n)) return n;
+  // anexo/apêndice vem depois de todos os capítulos numerados, ordenado
+  // pela letra e depois pelo número ("Appendix E" < "Appendix E2" < "Appendix G")
+  const anexo = s.match(/^(?:anexos?|annexe?s?|ap[êe]ndices?|appendix|appendices)\s*([A-Za-z])?\s*(\d{1,2})?/i);
+  if(anexo) return 10000 + (anexo[1] ? (anexo[1].toUpperCase().charCodeAt(0) - 64) * 100 : 0) + (anexo[2] ? parseInt(anexo[2], 10) : 0);
   if(/^[IVXLCDM]+$/i.test(s)){
     const v = romanoParaArabico(s.toUpperCase());
     if(v > 0) return v;
   }
   return 0;
+}
+// etiqueta de capítulo pra exibição. Quando o valor é auto-rotulado, o
+// rótulo da publicação ("Chapter", "Capítulo", "Título") NÃO entra -
+// senão sai "Chapter Appendix E". Todo lugar que mostra capítulo na tela
+// passa por aqui, pra não ter dois jeitos diferentes de escrever a mesma
+// coisa em telas diferentes
+function vfEtiquetaCapituloVF(rotulo, valor){
+  const v = String(valor == null ? '' : valor).trim();
+  if(!v) return '';
+  if(VF_RE_CAP_AUTOROTULADO_VF.test(v)) return v;
+  const r = String(rotulo || '').trim();
+  return r ? r + ' ' + v : v;
 }
 function normalizarNumeraisRomanos(texto){
   // (?<![\p{L}\p{N}])...(?![\p{L}\p{N}]) é a fronteira de palavra de
@@ -27354,7 +27375,7 @@ function renderizarMetricasPessoais(){
       partes.push(`<span style="display:inline-flex;align-items:center;gap:5px">${svg?`<span class="icone-modulo-mini">${svg}</span>`:''}${escapeHtml(info.modulo_pscpp)}</span>`);
     }
     if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
-    if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
+    if(info?.capitulo) partes.push(escapeHtml(vfEtiquetaCapituloVF(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null), String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))));
     if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
     return `<div style="cursor:pointer;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${p.questaoId}')">
       <div style="font-size:var(--fs-d);color:#888">${partes.length ? partes.join(' · ') : 'Questão'}</div>
@@ -27386,7 +27407,7 @@ function renderizarFavoritosMetricas(elFavoritos, infoPorQuestao){
         partes.push(`<span style="display:inline-flex;align-items:center;gap:5px">${svg?`<span class="icone-modulo-mini">${svg}</span>`:''}${escapeHtml(info.modulo_pscpp)}</span>`);
       }
       if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
-      if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
+      if(info?.capitulo) partes.push(escapeHtml(vfEtiquetaCapituloVF(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null), String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))));
       if(info?.tipo_questao) partes.push(escapeHtml(info.tipo_questao));
       return `<div style="cursor:pointer;position:relative;padding:12px 0 12px 10px;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${f.questao_id}')">
         <button onclick="event.stopPropagation();desfavoritarDaListaMetricas('${f.id}','${f.questao_id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px" title="Desfavoritar">✕</button>
@@ -27416,7 +27437,7 @@ function renderizarNotasMetricas(elNotas, infoPorQuestao){
       const partes = [];
       if(info?.modulo_pscpp) partes.push(escapeHtml(info.modulo_pscpp));
       if(info?.bibliografia_id && mapaBibliografiaTitulo[info.bibliografia_id]) partes.push(escapeHtml(mapaBibliografiaTitulo[info.bibliografia_id]));
-      if(info?.capitulo) partes.push(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null) + ' ' + escapeHtml(String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')));
+      if(info?.capitulo) partes.push(escapeHtml(vfEtiquetaCapituloVF(rotuloCapituloDoLivro(info?.bibliografia_id ? mapaBibliografiaTitulo[info.bibliografia_id] : null), String(info.capitulo).replace(/^cap(?:[íi]tulo)?\.?\s*/i, ''))));
       partes.push(new Date(n.criado_em).toLocaleDateString('pt-BR'));
       return `<div style="cursor:pointer;position:relative;padding:12px 0;border-bottom:0.5px solid #eee" onclick="abrirDetalheQuestao('${n.questao_id}')">
         <button onclick="event.stopPropagation();excluirNotaDaListaMetricas('${n.id}')" style="position:absolute;top:12px;right:0;background:none;border:none;color:#888;cursor:pointer;font-size:var(--fs-e);line-height:1;padding:4px" title="Excluir nota">✕</button>
@@ -27723,6 +27744,11 @@ function parsearArquivoVF(textoCompleto){
   // ("o título do capítulo", "título de crédito") e viraria lixo igual
   // ao bug que gravou capitulo = "como" em 100 afirmações
   const RE_TITULO_ARQUIVO_VF = /\bT[íi]tulos?\s*n?º?\s*(\d{1,2}|[IVXLivxl]{1,6})\b/i;
+  // anexo/apêndice no cabeçalho ("· Appendix E", "· Anexo G"). Também só
+  // no cabeçalho: no corpo do texto a questão cita "ver Appendix C" de
+  // passagem e isso não é o capítulo dela. O valor gravado carrega o
+  // rótulo ("Appendix E") e quem exibe usa vfEtiquetaCapituloVF
+  const RE_ANEXO_ARQUIVO_VF = /\b(Anexos?|Annexe?s?|Ap[êe]ndices?|Appendix|Appendices)\s*n?º?\s*([A-Za-z]\d?|\d{1,2})\b/i;
   const linhaCabecalhoVF = (texto.match(/PSCPP\s*[–-]\s*VERDADEIRO OU FALSO[^\r\n]*/i) || [''])[0];
   const capituloMatch = linhaCabecalhoVF.match(RE_CAPITULO_ARQUIVO_VF)
     || linhaCabecalhoVF.match(RE_TITULO_ARQUIVO_VF)
@@ -27731,6 +27757,13 @@ function parsearArquivoVF(textoCompleto){
   // romano em minúscula ("título ii", "cap. iv") vira maiúscula - senão
   // "ii" e "II" entram como dois capítulos diferentes no filtro
   if(capituloDoArquivo && /^[ivxl]+$/i.test(capituloDoArquivo)) capituloDoArquivo = capituloDoArquivo.toUpperCase();
+  // anexo ganha do capítulo: um cabeçalho de anexo pode mencionar o
+  // capítulo de onde ele vem, mas a questão é do anexo
+  const anexoMatch = linhaCabecalhoVF.match(RE_ANEXO_ARQUIVO_VF);
+  if(anexoMatch){
+    const palavraAnexo = anexoMatch[1].charAt(0).toUpperCase() + anexoMatch[1].slice(1).toLowerCase();
+    capituloDoArquivo = palavraAnexo + ' ' + anexoMatch[2].toUpperCase();
+  }
   // título do cabeçalho geral do arquivo (a parte depois do "·") - usado
   // na identificação de bibliografia EM VEZ do texto completo do campo
   // BIBLIOGRAFIA: de cada bloco. O campo BIBLIOGRAFIA: é uma citação ABNT
