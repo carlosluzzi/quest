@@ -1304,8 +1304,6 @@ html[data-tema="escuro"] [style*="border-color: rgb(178, 58, 52)"]{border-color:
 /* chip de recorte de capítulo (contorno cinza) - no preto o #bbb/#666
    viram ruído; mesma régua dos outros contornos do escuro */
 html[data-tema="escuro"] [style*="border:1.5px solid #bbb"]{border-color:#3A3A36 !important;color:#9D9A93 !important}
-/* (07/10) segurar pra editar: o campo "pegou", solta pra abrir a caixa */
-body.vf-edicao-armada [data-editavel-vf], body.vf-edicao-armada #vf-enunciado-atual{outline:1.5px dashed #B23A34;outline-offset:4px;border-radius:6px}
 /* (07/10) teclado do iPad: um campo de texto dentro de um bloco com
    user-select:none (enunciado, correção, notas - pra o toque não selecionar
    texto) recebe o cursor mas o iOS NÃO abre o teclado. Campos de digitação
@@ -3110,7 +3108,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-07-268';
+const VERSAO_APP = '2026-10-07-269';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -17034,25 +17032,36 @@ const VF_DURACAO_PRESSIONAR_ENUNCIADO_MS = 500;
 // captura no document - ainda é o mesmo gesto, então o teclado sobe. Como
 // a edição começa antes do handler de soltar do elemento, o
 // dataset.editando='1' já está lá e a cópia por toque não dispara
-let vfEdicaoArmadaAoSoltarVF = null;
+// (07/10, v2) a v1 só ARMAVA no segurar e criava a caixa no soltar - no
+// iPad o teclado continuou sem subir. Agora cobre as duas hipóteses: a
+// caixa abre no segurar (cursor na hora, como sempre foi) e, no soltar e
+// no clique que o Safari gera logo depois, o campo já aberto recebe um
+// blur+focus DENTRO do gesto - é o que o iOS exige pra mostrar o teclado
+let vfCampoAguardandoTecladoVF = null;
+let vfCampoAguardandoTecladoAteVF = 0;
 function vfArmarEdicaoAoSoltarVF(fn){
-  vfEdicaoArmadaAoSoltarVF = fn;
-  // retorno visual de que o segurar "pegou" (o antigo abria a caixa na hora)
-  try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e){}
-  document.body.classList.add('vf-edicao-armada');
+  try{ fn(); }catch(err){ console.error('edição ao segurar:', err); return; }
+  const ativo = document.activeElement;
+  if(ativo && (ativo.tagName === 'TEXTAREA' || ativo.tagName === 'INPUT' || ativo.isContentEditable)){
+    vfCampoAguardandoTecladoVF = ativo;
+    vfCampoAguardandoTecladoAteVF = Date.now() + 1500; // janela: o soltar e o clique chegam bem antes disso
+  }
 }
-function vfDispararEdicaoArmadaVF(e){
-  const fn = vfEdicaoArmadaAoSoltarVF;
-  if(!fn) return;
-  vfEdicaoArmadaAoSoltarVF = null;
-  document.body.classList.remove('vf-edicao-armada');
-  if(e && e.cancelable) e.preventDefault(); // sem o mouseup/click sintético do Safari depois do toque
-  try{ fn(); }catch(err){ console.error('edição ao soltar:', err); }
+function vfReforcarTecladoVF(){
+  const campo = vfCampoAguardandoTecladoVF;
+  if(!campo) return;
+  if(Date.now() > vfCampoAguardandoTecladoAteVF || !document.body.contains(campo)){ vfCampoAguardandoTecladoVF = null; return; }
+  try{
+    const ini = campo.selectionStart, fim = campo.selectionEnd;
+    campo.blur();
+    campo.focus({preventScroll: true});
+    if(typeof ini === 'number' && typeof campo.setSelectionRange === 'function') campo.setSelectionRange(ini, fim);
+  }catch(e){}
 }
-document.addEventListener('touchend', vfDispararEdicaoArmadaVF, {capture: true, passive: false});
-document.addEventListener('mouseup', vfDispararEdicaoArmadaVF, {capture: true});
-// se o toque for cancelado (rolagem, chamada do sistema), desarma sem editar
-document.addEventListener('touchcancel', () => { vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); }, {capture: true});
+document.addEventListener('touchend', vfReforcarTecladoVF, {capture: true, passive: true});
+document.addEventListener('mouseup', vfReforcarTecladoVF, {capture: true});
+document.addEventListener('click', () => { vfReforcarTecladoVF(); vfCampoAguardandoTecladoVF = null; }, {capture: true});
+document.addEventListener('touchcancel', () => { vfCampoAguardandoTecladoVF = null; }, {capture: true});
 
 let vfMoveuDuranteToqueEnunciado = false;
 let vfPosicaoInicialPressionarEnunciadoVF = null;
@@ -17084,7 +17093,6 @@ function vfCancelarPressionarEnunciadoSilencioso(evento){
       if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
     }
   }
-  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   vfMoveuDuranteToqueEnunciado = true;
   clearTimeout(vfTimerPressionarEnunciado);
   vfTimerPressionarEnunciado = null;
@@ -18468,7 +18476,6 @@ function vfCancelarPressionarCorrecaoSilencioso(evento){
       if(Math.hypot(dx, dy) < 25) return;
     }
   }
-  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   vfMoveuDuranteToqueCorrecao = true;
   clearTimeout(vfTimerPressionarCorrecao);
   vfTimerPressionarCorrecao = null;
@@ -19412,7 +19419,6 @@ function vfCancelarPressionarNotaPreviewSilenciosoVF(evento){
       if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
     }
   }
-  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   clearTimeout(vfTimerPressionarNotaPreviewVF);
   vfTimerPressionarNotaPreviewVF = null;
 }
@@ -22668,7 +22674,6 @@ function vfCancelarPressionarNotaSilenciosoVF(evento){
       if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
     }
   }
-  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   clearTimeout(vfTimerPressionarNotaVF);
   vfTimerPressionarNotaVF = null;
 }
@@ -22827,7 +22832,6 @@ function vfCancelarPressionarExplicacaoSilencioso(evento){
       if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
     }
   }
-  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   vfMoveuDuranteToqueExplicacao = true;
   clearTimeout(vfTimerPressionarExplicacao);
   vfTimerPressionarExplicacao = null;
@@ -24088,7 +24092,6 @@ function vfCancelarPressionarEnunciadoQuestVFSilencioso(evento){
       if(Math.hypot(dx, dy) < 25) return;
     }
   }
-  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   vfSoltarPressionarEnunciadoQuestVF();
 }
 function vfIniciarEdicaoEnunciadoQuestVF(){
@@ -24171,7 +24174,6 @@ function vfCancelarPressionarAlternativaQuestVFSilencioso(evento){
       if(Math.hypot(dx, dy) < 25) return;
     }
   }
-  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   vfSoltarPressionarAlternativaQuestVF();
 }
 function vfIniciarEdicaoAlternativaQuestVF(letra){
