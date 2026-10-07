@@ -1304,6 +1304,8 @@ html[data-tema="escuro"] [style*="border-color: rgb(178, 58, 52)"]{border-color:
 /* chip de recorte de capítulo (contorno cinza) - no preto o #bbb/#666
    viram ruído; mesma régua dos outros contornos do escuro */
 html[data-tema="escuro"] [style*="border:1.5px solid #bbb"]{border-color:#3A3A36 !important;color:#9D9A93 !important}
+/* (07/10) segurar pra editar: o campo "pegou", solta pra abrir a caixa */
+body.vf-edicao-armada [data-editavel-vf], body.vf-edicao-armada #vf-enunciado-atual{outline:1.5px dashed #B23A34;outline-offset:4px;border-radius:6px}
 </style>
 <script>
 /* ============================================================
@@ -3102,7 +3104,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-06-263';
+const VERSAO_APP = '2026-10-07-266';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5360,7 +5362,7 @@ async function selecionarFiltroSelect(nivel, valor){
         return q.order('id');
       };
       buscarTudoPaginadoVF(montarQueryCapTema).then(({data})=>{
-        const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
+        const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>vfOrdemCapituloVF(a)-vfOrdemCapituloVF(b)||a.localeCompare(b,'pt'));
         // tema junta publicações relacionadas, normalmente do mesmo
         // idioma - usa o rótulo da primeira como aproximação razoável
         const primeiraPubDoTema = bibliografiaCache.find(b => idsPublicacoes.includes(b.id));
@@ -5377,7 +5379,7 @@ async function selecionarFiltroSelect(nivel, valor){
         return q.order('id');
       };
       buscarTudoPaginadoVF(montarQueryCap).then(({data})=>{
-        const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>a-b);
+        const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>vfOrdemCapituloVF(a)-vfOrdemCapituloVF(b)||a.localeCompare(b,'pt'));
         const livro = bibliografiaCache.find(b=>b.id===valor);
         const rotulo = rotuloCapituloDoLivro(livro?.titulo);
         elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + ' ' + c)}</option>`).join('');
@@ -7668,6 +7670,14 @@ const VF_HIFEN_INQUEBRAVEL_VF = '\u2011';
 // final (nao pode vir letra ou digito depois) e o que impede colar numa
 // palavra comum: "1 metro" e "1 minutos" nao entram, "1 m" e "1 min" sim
 const VF_ESPACO_INQUEBRAVEL_VF = '\u00A0';
+// unidade COMPOSTA escrita com espaço: "m s⁻¹", "km h⁻¹", "kg m⁻³". O
+// espaço no meio dela também não pode quebrar - no print do Carlos
+// (06/10) "km" ficou no fim de uma linha e "h⁻¹)" no começo da outra.
+// A fonte guarda "km h^{-1}"; quando chega aqui o expoente já virou
+// sobrescrito de verdade (⁻¹), e é por ele que a regra se ancora: só cola
+// quando o segundo pedaço TERMINA em sobrescrito, o que mantém a regra
+// longe de texto comum
+const VF_RE_UNIDADE_COMPOSTA_VF = /([A-Za-zµμ°º]{1,4})[ \t]+([A-Za-zµμ]{1,4}[⁻⁺⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g;
 const VF_RE_NUMERO_UNIDADE_VF = /(\d)[ \t]+(°C|°F|ºC|ºF|km\/h|m\/s|mbar|hPa|kPa|psi|rpm|dwt|TEU|ppm|min|mL|km|cm|mm|nm|NM|mi|ft|kt|kn|kg|kW|hp|lb|oz|gal|pol|ton|bar|m²|m³|nós|nó|pés|pé|°|º|%|‰|m|g|t|s|h|d|L|V|A|W|K|J|N)(?![\p{L}\d])/gu;
 const VF_RE_HIFEN_PALAVRA_VF = /([0-9A-Za-zÀ-ÖØ-öø-ÿĀ-ſḀ-ỿΑ-Ωα-ω])-(?=[0-9A-Za-zÀ-ÖØ-öø-ÿĀ-ſḀ-ỿΑ-Ωα-ω])/g;
 function vfHifenInquebravelVF(html, preservarEspacos){
@@ -7682,6 +7692,7 @@ function vfHifenInquebravelVF(html, preservarEspacos){
     if(codigo) return pedaco;
     let texto = pedaco.replace(VF_RE_HIFEN_PALAVRA_VF, '$1' + VF_HIFEN_INQUEBRAVEL_VF);
     texto = texto.replace(VF_RE_NUMERO_UNIDADE_VF, '$1' + VF_ESPACO_INQUEBRAVEL_VF + '$2');
+    texto = texto.replace(VF_RE_UNIDADE_COMPOSTA_VF, '$1' + VF_ESPACO_INQUEBRAVEL_VF + '$2');
     // (06/10) dois ou mais espacos seguidos: o HTML junta tudo num so por
     // padrao. Cada espaco a mais vira &nbsp; e o ULTIMO continua espaco
     // normal - assim a quantidade digitada aparece na tela e a linha ainda
@@ -10474,7 +10485,7 @@ function vfPopularCapitulosFavoritosVF(){
     .map(f => f.questoes_vf?.capitulo)
     .filter(Boolean)
     .map(c => String(c).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')))]
-    .sort((a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0) || a.localeCompare(b, 'pt'));
+    .sort((a, b) => vfOrdemCapituloVF(a) - vfOrdemCapituloVF(b) || a.localeCompare(b, 'pt'));
   elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c =>
     `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
   ).join('');
@@ -10661,7 +10672,7 @@ async function vfBibliotecaMudarPublicacaoVF(){
     return;
   }
   const capitulos = [...new Set((data || []).map(q => q.capitulo).filter(Boolean))]
-    .sort((a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0) || a.localeCompare(b, 'pt'));
+    .sort((a, b) => vfOrdemCapituloVF(a) - vfOrdemCapituloVF(b) || a.localeCompare(b, 'pt'));
   elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c =>
     `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
   ).join('');
@@ -15759,7 +15770,7 @@ async function mudarFiltroPublicacaoVF(){
       return;
     }
     const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
-      .sort((a,b) => (parseFloat(a)||0) - (parseFloat(b)||0) || a.localeCompare(b,'pt'));
+      .sort((a,b) => vfOrdemCapituloVF(a) - vfOrdemCapituloVF(b) || a.localeCompare(b,'pt'));
     elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
       `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
     ).join('');
@@ -16633,7 +16644,7 @@ async function vfRestaurarUIFiltroVF(){
     // mesma correção da RPC - ver mudarFiltroPublicacaoVF
     const {data} = await sb.rpc('capitulos_distintos_por_publicacao_vf', {p_bibliografia_id: publicacao});
     const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
-      .sort((a,b) => (parseFloat(a)||0) - (parseFloat(b)||0) || a.localeCompare(b,'pt'));
+      .sort((a,b) => vfOrdemCapituloVF(a) - vfOrdemCapituloVF(b) || a.localeCompare(b,'pt'));
     elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
       `<option value="${escapeHtml(c)}">${escapeHtml(c === 'Único' ? c : rotulo + c)}</option>`
     ).join('');
@@ -16890,6 +16901,34 @@ function renderizarItemVF(){
 // simplesmente não fazem nada, sem risco)
 let vfTimerPressionarEnunciado = null;
 const VF_DURACAO_PRESSIONAR_ENUNCIADO_MS = 500;
+// (07/10) ACHADO REAL: "segurar pra editar" abria a caixa com o cursor
+// dentro, mas o teclado do iPad não subia - era preciso ocultar/mostrar
+// teclado na barrinha. Causa: o focus() rodava dentro do setTimeout dos
+// 500 ms, e o Safari só mostra o teclado quando o foco nasce DENTRO de um
+// evento de toque do usuário. Agora o temporizador só ARMA a edição; quem
+// cria a caixa e dá o foco é o soltar (touchend/mouseup), em fase de
+// captura no document - ainda é o mesmo gesto, então o teclado sobe. Como
+// a edição começa antes do handler de soltar do elemento, o
+// dataset.editando='1' já está lá e a cópia por toque não dispara
+let vfEdicaoArmadaAoSoltarVF = null;
+function vfArmarEdicaoAoSoltarVF(fn){
+  vfEdicaoArmadaAoSoltarVF = fn;
+  // retorno visual de que o segurar "pegou" (o antigo abria a caixa na hora)
+  try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e){}
+  document.body.classList.add('vf-edicao-armada');
+}
+function vfDispararEdicaoArmadaVF(e){
+  const fn = vfEdicaoArmadaAoSoltarVF;
+  if(!fn) return;
+  vfEdicaoArmadaAoSoltarVF = null;
+  document.body.classList.remove('vf-edicao-armada');
+  if(e && e.cancelable) e.preventDefault(); // sem o mouseup/click sintético do Safari depois do toque
+  try{ fn(); }catch(err){ console.error('edição ao soltar:', err); }
+}
+document.addEventListener('touchend', vfDispararEdicaoArmadaVF, {capture: true, passive: false});
+document.addEventListener('mouseup', vfDispararEdicaoArmadaVF, {capture: true});
+// se o toque for cancelado (rolagem, chamada do sistema), desarma sem editar
+document.addEventListener('touchcancel', () => { vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); }, {capture: true});
 
 let vfMoveuDuranteToqueEnunciado = false;
 let vfPosicaoInicialPressionarEnunciadoVF = null;
@@ -16905,7 +16944,7 @@ function vfIniciarPressionarEnunciado(evento){
   if(souCarlos() && jaRespondida){
     vfTimerPressionarEnunciado = setTimeout(() => {
       vfTimerPressionarEnunciado = null;
-      vfIniciarEdicaoEnunciadoVF();
+      vfArmarEdicaoAoSoltarVF(vfIniciarEdicaoEnunciadoVF);
     }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
   }
 }
@@ -16921,6 +16960,7 @@ function vfCancelarPressionarEnunciadoSilencioso(evento){
       if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
     }
   }
+  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   vfMoveuDuranteToqueEnunciado = true;
   clearTimeout(vfTimerPressionarEnunciado);
   vfTimerPressionarEnunciado = null;
@@ -18290,7 +18330,7 @@ function vfIniciarPressionarCorrecao(evento){
   if(souCarlos()){
     vfTimerPressionarCorrecao = setTimeout(() => {
       vfTimerPressionarCorrecao = null;
-      vfIniciarEdicaoCorrecaoVF();
+      vfArmarEdicaoAoSoltarVF(vfIniciarEdicaoCorrecaoVF);
     }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
   }
 }
@@ -18304,6 +18344,7 @@ function vfCancelarPressionarCorrecaoSilencioso(evento){
       if(Math.hypot(dx, dy) < 25) return;
     }
   }
+  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   vfMoveuDuranteToqueCorrecao = true;
   clearTimeout(vfTimerPressionarCorrecao);
   vfTimerPressionarCorrecao = null;
@@ -19247,6 +19288,7 @@ function vfCancelarPressionarNotaPreviewSilenciosoVF(evento){
       if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
     }
   }
+  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   clearTimeout(vfTimerPressionarNotaPreviewVF);
   vfTimerPressionarNotaPreviewVF = null;
 }
@@ -22489,7 +22531,7 @@ function vfIniciarPressionarNotaVF(evento, notaId){
   vfPosicaoInicialPressionarNotaVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
   vfTimerPressionarNotaVF = setTimeout(() => {
     vfTimerPressionarNotaVF = null;
-    vfEditarNotaVF(notaId);
+    vfArmarEdicaoAoSoltarVF(() => vfEditarNotaVF(notaId));
   }, VF_DURACAO_PRESSIONAR_NOTA_MS);
 }
 // usado no touchmove/touchend/mouseleave - moveu ou soltou cedo demais
@@ -22502,6 +22544,7 @@ function vfCancelarPressionarNotaSilenciosoVF(evento){
       if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
     }
   }
+  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   clearTimeout(vfTimerPressionarNotaVF);
   vfTimerPressionarNotaVF = null;
 }
@@ -22645,7 +22688,7 @@ function vfIniciarPressionarExplicacao(evento){
   vfPosicaoInicialPressionarExplicacaoVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
   vfTimerPressionarExplicacao = setTimeout(() => {
     vfTimerPressionarExplicacao = null;
-    vfIniciarEdicaoExplicacaoVF();
+    vfArmarEdicaoAoSoltarVF(vfIniciarEdicaoExplicacaoVF);
   }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
 }
 // usado no touchmove/mouseleave - moveu ou saiu = não é toque limpo, só
@@ -22660,6 +22703,7 @@ function vfCancelarPressionarExplicacaoSilencioso(evento){
       if(Math.hypot(dx, dy) < 25) return; // ainda dentro da tolerância, não cancela
     }
   }
+  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   vfMoveuDuranteToqueExplicacao = true;
   clearTimeout(vfTimerPressionarExplicacao);
   vfTimerPressionarExplicacao = null;
@@ -23904,7 +23948,7 @@ function vfIniciarPressionarEnunciadoQuestVF(evento){
   vfPosicaoInicialPressionarEnunciadoQuestVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
   vfTimerPressionarEnunciadoQuestVF = setTimeout(() => {
     vfTimerPressionarEnunciadoQuestVF = null;
-    vfIniciarEdicaoEnunciadoQuestVF();
+    vfArmarEdicaoAoSoltarVF(vfIniciarEdicaoEnunciadoQuestVF);
   }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
 }
 function vfSoltarPressionarEnunciadoQuestVF(){
@@ -23920,6 +23964,7 @@ function vfCancelarPressionarEnunciadoQuestVFSilencioso(evento){
       if(Math.hypot(dx, dy) < 25) return;
     }
   }
+  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   vfSoltarPressionarEnunciadoQuestVF();
 }
 function vfIniciarEdicaoEnunciadoQuestVF(){
@@ -23986,7 +24031,7 @@ function vfIniciarPressionarAlternativaQuestVF(evento, letra){
   vfPosicaoInicialPressionarAlternativaQuestVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
   vfTimerPressionarAlternativaQuestVF = setTimeout(() => {
     vfTimerPressionarAlternativaQuestVF = null;
-    vfIniciarEdicaoAlternativaQuestVF(letra);
+    vfArmarEdicaoAoSoltarVF(() => vfIniciarEdicaoAlternativaQuestVF(letra));
   }, VF_DURACAO_PRESSIONAR_ENUNCIADO_MS);
 }
 function vfSoltarPressionarAlternativaQuestVF(){
@@ -24002,6 +24047,7 @@ function vfCancelarPressionarAlternativaQuestVFSilencioso(evento){
       if(Math.hypot(dx, dy) < 25) return;
     }
   }
+  vfEdicaoArmadaAoSoltarVF = null; document.body.classList.remove('vf-edicao-armada'); // (07/10) cancelou de verdade = não edita
   vfSoltarPressionarAlternativaQuestVF();
 }
 function vfIniciarEdicaoAlternativaQuestVF(letra){
@@ -26695,6 +26741,22 @@ function romanoParaArabico(romano){
 // combinação romana válida), sem precisar de lista de bloqueio pra cada uma
 const REGEX_ROMANO_VALIDO = /^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
 function ehNumeralRomanoValido(s){ return s.length > 0 && REGEX_ROMANO_VALIDO.test(s); }
+// ordem de capítulo que entende numeral romano. Os dropdowns ordenavam
+// por parseFloat, que dá NaN em romano e caía no localeCompare - acerta
+// I..VI por coincidência (a ordem alfabética bate com a numérica até aí)
+// e erra a partir do IX, que viria antes do V. Usado pelas publicações
+// divididas em romano (SOLAS cap. V, Lei 2.180 por título). Valor não
+// numérico e não romano (ex: "Único") continua valendo 0, igual antes
+function vfOrdemCapituloVF(c){
+  const s = String(c == null ? '' : c).trim();
+  const n = parseFloat(s);
+  if(!isNaN(n)) return n;
+  if(/^[IVXLCDM]+$/i.test(s)){
+    const v = romanoParaArabico(s.toUpperCase());
+    if(v > 0) return v;
+  }
+  return 0;
+}
 function normalizarNumeraisRomanos(texto){
   // (?<![\p{L}\p{N}])...(?![\p{L}\p{N}]) é a fronteira de palavra de
   // verdade — o \b padrão do JS só entende letra/número em ASCII, então
@@ -27527,9 +27589,22 @@ function parsearArquivoVF(textoCompleto){
   // cabecalho, que e onde o capitulo realmente mora - o corpo do texto
   // vira so um ultimo recurso
   const RE_CAPITULO_ARQUIVO_VF = /\b(?:Cap[íi]tulos?|Cap\.|Chapters?|Ch\.)\s*n?º?\s*(\d{1,2}|[IVXLivxl]{1,6}|[ÚUúu]nico)\b/i;
+  // publicações divididas por TÍTULO em vez de capítulo (ex: Lei
+  // 2.180/54 - Tribunal Marítimo, onde o número do capítulo reinicia
+  // dentro de cada título e quem carrega o assunto é o título) podem
+  // trazer "Título IV" no cabeçalho. Aceito SÓ na linha do cabeçalho -
+  // no corpo do texto a palavra "título" aparece em outros sentidos
+  // ("o título do capítulo", "título de crédito") e viraria lixo igual
+  // ao bug que gravou capitulo = "como" em 100 afirmações
+  const RE_TITULO_ARQUIVO_VF = /\bT[íi]tulos?\s*n?º?\s*(\d{1,2}|[IVXLivxl]{1,6})\b/i;
   const linhaCabecalhoVF = (texto.match(/PSCPP\s*[–-]\s*VERDADEIRO OU FALSO[^\r\n]*/i) || [''])[0];
-  const capituloMatch = linhaCabecalhoVF.match(RE_CAPITULO_ARQUIVO_VF) || texto.match(RE_CAPITULO_ARQUIVO_VF);
-  const capituloDoArquivo = capituloMatch ? capituloMatch[1].replace(/[.,;:]$/, '') : null;
+  const capituloMatch = linhaCabecalhoVF.match(RE_CAPITULO_ARQUIVO_VF)
+    || linhaCabecalhoVF.match(RE_TITULO_ARQUIVO_VF)
+    || texto.match(RE_CAPITULO_ARQUIVO_VF);
+  let capituloDoArquivo = capituloMatch ? capituloMatch[1].replace(/[.,;:]$/, '') : null;
+  // romano em minúscula ("título ii", "cap. iv") vira maiúscula - senão
+  // "ii" e "II" entram como dois capítulos diferentes no filtro
+  if(capituloDoArquivo && /^[ivxl]+$/i.test(capituloDoArquivo)) capituloDoArquivo = capituloDoArquivo.toUpperCase();
   // título do cabeçalho geral do arquivo (a parte depois do "·") - usado
   // na identificação de bibliografia EM VEZ do texto completo do campo
   // BIBLIOGRAFIA: de cada bloco. O campo BIBLIOGRAFIA: é uma citação ABNT
