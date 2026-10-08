@@ -3108,7 +3108,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-08-276';
+const VERSAO_APP = '2026-10-08-277';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8128,7 +8128,7 @@ function vfCalcularFamiliasNoPoolVF(pool){
   // - questões sem nenhuma relação real se adiando mutuamente por causa
   // de um campo em branco. Ignorar esse hash específico deixa o sistema
   // imune a isso, sem custo nenhum nos casos normais
-  const HASH_STRING_VAZIA_VF = 'd41d8cd98f00b204e9800998ecf8427e';
+  const HASH_STRING_VAZIA_VF = 'd41d8cd98f00'; // (08/10) prefixo de 12 - os hashes chegam encurtados da pool_questoes_vf_delta
   const pai = new Map();
   function encontrar(id){
     if(!pai.has(id)) pai.set(id, id);
@@ -8145,8 +8145,8 @@ function vfCalcularFamiliasNoPoolVF(pool){
   const primeiroPorTrecho = new Map(), primeiroPorTexto = new Map();
   pool.forEach(q => {
     encontrar(q.id);
-    const ct = q.chave_familia_trecho === HASH_STRING_VAZIA_VF ? null : q.chave_familia_trecho;
-    const ctx = q.chave_familia_texto === HASH_STRING_VAZIA_VF ? null : q.chave_familia_texto;
+    const ct = (!q.chave_familia_trecho || q.chave_familia_trecho.slice(0, 12) === HASH_STRING_VAZIA_VF) ? null : q.chave_familia_trecho;
+    const ctx = (!q.chave_familia_texto || q.chave_familia_texto.slice(0, 12) === HASH_STRING_VAZIA_VF) ? null : q.chave_familia_texto;
     if(ct){ if(primeiroPorTrecho.has(ct)) unir(q.id, primeiroPorTrecho.get(ct)); else primeiroPorTrecho.set(ct, q.id); }
     if(ctx){ if(primeiroPorTexto.has(ctx)) unir(q.id, primeiroPorTexto.get(ctx)); else primeiroPorTexto.set(ctx, q.id); }
   });
@@ -11095,7 +11095,7 @@ async function vfSalvarEdicaoBibliotecaVF(){
   vfRenderizarBibliotecaVF();
   vfPropagarMudancaBibliotecaVF(id, mudancas);
   await vfSalvarComRetryVF(
-    () => sb.from('questoes_vf').update(mudancas).eq('id', id),
+    () => vfQuestoesVfEscritaVF().update(mudancas).eq('id', id),
     'a edição da afirmação',
     texto
   );
@@ -13837,6 +13837,102 @@ function vfProcessarQuestoesCruasVF(questoesCruas, estadoPorId, idsExcluidos){
     });
 }
 
+// ---- (08/10) lista compacta do pool guardada NO APARELHO ----
+// Com 58 mil flashes, a lista compacta (só metadados) já passava de 11 MB
+// e era baixada inteira a cada entrada no Flash E a cada troca de filtro
+// (matéria → livro → capítulo = três idas ao servidor). Agora ela mora no
+// IndexedDB: na entrada, o app lê do disco e pede ao banco só o que mudou
+// desde o último cursor (pool_questoes_vf_delta, atualizado_em); troca de
+// filtro é filtro em memória, zero rede. Se o IndexedDB não existir ou
+// falhar, continua funcionando só com a cópia em memória (ainda evita a
+// rebaixada a cada filtro dentro da mesma sessão)
+const VF_CACHE_POOL_DB_VF = 'pilotquest_vf';
+const VF_CACHE_POOL_STORE_VF = 'pool_compacto';
+const VF_CACHE_POOL_VERSAO_VF = 1; // mude quando o formato das linhas mudar
+const VF_LISTA_COMPACTA_FRESCA_MS_VF = 30000; // dentro disso, troca de filtro nem consulta o banco
+let vfListaCompactaVF = null; // {linhas: Map(id -> linha compacta), cursor, total, sincronizadoEm}
+let vfListaCompactaEmVooVF = null;
+function vfAbrirCacheDbVF(){
+  return new Promise((res) => {
+    try{
+      if(typeof indexedDB === 'undefined' || !indexedDB) return res(null);
+      const req = indexedDB.open(VF_CACHE_POOL_DB_VF, 1);
+      req.onupgradeneeded = () => { try{ req.result.createObjectStore(VF_CACHE_POOL_STORE_VF); }catch(e){} };
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => res(null);
+      req.onblocked = () => res(null);
+    }catch(e){ res(null); }
+  });
+}
+async function vfLerCachePoolVF(){
+  const db = await vfAbrirCacheDbVF();
+  if(!db) return null;
+  return new Promise((res) => {
+    try{
+      const tx = db.transaction(VF_CACHE_POOL_STORE_VF, 'readonly');
+      const r = tx.objectStore(VF_CACHE_POOL_STORE_VF).get('lista');
+      r.onsuccess = () => {
+        try{ db.close(); }catch(e){}
+        const v = r.result;
+        if(!v || v.versao !== VF_CACHE_POOL_VERSAO_VF || !v.json || !v.cursor) return res(null);
+        let linhas = null;
+        try{ linhas = JSON.parse(v.json); }catch(e){ return res(null); }
+        if(!Array.isArray(linhas)) return res(null);
+        res({linhas, cursor: v.cursor, total: v.total});
+      };
+      r.onerror = () => { try{ db.close(); }catch(e){} res(null); };
+    }catch(e){ try{ db.close(); }catch(e2){} res(null); }
+  });
+}
+async function vfGravarCachePoolVF(lista){
+  const db = await vfAbrirCacheDbVF();
+  if(!db) return false;
+  return new Promise((res) => {
+    try{
+      const tx = db.transaction(VF_CACHE_POOL_STORE_VF, 'readwrite');
+      tx.objectStore(VF_CACHE_POOL_STORE_VF).put({versao: VF_CACHE_POOL_VERSAO_VF, cursor: lista.cursor, total: lista.total, json: JSON.stringify(Array.from(lista.linhas.values())), gravadoEm: Date.now()}, 'lista');
+      tx.oncomplete = () => { try{ db.close(); }catch(e){} res(true); };
+      tx.onerror = () => { try{ db.close(); }catch(e){} res(false); };
+      tx.onabort = () => { try{ db.close(); }catch(e){} res(false); };
+    }catch(e){ try{ db.close(); }catch(e2){} res(false); }
+  });
+}
+// qualquer escrita em questoes_vf feita pelo próprio app (editar, marcar
+// Número/Lista/Data, importar) invalida o "fresco": a próxima carga de pool
+// faz uma diferença rápida antes de filtrar, pra refletir o que mudou
+function vfInvalidarListaCompactaVF(){ if(vfListaCompactaVF) vfListaCompactaVF.sincronizadoEm = 0; }
+function vfQuestoesVfEscritaVF(){ vfInvalidarListaCompactaVF(); return sb.from('questoes_vf'); }
+async function vfObterListaCompactaVF(){
+  if(vfListaCompactaEmVooVF) return vfListaCompactaEmVooVF;
+  vfListaCompactaEmVooVF = (async () => {
+    if(!vfListaCompactaVF){
+      const c = await vfLerCachePoolVF();
+      if(c) vfListaCompactaVF = {linhas: new Map(c.linhas.map(l => [l[0], l])), cursor: c.cursor, total: c.total, sincronizadoEm: 0};
+    }
+    if(vfListaCompactaVF && (Date.now() - vfListaCompactaVF.sincronizadoEm) < VF_LISTA_COMPACTA_FRESCA_MS_VF) return vfListaCompactaVF;
+    const desde = vfListaCompactaVF ? vfListaCompactaVF.cursor : null;
+    const {data, error} = await sb.rpc('pool_questoes_vf_delta', {p_desde: desde});
+    if(error || !data || !Array.isArray(data.linhas)){
+      if(vfListaCompactaVF) return vfListaCompactaVF; // sem rede: segue com o que tem
+      throw (error || new Error('pool_questoes_vf_delta sem dados'));
+    }
+    let mapa = desde ? vfListaCompactaVF.linhas : new Map();
+    data.linhas.forEach(l => { if(l[10]) mapa.delete(l[0]); else mapa.set(l[0], l); });
+    let cursor = data.cursor, total = data.total, mudou = data.linhas.length > 0 || !desde;
+    if(desde && typeof total === 'number' && mapa.size !== total){
+      // divergiu (apagamento físico, por exemplo): refaz a lista inteira uma vez
+      const r2 = await sb.rpc('pool_questoes_vf_delta', {p_desde: null});
+      if(!r2.error && r2.data && Array.isArray(r2.data.linhas)){
+        mapa = new Map(r2.data.linhas.map(l => [l[0], l])); cursor = r2.data.cursor; total = r2.data.total; mudou = true;
+      }
+    }
+    vfListaCompactaVF = {linhas: mapa, cursor, total, sincronizadoEm: Date.now()};
+    if(mudou){ const alvo = vfListaCompactaVF; setTimeout(() => { vfGravarCachePoolVF(alvo).catch(() => {}); }, 1500); } // grava depois da primeira questão já estar na tela (stringify de 58 mil linhas custa uns décimos no iPad)
+    return vfListaCompactaVF;
+  })().finally(() => { vfListaCompactaEmVooVF = null; });
+  return vfListaCompactaEmVooVF;
+}
+
 async function carregarPoolVF(incluirDadosEntradaVF){
   const tokenDestaCargaVF = ++vfTokenGeracaoPoolVF;
   // v102 (18/09): o pool vem de UMA chamada à RPC pool_questoes_vf, em
@@ -13856,18 +13952,32 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   };
   const vfLinhaCompactaParaObjetoVF = l => ({id: l[0], eh_numero: l[1], eh_lista: l[2], inconsistente: l[3], capitulo: l[4], n_palavras: l[5], bibliografia_id: l[6], chave_familia_trecho: l[7], chave_familia_texto: l[8], eh_data: l[9], anulada: false});
   const vfBuscarQuestoesPoolVF = async (aoCarregarRestante) => {
+    // (08/10) a lista compacta vem do aparelho (vfObterListaCompactaVF) e o
+    // filtro roda aqui, em memória, com as MESMAS regras da RPC antiga
+    // pool_questoes_vf (publicação/módulo, capítulo, união Número/Lista/
+    // Data, inconsistente). Mesma ordem por id, mesma primeira leva de 1000
+    // na entrada (o resto entra pelo mesmo callback de sempre, só que sem
+    // esperar rede nenhuma)
     const params = vfMontarParamsPoolVF();
+    let lista;
+    try{ lista = await vfObterListaCompactaVF(); }catch(e){ return {data: null, error: e}; }
+    const idsBib = params.p_ids_bibliografia ? new Set(params.p_ids_bibliografia) : null;
+    const filtrarTipo = params.p_numero || params.p_lista || params.p_data;
+    const linhas = [];
+    lista.linhas.forEach(l => {
+      if(idsBib && !idsBib.has(l[6])) return;
+      if(params.p_capitulo && l[4] !== params.p_capitulo) return;
+      if(filtrarTipo && !((params.p_numero && l[1]) || (params.p_lista && l[2]) || (params.p_data && l[9]))) return;
+      if(params.p_inconsistente && !l[3]) return;
+      linhas.push(l);
+    });
+    linhas.sort((a, b) => a[0] < b[0] ? -1 : (a[0] > b[0] ? 1 : 0));
+    const total = linhas.length;
     const PRIMEIRA_LEVA_VF = 1000;
-    const {data, error} = await sb.rpc('pool_questoes_vf', aoCarregarRestante ? {...params, p_limite: PRIMEIRA_LEVA_VF, p_offset: 0} : params);
-    if(error) return {data: null, error};
-    const linhas = (data && data.linhas) || [];
-    const total = (data && data.total) || linhas.length;
-    if(aoCarregarRestante && total > linhas.length){
-      // resto em segundo plano - mesma entrega progressiva de antes
-      sb.rpc('pool_questoes_vf', {...params, p_limite: null, p_offset: PRIMEIRA_LEVA_VF}).then(({data: d2, error: e2}) => {
-        if(e2 || !d2 || !d2.linhas){ console.error('pool_questoes_vf (resto):', e2); return; }
-        aoCarregarRestante(d2.linhas.map(vfLinhaCompactaParaObjetoVF));
-      });
+    if(aoCarregarRestante && total > PRIMEIRA_LEVA_VF){
+      const resto = linhas.slice(PRIMEIRA_LEVA_VF);
+      setTimeout(() => { try{ aoCarregarRestante(resto.map(vfLinhaCompactaParaObjetoVF)); }catch(e){ console.error('pool (resto):', e); } }, 0);
+      return {data: linhas.slice(0, PRIMEIRA_LEVA_VF).map(vfLinhaCompactaParaObjetoVF), error: null, count: total};
     }
     return {data: linhas.map(vfLinhaCompactaParaObjetoVF), error: null, count: total};
   };
@@ -17185,7 +17295,7 @@ async function vfSalvarEdicaoEnunciadoVF(questaoId, textoOriginal){
   const cacheAtualEnunciado = vfConteudoCompletoCache.get(questaoId) || {};
   vfConteudoCompletoCache.set(questaoId, {...cacheAtualEnunciado, texto: textoNovo});
   await vfSalvarComRetryVF(
-    () => sb.from('questoes_vf').update({texto: textoNovo, n_palavras: novoNPalavras}).eq('id', questaoId),
+    () => vfQuestoesVfEscritaVF().update({texto: textoNovo, n_palavras: novoNPalavras}).eq('id', questaoId),
     'a edição da afirmação',
     textoNovo
   );
@@ -17543,7 +17653,7 @@ async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
     const cacheAtual = vfConteudoCompletoCache.get(contexto.questaoId) || {};
     vfConteudoCompletoCache.set(contexto.questaoId, {...cacheAtual, [contexto.campo]: textoNovo});
     await vfSalvarComRetryVF(
-      () => sb.from('questoes_vf').update({[contexto.campo]: textoNovo}).eq('id', contexto.questaoId),
+      () => vfQuestoesVfEscritaVF().update({[contexto.campo]: textoNovo}).eq('id', contexto.questaoId),
       'a mudança no desenho',
       null
     );
@@ -18378,7 +18488,7 @@ async function vfPersistirTrechoTabelaVF(blocoId, novoTrecho){
     const cacheAtual = vfConteudoCompletoCache.get(contexto.questaoId) || {};
     vfConteudoCompletoCache.set(contexto.questaoId, {...cacheAtual, [contexto.campo]: textoNovo});
     await vfSalvarComRetryVF(
-      () => sb.from('questoes_vf').update({[contexto.campo]: textoNovo}).eq('id', contexto.questaoId),
+      () => vfQuestoesVfEscritaVF().update({[contexto.campo]: textoNovo}).eq('id', contexto.questaoId),
       'a mudança na tabela',
       null
     );
@@ -18509,7 +18619,7 @@ async function vfSalvarEdicaoCorrecaoVF(questaoId, textoOriginal){
   const cacheAtualCorrecao = vfConteudoCompletoCache.get(questaoId) || {};
   vfConteudoCompletoCache.set(questaoId, {...cacheAtualCorrecao, correcao: textoNovo});
   await vfSalvarComRetryVF(
-    () => sb.from('questoes_vf').update({correcao: textoNovo}).eq('id', questaoId),
+    () => vfQuestoesVfEscritaVF().update({correcao: textoNovo}).eq('id', questaoId),
     'a edição da correção',
     textoNovo
   );
@@ -18903,7 +19013,7 @@ function vfUsarTagExistenteVF(tagId){
 async function vfDesmarcarTagAutomaticaVF(campoEstrutural){
   if(!vfQuestaoIdTagsAtualVF) return;
   const questaoId = vfQuestaoIdTagsAtualVF;
-  const {error} = await sb.from('questoes_vf').update({[campoEstrutural]: false}).eq('id', questaoId);
+  const {error} = await vfQuestoesVfEscritaVF().update({[campoEstrutural]: false}).eq('id', questaoId);
   if(error) return;
   const itemNoPool = estadoVF?.pool?.find(i => i.id === questaoId) || estadoVF?.historico?.find(h => h.item.id === questaoId)?.item;
   if(itemNoPool) itemNoPool[campoEstrutural] = false; // reflete na tela na hora, sem esperar recarregar
@@ -18955,7 +19065,7 @@ async function vfAdicionarTagVF(){
       statusEl.innerHTML = `<span style="color:#B00020">Essa questão já está marcada como ${rotuloCampo}.</span>`;
       return;
     }
-    const {error} = await sb.from('questoes_vf').update({[campoEstrutural]: true}).eq('id', questaoId);
+    const {error} = await vfQuestoesVfEscritaVF().update({[campoEstrutural]: true}).eq('id', questaoId);
     if(error){
       statusEl.innerHTML = '<span style="color:#B00020">Não consegui marcar agora. Tenta de novo.</span>';
       return;
@@ -19036,7 +19146,7 @@ function vfColunaDaTagVF(nome){
 async function vfSincronizarColunaDaTagVF(questaoId, nomeTag, ligada){
   const coluna = vfColunaDaTagVF(nomeTag);
   if(!coluna || !questaoId) return;
-  const {error} = await sb.from('questoes_vf').update({[coluna]: ligada}).eq('id', questaoId);
+  const {error} = await vfQuestoesVfEscritaVF().update({[coluna]: ligada}).eq('id', questaoId);
   if(error){ console.error('não consegui espelhar a tag na coluna ' + coluna + ':', error); return; }
   const itemNoPool = estadoVF?.pool?.find(i => i.id === questaoId) || estadoVF?.historico?.find(h => h.item.id === questaoId)?.item;
   if(itemNoPool) itemNoPool[coluna] = ligada; // reflete na tela na hora, sem esperar recarregar
@@ -21365,7 +21475,7 @@ function vfEditarComplementarLocalVF(questaoId){
 
 // remove o conteúdo complementar local por completo
 async function vfRemoverComplementarLocalVF(questaoId){
-  const {error} = await sb.from('questoes_vf').update({complementar_local: null}).eq('id', questaoId);
+  const {error} = await vfQuestoesVfEscritaVF().update({complementar_local: null}).eq('id', questaoId);
   if(error){ vfMostrarAvisoVF('Erro ao remover: '+error.message); return; }
   const entrada = estadoVF.historico.find(h => h.item.id === questaoId);
   if(entrada) entrada.item.complementar_local = null;
@@ -21437,7 +21547,7 @@ async function vfUsarComplementarLocalVF(){
   // fila junto com os elementos da biblioteca (que têm criado_em próprio).
   // Só na primeira vez: editar o texto depois não muda o lugar dele
   const carimbo = entrada?.item?.complementar_local_em || new Date().toISOString();
-  const {error} = await sb.from('questoes_vf').update({complementar_local: latexFonte, complementar_local_em: carimbo}).eq('id', questaoId);
+  const {error} = await vfQuestoesVfEscritaVF().update({complementar_local: latexFonte, complementar_local_em: carimbo}).eq('id', questaoId);
   if(error){ vfMostrarAvisoVF('Erro ao salvar: '+error.message); return; }
   // atualiza local imediatamente - sensação instantânea, sem esperar
   // buscar de novo do banco
@@ -22866,7 +22976,7 @@ async function vfSalvarEdicaoExplicacaoVF(questaoId, textoOriginal){
   const cacheAtualExplicacao = vfConteudoCompletoCache.get(questaoId) || {};
   vfConteudoCompletoCache.set(questaoId, {...cacheAtualExplicacao, explicacao: textoNovo || null});
   await vfSalvarComRetryVF(
-    () => sb.from('questoes_vf').update({explicacao: textoNovo || null}).eq('id', questaoId),
+    () => vfQuestoesVfEscritaVF().update({explicacao: textoNovo || null}).eq('id', questaoId),
     'a edição da explicação',
     textoNovo
   );
@@ -27953,7 +28063,7 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     // "Único" - publicações que são um capítulo específico de um livro
     // maior (ex: Navegação cap.45) usam valor_capitulo_fixo pra mostrar
     // o número certo, sem reabrir a porta pra extração por questão
-    const {data: inserida, error} = await sb.from('questoes_vf').insert({
+    const {data: inserida, error} = await vfQuestoesVfEscritaVF().insert({
       ...camposComuns,
       bibliografia_id: bibliografiaId,
       capitulo: bibCapituloUnico ? (bibValorCapituloFixo || 'Único') : capituloDoArquivo
@@ -28765,7 +28875,7 @@ async function resolverGrupoRascunhoVF(nomeArquivo, idGrupo){
         return;
       }
 
-      const {error: erroInsert} = await sb.from('questoes_vf').insert({
+      const {error: erroInsert} = await vfQuestoesVfEscritaVF().insert({
         texto: q.texto,
         resposta: q.resposta,
         explicacao: q.explicacao,
