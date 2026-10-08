@@ -852,7 +852,6 @@ html[data-tema="escuro"] [data-cor-nota="ambar"]{background-color:#2E2719 !impor
 html[data-tema="escuro"] [data-cor-nota="verde"]{background-color:#212A1B !important}
 html[data-tema="escuro"] [data-cor-nota="azul"]{background-color:#1C2531 !important}
 html[data-tema="escuro"] .vf-selo-nota{background-color:#161616 !important;border-color:#3A3A36 !important}
-html[data-tema="escuro"] .vf-btn-teclado button{background:#2A1A18 !important;border-color:#5A2A26 !important;color:#C9908A !important}
 /* legenda da tabela e textos auxiliares cinza-medio */
 html[data-tema="escuro"] [style*="color:#7A7A74"]{color:#9D9A93 !important}
 
@@ -3109,7 +3108,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-08-274';
+const VERSAO_APP = '2026-10-08-276';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -17038,48 +17037,12 @@ const VF_DURACAO_PRESSIONAR_ENUNCIADO_MS = 500;
 // caixa abre no segurar (cursor na hora, como sempre foi) e, no soltar e
 // no clique que o Safari gera logo depois, o campo já aberto recebe um
 // blur+focus DENTRO do gesto - é o que o iOS exige pra mostrar o teclado
-// (08/10, v3) o reforço automático no soltar (v2/v2.1) foi REMOVIDO: no
-// iPad ele ou fechava a caixa (o blur disparava o salvar) ou impedia de
-// abrir. Agora a caixa abre no segurar exatamente como na -267 (que
-// funcionava) e, só em tela de toque, ganha um botão "Teclado" embaixo:
-// o toque nele é um gesto real do usuário, e é dentro desse gesto que o
-// iOS aceita subir o teclado. O blur() necessário pra "re-focar" é
-// engolido em captura enquanto o botão trabalha, pra não salvar/fechar
-let vfReforcandoTecladoVF = false;
-document.addEventListener('blur', (e) => { if(vfReforcandoTecladoVF) e.stopImmediatePropagation(); }, true);
-document.addEventListener('focusout', (e) => { if(vfReforcandoTecladoVF) e.stopImmediatePropagation(); }, true);
-const VF_ICONE_TECLADO_VF = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>';
+// (08/10, v4) sem truque nenhum de teclado: segurar abre a caixa com o
+// cursor dentro (como na -267) e o toque do Carlos na própria caixa é o
+// que sobe o teclado nativo do iPad. Os reforços automáticos (v2/v2.1) e o
+// botão "Teclado" (v3) foram removidos a pedido - só atrapalhavam
 function vfArmarEdicaoAoSoltarVF(fn){
-  try{ fn(); }catch(err){ console.error('edição ao segurar:', err); return; }
-  const campo = document.activeElement;
-  if(!campo || (campo.tagName !== 'TEXTAREA' && campo.tagName !== 'INPUT')) return;
-  if(!(navigator.maxTouchPoints > 0)) return; // Mac com teclado físico: não precisa
-  if(campo.parentNode && campo.parentNode.querySelector('.vf-btn-teclado')) return;
-  const linha = document.createElement('div');
-  linha.className = 'vf-btn-teclado';
-  linha.style.cssText = 'display:flex;justify-content:flex-end;margin-top:10px';
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.innerHTML = VF_ICONE_TECLADO_VF + '<span>Teclado</span>';
-  btn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #B23A34;border-radius:999px;background:#fff;color:#B23A34;font-family:inherit;font-size:var(--fs-b);font-weight:600;cursor:pointer;-webkit-user-select:none;user-select:none';
-  const subir = (e) => {
-    if(e) e.preventDefault(); // não tira o foco do campo (senão o blur salva e fecha)
-    if(!document.body.contains(campo)) return;
-    vfReforcandoTecladoVF = true;
-    try{
-      const ini = campo.selectionStart, fim = campo.selectionEnd;
-      campo.blur();
-      campo.focus({preventScroll: true});
-      if(typeof ini === 'number' && typeof campo.setSelectionRange === 'function') campo.setSelectionRange(ini, fim);
-    }catch(err){}
-    vfReforcandoTecladoVF = false;
-    if(document.activeElement !== campo){ try{ campo.focus({preventScroll: true}); }catch(err){} }
-  };
-  btn.addEventListener('touchstart', subir, {passive: false});
-  btn.addEventListener('mousedown', subir);
-  btn.addEventListener('click', (e) => e.preventDefault());
-  linha.appendChild(btn);
-  campo.insertAdjacentElement('afterend', linha);
+  try{ fn(); }catch(err){ console.error('edição ao segurar:', err); }
 }
 
 let vfMoveuDuranteToqueEnunciado = false;
@@ -27779,7 +27742,9 @@ function parsearArquivoVF(textoCompleto){
   // no cabeçalho: no corpo do texto a questão cita "ver Appendix C" de
   // passagem e isso não é o capítulo dela. O valor gravado carrega o
   // rótulo ("Appendix E") e quem exibe usa vfEtiquetaCapituloVF
-  const RE_ANEXO_ARQUIVO_VF = /\b(Anexos?|Annexe?s?|Ap[êe]ndices?|Appendix|Appendices)\s*n?º?\s*([A-Za-z]\d?|\d{1,2})\b/i;
+  // o \b depois da palavra é essencial: sem ele, "ANEXOS" casava como
+  // "ANEXO" + designador "S" e virava o capítulo "Anexo S"
+  const RE_ANEXO_ARQUIVO_VF = /\b(Anexos?|Annexe?s?|Ap[êe]ndices?|Appendix|Appendices)\b[\s:.\-–—]*n?º?\s*([A-Za-z]\d?|\d{1,2})\b/i;
   // publicações cujo rótulo é "Section" (as três do PNA) têm cabeçalho
   // "Section 3", que o regex de capítulo não reconhecia - as 131
   // afirmações de PNA Resistance entraram com capítulo vazio e ficaram
@@ -27803,6 +27768,19 @@ function parsearArquivoVF(textoCompleto){
   if(anexoMatch){
     const palavraAnexo = anexoMatch[1].charAt(0).toUpperCase() + anexoMatch[1].slice(1).toLowerCase();
     capituloDoArquivo = palavraAnexo + ' ' + anexoMatch[2].toUpperCase();
+  }else if(!capituloDoArquivo){
+    // "ANEXOS" no cabeçalho SEM letra nem número é o capítulo geral de
+    // anexos da publicação (a NORMAM-204 tem um), não um anexo
+    // específico. Só vale quando o cabeçalho não nomeou capítulo,
+    // título nem seção - num cabeçalho tipo "Capítulo 3, Anexo
+    // integral" quem manda é o capítulo
+    const anexoGeralMatch = linhaCabecalhoVF.match(/\b(Anexos?|Annexe?s?|Ap[êe]ndices?|Appendix|Appendices)\b/i);
+    if(anexoGeralMatch){
+      const palavraGeral = anexoGeralMatch[1].toLowerCase();
+      capituloDoArquivo = (palavraGeral.indexOf('anex') === 0 || palavraGeral.indexOf('annex') === 0) ? 'Anexos'
+        : (palavraGeral.indexOf('ap') === 0 && palavraGeral.indexOf('appe') !== 0) ? 'Apêndices'
+        : 'Appendices';
+    }
   }
   // título do cabeçalho geral do arquivo (a parte depois do "·") - usado
   // na identificação de bibliografia EM VEZ do texto completo do campo
