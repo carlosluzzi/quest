@@ -3108,7 +3108,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-08-277';
+const VERSAO_APP = '2026-10-08-278';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -27001,6 +27001,28 @@ function vfOrdemCapituloVF(c){
 // senão sai "Chapter Appendix E". Todo lugar que mostra capítulo na tela
 // passa por aqui, pra não ter dois jeitos diferentes de escrever a mesma
 // coisa em telas diferentes
+// anexo/apêndice como valor de capítulo (com ou sem designador)
+const VF_RE_CAP_ANEXO_VF = /^(?:anexos?|annexe?s?|ap[êe]ndices?|appendix|appendices)\b/i;
+// ...e o mesmo sem designador nenhum: o "capítulo geral de anexos"
+const VF_RE_CAP_ANEXO_GERAL_VF = /^(?:anexos?|annexe?s?|ap[êe]ndices?|appendix|appendices)$/i;
+// Encaixa o capítulo lido do cabeçalho no que a publicação declara em
+// bibliografia.capitulos_validos. Serve pra um caso concreto: publicações
+// que têm UM capítulo geral de anexos (NORMAM-204, NORMAM-311) em vez de
+// um capítulo por anexo. Um cabeçalho "Anexos 4-A a 4-D" é lido como
+// "Anexos 4" (a faixa de anexos 4), que não é um capítulo que existe
+// nessa publicação - então colapsa pro geral "Anexos". Já a PIANC 121,
+// que declara "Appendix E" e "Appendix G" como capítulos próprios, não
+// colapsa nada: o valor lido bate exatamente com um dos válidos.
+// Só mexe em anexo/apêndice - capítulo numerado, romano e "Único" passam
+// intactos, mesmo que não estejam na lista (a lista não é trava)
+function vfCapituloConformeValidosVF(valor, validos){
+  const v = String(valor == null ? '' : valor).trim();
+  if(!v || !Array.isArray(validos) || !validos.length) return valor;
+  if(!VF_RE_CAP_ANEXO_VF.test(v)) return valor;
+  if(validos.some(x => String(x).trim() === v)) return valor;
+  const geral = validos.find(x => VF_RE_CAP_ANEXO_GERAL_VF.test(String(x).trim()));
+  return geral ? String(geral).trim() : valor;
+}
 function vfEtiquetaCapituloVF(rotulo, valor){
   const v = String(valor == null ? '' : valor).trim();
   if(!v) return '';
@@ -28004,15 +28026,17 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     let bibliografiaId = null;
     let bibCapituloUnico = false;
     let bibValorCapituloFixo = null;
+    let bibCapitulosValidos = null;
     if(bibEncontrada){
       const {data: bibRow} = await sb.from('bibliografia')
-        .select('id, capitulo_unico, valor_capitulo_fixo')
+        .select('id, capitulo_unico, valor_capitulo_fixo, capitulos_validos')
         .eq('modulo_pscpp', bibEncontrada.modulo)
         .eq('titulo', bibEncontrada.titulo)
         .maybeSingle();
       bibliografiaId = bibRow?.id || null;
       bibCapituloUnico = bibRow?.capitulo_unico === true;
       bibValorCapituloFixo = bibRow?.valor_capitulo_fixo || null;
+      bibCapitulosValidos = bibRow?.capitulos_validos || null;
     }
 
     // checagem de duplicata — mesmo texto já cadastrado, pula sem inserir.
@@ -28066,7 +28090,7 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     const {data: inserida, error} = await vfQuestoesVfEscritaVF().insert({
       ...camposComuns,
       bibliografia_id: bibliografiaId,
-      capitulo: bibCapituloUnico ? (bibValorCapituloFixo || 'Único') : capituloDoArquivo
+      capitulo: bibCapituloUnico ? (bibValorCapituloFixo || 'Único') : vfCapituloConformeValidosVF(capituloDoArquivo, bibCapitulosValidos)
     }).select('id').single();
 
     // segunda camada — se duas rotinas checaram ao mesmo tempo e as duas
