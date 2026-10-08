@@ -852,6 +852,7 @@ html[data-tema="escuro"] [data-cor-nota="ambar"]{background-color:#2E2719 !impor
 html[data-tema="escuro"] [data-cor-nota="verde"]{background-color:#212A1B !important}
 html[data-tema="escuro"] [data-cor-nota="azul"]{background-color:#1C2531 !important}
 html[data-tema="escuro"] .vf-selo-nota{background-color:#161616 !important;border-color:#3A3A36 !important}
+html[data-tema="escuro"] .vf-btn-teclado button{background:#2A1A18 !important;border-color:#5A2A26 !important;color:#C9908A !important}
 /* legenda da tabela e textos auxiliares cinza-medio */
 html[data-tema="escuro"] [style*="color:#7A7A74"]{color:#9D9A93 !important}
 
@@ -3108,7 +3109,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-08-273';
+const VERSAO_APP = '2026-10-08-274';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -17037,41 +17038,49 @@ const VF_DURACAO_PRESSIONAR_ENUNCIADO_MS = 500;
 // caixa abre no segurar (cursor na hora, como sempre foi) e, no soltar e
 // no clique que o Safari gera logo depois, o campo já aberto recebe um
 // blur+focus DENTRO do gesto - é o que o iOS exige pra mostrar o teclado
-let vfCampoAguardandoTecladoVF = null;
-let vfCampoAguardandoTecladoAteVF = 0;
-// (08/10) BUG REAL do v2: o blur() de reforço disparava o 'blur' da própria
-// caixa de edição - que é "salvar e fechar". Resultado: segurava, a caixa
-// abria e fechava sozinha. Enquanto o reforço está rodando, o blur é
-// engolido em fase de captura no document (antes de chegar na caixa)
+// (08/10, v3) o reforço automático no soltar (v2/v2.1) foi REMOVIDO: no
+// iPad ele ou fechava a caixa (o blur disparava o salvar) ou impedia de
+// abrir. Agora a caixa abre no segurar exatamente como na -267 (que
+// funcionava) e, só em tela de toque, ganha um botão "Teclado" embaixo:
+// o toque nele é um gesto real do usuário, e é dentro desse gesto que o
+// iOS aceita subir o teclado. O blur() necessário pra "re-focar" é
+// engolido em captura enquanto o botão trabalha, pra não salvar/fechar
 let vfReforcandoTecladoVF = false;
 document.addEventListener('blur', (e) => { if(vfReforcandoTecladoVF) e.stopImmediatePropagation(); }, true);
 document.addEventListener('focusout', (e) => { if(vfReforcandoTecladoVF) e.stopImmediatePropagation(); }, true);
+const VF_ICONE_TECLADO_VF = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>';
 function vfArmarEdicaoAoSoltarVF(fn){
   try{ fn(); }catch(err){ console.error('edição ao segurar:', err); return; }
-  const ativo = document.activeElement;
-  if(ativo && (ativo.tagName === 'TEXTAREA' || ativo.tagName === 'INPUT' || ativo.isContentEditable)){
-    vfCampoAguardandoTecladoVF = ativo;
-    vfCampoAguardandoTecladoAteVF = Date.now() + 1500; // janela: o soltar e o clique chegam bem antes disso
-  }
+  const campo = document.activeElement;
+  if(!campo || (campo.tagName !== 'TEXTAREA' && campo.tagName !== 'INPUT')) return;
+  if(!(navigator.maxTouchPoints > 0)) return; // Mac com teclado físico: não precisa
+  if(campo.parentNode && campo.parentNode.querySelector('.vf-btn-teclado')) return;
+  const linha = document.createElement('div');
+  linha.className = 'vf-btn-teclado';
+  linha.style.cssText = 'display:flex;justify-content:flex-end;margin-top:10px';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.innerHTML = VF_ICONE_TECLADO_VF + '<span>Teclado</span>';
+  btn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #B23A34;border-radius:999px;background:#fff;color:#B23A34;font-family:inherit;font-size:var(--fs-b);font-weight:600;cursor:pointer;-webkit-user-select:none;user-select:none';
+  const subir = (e) => {
+    if(e) e.preventDefault(); // não tira o foco do campo (senão o blur salva e fecha)
+    if(!document.body.contains(campo)) return;
+    vfReforcandoTecladoVF = true;
+    try{
+      const ini = campo.selectionStart, fim = campo.selectionEnd;
+      campo.blur();
+      campo.focus({preventScroll: true});
+      if(typeof ini === 'number' && typeof campo.setSelectionRange === 'function') campo.setSelectionRange(ini, fim);
+    }catch(err){}
+    vfReforcandoTecladoVF = false;
+    if(document.activeElement !== campo){ try{ campo.focus({preventScroll: true}); }catch(err){} }
+  };
+  btn.addEventListener('touchstart', subir, {passive: false});
+  btn.addEventListener('mousedown', subir);
+  btn.addEventListener('click', (e) => e.preventDefault());
+  linha.appendChild(btn);
+  campo.insertAdjacentElement('afterend', linha);
 }
-function vfReforcarTecladoVF(){
-  const campo = vfCampoAguardandoTecladoVF;
-  if(!campo) return;
-  if(Date.now() > vfCampoAguardandoTecladoAteVF || !document.body.contains(campo)){ vfCampoAguardandoTecladoVF = null; return; }
-  vfReforcandoTecladoVF = true;
-  try{
-    const ini = campo.selectionStart, fim = campo.selectionEnd;
-    campo.blur();
-    campo.focus({preventScroll: true});
-    if(typeof ini === 'number' && typeof campo.setSelectionRange === 'function') campo.setSelectionRange(ini, fim);
-  }catch(e){}
-  vfReforcandoTecladoVF = false;
-  if(document.activeElement !== campo){ try{ campo.focus({preventScroll: true}); }catch(e){} }
-}
-document.addEventListener('touchend', vfReforcarTecladoVF, {capture: true, passive: true});
-document.addEventListener('mouseup', vfReforcarTecladoVF, {capture: true});
-document.addEventListener('click', () => { vfReforcarTecladoVF(); vfCampoAguardandoTecladoVF = null; }, {capture: true});
-document.addEventListener('touchcancel', () => { vfCampoAguardandoTecladoVF = null; }, {capture: true});
 
 let vfMoveuDuranteToqueEnunciado = false;
 let vfPosicaoInicialPressionarEnunciadoVF = null;
