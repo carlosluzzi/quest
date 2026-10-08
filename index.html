@@ -3108,7 +3108,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-07-270';
+const VERSAO_APP = '2026-10-08-273';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -17039,6 +17039,13 @@ const VF_DURACAO_PRESSIONAR_ENUNCIADO_MS = 500;
 // blur+focus DENTRO do gesto - é o que o iOS exige pra mostrar o teclado
 let vfCampoAguardandoTecladoVF = null;
 let vfCampoAguardandoTecladoAteVF = 0;
+// (08/10) BUG REAL do v2: o blur() de reforço disparava o 'blur' da própria
+// caixa de edição - que é "salvar e fechar". Resultado: segurava, a caixa
+// abria e fechava sozinha. Enquanto o reforço está rodando, o blur é
+// engolido em fase de captura no document (antes de chegar na caixa)
+let vfReforcandoTecladoVF = false;
+document.addEventListener('blur', (e) => { if(vfReforcandoTecladoVF) e.stopImmediatePropagation(); }, true);
+document.addEventListener('focusout', (e) => { if(vfReforcandoTecladoVF) e.stopImmediatePropagation(); }, true);
 function vfArmarEdicaoAoSoltarVF(fn){
   try{ fn(); }catch(err){ console.error('edição ao segurar:', err); return; }
   const ativo = document.activeElement;
@@ -17051,12 +17058,15 @@ function vfReforcarTecladoVF(){
   const campo = vfCampoAguardandoTecladoVF;
   if(!campo) return;
   if(Date.now() > vfCampoAguardandoTecladoAteVF || !document.body.contains(campo)){ vfCampoAguardandoTecladoVF = null; return; }
+  vfReforcandoTecladoVF = true;
   try{
     const ini = campo.selectionStart, fim = campo.selectionEnd;
     campo.blur();
     campo.focus({preventScroll: true});
     if(typeof ini === 'number' && typeof campo.setSelectionRange === 'function') campo.setSelectionRange(ini, fim);
   }catch(e){}
+  vfReforcandoTecladoVF = false;
+  if(document.activeElement !== campo){ try{ campo.focus({preventScroll: true}); }catch(e){} }
 }
 document.addEventListener('touchend', vfReforcarTecladoVF, {capture: true, passive: true});
 document.addEventListener('mouseup', vfReforcarTecladoVF, {capture: true});
@@ -26314,8 +26324,13 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Arte Naval", autorBusca:["hensen", "estabilidade", "rebocadores"], autor:"HENSEN, H.; VAN DER LAAN, M.", titulo:"Estabilidade dos Rebocadores", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["1428"], autor:"IMO", titulo:"Required Pilot Transfer Arrangements (MSC.1/Circ.1428)", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["circ.1428"], autor:"IMO", titulo:"Required Pilot Transfer Arrangements (MSC.1/Circ.1428)", capitulos:null},
-  {modulo:"Arte Naval", autorBusca:["1495"], autor:"IMO", titulo:"SOLAS 1974 (as amended), Regra V/23.3.3", capitulos:null},
-  {modulo:"Arte Naval", autorBusca:["circ.1495"], autor:"IMO", titulo:"SOLAS 1974 (as amended), Regra V/23.3.3", capitulos:null},
+  // os dois termos de 1495 apontavam pro título da SOLAS, não pro da
+  // própria circular - 18 afirmações da Circ.1495 entraram na publicação
+  // errada por causa disso (corrigido em 07/10/2026). O título aqui tem
+  // que ser IDÊNTICO ao de bibliografia.titulo, senão a busca por
+  // modulo+titulo não acha a linha e a questão cai em rascunho
+  {modulo:"Arte Naval", autorBusca:["1495"], autor:"IMO", titulo:"Unified Interpretation of SOLAS Regulation V/23.3.3 on Pilot Transfer Arrangements (MSC.1/Circ.1495/Rev.1)", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["circ.1495"], autor:"IMO", titulo:"Unified Interpretation of SOLAS Regulation V/23.3.3 on Pilot Transfer Arrangements (MSC.1/Circ.1495/Rev.1)", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["1045"], autor:"IMO", titulo:"Pilot Transfer Arrangements (Resolution A.1045(27))", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["1108"], autor:"IMO", titulo:"Amendments to the Recommendation on Pilot Transfer Arrangements (Resolution A.1108(29))", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["solas", "1974"], autor:"IMO", titulo:"SOLAS 1974 (as amended), Regra V/23.3.3", capitulos:null},
@@ -26323,8 +26338,8 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Arte Naval", autorBusca:["shfm"], autor:"MacELREVEY, D. H.", titulo:"Shiphandling for the Mariner", capitulos:null},
   {modulo:"Arte Naval", autorBusca:["nayak", "pilotage"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 3, 4, 13-19)", capitulos:[3, 4, 13, 14, 15, 16, 17, 18, 19]},
   {modulo:"Arte Naval", autorBusca:["tpmp"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 3, 4, 13-19)", capitulos:[3, 4, 13, 14, 15, 16, 17, 18, 19]},
-  {modulo:"Arte Naval", autorBusca:["pianc 235"], autor:"PIANC", titulo:"Ship Dimensions and Data for Design of Marine Infrastructure (Report Nº 235)", capitulos:null},
-  {modulo:"Arte Naval", autorBusca:["pianc", "ship dimensions"], autor:"PIANC", titulo:"Ship Dimensions and Data for Design of Marine Infrastructure (Report Nº 235)", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["pianc 235"], autor:"PIANC", titulo:"Ship Dimensions and Data for Design of Marine Infrastructure", capitulos:null},
+  {modulo:"Arte Naval", autorBusca:["pianc", "ship dimensions"], autor:"PIANC", titulo:"Ship Dimensions and Data for Design of Marine Infrastructure", capitulos:null},
   {modulo:"Comunicações", autorBusca:["radioperador"], autor:"DIRETORIA DE PORTOS E COSTAS", titulo:"Manual do Curso Especial de Radioperador Geral", capitulos:null},
   {modulo:"Comunicações", autorBusca:["erog"], autor:"DIRETORIA DE PORTOS E COSTAS", titulo:"Manual do Curso Especial de Radioperador Geral", capitulos:null},
   {modulo:"Comunicações", autorBusca:["international code of signals"], autor:"IMO", titulo:"International Code of Signals", capitulos:null},
@@ -26363,7 +26378,14 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Legislação", autorBusca:["960", "certification for maritime pilots"], autor:"IMO", titulo:"Recommendations on Training and Certification for Maritime Pilots (Resolution A.960(23))", capitulos:null},
   {modulo:"Legislação", autorBusca:["normam-601"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-601/DHN", capitulos:null},
   {modulo:"Legislação", autorBusca:["normam-311"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-311/DPC", capitulos:null},
-  {modulo:"Legislação", autorBusca:["busca e salvamento", "sar"], autor:"MARINHA DO BRASIL", titulo:"Serviço de Busca e Salvamento Marítimo (SAR) no Brasil", capitulos:null},
+  // uma entrada por termo (e não os dois termos juntos numa entrada só):
+  // autorBusca exige que TODOS os termos da entrada apareçam no texto, e
+  // um cabeçalho real traz "SALVAMAR" OU "busca e salvamento" OU "SAR",
+  // quase nunca os três. Entradas repetidas do mesmo título não geram
+  // ambiguidade: a dedup é por módulo+título
+  {modulo:"Comunicações", autorBusca:["busca e salvamento"], autor:"MARINHA DO BRASIL", titulo:"SALVAMAR Brasil – Sistema de Busca e Salvamento Marítimo", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["salvamar"], autor:"MARINHA DO BRASIL", titulo:"SALVAMAR Brasil – Sistema de Busca e Salvamento Marítimo", capitulos:null},
+  {modulo:"Comunicações", autorBusca:["sar"], autor:"MARINHA DO BRASIL", titulo:"SALVAMAR Brasil – Sistema de Busca e Salvamento Marítimo", capitulos:null},
   {modulo:"Legislação", autorBusca:["normam-602"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-602/DHN", capitulos:null},
   {modulo:"Legislação", autorBusca:["normam-112"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-112/DPC", capitulos:null},
   {modulo:"Legislação", autorBusca:["portaria", "37/mb"], autor:"MARINHA DO BRASIL", titulo:"Portaria nº 37/MB/2022 – Estrutura da Autoridade Marítima", capitulos:null},
@@ -26427,8 +26449,8 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Navegação em Águas Restritas", autorBusca:["normam-202"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-202/DPC", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["miguens"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte (v.1 e v.3, exceto cap. 45)", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["ciência e a arte"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte (v.1 e v.3, exceto cap. 45)", capitulos:null},
-  {modulo:"Navegação em Águas Restritas", autorBusca:["nayak", "pilotage"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6, 13)", capitulos:[5, 6, 13]},
-  {modulo:"Navegação em Águas Restritas", autorBusca:["tpmp"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6, 13)", capitulos:[5, 6, 13]},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["nayak", "pilotage"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6)", capitulos:[5, 6, 13]},
+  {modulo:"Navegação em Águas Restritas", autorBusca:["tpmp"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6)", capitulos:[5, 6, 13]},
   {modulo:"Navegação em Águas Restritas", autorBusca:["swift", "bailey"], autor:"SWIFT, A. J.; BAILEY, T. J.", titulo:"Bridge Team Management: a Practical Guide", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["btm"], autor:"SWIFT, A. J.; BAILEY, T. J.", titulo:"Bridge Team Management: a Practical Guide", capitulos:null},
 ];
@@ -27749,9 +27771,18 @@ function parsearArquivoVF(textoCompleto){
   // passagem e isso não é o capítulo dela. O valor gravado carrega o
   // rótulo ("Appendix E") e quem exibe usa vfEtiquetaCapituloVF
   const RE_ANEXO_ARQUIVO_VF = /\b(Anexos?|Annexe?s?|Ap[êe]ndices?|Appendix|Appendices)\s*n?º?\s*([A-Za-z]\d?|\d{1,2})\b/i;
+  // publicações cujo rótulo é "Section" (as três do PNA) têm cabeçalho
+  // "Section 3", que o regex de capítulo não reconhecia - as 131
+  // afirmações de PNA Resistance entraram com capítulo vazio e ficaram
+  // fora de toda contagem por capítulo (corrigido em 07/10/2026).
+  // Também só no cabeçalho: no corpo do texto "Seção 2.3" é citação
+  // interna da própria seção, não o capítulo da questão - essa leitura
+  // continua sendo feita só por extrairCapituloDoTexto, como antes
+  const RE_SECAO_ARQUIVO_VF = /\b(?:Se[çc][õo]es?|Se[çc][ãa]o|Sections?|Sec\.)\s*n?º?\s*(\d{1,2})\b/i;
   const linhaCabecalhoVF = (texto.match(/PSCPP\s*[–-]\s*VERDADEIRO OU FALSO[^\r\n]*/i) || [''])[0];
   const capituloMatch = linhaCabecalhoVF.match(RE_CAPITULO_ARQUIVO_VF)
     || linhaCabecalhoVF.match(RE_TITULO_ARQUIVO_VF)
+    || linhaCabecalhoVF.match(RE_SECAO_ARQUIVO_VF)
     || texto.match(RE_CAPITULO_ARQUIVO_VF);
   let capituloDoArquivo = capituloMatch ? capituloMatch[1].replace(/[.,;:]$/, '') : null;
   // romano em minúscula ("título ii", "cap. iv") vira maiúscula - senão
