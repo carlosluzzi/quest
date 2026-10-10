@@ -3108,7 +3108,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-08-278';
+const VERSAO_APP = '2026-10-10-279';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7103,14 +7103,40 @@ function vfProcessarColunasNotaVF(texto){
   const linhas = texto.split('\n');
   const saida = [];
   let grade = null;
+  // "- " no comeco da primeira celula continua valendo como marcador de
+  // lista. Sem isso o bullet morria toda vez que a linha ganhava um \tab:
+  // a grade ja sai pronta como bloco HTML, e o passo das listas (que roda
+  // depois) nao ve mais o "-" no comeco da linha - ele vira hifen solto
+  // dentro da celula. O bullet entra DENTRO da primeira celula, nao como
+  // coluna nova, pra nao mexer no alinhamento das colunas seguintes;
+  // linha sem marcador numa grade que tem bullet ganha um bullet
+  // invisivel, so pro texto da primeira coluna alinhar com o das outras
+  const RE_BULLET_COLUNA_VF = /^(?:[*\-•]|--)[ \t]+([\s\S]+)$/;
   const fechar = () => {
     if(!grade) return;
-    const n = Math.min(VF_COLUNAS_MAX_NOTA_VF, Math.max(2, ...grade.map(l => l.length)));
+    const marcadores = grade.map(l => RE_BULLET_COLUNA_VF.exec(l[0] || ''));
+    const temBullet = marcadores.some(Boolean);
+    const corpo = grade.map((l, i) => {
+      const c = l.slice();
+      if(marcadores[i]) c[0] = marcadores[i][1];
+      return c;
+    });
+    const n = Math.min(VF_COLUNAS_MAX_NOTA_VF, Math.max(2, ...corpo.map(l => l.length)));
     const modelo = n > 1 ? `repeat(${n - 1},max-content) auto` : 'auto';
-    const celulas = grade.map(linha => {
+    const celulas = corpo.map((linha, i) => {
       const c = linha.slice(0, n);
       while(c.length < n) c.push('');
-      return c.map(t => `<span style="min-width:0;overflow-wrap:break-word">${t}</span>`).join('');
+      return c.map((t, col) => {
+        if(col === 0 && temBullet){
+          // largura fixa nos dois casos (com e sem marcador) alinha o
+          // texto por construcao, e a celula vazia nao leva nenhum
+          // caractere - um "•" escondido por visibility ainda entraria no
+          // texto copiado ao tocar na nota
+          const marca = marcadores[i] ? '•' : '';
+          return `<span style="min-width:0;overflow-wrap:break-word;display:flex;gap:5px"><span style="flex-shrink:0;width:0.6em">${marca}</span><span style="min-width:0">${t}</span></span>`;
+        }
+        return `<span style="min-width:0;overflow-wrap:break-word">${t}</span>`;
+      }).join('');
     }).join('');
     saida.push(`<div class="vf-colunas-nota" style="display:grid;grid-template-columns:${modelo};column-gap:1.6em;margin:2px 0">${celulas}</div><!--COLFIM-->`);
     grade = null;
