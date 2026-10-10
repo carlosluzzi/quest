@@ -3108,7 +3108,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-10-279';
+const VERSAO_APP = '2026-10-10-283';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5812,6 +5812,68 @@ const vfSvgOrigemVF = new Map();
 // redimensionador não tenta salvar nada, por segurança). Reaproveitado
 // também pelas tabelas, mesmo contexto genérico de renderização
 let vfContextoRenderizacaoSvgVF = null;
+// ---- SVG no tema escuro -------------------------------------------
+// O desenho chega com tinta escura e cinzas; no tema escuro eles somem no
+// fundo (foi o caso real do diagrama de forcas no casco: so o laranja, o
+// azul e o vermelho sobreviviam). Inverter o SVG inteiro - que e o que o
+// canvas de caneta faz - aqui estragaria justamente essas cores, que ja
+// estao boas. Entao a regra e: so cor ACROMATICA muda. Qualquer cor com
+// saturacao de verdade passa intacta.
+// Nao e uma lista de tons: a decisao e por LUMINANCIA, entao pega
+// #000, #1a1a1a, #222, #333, "black", rgb(20,20,20) e qualquer outro
+// preto/cinza que aparecer, em 4 faixas (tinta, cinza medio, cinza claro,
+// branco).
+// E nao reescreve o markup: sai como regra CSS do tema casando o valor
+// literal do atributo (ex: [fill="#1a1a1a"]). Com isso o tema claro fica
+// exatamente como era, e alternar o tema repinta na hora - sem
+// reprocessar o texto da questao e sem tocar no que esta salvo no banco.
+const VF_CORES_NOMEADAS_SVG_VF = {black:'#000000', white:'#ffffff', gray:'#808080', grey:'#808080', silver:'#c0c0c0', dimgray:'#696969', dimgrey:'#696969', darkgray:'#a9a9a9', darkgrey:'#a9a9a9', lightgray:'#d3d3d3', lightgrey:'#d3d3d3', gainsboro:'#dcdcdc', whitesmoke:'#f5f5f5', snow:'#fffafa', ivory:'#fffff0'};
+const VF_PROPS_COR_SVG_VF = ['fill', 'stroke', 'stop-color', 'color', 'flood-color', 'lighting-color'];
+function vfRgbDaCorSvgVF(valor){
+  const v = String(valor == null ? '' : valor).trim().toLowerCase();
+  if(!v || v === 'none' || v === 'transparent' || v === 'currentcolor' || v === 'inherit' || v.indexOf('url(') === 0 || v.indexOf('var(') === 0) return null;
+  const alvo = VF_CORES_NOMEADAS_SVG_VF[v] || v;
+  let m = alvo.match(/^#([0-9a-f]{3})$/);
+  if(m) return [0, 1, 2].map(i => parseInt(m[1][i] + m[1][i], 16));
+  m = alvo.match(/^#([0-9a-f]{6})$/);
+  if(m) return [0, 2, 4].map(i => parseInt(m[1].substr(i, 2), 16));
+  m = alvo.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/);
+  if(m) return [1, 2, 3].map(i => Math.round(parseFloat(m[i])));
+  return null;
+}
+// margem de 18/255 na diferenca entre o canal maior e o menor: deixa
+// passar o cinza levemente "quente" que alguns geradores emitem, sem
+// capturar cor de verdade (o laranja do casco tem diferenca de ~190)
+function vfCorSvgNoEscuroVF(valor){
+  const rgb = vfRgbDaCorSvgVF(valor);
+  if(!rgb) return null;
+  const [r, g, b] = rgb;
+  if(Math.max(r, g, b) - Math.min(r, g, b) > 18) return null; // tem cor: nao mexe
+  const luz = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  if(luz < 0.35) return '#E4E0D8'; // tinta principal - mesmo tom do texto do app no escuro
+  if(luz < 0.62) return '#A9A79F'; // cinza de anotacao secundaria
+  if(luz < 0.88) return '#4A4944'; // cinza claro (grade, guia) continua discreto, agora por baixo
+  return '#0F0F0E';                // branco (fundo, halo atras de texto) vira o fundo do cartao
+}
+// elemento SEM fill declarado renderiza preto por padrao - no escuro isso
+// tambem some, e nao tem atributo pra casar. Rede de seguranca por tag
+function vfCssSvgEscuroVF(svg, idEscopo){
+  const regras = [];
+  const vistos = new Set();
+  svg.replace(/\b(fill|stroke|stop-color|color|flood-color|lighting-color)\s*=\s*["']([^"']*)["']/gi, (m, prop, valor) => {
+    const p = prop.toLowerCase();
+    const chave = p + '|' + valor;
+    if(vistos.has(chave)) return m;
+    vistos.add(chave);
+    const nova = vfCorSvgNoEscuroVF(valor);
+    if(nova) regras.push(`html[data-tema="escuro"] #${idEscopo} [${p}="${valor}"]{${p}:${nova} !important}`);
+    return m;
+  });
+  const semFill = ['path', 'polygon', 'rect', 'circle', 'ellipse', 'text', 'tspan']
+    .map(t => `html[data-tema="escuro"] #${idEscopo} ${t}:not([fill]):not([style*="fill"])`).join(',');
+  regras.push(`${semFill}{fill:#E4E0D8}`);
+  return regras.join('');
+}
 function vfProcessarSvgBrutoVF(texto){
   let resultado = '';
   let pos = 0;
@@ -5886,6 +5948,15 @@ function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo, larguraPx, alinhame
   const cssEscopado = css.replace(/([^{}]+)\{/g, (m, seletor) => {
     return seletor.split(',').map(s => `#${idEscopo} ${s.trim()}`).join(', ') + '{';
   });
+  // mesma troca de cor acromatica para o <style> que o proprio SVG traz:
+  // gera uma copia das regras com a cor do escuro, prefixada pelo tema
+  const cssTrocado = cssEscopado.replace(/\b(fill|stroke|stop-color|color|flood-color|lighting-color)\s*:\s*([^;}!]+)/gi, (m, prop, valor) => {
+    const nova = vfCorSvgNoEscuroVF(valor);
+    return nova ? `${prop}:${nova}` : m;
+  });
+  const cssEscuroDoSvg = cssTrocado === cssEscopado ? '' : cssTrocado.replace(/([^{}]+)\{/g, (m, seletor) =>
+    seletor.split(',').map(s => `html[data-tema="escuro"] ${s.trim()}`).join(', ') + '{');
+  const cssEscuro = vfCssSvgEscuroVF(svgSemStyle, idEscopo) + cssEscuroDoSvg;
   // largura máxima sempre igual à largura disponível na tela (nunca
   // estoura), mantendo a proporção original via height:auto - aplicado
   // sempre, independente do SVG já ter seu próprio <style> ou não.
@@ -5903,7 +5974,7 @@ function vfMontarBlocoSvgEscopadoVF(conteudoBruto, idEscopo, larguraPx, alinhame
   const margemAlinhamento = alinhamento === 'centro' ? 'margin-left:auto;margin-right:auto;'
     : alinhamento === 'direita' ? 'margin-left:auto;margin-right:0;'
     : '';
-  return `<div id="${idEscopo}" class="vf-svg-bloco" data-alinhamento-svg="${alinhamento || 'esquerda'}" style="margin:16px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}"><style>${cssBase}${cssEscopado}</style>${svgSemStyle}</div>`;
+  return `<div id="${idEscopo}" class="vf-svg-bloco" data-alinhamento-svg="${alinhamento || 'esquerda'}" style="margin:16px 0;position:relative;width:fit-content;max-width:100%;${margemAlinhamento}"><style>${cssBase}${cssEscopado}${cssEscuro}</style>${svgSemStyle}</div>`;
 }
 
 // \arvore{...} - árvore de chaves (pedido do Carlos, 21/09/2026).
@@ -7161,9 +7232,10 @@ function vfProcessarListasNotaVF(texto, aceitarNumeracao){
   // ao encontrar linha comum, e no fim do texto
   const fechar = () => {
     if(!itens) return;
-    blocos.push(tipoAtual === 'numerada'
-      ? `<ul style="margin:6px 0;padding-left:2px;list-style:none">${itens.join('')}</ul>`
-      : `<ul style="margin:6px 0;padding-left:22px">${itens.join('')}</ul>`);
+    // os dois tipos usam marcador proprio (list-style:none): o disco
+    // nativo do <ul> e visivelmente maior que o "•" que a grade de \tab
+    // desenha, e as duas coisas aparecem lado a lado na mesma nota
+    blocos.push(`<ul style="margin:6px 0;padding-left:2px;list-style:none">${itens.join('')}</ul>`);
     itens = null; tipoAtual = null;
   };
   for(const linhaBruta of linhas){
@@ -7184,7 +7256,10 @@ function vfProcessarListasNotaVF(texto, aceitarNumeracao){
       if(tipoAtual !== 'simples') fechar();
       tipoAtual = 'simples';
       itens = itens || [];
-      itens.push(`<li style="${estiloRecuo}">${simples[1]}</li>`);
+      // mesmo desenho da grade de colunas (largura 0.6em, gap 5px) e da
+      // lista numerada: marcador fora, texto que quebra alinha embaixo do
+      // TEXTO, nao embaixo da bolinha
+      itens.push(`<li style="display:flex;gap:5px;margin:2px 0;${estiloRecuo}"><span style="flex-shrink:0;width:0.6em">•</span><span style="min-width:0">${simples[1]}</span></li>`);
     }else if(numerada){
       if(tipoAtual !== 'numerada') fechar();
       tipoAtual = 'numerada';
@@ -14348,6 +14423,7 @@ function vfSincronizarSessaoComBancoVF(){
     vfSessaoResolvendoConflitoVF = true;
     try{
       const remota = await vfBuscarSessaoAbertaNoBancoVF();
+      if(remota === undefined) return; // (10/10) sem rede agora - mantém a sessão, tenta na próxima escrita
       if(!vfSessaoAtivaVF || vfSessaoAtivaVF.id !== sess.id) return;
       if(!remota || remota.id !== sess.id){ vfSessaoEncerradaRemotamenteVF(); return; }
       vfMesclarSessaoRemotaVF(remota);
@@ -14402,7 +14478,12 @@ async function vfBuscarSessaoAbertaNoBancoVF(){
     .select('id, iniciado_em, pausado, tempo_acumulado_ms, ultimo_resume_em, atualizado_em, dispositivo_ativo_id, dispositivo_ativo')
     .eq('usuario_id', usuarioAtual.id).is('finalizado_em', null)
     .order('iniciado_em', {ascending: false}).limit(1).maybeSingle();
-  if(error){ console.warn('sessão aberta: erro ao buscar', error.message); return null; }
+  // (10/10) ACHADO REAL: erro de rede aqui voltava null, e null significa
+  // "não existe sessão aberta" - os chamadores concluíam que outro
+  // aparelho tinha finalizado e APAGAVAM a sessão local (balão sumia,
+  // "Iniciar" voltava), com a linha intacta no banco, rodando. Erro agora
+  // volta undefined ("não sei"), e quem chama mantém o que tem
+  if(error){ console.warn('sessão aberta: erro ao buscar', error.message); return undefined; }
   return data ? vfSessaoDaLinhaVF(data) : null;
 }
 // aplica uma mudança vinda de OUTRO aparelho (realtime ou releitura ao
@@ -14541,6 +14622,7 @@ async function vfIniciarSessaoFlashVF(){
   // se outro aparelho já tem uma sessão aberta, continua ELA em vez de
   // abrir uma segunda - é a mesma pessoa estudando
   const aberta = await vfBuscarSessaoAbertaNoBancoVF();
+  if(aberta === undefined){ alert('Sem conexão com o banco agora. Tenta iniciar de novo em alguns segundos.'); return; }
   if(aberta){
     vfSessaoAtivaVF = aberta; vfSessaoAtivaVF.recarregada = true;
     if(vfSessaoAtivaVF.pausado){ vfSessaoAtivaVF.pausado = false; vfSessaoAtivaVF.ultimoResumeEm = Date.now(); }
@@ -15372,7 +15454,13 @@ async function vfRestaurarSessaoFlashVF(){
   // fonte da verdade: a linha aberta no banco (compartilhada entre
   // aparelhos). O localStorage só entra se o banco não tiver nada
   let salva = await vfBuscarSessaoAbertaNoBancoVF();
-  if(salva){
+  if(salva === undefined){
+    // (10/10) banco inacessível agora: NÃO apaga o espelho local (antes
+    // caía no ramo "o banco já fechou" e descartava). Segue com a cópia
+    // do aparelho, como "pausada", e o banco é relido na próxima volta
+    salva = vfCarregarSessaoDoStorageVF();
+    if(salva && !salva.pausado && salva.id){ salva.pausado = true; }
+  }else if(salva){
     // sessão aberta sem nenhuma resposta e parada há mais de 10 min: some
     // sozinha, sem overlay "Retomar/Finalizar" - foi um "abri pra olhar"
     const ultimaResp = await vfInstanteUltimaRespostaVF(salva.iniciadoEm);
@@ -15503,6 +15591,7 @@ async function vfVoltarDoSegundoPlanoSessaoVF(escondidoEm){
   if(vfSessaoAtivaVF && vfSessaoAtivaVF.id){
     const remota = await vfBuscarSessaoAbertaNoBancoVF();
     if(!vfSessaoAtivaVF) return;
+    if(remota === undefined) return; // (10/10) sem rede ao voltar do segundo plano (comum no iPad) - não é "encerrada", é "não sei"; segue com a cópia local
     if(!remota || remota.id !== vfSessaoAtivaVF.id){ vfSessaoEncerradaRemotamenteVF(); return; }
     if(remota.atualizadoEm && (!vfSessaoAtivaVF.atualizadoEm || remota.atualizadoEm > vfSessaoAtivaVF.atualizadoEm)) vfAplicarSessaoRemotaVF(remota);
   }
@@ -15734,6 +15823,23 @@ async function vfCarregarPoolInicialVF(){
   // a sessão ainda ativa/pausada, só porque estadoVF vive em memória
   const restaurado = await vfReconstruirHistoricoDaSessaoVF();
   if(restaurado) Object.assign(estadoVF, restaurado);
+  // (10/10) rede de segurança pros CONTADORES da sessão restaurada: se a
+  // reconstrução do histórico falhou ou veio curta (achado real: sessão de
+  // 27 respostas voltando com "8" no contador - o Finalizar já contava
+  // certo pelo banco, mas a tela mentia a sessão inteira), conta direto no
+  // log do banco desde o início da sessão. Só sobe, nunca desce
+  if(vfSessaoAtivaVF && vfSessaoAtivaVF.recarregada && vfSessaoAtivaVF.iniciadoEm && usuarioAtual){
+    try{
+      const {data: logs} = await sb.from('log_respostas_vf').select('acertou')
+        .eq('usuario_id', usuarioAtual.id).gte('respondida_em', new Date(vfSessaoAtivaVF.iniciadoEm).toISOString());
+      if(logs && logs.length > (estadoVF.respondidasSessao || 0)){
+        estadoVF.respondidasSessao = logs.length;
+        estadoVF.acertosSessao = logs.filter(l => l.acertou).length;
+        vfSessaoAtivaVF.respondidasSessao = estadoVF.respondidasSessao;
+        vfSessaoAtivaVF.acertosSessao = estadoVF.acertosSessao;
+      }
+    }catch(e){}
+  }
   // userRow/now_ms/total geral agora entram NO MESMO Promise.all da busca
   // do pool (dentro de carregarPoolVF) - antes eram uma rodada sequencial
   // separada, pagando uma viagem de rede inteira a mais só na entrada
