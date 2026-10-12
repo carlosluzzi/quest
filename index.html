@@ -3108,7 +3108,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-10-283';
+const VERSAO_APP = '2026-10-12-285';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9266,6 +9266,14 @@ document.addEventListener('touchstart', (e) => {
   if(e.target.closest('input[type="search"], input[type="text"], input[type="email"], input[type="number"], input[type="password"], input:not([type])')) return; // mesmo motivo da textarea logo abaixo: escrever com a CANETA num campo de texto (busca da Biblioteca, glossário...) precisa do toque limpo. Sem isso o toque da caneta virava início de traço, competia com o cursor/Scribble e a escrita ficava tremida
   if(e.target.closest('textarea')) return; // nunca vira início de traço - dentro de qualquer textarea (edição de explicação/enunciado/correção), o toque (caneta ou dedo) precisa ficar livre pro comportamento nativo de seleção/cursor, sem competir com o sistema de desenho
   if(e.target.closest('select')) return; // qualquer <select> nativo (filtros do Flash, e futuros) - nunca vira início de traço, o dropdown nativo do Safari precisa do toque limpo
+  // caixa de texto da folha de rascunho: o corpo é contenteditable (mesmo
+  // motivo da textarea logo acima - cursor e Scribble precisam do toque
+  // limpo) e os dois controles, o ✕ e a alça de tamanho, têm arrasto
+  // próprio. Puxar a alça COM A CANETA estava fazendo as duas coisas
+  // erradas ao mesmo tempo: riscava a folha por baixo e ainda deixava o
+  // Scribble escrever letras soltas dentro da caixa (relato do Carlos:
+  // "aquele WJ no começo não fui eu que escrevi")
+  if(e.target.closest('.rascunho-texto-box')) return;
   // Favoritar já tem sistema PRÓPRIO completo (toque curto=clique, toque
   // longo=abrir lista, ver vfIniciarPressionarFavoritar) - achado real: o
   // sistema genérico abaixo (só ativo pra caneta) competia com esse
@@ -13690,6 +13698,15 @@ let questoesComElementoVF = new Set();
 // questão - preenchido pela pré-busca, consumido de forma síncrona ao
 // responder. Invalidado em qualquer mudança nos elementos dessa questão
 let vfElementosCacheVF = new Map();
+// Toda invalidação desse cache avança a geração. As duas buscas abaixo
+// (lote e individual) guardam a geração ANTES de ir no banco e conferem
+// depois: se mudou no meio do caminho, o que voltou já nasceu velho e
+// não pode virar cache. Sem isso existia uma corrida real: realinhar ou
+// redimensionar um desenho salva no banco e invalida o cache, mas uma
+// pré-busca disparada ANTES disso respondia DEPOIS e gravava de volta o
+// latex_fonte antigo - a figura voltava desalinhada ao reabrir a
+// questão, de forma intermitente (dependia do tempo da pré-busca)
+let vfGeracaoCacheElementosVF = 0;
 
 // busca todas as questões do pool atual (respeitando filtro), já com o
 // estado de repetição de cada uma (ou 'nova' implícito se nunca respondida)
@@ -21556,6 +21573,7 @@ async function vfToggleAnexarElementoVF(elementoHtmlId, botao){
   vfAtualizarBotaoFixarBibliotecaVF(botao, vfLigacoesAnexadasVF.has(elementoHtmlId));
   // invalida o cache dessa questão - o conjunto de elementos anexados
   // mudou, a próxima montagem precisa vir com dado novo
+  vfGeracaoCacheElementosVF++;
   vfElementosCacheVF.delete(vfQuestaoIdComplementarAtualVF);
   if(vfLigacoesAnexadasVF.size) questoesComElementoVF.add(vfQuestaoIdComplementarAtualVF);
   else questoesComElementoVF.delete(vfQuestaoIdComplementarAtualVF); // desanexou o último - a questão não tem mais nada anexado
@@ -21797,8 +21815,10 @@ function vfMontarQueryElementosAnexadosVF(){
 async function vfBuscarElementosEmLoteVF(questaoIds){
   const pendentes = questaoIds.filter(id => questoesComElementoVF.has(id) && !vfElementosCacheVF.has(id));
   if(!pendentes.length) return;
+  const geracao = vfGeracaoCacheElementosVF;
   const {data, error} = await buscarTudoPaginadoVF(() => vfMontarQueryElementosAnexadosVF().in('questao_vf_id', pendentes).order('criado_em').order('id'));
   if(error) return;
+  if(geracao !== vfGeracaoCacheElementosVF) return; // alguém mexeu num elemento enquanto isso: esse resultado é velho, não cacheia
   pendentes.forEach(id => vfElementosCacheVF.set(id, [])); // marca como "já buscou" mesmo se não achar nada, evita rebuscar
   (data || []).forEach(l => {
     if(!vfElementosCacheVF.get(l.questao_vf_id)) vfElementosCacheVF.set(l.questao_vf_id, []);
@@ -21807,14 +21827,18 @@ async function vfBuscarElementosEmLoteVF(questaoIds){
 }
 // se está no cache (pré-buscado), monta na hora, síncrono - senão busca
 // com a query de join aninhado (uma ida só) e monta
-async function vfCarregarElementosAnexadosVF(questaoVfId){
+async function vfCarregarElementosAnexadosVF(questaoVfId, jaRefez){
   const container = document.getElementById('vf-elementos-html-anexados');
   if(!container) return;
   if(vfElementosCacheVF.has(questaoVfId)){
     vfMontarElementosAnexadosVF(container, questaoVfId, vfElementosCacheVF.get(questaoVfId));
     return;
   }
+  const geracao = vfGeracaoCacheElementosVF;
   const {data} = await buscarTudoPaginadoVF(() => vfMontarQueryElementosAnexadosVF().eq('questao_vf_id', questaoVfId).order('criado_em').order('id'));
+  // mudou no meio do caminho: busca de novo (uma vez só) em vez de
+  // montar e cachear um dado que já nasceu velho
+  if(geracao !== vfGeracaoCacheElementosVF && !jaRefez) return vfCarregarElementosAnexadosVF(questaoVfId, true);
   vfElementosCacheVF.set(questaoVfId, data || []);
   vfMontarElementosAnexadosVF(container, questaoVfId, data);
 }
@@ -22009,6 +22033,7 @@ function vfAbrirModalAnotacaoVF(elementoHtmlId, identificador, textoAtual, celul
 // anotação dele invalida o cache de TODAS as questões que o têm anexado,
 // não só a questão atual sendo vista no momento
 function vfInvalidarCacheElementosPorElementoIdVF(elementoHtmlId){
+  vfGeracaoCacheElementosVF++;
   for(const [questaoId, ligacoes] of vfElementosCacheVF){
     if((ligacoes||[]).some(l => l.elemento_html_id === elementoHtmlId)) vfElementosCacheVF.delete(questaoId);
   }
@@ -22059,6 +22084,7 @@ async function vfDesanexarElementoVF(ligacaoId, questaoVfId){
   vfAbrirConfirmacaoGenericaVF('Desanexar elemento', 'Desanexar esse elemento dessa questão? Ele continua salvo na sua biblioteca.', async () => {
     const {error} = await sb.from('questao_elemento_html_vf').delete().eq('id', ligacaoId);
     if(error){ vfMostrarAvisoVF('Erro ao desanexar: '+error.message); return; }
+    vfGeracaoCacheElementosVF++;
     vfElementosCacheVF.delete(questaoVfId); // invalida - o conjunto de elementos anexados mudou
     vfCarregarElementosAnexadosVF(questaoVfId).then(() => {
       if(typeof vfRedimensionarCanvasDesenhoInternoVF === 'function') vfRedimensionarCanvasDesenhoInternoVF();
@@ -24868,6 +24894,14 @@ function vfIniciarRedimensionarCaixaRascunhoVF(evento, caixa){
   const esquerda = rectCaixa.left - rectPapel.left, topo = rectCaixa.top - rectPapel.top;
   const corpo = caixa.querySelector('.rascunho-texto-corpo');
   caixa.style.maxWidth = 'none';
+  // o traço do arrasto passa POR CIMA do corpo, que é contenteditable e
+  // está em edição (a alça só aparece com ele focado) - e o Scribble
+  // transforma esse traço em letras dentro da caixa. Tirar o corpo do
+  // alcance do ponteiro durante o arrasto resolve sem precisar tirar o
+  // foco dele (blur aqui esconderia a alça no meio do arrasto, e ainda
+  // apagaria a caixa se o texto estivesse vazio)
+  const pontosCorpoAntes = corpo ? corpo.style.pointerEvents : null;
+  if(corpo) corpo.style.pointerEvents = 'none';
   const mover = (e) => {
     if(e.cancelable) e.preventDefault();
     const larg = Math.max(60, Math.min(rectPapel.width - esquerda, larguraInicial + (e.clientX - xInicial)));
@@ -24879,6 +24913,7 @@ function vfIniciarRedimensionarCaixaRascunhoVF(evento, caixa){
     document.removeEventListener('pointermove', mover);
     document.removeEventListener('pointerup', soltar);
     document.removeEventListener('pointercancel', soltar);
+    if(corpo) corpo.style.pointerEvents = pontosCorpoAntes || '';
     corpo?.focus(); // continua em edição, com os controles à vista
     vfSalvarRascunhoLivreVF();
   };
@@ -24903,11 +24938,17 @@ function vfIniciarArrastoCaixaRascunhoVF(evento, caixa){
   const deslocY = evento.clientY - rectCaixa.top;
   const xInicial = evento.clientX, yInicial = evento.clientY;
   let arrastando = false;
+  const pontosCorpoAntes = corpo ? corpo.style.pointerEvents : null;
   const mover = (e) => {
     if(!arrastando){
       if(Math.hypot(e.clientX - xInicial, e.clientY - yInicial) < 6) return; // tremor do dedo ainda não é arrasto
       arrastando = true;
       caixa.style.opacity = '0.75';
+      // virou arrasto de verdade: o corpo sai do alcance do ponteiro pra
+      // o Scribble não transformar o caminho do arrasto em texto (mesmo
+      // motivo da alça de tamanho). Só aqui dentro - enquanto ainda
+      // pode ser um toque pra editar, nada muda
+      if(corpo) corpo.style.pointerEvents = 'none';
     }
     if(e.cancelable) e.preventDefault();
     // presa dentro da folha: soltar metade pra fora seria só um jeito de
@@ -24922,6 +24963,7 @@ function vfIniciarArrastoCaixaRascunhoVF(evento, caixa){
     document.removeEventListener('pointerup', soltar);
     document.removeEventListener('pointercancel', soltar);
     caixa.style.opacity = '';
+    if(corpo) corpo.style.pointerEvents = pontosCorpoAntes || '';
     if(arrastando) vfSalvarRascunhoLivreVF();
     else corpo.focus(); // parado = quer editar
   };
