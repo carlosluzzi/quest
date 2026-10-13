@@ -3108,7 +3108,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-12-285';
+const VERSAO_APP = '2026-10-12-286';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -17793,7 +17793,7 @@ async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
   if(contexto.tipo === 'campo-vf'){
     const entrada = estadoVF.historico.find(h => h.item.id === contexto.questaoId);
     const textoAtual = entrada?.item?.[contexto.campo];
-    const textoNovo = entrada ? vfSubstituirTrechoFonteVF(textoAtual, textoOriginalMatch, novoTrecho) : null;
+    const textoNovo = entrada ? vfSubstituirTrechoSvgVF(textoAtual, textoOriginalMatch, novoTrecho) : null;
     if(textoNovo === null){
       vfMostrarAvisoVF('Não consegui salvar essa mudança (o texto pode ter mudado nesse meio tempo). Tenta segurar de novo.');
       return;
@@ -17808,7 +17808,7 @@ async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
     );
   }else if(contexto.tipo === 'elemento-html'){
     const {data, error: erroBusca} = await sb.from('elementos_html_vf').select('latex_fonte').eq('id', contexto.elementoId).single();
-    const textoNovo = (erroBusca || !data) ? null : vfSubstituirTrechoFonteVF(data.latex_fonte, textoOriginalMatch, novoTrecho);
+    const textoNovo = (erroBusca || !data) ? null : vfSubstituirTrechoSvgVF(data.latex_fonte, textoOriginalMatch, novoTrecho);
     if(textoNovo === null){
       vfMostrarAvisoVF('Não consegui salvar essa mudança (o elemento pode ter mudado nesse meio tempo). Tenta segurar de novo.');
       return;
@@ -18608,6 +18608,29 @@ function vfEscaparRegexVF(texto){
 // reescreve o colchete [larguras:...]). Em vez de desistir, acha o MESMO
 // bloco ignorando so o colchete de opcoes - o corpo da tabela tem que
 // bater caractere por caractere, entao nao tem risco de pegar outra
+// MESMO problema que a tabela resolve logo abaixo, e que o desenho nao
+// resolvia: o trecho guardado na tela envelhece. Redimensionar reescreve
+// o colchete ([250px]), entao o ALINHAMENTO - que quase sempre vem
+// depois - procurava um \svg{...} que ja nao existia mais no banco,
+// nao achava, e falhava calado. Era por isso que a largura salvava e o
+// "centro" nao. Aqui acha o MESMO desenho ignorando so o colchete de
+// opcoes; o corpo (o <svg> inteiro) tem que bater caractere por
+// caractere, entao nao tem risco de acertar outro desenho.
+// Cobre tambem o caminho inverso: a tela ainda com o svg CRU (sem
+// \svg{}) e o banco ja com ele embrulhado por um salvamento anterior
+function vfSubstituirTrechoSvgVF(textoAtual, textoOriginalMatch, novoTrecho){
+  if(typeof textoAtual !== 'string') return null;
+  const direto = vfSubstituirTrechoFonteVF(textoAtual, textoOriginalMatch, novoTrecho);
+  if(direto !== null) return direto;
+  const comComando = textoOriginalMatch.match(/^\\svg(?:\[[^\]]*\])?\{([\s\S]*)\}$/);
+  const corpo = comComando ? comComando[1] : (/^\s*<svg[\s\S]*<\/svg>\s*$/i.test(textoOriginalMatch) ? textoOriginalMatch : null);
+  if(corpo === null) return null;
+  const regex = new RegExp('\\\\svg(?:\\[[^\\]]*\\])?\\{' + vfEscaparRegexVF(corpo) + '\\}');
+  if(regex.test(textoAtual)) return textoAtual.replace(regex, novoTrecho);
+  const limpo = vfLimparApostrofoUnderscoreVF(textoAtual);
+  if(regex.test(limpo)) return limpo.replace(regex, novoTrecho);
+  return null;
+}
 function vfSubstituirTrechoTabelaVF(textoAtual, textoOriginalMatch, novoTrecho){
   if(typeof textoAtual !== 'string') return null;
   const direto = vfSubstituirTrechoFonteVF(textoAtual, textoOriginalMatch, novoTrecho);
@@ -21520,6 +21543,9 @@ async function vfExcluirElementoBibliotecaVF(elementoHtmlId){
   vfAbrirConfirmacaoGenericaVF('Excluir elemento', 'Excluir esse elemento da biblioteca de vez? Ele some de todas as questões onde estiver anexado, e não dá pra desfazer.', async () => {
     const {error} = await sb.from('elementos_html_vf').delete().eq('id', elementoHtmlId);
     if(error){ vfMostrarAvisoVF('Erro ao excluir: '+error.message); return; }
+    // sem isso, as questões que tinham esse elemento continuavam
+    // montando do cache e mostrando um elemento que já não existe
+    vfInvalidarCacheElementosPorElementoIdVF(elementoHtmlId);
     vfCarregarBibliotecaComplementarVF();
     // se a questão atual (embaixo do modal) tinha esse elemento anexado,
     // atualiza a tela principal também - sem isso, ficaria mostrando um
