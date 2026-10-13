@@ -468,7 +468,7 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-btn-recorte-wrap{display:flex;flex-direction:column;align-items:center;gap:1px}
 .vf-btn-recorte-n{font-size:var(--fs-a);color:#aaa;line-height:1}
 .vf-painel-inconsistencia{background:#fff;border:0.5px solid #E6E6E3;box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:16px 18px;box-sizing:border-box;font-family:inherit}
-.vf-painel-inconsistencia.popover{position:absolute;z-index:145;border-radius:14px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.vf-painel-inconsistencia.popover{position:absolute;z-index:155;border-radius:14px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .vf-painel-inconsistencia.sheet{position:fixed;left:0;right:0;bottom:0;z-index:320;border-radius:16px 16px 0 0;max-height:72vh;overflow-y:auto;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
 .vf-painel-inconsistencia.hidden{display:none}
 .vf-nota-clicavel{border-bottom:1.5px dotted #888;cursor:pointer}
@@ -2011,11 +2011,17 @@ textarea, input[type="text"], input[type="search"], input[type="number"], input[
   sem responder nenhuma. Mesma busca do filtro de palavra-chave do Flash,
   com o glossário português/inglês por trás -->
   <div class="view-aba hidden" id="aba-biblioteca">
-    <div id="vf-biblioteca-abas-secao" style="display:flex;gap:8px;margin-bottom:12px">
-      <button id="vf-biblioteca-secao-afirmacoes" class="btn-secundario active" style="flex:1" onclick="vfMudarSecaoBibliotecaVF('afirmacoes')">Afirmações</button>
-      <button id="vf-biblioteca-secao-notas" class="btn-secundario" style="flex:1" onclick="vfMudarSecaoBibliotecaVF('notas')">Notas</button>
+    <!-- flex-wrap + largura mínima: com 5 botões numa tela estreita eles
+         quebram pra segunda linha em vez de espremer o texto -->
+    <div id="vf-biblioteca-abas-secao" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button id="vf-biblioteca-secao-afirmacoes" class="btn-secundario active" style="flex:1 1 110px" onclick="vfMudarSecaoBibliotecaVF('afirmacoes')">Afirmações</button>
+      <button id="vf-biblioteca-secao-notas" class="btn-secundario" style="flex:1 1 90px" onclick="vfMudarSecaoBibliotecaVF('notas')">Notas</button>
+      <button id="vf-biblioteca-secao-mnemonicos" class="btn-secundario" style="flex:1 1 120px" onclick="vfMudarSecaoBibliotecaVF('mnemonicos')">Mnemônicos</button>
+      <button id="vf-biblioteca-secao-bizus" class="btn-secundario" style="flex:1 1 90px" onclick="vfMudarSecaoBibliotecaVF('bizus')">Bizus</button>
+      <button id="vf-biblioteca-secao-divergencia" class="btn-secundario" style="flex:1 1 120px" onclick="vfMudarSecaoBibliotecaVF('divergencia')">Divergência</button>
     </div>
     <div id="vf-biblioteca-conteudo-notas" class="hidden"></div>
+    <div id="vf-biblioteca-conteudo-divergencia" class="hidden"></div>
     <div id="vf-biblioteca-conteudo-afirmacoes">
     <select id="vf-biblioteca-filtro-modulo" class="filter-select" style="margin-bottom:8px" onchange="vfBibliotecaMudarModuloVF()">
       <option value="">Todos os módulos</option>
@@ -3108,7 +3114,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-12-286';
+const VERSAO_APP = '2026-10-13-288';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -20192,7 +20198,16 @@ function vfAbrirPainelInconsistenciaVF(btn, questaoVfId){
     painel.style.maxHeight = 'none';
     painel.style.overflowY = 'visible';
     const alturaNaturalVF = painel.offsetHeight;
-    const espacoAbaixoVF = rc.bottom - rb.bottom - folgaPainelVF * 2;
+    // o chao nao e o fim do #content: a barra fixa de baixo
+    // (Anterior/Proxima + Excluir/Favoritar/...) flutua POR CIMA dele.
+    // Medindo ate rc.bottom, o painel "cabia" num espaco que na pratica
+    // esta coberto, e o fim do texto sumia atras da barra
+    const barraFixaVF = document.querySelector('.vf-barra-fixa:not(.hidden)');
+    const retanguloBarraVF = barraFixaVF ? barraFixaVF.getBoundingClientRect() : null;
+    const chaoVF = retanguloBarraVF && retanguloBarraVF.height
+      ? Math.min(rc.bottom, retanguloBarraVF.top)
+      : rc.bottom;
+    const espacoAbaixoVF = chaoVF - rb.bottom - folgaPainelVF * 2;
     const espacoAcimaVF  = rb.top - rc.top - folgaPainelVF * 2;
     const baseAbaixoVF = rb.bottom - rc.top + content.scrollTop + 8;
     const baseAcimaVF  = rb.top - rc.top + content.scrollTop - 8;
@@ -22474,12 +22489,99 @@ function vfMudarAbaNotaVF(aba){
   if(aba === 'biblioteca') vfAbrirBibliotecaNotasVF('modal', 'vf-nota-conteudo-biblioteca', true);
 }
 
+// 5 seções: Afirmações, Notas, Mnemônicos, Bizus e Divergência.
+// Mnemônicos e Bizus são a MESMA lista de notas, já aberta com o filtro
+// correspondente marcado - a caixinha continua à vista (e desmarcável),
+// pra ficar claro por que a lista está menor. Divergência é outra coisa:
+// agrupa por AFIRMAÇÃO, não por nota (ver vfRenderizarDivergenciasVF)
+const VF_SECOES_NOTAS_BIBLIOTECA_VF = {mnemonicos: 'mnemonicos', bizus: 'bizus'};
 function vfMudarSecaoBibliotecaVF(secao){
+  const usaListaDeNotas = secao === 'notas' || !!VF_SECOES_NOTAS_BIBLIOTECA_VF[secao];
   document.getElementById('vf-biblioteca-conteudo-afirmacoes').classList.toggle('hidden', secao !== 'afirmacoes');
-  document.getElementById('vf-biblioteca-conteudo-notas').classList.toggle('hidden', secao !== 'notas');
-  document.getElementById('vf-biblioteca-secao-afirmacoes').classList.toggle('active', secao === 'afirmacoes');
-  document.getElementById('vf-biblioteca-secao-notas').classList.toggle('active', secao === 'notas');
-  if(secao === 'notas') vfAbrirBibliotecaNotasVF('aba', 'vf-biblioteca-conteudo-notas', true);
+  document.getElementById('vf-biblioteca-conteudo-notas').classList.toggle('hidden', !usaListaDeNotas);
+  document.getElementById('vf-biblioteca-conteudo-divergencia').classList.toggle('hidden', secao !== 'divergencia');
+  ['afirmacoes', 'notas', 'mnemonicos', 'bizus', 'divergencia'].forEach(nome => {
+    document.getElementById(`vf-biblioteca-secao-${nome}`)?.classList.toggle('active', secao === nome);
+  });
+  if(usaListaDeNotas){
+    vfAbrirBibliotecaNotasVF('aba', 'vf-biblioteca-conteudo-notas', true).then(() => {
+      const marcar = VF_SECOES_NOTAS_BIBLIOTECA_VF[secao] || null;
+      const mnem = document.getElementById('vf-notas-lib-mnemonicos-aba');
+      const bizu = document.getElementById('vf-notas-lib-bizus-aba');
+      if(mnem) mnem.checked = marcar === 'mnemonicos';
+      if(bizu) bizu.checked = marcar === 'bizus';
+      vfFiltrarNotasBibliotecaVF('aba');
+    });
+  }
+  if(secao === 'divergencia') vfAbrirDivergenciasBibliotecaVF();
+}
+
+// ---- Divergência ----------------------------------------------------
+// Afirmações marcadas com a tag DIVERGÊNCIA: são os pontos em que as
+// fontes brigam entre si. Aqui o que interessa não é a nota solta, é o
+// PAR - a afirmação (com o gabarito dela) e, embaixo, o que cada fonte
+// diz. Por isso essa seção agrupa por afirmação em vez de listar notas
+const VF_NOME_TAG_DIVERGENCIA_VF = 'divergencia';
+function vfChaveSimplesVF(texto){
+  return String(texto || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+async function vfAbrirDivergenciasBibliotecaVF(){
+  const container = document.getElementById('vf-biblioteca-conteudo-divergencia');
+  if(!container) return;
+  container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;margin:0">Carregando...</p>';
+  await vfCarregarBibliografiaCacheVF();
+  const {data: tags} = await sb.from('tags_vf').select('id, nome');
+  const tag = (tags || []).find(t => vfChaveSimplesVF(t.nome) === VF_NOME_TAG_DIVERGENCIA_VF);
+  if(!tag){
+    container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;margin:0">Nenhuma afirmação marcada com a tag DIVERGÊNCIA ainda.</p>';
+    return;
+  }
+  const {data: ligacoes} = await sb.from('questoes_vf_tags').select('questao_vf_id').eq('tag_id', tag.id);
+  const ids = [...new Set((ligacoes || []).map(l => l.questao_vf_id).filter(Boolean))];
+  if(!ids.length){
+    container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;margin:0">Nenhuma afirmação marcada com a tag DIVERGÊNCIA ainda.</p>';
+    return;
+  }
+  const [{data: questoes}, {data: notas}] = await Promise.all([
+    sb.from('questoes_vf').select('id, texto, resposta, bibliografia_id, capitulo').in('id', ids),
+    sb.from('notas_vf').select('id, texto, cor, eh_mnemonico, eh_bizu, questao_vf_id, criado_em').in('questao_vf_id', ids).eq('usuario_id', usuarioAtual.id).order('criado_em')
+  ]);
+  const porQuestao = new Map();
+  (notas || []).forEach(n => {
+    if(!porQuestao.has(n.questao_vf_id)) porQuestao.set(n.questao_vf_id, []);
+    porQuestao.get(n.questao_vf_id).push(n);
+  });
+  vfRenderizarDivergenciasVF(container, questoes || [], porQuestao);
+}
+function vfRenderizarDivergenciasVF(container, questoes, porQuestao){
+  if(!questoes.length){
+    container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;margin:0">Nenhuma afirmação marcada com a tag DIVERGÊNCIA ainda.</p>';
+    return;
+  }
+  const cartoes = questoes.map(q => {
+    const bib = q.bibliografia_id ? vfBibliografiaCache.get(q.bibliografia_id) : null;
+    const rotuloCap = bib ? vfEtiquetaCapituloVF(rotuloCapituloDoLivro(bib.titulo), q.capitulo) : '';
+    const referencia = [bib?.titulo, rotuloCap].filter(Boolean).join(' · ');
+    const ehVerdadeira = q.resposta === true;
+    const selo = `<span style="flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 8px;border-radius:999px;font-size:var(--fs-b);font-weight:700;background:${ehVerdadeira ? '#EAF3DE' : '#FCEBEB'};color:${ehVerdadeira ? '#3B6D11' : '#A32D2D'};border:0.5px solid ${ehVerdadeira ? '#C0DD97' : '#F7C1C1'}">${ehVerdadeira ? 'V' : 'F'}</span>`;
+    const lista = porQuestao.get(q.id) || [];
+    const notasHtml = lista.length
+      ? lista.map(n => {
+          const cor = n.cor ? VF_CORES_NOTA_VF[n.cor] : null;
+          return `<div style="border-left:3px solid ${cor ? cor.texto : '#E0DACA'};background:${cor ? cor.fundo : '#FBFBFA'};border-radius:0 8px 8px 0;padding:10px 12px;margin-top:8px;font-size:var(--fs-d);line-height:1.4">${formatarTextoItemVF(n.texto || '')}</div>`;
+        }).join('')
+      : '<p style="color:#999;font-size:var(--fs-c);margin:8px 0 0">Sem nota escrita nessa afirmação ainda.</p>';
+    return `
+      <div style="border:0.5px solid #E6E6E3;border-radius:12px;padding:14px;margin-bottom:14px;background:#fff">
+        ${referencia ? `<p style="font-size:var(--fs-c);color:#999;margin:0 0 8px;line-height:1.3">${escapeHtml(referencia)}</p>` : ''}
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          ${selo}
+          <div style="min-width:0;flex:1;font-size:var(--fs-d);line-height:1.4">${formatarTextoItemVF(q.texto || '')}</div>
+        </div>
+        ${notasHtml}
+      </div>`;
+  }).join('');
+  container.innerHTML = `<p style="font-size:var(--fs-c);color:#888;margin:0 0 12px">${questoes.length} ${questoes.length > 1 ? 'afirmações' : 'afirmação'} com divergência entre fontes</p>${cartoes}`;
 }
 
 // ---- notas escritas nas IRMÃS dessa afirmação ----
