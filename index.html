@@ -3118,7 +3118,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-13-290';
+const VERSAO_APP = '2026-10-14-291';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -14020,6 +14020,75 @@ async function vfBuscarConteudoEmLoteVF(itens){
 // dado velho pra trás, sem precisar invalidar em cada lugar que mexe em nota
 const vfNotasIrmasPreparadasVF = new Map(); // questaoId -> array de notas fixadas das irmãs (cru, sem filtrar)
 const vfNotasIrmasEmVooVF = new Map();      // questaoId -> promessa da busca
+// ---- ofertas dispensadas (14/10, Carlos) ----
+// a oferta da irmã é só uma oferta, e ele tem que poder dizer "não aqui".
+// Antes não tinha como: o "+" voltava a aparecer na página toda vez,
+// inclusive depois de ele ter trazido a nota e excluído dessa questão - o
+// fantasma eterno. Agora o "não aqui" é gravado (tabela
+// notas_irmas_dispensadas_vf) POR QUESTÃO: dispensar aqui não mexe na
+// irmã, e a nota continua inteira lá. O caminho de volta é o popup de
+// Notas, que continua oferecendo ela discretamente no fim da lista
+const vfDispensasIrmasVF = new Map(); // questaoId -> Set(raiz da nota dispensada)
+function vfDispensasDaQuestaoVF(questaoVfId){
+  return vfDispensasIrmasVF.get(questaoVfId) || new Set();
+}
+async function vfCarregarDispensasIrmasVF(questaoVfId){
+  if(!questaoVfId || !usuarioAtual) return new Set();
+  if(vfDispensasIrmasVF.has(questaoVfId)) return vfDispensasIrmasVF.get(questaoVfId);
+  const {data, error} = await sb.from('notas_irmas_dispensadas_vf')
+    .select('raiz_nota_id').eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId);
+  const conjunto = new Set((!error && data ? data : []).map(d => d.raiz_nota_id).filter(Boolean));
+  vfDispensasIrmasVF.set(questaoVfId, conjunto);
+  return conjunto;
+}
+function vfMarcarDispensaLocalVF(questaoVfId, raiz){
+  if(!questaoVfId || !raiz) return;
+  const conjunto = vfDispensasIrmasVF.get(questaoVfId) || new Set();
+  conjunto.add(raiz);
+  vfDispensasIrmasVF.set(questaoVfId, conjunto);
+}
+// grava o "não aqui". Otimista: quem chama já tirou da tela
+async function vfGravarDispensaIrmaVF(questaoVfId, raiz){
+  if(!questaoVfId || !raiz || !usuarioAtual) return;
+  vfMarcarDispensaLocalVF(questaoVfId, raiz);
+  const {error} = await sb.from('notas_irmas_dispensadas_vf')
+    .upsert({usuario_id: usuarioAtual.id, questao_vf_id: questaoVfId, raiz_nota_id: raiz},
+            {onConflict: 'usuario_id,questao_vf_id,raiz_nota_id'});
+  if(error) vfMostrarAvisoVF('Não consegui guardar isso. A oferta pode voltar a aparecer.');
+}
+// trazer a nota pra cá desfaz o "não aqui" - senão, excluir ela depois
+// deixaria a dispensa velha valendo e a oferta não voltaria nunca
+async function vfLimparDispensaIrmaVF(questaoVfId, raiz){
+  if(!questaoVfId || !raiz || !usuarioAtual) return;
+  vfDispensasIrmasVF.get(questaoVfId)?.delete(raiz);
+  await sb.from('notas_irmas_dispensadas_vf').delete()
+    .eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).eq('raiz_nota_id', raiz);
+}
+// raiz da família de uma nota, antes de ela ser apagada (depois não tem
+// mais linha pra ler). Tenta nos caches da tela primeiro
+// versão SÍNCRONA (o caso normal): a resposta tem que estar na mão antes
+// de redesenhar a questão, senão a oferta reaparece por um instante
+function vfRaizDaNotaEmCacheVF(notaId, questaoVfId){
+  if(!notaId || String(notaId).startsWith('tmp-') || String(notaId).startsWith('nova-')) return null;
+  const listas = [vfListaNotasCacheVF.get(questaoVfId), vfNotaPreviewCacheVF.get(questaoVfId), vfNotasBibliotecaCacheVF];
+  for(const lista of listas){
+    // só vale a entrada que REALMENTE carrega o campo da família: alguns
+    // caches guardam um objeto montado na mão ao fixar (sem
+    // origem_nota_id), e aí a raiz sairia errada - nesse caso é melhor ler
+    // do banco
+    const achada = (lista || []).find(n => n && n.id === notaId && Object.prototype.hasOwnProperty.call(n, 'origem_nota_id'));
+    if(achada) return vfRaizNotaVF(achada);
+  }
+  return null;
+}
+function vfRaizDaNotaVF(notaId, questaoVfId){
+  if(!notaId || String(notaId).startsWith('tmp-') || String(notaId).startsWith('nova-')) return Promise.resolve(null);
+  const emCache = vfRaizDaNotaEmCacheVF(notaId, questaoVfId);
+  if(emCache) return Promise.resolve(emCache);
+  return sb.from('notas_vf').select('id, origem_nota_id').eq('id', notaId).maybeSingle()
+    .then(({data}) => data ? (data.origem_nota_id || data.id) : null)
+    .catch(() => null);
+}
 function vfBuscarNotasFixadasIrmasVF(questaoVfId){
   if(!questaoVfId || !usuarioAtual) return Promise.resolve([]);
   if(vfNotasIrmasPreparadasVF.has(questaoVfId)) return Promise.resolve(vfNotasIrmasPreparadasVF.get(questaoVfId));
@@ -14028,11 +14097,17 @@ function vfBuscarNotasFixadasIrmasVF(questaoVfId){
     const ids = (irmas || []).map(i => i.id).filter(Boolean);
     let lista = [];
     if(ids.length){
-      const {data, error} = await sb.from('notas_vf')
-        .select('id, texto, cor, alinhamento, eh_mnemonico, eh_bizu, origem_nota_id')
-        .eq('usuario_id', usuarioAtual.id).eq('fixada', true).in('questao_vf_id', ids)
-        .order('criado_em', {ascending: true}); // mais antiga primeiro: é ela que representa a nota quando várias irmãs têm a mesma
-      if(!error && data) lista = data;
+      // as dispensas vêm no MESMO ida-e-volta: elas decidem o que vai ser
+      // mostrado, não dá pra pintar antes e filtrar depois (o fantasma
+      // apareceria por um instante)
+      const [rNotas] = await Promise.all([
+        sb.from('notas_vf')
+          .select('id, texto, cor, alinhamento, eh_mnemonico, eh_bizu, origem_nota_id')
+          .eq('usuario_id', usuarioAtual.id).eq('fixada', true).in('questao_vf_id', ids)
+          .order('criado_em', {ascending: true}), // mais antiga primeiro: é ela que representa a nota quando várias irmãs têm a mesma
+        vfCarregarDispensasIrmasVF(questaoVfId)
+      ]);
+      if(!rNotas.error && rNotas.data) lista = rNotas.data;
     }
     vfNotasIrmasEmVooVF.delete(questaoVfId);
     vfNotasIrmasPreparadasVF.set(questaoVfId, lista);
@@ -22659,8 +22734,12 @@ function vfExcluirNotaBibliotecaVF(notaId, pref){
 
 async function vfConfirmarExclusaoNotaBibliotecaVF(notaId, pref){
   const nota = (vfNotasBibliotecaCacheVF || []).find(x => x.id === notaId);
+  const raizDaExcluidaVF = nota ? vfRaizNotaVF(nota) : null;
   const {error} = await sb.from('notas_vf').delete().eq('id', notaId);
   if(error){ vfMostrarAvisoVF('Não consegui excluir a nota. Tenta de novo.'); vfFiltrarNotasBibliotecaVF(pref); return; }
+  // mesmo raciocínio do excluir de dentro da questão: tirou daqui, não
+  // volta como oferta aqui (continua inteira na irmã)
+  if(nota?.questao_vf_id && raizDaExcluidaVF) vfGravarDispensaIrmaVF(nota.questao_vf_id, raizDaExcluidaVF);
   vfNotasBibliotecaCacheVF = (vfNotasBibliotecaCacheVF || []).filter(x => x.id !== notaId);
   vfSincronizarQuestaoDaNotaVF(nota?.questao_vf_id, pref);
   vfFiltrarNotasBibliotecaVF(pref);
@@ -22873,6 +22952,7 @@ async function vfCopiarNotaDaIrmaVF(notaId){
   notasVF.add(destino);
   vfListaNotasCacheVF.delete(destino);
   vfNotasBibliotecaCacheVF = null; // a biblioteca de notas passa a ter mais uma
+  vfLimparDispensaIrmaVF(destino, vfRaizNotaVF(origem)); // trouxe pra cá: a dispensa velha não vale mais
   if(questaoNotaVfAtual === destino) await renderizarListaNotasVF();
   const naTela = estadoVF?.historico?.[estadoVF.posicao]?.item?.id;
   if(naTela === destino && typeof renderizarItemVF === 'function') renderizarItemVF();
@@ -22967,8 +23047,10 @@ function vfMontarNotasFixadasIrmasVF(questaoVfId, data){
     if(!chave || porFamilia.has(chave)) return;
     porFamilia.set(chave, n);
   });
+  const dispensadas = vfDispensasDaQuestaoVF(questaoVfId); // o que ele já disse "não aqui"
   vfNotasFixadasIrmasVF = [...porFamilia.values()].filter(n =>
     !raizesAqui.has(vfRaizNotaVF(n))
+    && !dispensadas.has(vfRaizNotaVF(n))
     && !jaAqui.has((n.texto || '').trim()));
   if(!vfNotasFixadasIrmasVF.length) return;
   const atual = document.getElementById('vf-preview-notas-irmas-container');
@@ -22985,11 +23067,27 @@ function vfMontarNotasFixadasIrmasVF(questaoVfId, data){
       <div id="vf-nota-irma-card-${n.id}" style="margin-bottom:10px">
         <div class="${temTabela ? '' : 'card-questao'}" style="position:relative;margin-bottom:0;border-style:dashed;${vfEstiloCorNotaVF(n.cor)}">
           <div style="opacity:0.45">${conteudo}</div>
-          <button onclick="vfAdicionarNotaFixadaDaIrmaVF('${n.id}')" title="Adicionar essa nota nessa afirmação também" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:36px;height:36px;border-radius:9px;border:0.5px solid #DDD;background:#fff;color:#777;font-size:var(--fs-g);font-weight:300;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.10);-webkit-tap-highlight-color:transparent">+</button>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:8px">
+            <button onclick="vfAdicionarNotaFixadaDaIrmaVF('${n.id}')" title="Adicionar essa nota nessa afirmação também" style="width:36px;height:36px;border-radius:9px;border:0.5px solid #DDD;background:#fff;color:#777;font-size:var(--fs-g);font-weight:300;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.10);-webkit-tap-highlight-color:transparent">+</button>
+            <button onclick="vfDispensarNotaFixadaDaIrmaVF('${n.id}')" title="Não oferecer essa nota nessa afirmação (continua na irmã)" style="width:36px;height:36px;border-radius:9px;border:0.5px solid #DDD;background:#fff;color:#999;font-size:var(--fs-e);font-weight:400;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.10);-webkit-tap-highlight-color:transparent">✕</button>
+          </div>
         </div>
       </div>`;
   }).join('');
   atual.classList.remove('hidden');
+}
+
+// "não aqui": tira a oferta dessa questão pra sempre, sem tocar na nota
+// da irmã. Se ele mudar de ideia, o popup de Notas continua oferecendo
+async function vfDispensarNotaFixadaDaIrmaVF(notaId){
+  const origem = vfNotasFixadasIrmasVF.find(n => n.id === notaId);
+  const containerIrmas = document.getElementById('vf-preview-notas-irmas-container');
+  const destino = containerIrmas?.dataset.questaoId;
+  if(!origem || !destino) return;
+  vfNotasFixadasIrmasVF = vfNotasFixadasIrmasVF.filter(n => n.id !== notaId);
+  document.getElementById(`vf-nota-irma-card-${notaId}`)?.remove();
+  if(!vfNotasFixadasIrmasVF.length && containerIrmas){ containerIrmas.classList.add('hidden'); containerIrmas.innerHTML = ''; }
+  await vfGravarDispensaIrmaVF(destino, vfRaizNotaVF(origem));
 }
 
 async function vfAdicionarNotaFixadaDaIrmaVF(notaId){
@@ -23014,6 +23112,7 @@ async function vfAdicionarNotaFixadaDaIrmaVF(notaId){
   notasFixadasVF.add(destino);
   vfListaNotasCacheVF.delete(destino);
   vfNotasBibliotecaCacheVF = null;
+  vfLimparDispensaIrmaVF(destino, vfRaizNotaVF(origem)); // trouxe pra cá: a dispensa velha não vale mais
   // a questão pode não ter nenhuma nota fixada ainda - nesse caso o
   // container da pilha nem existe na tela, e é criado aqui, logo acima
   // do bloco das ofertas das irmãs
@@ -23544,6 +23643,14 @@ async function excluirNotaVF(notaId){
   vfNotasBibliotecaCacheVF = null; // idem: a biblioteca de notas não pode continuar mostrando o que foi apagado
   const itemEl = document.getElementById(`vf-nota-item-${notaId}`);
   if(!itemEl) return;
+  // excluir a nota DESSA questão é dizer "não aqui" (14/10): se a mesma
+  // nota existe numa irmã, ela voltaria na hora como oferta na página -
+  // era o fantasma. A promessa começa agora, antes do delete, porque
+  // depois não tem mais linha pra ler a raiz da família
+  const questaoDaExclusaoVF = questaoNotaVfAtual;
+  const raizEmCacheVF = vfRaizDaNotaEmCacheVF(notaId, questaoDaExclusaoVF);
+  if(raizEmCacheVF) vfMarcarDispensaLocalVF(questaoDaExclusaoVF, raizEmCacheVF); // antes do renderizarItemVF() logo abaixo, senão o fantasma aparece por um instante
+  const promessaRaizVF = raizEmCacheVF ? Promise.resolve(raizEmCacheVF) : vfRaizDaNotaVF(notaId, questaoDaExclusaoVF);
   // guarda tudo que precisa pra reverter em caso de erro - o HTML do
   // item (com a posição exata que ocupava na lista) e a lista de
   // fixadas de antes, pra restaurar notasFixadasVF/vfNotaPreviewCacheVF
@@ -23575,7 +23682,12 @@ async function excluirNotaVF(notaId){
   renderizarItemVF();
 
   const {error} = await sb.from('notas_vf').delete().eq('id', notaId);
+  if(!error){
+    const raizExcluidaVF = await promessaRaizVF;
+    if(raizExcluidaVF) vfGravarDispensaIrmaVF(questaoDaExclusaoVF, raizExcluidaVF);
+  }
   if(error){
+    if(raizEmCacheVF) vfDispensasIrmasVF.get(questaoDaExclusaoVF)?.delete(raizEmCacheVF); // o delete falhou: a nota continua aqui, nada a dispensar
     // reverte tudo: devolve o item pro lugar exato onde estava
     const itensEl = document.getElementById('vf-lista-notas-itens');
     if(itensEl){
