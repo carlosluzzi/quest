@@ -656,6 +656,12 @@ html[data-tema="escuro"] .textarea-padrao{border-color:#262626 !important;backgr
    versao adaptada pro escuro viajam juntas na propria tag, em variaveis -
    CSS nao sabe ler atributo pra pintar, mas sabe ler variavel */
 html[data-tema="escuro"] .vf-cor-trecho{color:var(--cor-trecho-escuro) !important}
+/* chips de tags principais no seletor de tags (16/10) - mesma borda
+   (1,5 px) aceso ou apagado, só o preenchimento muda */
+.vf-chip-tag-principal{height:36px;border-radius:8px;border:1.5px solid #B23A34;background:#fff;color:#B23A34;font-family:inherit;font-size:var(--fs-b);font-weight:700;letter-spacing:.03em;cursor:pointer;padding:0 6px;white-space:nowrap;min-width:0;-webkit-tap-highlight-color:transparent}
+.vf-chip-tag-principal[aria-pressed="true"]{background:#B23A34;color:#fff}
+html[data-tema="escuro"] .vf-chip-tag-principal{background:transparent !important;color:#E07C6F !important;border-color:#E07C6F !important}
+html[data-tema="escuro"] .vf-chip-tag-principal[aria-pressed="true"]{background:#B23A34 !important;color:#fff !important;border-color:#B23A34 !important}
 /* imagem do Complementar que teve o fundo tirado: quase sempre é traço
    escuro (figura de livro, esquema) sobre nada - no fundo preto do tema
    escuro sumiria. Inverte a claridade e devolve o matiz (hue-rotate), o
@@ -2771,7 +2777,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 </div>
 
 <div class="modal-overlay hidden" id="modal-tags-vf" onclick="if(event.target===this) vfFecharPopupTagsVF()">
-  <div class="modal-conteudo">
+  <div class="modal-conteudo" style="max-width:480px"><!-- 480 (não 340): cabem os 4 chips de tags principais numa linha só; no celular eles quebram em 2 x 2 -->
     <h3 class="config-title">Tags dessa afirmação</h3>
     <div id="vf-tags-lista-atual" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;min-height:25px"></div>
     <div style="display:flex;gap:8px;align-items:stretch">
@@ -2779,7 +2785,8 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       <datalist id="vf-tags-datalist"></datalist>
       <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfAdicionarTagVF()">+</button>
     </div>
-    <button id="vf-tags-btn-ver" onclick="vfAlternarTodasTagsVF()" style="background:none;border:none;padding:0;margin-top:16px;color:#B23A34;font-size:var(--fs-c);font-weight:600;cursor:pointer;font-family:inherit;display:block">Ver tags existentes</button>
+    <div id="vf-tags-principais" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(104px, 1fr));gap:6px;margin-top:14px"></div>
+    <button id="vf-tags-btn-ver" onclick="vfAlternarTodasTagsVF()" style="background:none;border:none;padding:0;margin-top:14px;color:#B23A34;font-size:var(--fs-c);font-weight:600;cursor:pointer;font-family:inherit;display:block">Ver tags existentes</button>
     <div id="vf-tags-todas" class="hidden" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start"></div>
     <p id="vf-tags-status" style="font-size:var(--fs-c);margin:6px 0 0 0;min-height:1.4em;line-height:1.4"></p>
     <button class="btn-secundario" style="width:100%;margin-top:8px" onclick="vfFecharPopupTagsVF()">Fechar</button>
@@ -3147,7 +3154,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-16-298';
+const VERSAO_APP = '2026-10-16-299';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -8267,6 +8274,10 @@ const VF_ALGO = {
   BOOST_LEECH: 1.3,           // >= LEECH_ERROS erros
   DIFIC_PESO: 0.5, DIFIC_MIN: 0.8, DIFIC_MAX: 1.8, DIFIC_JANELA: 5, // dificuldade = clamp(1 + 0.5*soma/janela, 0.8, 1.8); E=1 (2º E na janela em diante = 2), L=0.5, A=0
   FATOR_FAVORITO_INTERVALO: 0.8, // favorita agenda com intervalo 20% menor - volta mais vezes, não só sobe na fila (D5)
+  // v5 (16/10) - tag ABSURDO: o mesmo mecanismo da favorita, mais forte. Com
+  // as duas marcas no mesmo cartão vale só a maior de cada par (3,0 e 0,6)
+  BOOST_ABSURDO: 3.0,         // importância na fila de repetição (favorita 1,5; leech 1,3; escada 4,0)
+  FATOR_ABSURDO_INTERVALO: 0.6, // ao agendar acerto, antes do fuzz e da consciência da prova
   REP_ANTIGUIDADE_A_CADA: 4,  // 1 em cada 4 vagas de repetição vai pela antiguidade (mais horas vencida em absoluto), não pela prioridade (D6)
   AUTO_ALTA_PRIO_LIMITES: [20, 60], AUTO_FRACOES: [1.5, 2, 3], AUTO_RECALC_A_CADA: 10, // ritmo Auto (D7): fila urgente < 20 → 1.5; 20–60 → 2; > 60 → 3
   // NOVO - multiplicador do PRIMEIRO intervalo (e do GRADUA_NOVA_H) por módulo, calibrado no acerto medido por módulo. Recalibrado mensalmente
@@ -8299,13 +8310,25 @@ function vfAplicarConscienciaDaProvaVF(intervaloHoras, agoraMs){
   return Math.min(novo, teto, Math.max(24, horasAteProva - 24)); // nunca agenda depois da prova
 }
 
+// ---- marca pessoal do cartão: favorita e ABSURDO (v5) ----
+// as duas fazem a mesma coisa (sobe na fila, volta antes) e não somam:
+// com as duas, vale a mais forte de cada par
+function vfBoostMarcaVF(id, favoritos, absurdos){
+  return Math.max(favoritos && favoritos.has(id) ? VF_ALGO.BOOST_FAVORITO : 1,
+                  absurdos && absurdos.has(id) ? VF_ALGO.BOOST_ABSURDO : 1);
+}
+function vfFatorIntervaloMarcaVF(id, favoritos, absurdos){
+  return Math.min(favoritos && favoritos.has(id) ? VF_ALGO.FATOR_FAVORITO_INTERVALO : 1,
+                  absurdos && absurdos.has(id) ? VF_ALGO.FATOR_ABSURDO_INTERVALO : 1);
+}
 // ao registrar uma resposta: recebe o estado ATUAL da questão pra esse
 // usuário e devolve o NOVO estado. Não mexe no banco — quem chama decide
 // persistir (ver responderVF)
-function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraMs, contadorGlobal, respondidaAdiantada, favoritos){
-  // v4 - favorita agenda com intervalo 20% menor (D5). favoritos entra por
-  // parâmetro pra função continuar pura/testável; sem ele, usa o Set global
-  const ehFavorita = (favoritos || favoritosVF).has(estadoAnterior.id);
+function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraMs, contadorGlobal, respondidaAdiantada, favoritos, absurdos){
+  // v4 - favorita agenda com intervalo 20% menor (D5); v5 - ABSURDO 40%
+  // menor, e com as duas vale só a maior. Os dois Sets entram por
+  // parâmetro pra função continuar pura/testável; sem eles, usa os globais
+  const fatorMarca = vfFatorIntervaloMarcaVF(estadoAnterior.id, favoritos || favoritosVF, absurdos || absurdosVF);
   const tempo_s = clampVF(tempoSRaw, 0.3, 180);
   const nPalavras = estadoAnterior.n_palavras || 10;
   const v = tempo_s / esperadoSegundosVF(nPalavras);
@@ -8335,7 +8358,7 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
   if(q.estado === 'nova'){
     if(acertou){
       q.estado = 'revisao';
-      q.intervalo_horas = vfAplicarConscienciaDaProvaVF(VF_ALGO.PRIMEIRO_ACERTO_H * bonus * mult * (ehFavorita ? VF_ALGO.FATOR_FAVORITO_INTERVALO : 1), agoraMs);
+      q.intervalo_horas = vfAplicarConscienciaDaProvaVF(VF_ALGO.PRIMEIRO_ACERTO_H * bonus * mult * fatorMarca, agoraMs);
       if(v < 0.8) q.fator = Math.min(VF_ALGO.FATOR_MAX, q.fator + 0.1);
     }else{
       // um acerto gradua (total_degraus=1) - o segundo degrau da escada
@@ -8389,7 +8412,7 @@ function registrarRespostaAlgoritmoVF(estadoAnterior, acertou, tempoSRaw, agoraM
       // respondida exatamente na data prevista
       const base = Math.max(decorridoH, q.intervalo_horas);
       let novo = Math.max(q.intervalo_horas, base * q.fator * bonus);
-      if(ehFavorita) novo *= VF_ALGO.FATOR_FAVORITO_INTERVALO; // v4 (D5) - antes do fuzz e da consciência da prova
+      novo *= fatorMarca; // v4 (D5) favorita / v5 ABSURDO - antes do fuzz e da consciência da prova
       if(r >= 0.5){
         const delta = v < 0.8 ? 0.1 : (v > 1.5 ? -0.05 : 0);
         q.fator = clampVF(q.fator + delta, VF_ALGO.FATOR_MIN, VF_ALGO.FATOR_MAX);
@@ -8531,8 +8554,9 @@ function vfCalcularFamiliasNoPoolVF(pool){
 // favoritos) entra por parâmetro e o retorno leva `fatia` ('nova'/'rep')
 // pra quem chama descontar do crédito certo e `repeticao` pra incrementar
 // contadorRepVF. Nada aqui muta estadoVF.
-function escolherProximaVF(pool, agoraMs, contadorGlobal, sementeSessao, creditoNovaVF, creditoRepVF, contadorRepVF, favoritos){
+function escolherProximaVF(pool, agoraMs, contadorGlobal, sementeSessao, creditoNovaVF, creditoRepVF, contadorRepVF, favoritos, absurdos){
   favoritos = favoritos || favoritosVF;
+  absurdos = absurdos || absurdosVF;
   const rep = [];                 // fila única de repetição
   const novas = [];
   const novasEnterradas = [];
@@ -8578,7 +8602,7 @@ function escolherProximaVF(pool, agoraMs, contadorGlobal, sementeSessao, credito
   // sessão+id (pseudoAleatorioVF), não Math.random - a ordem não muda se
   // trocar de aba e voltar sem responder
   rep.forEach(r => {
-    const imp = (favoritos.has(r.item.id) ? VF_ALGO.BOOST_FAVORITO : 1) * ((r.item.total_erros || 0) >= VF_ALGO.LEECH_ERROS ? VF_ALGO.BOOST_LEECH : 1);
+    const imp = vfBoostMarcaVF(r.item.id, favoritos, absurdos) * ((r.item.total_erros || 0) >= VF_ALGO.LEECH_ERROS ? VF_ALGO.BOOST_LEECH : 1);
     const jitter = 1 + (pseudoAleatorioVF(sementeSessao, r.item.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
     r.prio = r.urg * imp * dificuldadeVF(r.item) * jitter;
   });
@@ -8747,6 +8771,9 @@ function vfSalvarFiltroNoStorageVF(){
 // em si (o termo continua salvo, só não foi aplicado nessa carga)
 let vfFiltroTermoIgnoradoVF = false;
 let favoritosVF = new Set();
+// v5 (16/10) - cartões com a tag ABSURDO. Derivado de vfTagsPorQuestaoVF
+// (ver vfRecalcularAbsurdosVF) e mantido em dia ao marcar/desmarcar
+let absurdosVF = new Set();
 // tags: cache de TODAS as tags existentes (nome + id), carregado uma vez
 // por sessão, pra a busca no popup ser instantânea sem consultar o banco
 // a cada letra digitada - mesmo espírito do vfBibliografiaCache abaixo.
@@ -14239,7 +14266,7 @@ function vfPreBuscarProximasVF(){
       // v4 - pré-busca aproxima a fila de repetição real: razão × favorita
       // × leech × dificuldade (mesma fórmula de escolherProximaVF, sem a
       // porta da antiguidade - é só um palpite de quem vem em seguida)
-      const boost = (favoritosVF.has(q.id) ? VF_ALGO.BOOST_FAVORITO : 1) * ((q.total_erros||0) >= VF_ALGO.LEECH_ERROS ? VF_ALGO.BOOST_LEECH : 1) * dificuldadeVF(q);
+      const boost = vfBoostMarcaVF(q.id, favoritosVF, absurdosVF) * ((q.total_erros||0) >= VF_ALGO.LEECH_ERROS ? VF_ALGO.BOOST_LEECH : 1) * dificuldadeVF(q); // v5: ABSURDO no lugar da favorita quando for a maior
       const razao = (decorridoH / q.intervalo_horas);
       const jitter = 1 + (pseudoAleatorioVF(estadoVF.sementeSessao, q.id) * 2 - 1) * VF_ALGO.JITTER_FILA;
       return {q, score: razao * boost * jitter, razao};
@@ -14582,8 +14609,8 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     buscarTudoPaginadoVF(() => sb.from('exclusoes_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     buscarTudoPaginadoVF(() => sb.from('favoritos_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     buscarTudoPaginadoVF(() => sb.from('notas_vf').select('questao_vf_id, fixada', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
-    buscarTudoPaginadoVF(() => sb.from('tags_vf').select('id, nome', {count: 'exact'}).order('nome').order('id')),
-    buscarTudoPaginadoVF(() => sb.from('questoes_vf_tags').select('questao_vf_id, tags_vf(id, nome)', {count: 'exact'}).order('questao_vf_id').order('tag_id')),
+    buscarTudoPaginadoVF(() => sb.from('tags_vf').select('id, nome, oculta', {count: 'exact'}).order('nome').order('id')),
+    buscarTudoPaginadoVF(() => sb.from('questoes_vf_tags').select('questao_vf_id, tags_vf(id, nome, oculta)', {count: 'exact'}).order('questao_vf_id').order('tag_id')),
     vfCarregarBibliografiaCacheVF(), // idempotente - só busca de verdade na primeira vez da sessão
     promiseTermoVF,
     // leve: só os ids das questões que têm elemento anexado, pra saber
@@ -14620,6 +14647,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     if(!vfTagsPorQuestaoVF.has(r.questao_vf_id)) vfTagsPorQuestaoVF.set(r.questao_vf_id, []);
     vfTagsPorQuestaoVF.get(r.questao_vf_id).push(r.tags_vf);
   });
+  vfRecalcularAbsurdosVF();
   const idsExcluidos = new Set((excluidas||[]).map(e=>e.questao_vf_id));
   const estadoPorId = {};
   (estados||[]).forEach(e => { estadoPorId[e.questao_vf_id] = e; });
@@ -16361,7 +16389,7 @@ async function avancarParaProximaVF(){
   const agoraMs = agoraCorrigidoVF();
   const pick = filtroVF.varreduraDesde
     ? vfEscolherProximaVarreduraVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.sementeSessao)
-    : escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.sementeSessao, estadoVF.creditoNovaVF || 0, estadoVF.creditoRepVF || 0, estadoVF.contadorRepVF || 0, favoritosVF);
+    : escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.sementeSessao, estadoVF.creditoNovaVF || 0, estadoVF.creditoRepVF || 0, estadoVF.contadorRepVF || 0, favoritosVF, absurdosVF);
   if(!pick || pick.esgotado){
     vfMostrarTelaEsgotadoVF(pick?.motivo, !!filtroVF.varreduraDesde);
     document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
@@ -16847,7 +16875,7 @@ async function vfAbrirMenuTagsFiltroVF(evento){
   vfPosicionarMenuTagsVF(menu, botao);
   setTimeout(() => document.addEventListener('click', vfFecharMenuTagsFiltroVF), 0); // fecha ao tocar fora - no setTimeout pra não pegar o próprio clique que abriu
   // reconfere a lista no banco (barato: só id e nome) - se mudou, redesenha
-  const {data, error} = await sb.from('tags_vf').select('id, nome').order('nome');
+  const {data, error} = await sb.from('tags_vf').select('id, nome, oculta').order('nome');
   if(error || !data || !document.getElementById('vf-menu-tags-filtro')) return;
   const mudou = data.length !== (vfTodasTagsCacheVF || []).length || data.some(t => !(vfTodasTagsCacheVF || []).some(c => c.id === t.id));
   if(!mudou) return;
@@ -17275,7 +17303,7 @@ function vfRecalcularAutoVF(){
       if(elegibilidadeAprendendoVF(q, agoraMs, estadoVF.contadorGlobal, estadoVF.pool.length)) urgentes++;
     }else if(q.estado === 'revisao' && q.intervalo_horas && q.ultima_resposta_em){
       const razao = ((agoraMs - new Date(q.ultima_resposta_em).getTime()) / 3600000) / q.intervalo_horas;
-      if(razao >= 1 && ((q.historico_recente || '').includes('E') || favoritosVF.has(q.id))) urgentes++;
+      if(razao >= 1 && ((q.historico_recente || '').includes('E') || favoritosVF.has(q.id) || absurdosVF.has(q.id))) urgentes++;
     }
   });
   const [l1, l2] = VF_ALGO.AUTO_ALTA_PRIO_LIMITES;
@@ -17511,7 +17539,10 @@ function renderizarItemVF(){
   // cor de marca, fundo branco (diferencia visualmente de uma tag
   // automática do sistema como NÚMERO/LISTA, que tem fundo sólido).
   // Clicar em qualquer uma abre o popup de gerenciar
-  const tagsDaQuestao = vfTagsPorQuestaoVF.get(item.id) || [];
+  // tag cega (tags_vf.oculta, ex: ABSURDO) nunca aparece onde se está
+  // respondendo - frente e verso. Ela vive só no seletor, nos filtros e
+  // nas contagens (16/10)
+  const tagsDaQuestao = (vfTagsPorQuestaoVF.get(item.id) || []).filter(t => !t.oculta);
   // recortes de capítulo da questão (filtros_capitulo_vf) - chips em contorno
   // cinza, só leitura, ao lado das tags. Não são tags
   const recortesDaQuestao = (item.questoes_vf_filtros || []).map(x => x.filtros_capitulo_vf).filter(Boolean);
@@ -19329,7 +19360,7 @@ async function responderVF(resposta){
   }
 
   const contadorNoMomento = estadoVF.contadorGlobal;
-  const novoEstadoItem = registrarRespostaAlgoritmoVF(item, acertou, tempoS, agoraMs, contadorNoMomento, entrada.adiantada);
+  const novoEstadoItem = registrarRespostaAlgoritmoVF(item, acertou, tempoS, agoraMs, contadorNoMomento, entrada.adiantada, favoritosVF, absurdosVF);
   Object.assign(item, novoEstadoItem);
 
   // v3.2 - aviso "rodei tudo": critério é nenhuma questão do filtro
@@ -19484,10 +19515,84 @@ function vfCancelarPressionarFavoritar(evento, id){
 // ---- sistema de tags customizadas (livres) por questão V/F ----
 let vfQuestaoIdTagsAtualVF = null;
 
+// ---- tags principais: chips de um toque no seletor (16/10) ----
+// liga/desliga em um toque, na ordem abaixo. ABSURDO e DIVERGÊNCIA são
+// tags de tags_vf (questoes_vf_tags); NÚMERO e LISTA são os campos
+// eh_numero / eh_lista da afirmação. Pra mudar a linha, é só mexer aqui
+const VF_TAGS_PRINCIPAIS_VF = [
+  {rotulo: 'ABSURDO', tag: 'ABSURDO'},
+  {rotulo: 'DIVERGÊNCIA', tag: 'DIVERGÊNCIA'},
+  {rotulo: 'NÚMERO', campo: 'eh_numero'},
+  {rotulo: 'LISTA', campo: 'eh_lista'}
+];
+const VF_NOME_TAG_ABSURDO_VF = 'ABSURDO';
+function vfChaveTagVF(nome){
+  return String(nome || '').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+function vfEhTagPrincipalVF(nome){
+  const k = vfChaveTagVF(nome);
+  return VF_TAGS_PRINCIPAIS_VF.some(c => c.tag && vfChaveTagVF(c.tag) === k);
+}
+function vfRecalcularAbsurdosVF(){
+  const alvo = vfChaveTagVF(VF_NOME_TAG_ABSURDO_VF);
+  const s = new Set();
+  vfTagsPorQuestaoVF.forEach((tags, qid) => { if((tags || []).some(t => vfChaveTagVF(t.nome) === alvo)) s.add(qid); });
+  absurdosVF = s;
+}
+function vfItemDaQuestaoTagsVF(questaoId){
+  return estadoVF?.pool?.find(i => i.id === questaoId) || estadoVF?.historico?.find(h => h.item.id === questaoId)?.item;
+}
+function vfRenderizarChipsTagsPrincipaisVF(){
+  const caixa = document.getElementById('vf-tags-principais');
+  const qid = vfQuestaoIdTagsAtualVF;
+  if(!caixa || !qid) return;
+  const item = vfItemDaQuestaoTagsVF(qid);
+  const tags = vfTagsPorQuestaoVF.get(qid) || [];
+  caixa.innerHTML = VF_TAGS_PRINCIPAIS_VF.map((c, i) => {
+    const aceso = c.campo ? !!item?.[c.campo] : tags.some(t => vfChaveTagVF(t.nome) === vfChaveTagVF(c.tag));
+    return `<button type="button" class="vf-chip-tag-principal" aria-pressed="${aceso}" onclick="vfAlternarTagPrincipalVF(${i})">${c.rotulo}</button>`;
+  }).join('');
+}
+async function vfAlternarTagPrincipalVF(indice){
+  const c = VF_TAGS_PRINCIPAIS_VF[indice];
+  const qid = vfQuestaoIdTagsAtualVF;
+  if(!c || !qid) return;
+  const statusEl = document.getElementById('vf-tags-status');
+  if(c.campo){
+    // campo da afirmação: otimista, igual ao resto do seletor
+    const item = vfItemDaQuestaoTagsVF(qid);
+    const novo = !(item && item[c.campo]);
+    if(item) item[c.campo] = novo;
+    vfRenderizarListaTagsAtualVF();
+    renderizarItemVF();
+    const {error} = await vfQuestoesVfEscritaVF().update({[c.campo]: novo}).eq('id', qid);
+    if(error){
+      if(item) item[c.campo] = !novo;
+      vfRenderizarListaTagsAtualVF();
+      renderizarItemVF();
+      if(statusEl) statusEl.innerHTML = '<span style="color:#B00020">Não consegui salvar agora. Tenta de novo.</span>';
+    }
+    return;
+  }
+  const alvo = vfChaveTagVF(c.tag);
+  const jaTem = (vfTagsPorQuestaoVF.get(qid) || []).find(t => vfChaveTagVF(t.nome) === alvo);
+  if(jaTem){ await vfRemoverTagVF(jaTem.id); return; }
+  // ligar: mesmo caminho de sempre (reaproveita a tag existente, otimista)
+  const existente = (vfTodasTagsCacheVF || []).find(t => vfChaveTagVF(t.nome) === alvo);
+  const input = document.getElementById('vf-tags-input-novo');
+  if(!input) return;
+  const digitado = input.value;
+  input.value = existente ? existente.nome : c.tag;
+  await vfAdicionarTagVF();
+  if(digitado && !input.value) input.value = digitado; // devolve o que estava sendo digitado
+}
+
 function vfRenderizarListaTagsAtualVF(){
   const container = document.getElementById('vf-tags-lista-atual');
   if(!container || !vfQuestaoIdTagsAtualVF) return;
-  const tags = vfTagsPorQuestaoVF.get(vfQuestaoIdTagsAtualVF) || [];
+  vfRenderizarChipsTagsPrincipaisVF();
+  // as principais já estão nos chips logo abaixo - não aparecem de novo aqui
+  const tags = (vfTagsPorQuestaoVF.get(vfQuestaoIdTagsAtualVF) || []).filter(t => !vfEhTagPrincipalVF(t.nome));
   // tags automáticas (eh_numero/eh_lista) são campos estruturais da
   // questão, não registros na tabela de tags customizadas - por isso não
   // apareciam aqui antes, mesmo já visíveis como badge na tela principal.
@@ -19495,8 +19600,7 @@ function vfRenderizarListaTagsAtualVF(){
   // das customizadas, que têm só borda), permitindo desmarcar direto daqui
   const itemAtual = estadoVF?.pool?.find(i => i.id === vfQuestaoIdTagsAtualVF) || estadoVF?.historico?.find(h => h.item.id === vfQuestaoIdTagsAtualVF)?.item;
   const tagsAutomaticas = [
-    itemAtual?.eh_numero ? {campo: 'eh_numero', nome: 'NÚMERO'} : null,
-    itemAtual?.eh_lista ? {campo: 'eh_lista', nome: 'LISTA'} : null,
+    // NÚMERO e LISTA viraram chips (VF_TAGS_PRINCIPAIS_VF)
     itemAtual?.inconsistente ? {campo: 'inconsistente', nome: 'INCONSISTENTE'} : null
   ].filter(Boolean);
   const htmlAutomaticas = tagsAutomaticas.map(t =>
@@ -19649,12 +19753,12 @@ async function vfAdicionarTagVF(){
   let tag = tagExistente;
 
   if(!tag){
-    const {data: tagCriada, error: erroCriar} = await sb.from('tags_vf').insert({nome: nomeDigitado, criado_por: usuarioAtual.id}).select('id, nome').single();
+    const {data: tagCriada, error: erroCriar} = await sb.from('tags_vf').insert({nome: nomeDigitado, criado_por: usuarioAtual.id}).select('id, nome, oculta').single();
     if(erroCriar){
       // corrida: outra pessoa criou a mesma tag entre o cache carregar e
       // agora - trata como "já existe", busca ela em vez de falhar
       if(erroCriar.code === '23505'){
-        const {data: tagJaExistente} = await sb.from('tags_vf').select('id, nome').ilike('nome', nomeDigitado).maybeSingle();
+        const {data: tagJaExistente} = await sb.from('tags_vf').select('id, nome, oculta').ilike('nome', nomeDigitado).maybeSingle();
         if(tagJaExistente) tag = tagJaExistente;
       }
       if(!tag){
@@ -19672,6 +19776,7 @@ async function vfAdicionarTagVF(){
   const questaoId = vfQuestaoIdTagsAtualVF;
   if(!vfTagsPorQuestaoVF.has(questaoId)) vfTagsPorQuestaoVF.set(questaoId, []);
   vfTagsPorQuestaoVF.get(questaoId).push(tag);
+  vfRecalcularAbsurdosVF();
   input.value = '';
   vfRenderizarListaTagsAtualVF();
   renderizarItemVF();
@@ -19681,6 +19786,7 @@ async function vfAdicionarTagVF(){
     // desfaz o otimismo
     const lista = vfTagsPorQuestaoVF.get(questaoId) || [];
     vfTagsPorQuestaoVF.set(questaoId, lista.filter(t => t.id !== tag.id));
+    vfRecalcularAbsurdosVF();
     vfRenderizarListaTagsAtualVF();
     renderizarItemVF();
     console.error('erro ao ligar a tag na questão:', error, {tag, questaoId});
@@ -19715,6 +19821,7 @@ async function vfRemoverTagVF(tagId){
   const tagRemovida = listaAntes.find(t => t.id === tagId);
   // otimista
   vfTagsPorQuestaoVF.set(questaoId, listaAntes.filter(t => t.id !== tagId));
+  vfRecalcularAbsurdosVF();
   vfRenderizarListaTagsAtualVF();
   renderizarItemVF();
 
@@ -19723,6 +19830,7 @@ async function vfRemoverTagVF(tagId){
     // desfaz o otimismo
     const listaAtual = vfTagsPorQuestaoVF.get(questaoId) || [];
     vfTagsPorQuestaoVF.set(questaoId, [...listaAtual, tagRemovida]);
+    vfRecalcularAbsurdosVF();
     vfRenderizarListaTagsAtualVF();
     renderizarItemVF();
     return;
@@ -19739,6 +19847,10 @@ async function vfRemoverTagVF(tagId){
 // afirmações é compartilhado, e uma tag ainda usada por outra pessoa não
 // pode sumir porque o Carlos tirou da dele
 async function vfApagarTagOrfaVF(tagId){
+  // (16/10) as tags dos chips e as cegas existem mesmo sem nenhuma questão:
+  // apagar a ABSURDO ao desmarcar o último cartão levaria junto o oculta
+  const tagCache = (vfTodasTagsCacheVF || []).find(t => String(t.id) === String(tagId));
+  if(tagCache && (tagCache.oculta || vfEhTagPrincipalVF(tagCache.nome))) return;
   const {count, error} = await sb.from('questoes_vf_tags')
     .select('tag_id', {count: 'exact', head: true}).eq('tag_id', tagId);
   if(error || count === null || count > 0) return;
