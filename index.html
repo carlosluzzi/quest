@@ -3147,7 +3147,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-15-294';
+const VERSAO_APP = '2026-10-16-296';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5740,6 +5740,11 @@ const VF_SIMBOLOS_QUE_PEDEM_ESPACO_VF = new Set([
 ]);
 function vfJuntarSimboloVF(resto, nome){
   if(nome && VF_SIMBOLOS_QUE_PEDEM_ESPACO_VF.has(nome)) return false;
+  // ...e o mesmo vale olhando pra FRENTE: "\nu \approx 2" saía "ν≈ 2"
+  // porque o comando seguinte (\approx) era lido como fórmula colada. Se
+  // o que vem depois é uma relação/operação, o espaço fica (achado real, 16/10)
+  const proximo = resto.match(/^\\([A-Za-z]+)/);
+  if(proximo && VF_SIMBOLOS_QUE_PEDEM_ESPACO_VF.has(proximo[1])) return false;
   return /^\\[A-Za-z]/.test(resto) || /^[A-Za-z](?![A-Za-zÀ-ÿ])/.test(resto);
 }
 // fonte serifada, exceção deliberada só pras tabelas (\begin{array}) -
@@ -7030,8 +7035,24 @@ function vfExtrairTabelasComoPlaceholderVF(texto){
   // \imagem[opções]{url} - figura enviada pelo Complementar (15/10). Sai
   // como bloco pronto, igual tabela/desenho: o <img> não passa pelo
   // escapeHtml nem pelas trocas de texto (expoente, hífen, etc)
+  // (16/10) ela vira um bloco igual ao do desenho SVG (.vf-svg-bloco) e é
+  // registrada no mesmo mapa de origem: segurar mostra a alça de
+  // redimensionar, os 3 botões de alinhamento e o de tirar da questão,
+  // e o que ele ajustar volta gravado no próprio \imagem[...]{}
   texto = texto.replace(VF_RE_COMANDO_IMAGEM_VF, (m, opcoesStr, url) => {
-    tabelas.push(vfMontarBlocoImagemVF(url, opcoesStr));
+    const idEscopo = `vf-svg-${++vfContadorSvgVF}`;
+    const opcoes = vfOpcoesImagemVF(opcoesStr);
+    tabelas.push(vfMontarBlocoImagemVF(url, opcoesStr, idEscopo));
+    vfSvgOrigemVF.set(idEscopo, {
+      contexto: vfContextoRenderizacaoSvgVF,
+      textoOriginalMatch: m,
+      ehImagem: true,
+      url,
+      semFundo: opcoes.semFundo,
+      larguraAtualPx: opcoes.larguraPx,
+      larguraPct: opcoes.larguraPct,
+      alinhamentoAtual: opcoes.alinhamento
+    });
     return `\u0000TABELA${tabelas.length - 1}\u0000`;
   });
   // \svg[...]{...} primeiro - isola completamente antes de qualquer
@@ -7184,16 +7205,32 @@ function vfExtrairTabelasComoPlaceholderVF(texto){
 }
 // só aceita endereço https: é texto que vira atributo src
 const VF_RE_COMANDO_IMAGEM_VF = /\\imagem(?:\[([^\]]*)\])?\{(https:\/\/[^\s{}"'<>]+)\}/g;
-// opções, em qualquer ordem: semfundo, largura em % (ex 60%) e
-// esquerda/direita (o padrão é centralizada)
-function vfMontarBlocoImagemVF(url, opcoesStr){
+// opções, em qualquer ordem: semfundo, largura (em px, ex 420px - é o
+// que a alça grava - ou em %, ex 60%) e esquerda/centro/direita. O padrão
+// da imagem é CENTRALIZADA (o do desenho SVG é esquerda)
+function vfOpcoesImagemVF(opcoesStr){
   const tokens = String(opcoesStr || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-  const semFundo = tokens.includes('semfundo');
-  const tokenLargura = tokens.find(t => /^\d{1,3}%$/.test(t));
-  const largura = tokenLargura ? Math.min(100, Math.max(10, parseInt(tokenLargura, 10))) : null;
-  const alinhamento = tokens.find(t => t === 'esquerda' || t === 'direita') || 'centro';
-  const margem = alinhamento === 'esquerda' ? '12px auto 12px 0' : alinhamento === 'direita' ? '12px 0 12px auto' : '12px auto';
-  return `<img class="vf-imagem-complementar${semFundo ? ' vf-imagem-sem-fundo' : ''}" src="${escapeHtml(url)}" alt="" loading="lazy" decoding="async" style="display:block;max-width:100%;${largura ? `width:${largura}%;` : ''}height:auto;margin:${margem};border-radius:6px">`;
+  const tokenPx = tokens.find(t => /^\d{2,4}px$/.test(t));
+  const tokenPct = tokens.find(t => /^\d{1,3}%$/.test(t));
+  return {
+    semFundo: tokens.includes('semfundo'),
+    larguraPx: tokenPx ? Math.max(40, parseInt(tokenPx, 10)) : null,
+    larguraPct: (!tokenPx && tokenPct) ? Math.min(100, Math.max(10, parseInt(tokenPct, 10))) : null,
+    alinhamento: tokens.find(t => t === 'esquerda' || t === 'direita') || 'centro'
+  };
+}
+function vfMontarBlocoImagemVF(url, opcoesStr, idEscopo){
+  const o = vfOpcoesImagemVF(opcoesStr);
+  const margemAlinhamento = o.alinhamento === 'centro' ? 'margin-left:auto;margin-right:auto;'
+    : o.alinhamento === 'direita' ? 'margin-left:auto;margin-right:0;' : '';
+  const largura = o.larguraPx ? `width:${o.larguraPx}px;` : '';
+  // largura em % é relativa ao CARTÃO, então quem leva o % é o bloco
+  const larguraBloco = o.larguraPct ? `width:${o.larguraPct}%;` : 'width:fit-content;';
+  const larguraImg = o.larguraPct ? 'width:100%;' : largura;
+  // draggable=false + o -webkit-touch-callout:none que .vf-svg-bloco já
+  // aplica: segurar a imagem no iPad não abre mais o menu do sistema
+  // (Compartilhar / Salvar em Fotos) - o toque longo é do app
+  return `<div id="${idEscopo || ''}" class="vf-svg-bloco vf-imagem-bloco" data-alinhamento-svg="${o.alinhamento}" style="margin:16px 0;position:relative;${larguraBloco}max-width:100%;${margemAlinhamento}"><img class="vf-imagem-complementar${o.semFundo ? ' vf-imagem-sem-fundo' : ''}" src="${escapeHtml(url)}" alt="" draggable="false" loading="lazy" decoding="async" style="display:block;${larguraImg}max-width:100%;height:auto;border-radius:6px;pointer-events:none"></div>`;
 }
 function vfReinserirTabelasVF(texto, tabelas){
   return texto.replace(/\u0000TABELA(\d+)\u0000/g, (m, i) => tabelas[Number(i)] || '');
@@ -18056,8 +18093,10 @@ function vfMostrarAlcaRedimensionarSvgVF(bloco){
 function vfIniciarArrastoAlcaSvgVF(evento, bloco, alca){
   evento.preventDefault();
   evento.stopPropagation();
-  const svg = bloco.querySelector('svg');
+  // imagem do Complementar usa a mesma alça (o "svg" aqui é o que se redimensiona)
+  const svg = bloco.querySelector(':scope > img.vf-imagem-complementar') || bloco.querySelector('svg');
   if(!svg) return;
+  if(bloco.classList.contains('vf-imagem-bloco')) bloco.style.width = 'fit-content'; // largura em % vira px a partir do primeiro arrasto
   const toque = evento.touches ? evento.touches[0] : evento;
   const rect = svg.getBoundingClientRect();
   vfBlocoSvgAlcaAtivaVF = {blocoId: bloco.id, svg, largInicial: rect.width, xInicial: toque.clientX};
@@ -18110,7 +18149,7 @@ async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
   }
   const {contexto, textoOriginalMatch, textoOriginalEraCru} = origem;
   const larguraFinal = novaLarguraPx !== null ? novaLarguraPx : origem.larguraAtualPx;
-  const alinhamentoFinal = novoAlinhamento !== null ? novoAlinhamento : (origem.alinhamentoAtual || 'esquerda');
+  const alinhamentoFinal = novoAlinhamento !== null ? novoAlinhamento : (origem.alinhamentoAtual || (origem.ehImagem ? 'centro' : 'esquerda'));
   // monta os tokens dentro dos colchetes: largura (se tiver) + alinhamento
   // (só se não for o padrão "esquerda", pra manter \svg{} limpo quando dá)
   const tokens = [];
@@ -18120,9 +18159,19 @@ async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
   // monta o novo comando: envolve em \svg[...]{} se era um <svg> cru sem
   // wrapper nenhum, ou só troca o \svg[...]{ de abertura se já vinha com
   // o comando (preserva o conteúdo interno inteiro, intocado)
-  const novoTrecho = textoOriginalEraCru
+  let novoTrecho = textoOriginalEraCru
     ? `\\svg${colchetes}{${textoOriginalMatch}}`
     : textoOriginalMatch.replace(/^\\svg(?:\[[^\]]*\])?\{/, `\\svg${colchetes}{`);
+  if(origem.ehImagem){
+    // imagem: o padrão é centro, então só grava esquerda/direita; o
+    // "semfundo" (que liga o ajuste do tema escuro) é preservado
+    const tokensImg = [];
+    if(origem.semFundo) tokensImg.push('semfundo');
+    if(larguraFinal) tokensImg.push(`${larguraFinal}px`);
+    else if(origem.larguraPct) tokensImg.push(`${origem.larguraPct}%`);
+    if(alinhamentoFinal !== 'centro') tokensImg.push(alinhamentoFinal);
+    novoTrecho = `\\imagem${tokensImg.length ? `[${tokensImg.join(',')}]` : ''}{${origem.url}}`;
+  }
 
   if(contexto.tipo === 'campo-vf'){
     const entrada = estadoVF.historico.find(h => h.item.id === contexto.questaoId);
@@ -18161,6 +18210,7 @@ async function vfSalvarAtributosSvgVF(blocoId, novaLarguraPx, novoAlinhamento){
   origem.textoOriginalMatch = novoTrecho;
   origem.textoOriginalEraCru = false;
   origem.larguraAtualPx = larguraFinal;
+  if(larguraFinal) origem.larguraPct = null;
   origem.alinhamentoAtual = alinhamentoFinal;
 }
 // mantém o nome antigo funcionando (só largura) - usado pelo arrasto da alça
