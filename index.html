@@ -3147,7 +3147,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-16-296';
+const VERSAO_APP = '2026-10-16-298';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -22589,10 +22589,15 @@ function vfMontarElementosAnexadosVF(container, questaoVfId, ligacoes){
     // antigo, só nesse caso
     // árvore entra na mesma regra da tabela e do desenho: nada de botão
     // "Desanexar" em cima. Ela vive na biblioteca, e é de lá que se tira
-    if(!bloco.querySelector('.vf-tabela-bloco') && !bloco.querySelector('svg') && !bloco.querySelector('.vf-arvore-bloco')){
+    // (16/10) a checagem era por <svg> - a imagem do Complementar não tem
+    // svg nenhum, então ganhava o botão "Desanexar" em cima MESMO tendo o
+    // "x" na barrinha de segurar. Agora conta qualquer bloco de desenho
+    // (.vf-svg-bloco cobre SVG e imagem). E o que sobra (texto solto) não
+    // tem mais a palavra "Desanexar": é o mesmo "x" vermelho das barrinhas
+    if(!bloco.querySelector('.vf-tabela-bloco') && !bloco.querySelector('.vf-svg-bloco') && !bloco.querySelector('svg') && !bloco.querySelector('.vf-arvore-bloco')){
       const saida = document.createElement('div');
       saida.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:6px';
-      saida.innerHTML = `<button style="font-size:var(--fs-a);padding:3px 8px;border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;cursor:pointer;-webkit-tap-highlight-color:transparent">Desanexar</button>`;
+      saida.innerHTML = `<button title="Tirar esse complementar da questão" style="width:28px;height:28px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#B23A34;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>`;
       saida.firstChild.onclick = () => vfDesanexarElementoVF(bloco.dataset.ligacaoId, bloco.dataset.questaoVfId);
       bloco.parentElement?.insertBefore(saida, bloco);
     }
@@ -22880,9 +22885,9 @@ async function vfConfirmarAnotacaoElementoVF(){
   celulaEl.onmouseenter = mostrar;
 }
 async function vfDesanexarElementoVF(ligacaoId, questaoVfId){
-  vfAbrirConfirmacaoGenericaVF('Desanexar elemento', 'Desanexar esse elemento dessa questão? Ele continua salvo na sua biblioteca.', async () => {
+  vfAbrirConfirmacaoGenericaVF('Tirar da questão', 'Tirar esse complementar dessa questão? Ele continua salvo na sua biblioteca.', async () => {
     const {error} = await sb.from('questao_elemento_html_vf').delete().eq('id', ligacaoId);
-    if(error){ vfMostrarAvisoVF('Erro ao desanexar: '+error.message); return; }
+    if(error){ vfMostrarAvisoVF('Não consegui tirar da questão: '+error.message); return; }
     vfGeracaoCacheElementosVF++;
     vfElementosCacheVF.delete(questaoVfId); // invalida - o conjunto de elementos anexados mudou
     vfCarregarElementosAnexadosVF(questaoVfId).then(() => {
@@ -23541,11 +23546,16 @@ function vfMontarNotasFixadasIrmasVF(questaoVfId, data){
     const alinhamento = n.alinhamento || 'esquerda';
     const alinhamentoCss = alinhamento === 'centro' ? 'center' : alinhamento === 'direita' ? 'right' : 'left';
     const temTabela = /\\begin\{array\}/.test(n.texto);
+    // (16/10) mesmo miolo da nota fixada de verdade (vfMontarPreviewNotasVF),
+    // inclusive a folga da direita reservada pra alça: sem ela o texto do
+    // fantasma quebrava a linha em outro ponto e a nota "mudava de lugar"
+    // ao ser trazida
+    const paddingTexto = alinhamento === 'centro' ? 'padding:0 32px' : 'padding-right:32px';
     const conteudo = temTabela
       ? formatarTextoItemVF(n.texto, {listaNumerada: true})
-      : `<div style="color:#333;line-height:1.4;text-align:${alinhamentoCss}">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>`;
+      : `<div style="color:#333;line-height:1.4;text-align:${alinhamentoCss};${paddingTexto}">${formatarTextoItemVF(n.texto, {listaNumerada: true})}</div>`;
     return `
-      <div id="vf-nota-irma-card-${n.id}" style="margin-bottom:10px">
+      <div id="vf-nota-irma-card-${n.id}" style="margin-bottom:${VF_GAP_PREVIEW_NOTAS}px">
         <div class="${temTabela ? '' : 'card-questao'}" style="position:relative;margin-bottom:0;border-style:dashed;${vfEstiloCorNotaVF(n.cor)}">
           <div style="opacity:0.45">${conteudo}</div>
           <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:8px">
@@ -23556,6 +23566,19 @@ function vfMontarNotasFixadasIrmasVF(questaoVfId, data){
       </div>`;
   }).join('');
   atual.classList.remove('hidden');
+  vfAjustarMargemOfertasIrmasVF();
+}
+// (16/10) o fantasma tem que estar EXATAMENTE onde a nota vai parar ao
+// tocar no "+". Sem nenhuma nota fixada, ela vira o começo da pilha (22px
+// abaixo do cartão da questão - mesma margem da pilha). Com notas já
+// fixadas, ela entra no fim da pilha, a VF_GAP_PREVIEW_NOTAS da última -
+// e era aí que os 22px do bloco de ofertas faziam ela pular pra cima
+function vfAjustarMargemOfertasIrmasVF(){
+  const ofertas = document.getElementById('vf-preview-notas-irmas-container');
+  if(!ofertas) return;
+  const pilha = document.getElementById('vf-preview-notas-container');
+  const temPilha = !!(pilha && pilha.querySelector('.vf-nota-preview-item'));
+  ofertas.style.marginTop = (temPilha ? VF_GAP_PREVIEW_NOTAS : 22) + 'px';
 }
 
 // "não aqui": tira a oferta dessa questão pra sempre, sem tocar na nota
@@ -23601,10 +23624,11 @@ async function vfAdicionarNotaFixadaDaIrmaVF(notaId){
   if(!containerFixadas && containerIrmas?.parentElement){
     containerFixadas = document.createElement('div');
     containerFixadas.id = 'vf-preview-notas-container';
-    containerFixadas.style.cssText = 'position:relative;margin-top:14px';
+    containerFixadas.style.cssText = 'position:relative;margin-top:22px'; // (16/10) era 14px, e a pilha que nasce com a página tem 22px: a nota trazida "pulava" 8px pra cima de onde o fantasma estava
     containerIrmas.parentElement.insertBefore(containerFixadas, containerIrmas);
   }
   if(containerFixadas) vfMontarPreviewNotasVF(containerFixadas, listaNova, destino);
+  vfAjustarMargemOfertasIrmasVF(); // as ofertas que sobraram agora vêm depois de uma pilha
 
   const {data, error} = await sb.from('notas_vf').insert({
     usuario_id: usuarioAtual.id,
