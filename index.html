@@ -656,6 +656,12 @@ html[data-tema="escuro"] .textarea-padrao{border-color:#262626 !important;backgr
    versao adaptada pro escuro viajam juntas na propria tag, em variaveis -
    CSS nao sabe ler atributo pra pintar, mas sabe ler variavel */
 html[data-tema="escuro"] .vf-cor-trecho{color:var(--cor-trecho-escuro) !important}
+/* imagem do Complementar que teve o fundo tirado: quase sempre é traço
+   escuro (figura de livro, esquema) sobre nada - no fundo preto do tema
+   escuro sumiria. Inverte a claridade e devolve o matiz (hue-rotate), o
+   mesmo efeito do preto->claro que o SVG ganhou. Imagem que manteve o
+   fundo próprio não precisa: o fundo dela já dá o contraste */
+html[data-tema="escuro"] .vf-imagem-sem-fundo{filter:invert(1) hue-rotate(180deg)}
 html[data-tema="escuro"] [data-vf-editor-rich] table td{border-color:#262626 !important}
 html[data-tema="escuro"] [data-vf-editor-rich] table tr:first-child.vf-editor-tr-cabecalho td{background-color:#0F0F0E !important;color:#DCD8D0 !important}
 html[data-tema="escuro"] [data-vf-editor-rich]:empty:before{color:#9D9A93 !important}
@@ -2871,8 +2877,22 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
           <button type="button" title="Alinhar à direita" onmousedown="event.preventDefault()" onclick="vfEditorRichAlinharVF('direita')" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="7" x2="19" y2="7"/><line x1="9" y1="12" x2="19" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/></svg></button>
           <div style="width:1px;background:#ddd;margin:4px 2px"></div>
           <button type="button" title="Inserir tabela" onmousedown="event.preventDefault()" onclick="vfEditorRichInserirTabelaVF()" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg></button>
+          <button type="button" title="Inserir imagem" onmousedown="event.preventDefault()" onclick="vfAbrirSeletorImagemComplementarVF()" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M21 15l-5-5L5 21"/></svg></button>
+          <input type="file" id="vf-complementar-input-imagem" accept="image/*" class="hidden" onchange="vfImagemEscolhidaComplementarVF(this)">
           <div style="width:1px;background:#ddd;margin:4px 2px"></div>
           <button type="button" id="vf-editor-btn-modo-codigo" title="Ver/editar o código-fonte" onmousedown="event.preventDefault()" onclick="vfAlternarModoCodigoEditorVF()" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>
+        </div>
+        <div id="vf-imagem-complementar-painel" class="hidden" style="border:0.5px solid #e6e6e2;border-radius:10px;padding:12px;margin-bottom:10px">
+          <div id="vf-imagem-complementar-previa" style="border-radius:8px;min-height:120px;display:flex;align-items:center;justify-content:center;padding:8px;background-color:#fff;background-image:linear-gradient(45deg,#ececea 25%,transparent 25%),linear-gradient(-45deg,#ececea 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ececea 75%),linear-gradient(-45deg,transparent 75%,#ececea 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0"></div>
+          <p id="vf-imagem-complementar-status" style="font-size:var(--fs-c);color:#888;margin:8px 0 0;text-align:center;line-height:1.4"></p>
+          <div id="vf-imagem-complementar-fundo" class="hidden" style="display:flex;gap:8px;margin-top:10px">
+            <button type="button" id="vf-imagem-btn-sem-fundo" class="btn-secundario active" style="flex:1 1 0;min-width:0" onclick="vfEscolherFundoImagemVF(false)">Sem fundo</button>
+            <button type="button" id="vf-imagem-btn-com-fundo" class="btn-secundario" style="flex:1 1 0;min-width:0" onclick="vfEscolherFundoImagemVF(true)">Com fundo</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button type="button" class="btn-secundario" style="flex:1 1 0;min-width:0" onclick="vfCancelarImagemComplementarVF()">Cancelar</button>
+            <button type="button" id="vf-imagem-btn-inserir" class="btn-primario" style="flex:1 1 0;min-width:0" onclick="vfInserirImagemComplementarVF()">Inserir</button>
+          </div>
         </div>
         <div id="vf-editor-rich-caixa" data-vf-editor-rich data-espelho="vf-complementar-latex-novo" contenteditable="true" class="textarea-padrao" style="min-height:180px;overflow-y:auto;white-space:pre-wrap"></div>
         <textarea id="vf-complementar-latex-novo" class="hidden textarea-padrao" style="min-height:180px;font-family:monospace;font-size:var(--fs-c)"></textarea>
@@ -3127,7 +3147,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-15-293';
+const VERSAO_APP = '2026-10-15-294';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7007,6 +7027,13 @@ function vfAplicarMarcacaoMatematicaVF(textoEscapado){
 // das células - precisa rodar antes, com o & ainda literal
 function vfExtrairTabelasComoPlaceholderVF(texto){
   const tabelas = [];
+  // \imagem[opções]{url} - figura enviada pelo Complementar (15/10). Sai
+  // como bloco pronto, igual tabela/desenho: o <img> não passa pelo
+  // escapeHtml nem pelas trocas de texto (expoente, hífen, etc)
+  texto = texto.replace(VF_RE_COMANDO_IMAGEM_VF, (m, opcoesStr, url) => {
+    tabelas.push(vfMontarBlocoImagemVF(url, opcoesStr));
+    return `\u0000TABELA${tabelas.length - 1}\u0000`;
+  });
   // \svg[...]{...} primeiro - isola completamente antes de qualquer
   // outro processamento, já que o conteúdo (CSS/atributos) pode ter
   // muitas chaves que não têm nada a ver com \nota{}{} ou \begin{array}.
@@ -7154,6 +7181,19 @@ function vfExtrairTabelasComoPlaceholderVF(texto){
   // segura ali porque a tabela inteira já vira um placeholder protegido
   const textoFinal = vfProcessarNotaClicavelComPlaceholderVF(textoComPlaceholder, tabelas);
   return {textoComPlaceholder: textoFinal, tabelas};
+}
+// só aceita endereço https: é texto que vira atributo src
+const VF_RE_COMANDO_IMAGEM_VF = /\\imagem(?:\[([^\]]*)\])?\{(https:\/\/[^\s{}"'<>]+)\}/g;
+// opções, em qualquer ordem: semfundo, largura em % (ex 60%) e
+// esquerda/direita (o padrão é centralizada)
+function vfMontarBlocoImagemVF(url, opcoesStr){
+  const tokens = String(opcoesStr || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+  const semFundo = tokens.includes('semfundo');
+  const tokenLargura = tokens.find(t => /^\d{1,3}%$/.test(t));
+  const largura = tokenLargura ? Math.min(100, Math.max(10, parseInt(tokenLargura, 10))) : null;
+  const alinhamento = tokens.find(t => t === 'esquerda' || t === 'direita') || 'centro';
+  const margem = alinhamento === 'esquerda' ? '12px auto 12px 0' : alinhamento === 'direita' ? '12px 0 12px auto' : '12px auto';
+  return `<img class="vf-imagem-complementar${semFundo ? ' vf-imagem-sem-fundo' : ''}" src="${escapeHtml(url)}" alt="" loading="lazy" decoding="async" style="display:block;max-width:100%;${largura ? `width:${largura}%;` : ''}height:auto;margin:${margem};border-radius:6px">`;
 }
 function vfReinserirTabelasVF(texto, tabelas){
   return texto.replace(/\u0000TABELA(\d+)\u0000/g, (m, i) => tabelas[Number(i)] || '');
@@ -21029,6 +21069,12 @@ function vfEditorRichDeLatexVF(texto){
     semSvg += texto.slice(posSvg);
     texto = semSvg;
   }
+  // \imagem{} - mesmo tratamento do \svg{}: vira bloco intocado (o texto
+  // original volta exato ao salvar), só que mostrando a miniatura
+  texto = texto.replace(/\\imagem(?:\[[^\]]*\])?\{[^{}]*\}/g, (m) => {
+    svgsGuardados.push(m);
+    return `\u0000SVGBRUTO${svgsGuardados.length - 1}\u0000`;
+  });
   // \nota{trecho}{explicação} sai de cena ANTES do escapeHtml (a
   // explicação pode ter chaves dentro - c_{33}, \frac{}{} - então tem que
   // ser lida com contagem de chaves, não com regex simples) e volta já
@@ -21085,6 +21131,7 @@ function vfEditorRichDeLatexVF(texto){
       // (não dentro de um <div> de parágrafo), pra vfEditorRichParaLatexVF
       // reconhecer certo depois, sem nenhum wrapper extra no meio
       const b64 = btoa(unescape(encodeURIComponent(svgsGuardados[Number(match[6])])));
+      if(/^\\imagem/.test(svgsGuardados[Number(match[6])])){ blocos.push(vfHtmlBlocoImagemEditorVF(svgsGuardados[Number(match[6])], b64)); pos = regex.lastIndex; continue; }
       blocos.push(`<div class="vf-editor-svg-wrap" contenteditable="false" data-svg-b64="${b64}" style="background:#F3F1EC;border-radius:8px;padding:10px 14px;color:#888;font-family:-apple-system,sans-serif;font-size:13px;margin:6px 0">🖼️ Desenho/SVG — não editável aqui, use o modo &lt; &gt; pra mexer no código</div>`);
     }else if(match[2] !== undefined){
       // é uma tabela
@@ -21299,6 +21346,7 @@ function vfAbrirComplementarVF(questaoVfId){
   document.getElementById('vf-complementar-btn-remover-local').classList.add('hidden');
   document.getElementById('vf-complementar-btn-usar-local').classList.remove('hidden');
   document.getElementById('vf-complementar-btn-salvar-biblioteca').textContent = 'Salvar na biblioteca';
+  vfCancelarImagemComplementarVF();
   vfMarcarComparacaoNoFormularioVF(false);
   vfMudarAbaComplementarVF('biblioteca');
   abrirModal('modal-complementar-vf');
@@ -21934,6 +21982,290 @@ function vfRenderizarComparacoesVF(){
       </div>`).join('');
 }
 
+// ============================================================
+// ---- IMAGEM NO COMPLEMENTAR (15/10, Carlos) ----
+// Botão na barrinha -> escolhe a imagem -> prévia -> Inserir. O arquivo
+// vai pro Storage do Supabase (bucket complementar-imagens, uma pasta por
+// usuário) e o texto ganha \imagem[...]{url}, que vira figura em todo
+// lugar que mostra Complementar.
+// Regra do Carlos: WebP chega e vai do jeito que está. Qualquer outro
+// formato é reduzido (lado maior até 1800 px), tem o FUNDO TIRADO quando
+// tem fundo, e é convertido pra WebP.
+// "Tem fundo" = a borda da imagem é quase toda de uma cor só (o papel
+// branco/amarelado de uma figura de livro, o branco de um print). O fundo
+// é apagado por preenchimento a partir da borda - só some o que está
+// LIGADO à borda, então o branco de dentro de uma letra ou de uma caixa
+// fechada fica. A prévia deixa escolher "Com fundo" se o resultado não
+// agradar
+// ============================================================
+const VF_LADO_MAXIMO_IMAGEM_VF = 1800;
+const VF_BUCKET_IMAGENS_COMPLEMENTAR_VF = 'complementar-imagens';
+// codificador WebP do próprio libwebp em WebAssembly (pacote @jsquash/webp)
+// - o canvas do Safari não sabe gerar WebP (devolve PNG no lugar). O
+// módulo carrega o .wasm do lado dele sozinho
+const VF_URL_CODIFICADOR_WEBP_VF = 'https://cdn.jsdelivr.net/npm/@jsquash/webp@1.4.0/codec/enc/webp_enc.js';
+// a struct WebPConfig inteira tem que ir preenchida (valores do pacote)
+const VF_OPCOES_WEBP_VF = {quality: 86, target_size: 0, target_PSNR: 0, method: 4, sns_strength: 50, filter_strength: 60, filter_sharpness: 0, filter_type: 1, partitions: 0, segments: 4, pass: 1, show_compressed: 0, preprocessing: 0, autofilter: 0, partition_limit: 0, alpha_compression: 1, alpha_filtering: 1, alpha_quality: 100, lossless: 0, exact: 0, image_hint: 0, emulate_jpeg_size: 0, thread_level: 0, low_memory: 0, near_lossless: 100, use_delta_palette: 0, use_sharp_yuv: 0};
+let vfImagemComplementarVF = null;     // {arquivo, ehWebp, urlObjeto, canvasCom, canvasSem, usarSemFundo}
+let vfRangeImagemComplementarVF = null; // onde o cursor estava no editor visual
+let vfCursorCodigoImagemVF = null;      // idem no modo código
+let vfPromessaCodificadorWebpVF = null;
+function vfAbrirSeletorImagemComplementarVF(){
+  const textarea = document.getElementById('vf-complementar-latex-novo');
+  const caixa = document.getElementById('vf-editor-rich-caixa');
+  vfRangeImagemComplementarVF = null;
+  vfCursorCodigoImagemVF = null;
+  if(textarea && !textarea.classList.contains('hidden')){
+    vfCursorCodigoImagemVF = textarea.selectionStart;
+  }else{
+    const sel = window.getSelection();
+    if(sel && sel.rangeCount && caixa && caixa.contains(sel.getRangeAt(0).startContainer)) vfRangeImagemComplementarVF = sel.getRangeAt(0).cloneRange();
+  }
+  document.getElementById('vf-complementar-input-imagem')?.click();
+}
+function vfStatusImagemComplementarVF(texto){
+  const el = document.getElementById('vf-imagem-complementar-status');
+  if(el) el.textContent = texto || '';
+}
+function vfLimparImagemComplementarVF(){
+  if(vfImagemComplementarVF?.urlObjeto) URL.revokeObjectURL(vfImagemComplementarVF.urlObjeto);
+  vfImagemComplementarVF = null;
+}
+function vfCancelarImagemComplementarVF(){
+  vfLimparImagemComplementarVF();
+  document.getElementById('vf-imagem-complementar-painel')?.classList.add('hidden');
+  const previa = document.getElementById('vf-imagem-complementar-previa');
+  if(previa) previa.innerHTML = '';
+}
+function vfCarregarImagemArquivoVF(arquivo){
+  return new Promise((resolver, rejeitar) => {
+    const url = URL.createObjectURL(arquivo);
+    const img = new Image();
+    img.onload = () => resolver({img, url});
+    img.onerror = () => { URL.revokeObjectURL(url); rejeitar(new Error('Não consegui abrir essa imagem.')); };
+    img.src = url;
+  });
+}
+async function vfImagemEscolhidaComplementarVF(input){
+  const arquivo = input.files && input.files[0];
+  input.value = ''; // deixa escolher o mesmo arquivo de novo depois
+  if(!arquivo) return;
+  vfLimparImagemComplementarVF();
+  const painel = document.getElementById('vf-imagem-complementar-painel');
+  const previa = document.getElementById('vf-imagem-complementar-previa');
+  const fundo = document.getElementById('vf-imagem-complementar-fundo');
+  const btnInserir = document.getElementById('vf-imagem-btn-inserir');
+  painel.classList.remove('hidden');
+  fundo.classList.add('hidden');
+  previa.innerHTML = '';
+  btnInserir.disabled = true;
+  vfStatusImagemComplementarVF('Preparando a imagem...');
+  painel.scrollIntoView({block: 'nearest'});
+  const ehWebp = arquivo.type === 'image/webp' || /\.webp$/i.test(arquivo.name || '');
+  try{
+    const {img, url} = await vfCarregarImagemArquivoVF(arquivo);
+    if(ehWebp){
+      vfImagemComplementarVF = {arquivo, ehWebp: true, urlObjeto: url};
+      img.style.cssText = 'max-width:100%;max-height:280px;display:block';
+      previa.appendChild(img);
+      vfStatusImagemComplementarVF('Já é WebP: vai do jeito que está.');
+      btnInserir.disabled = false;
+      return;
+    }
+    const escala = Math.min(1, VF_LADO_MAXIMO_IMAGEM_VF / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * escala));
+    const h = Math.max(1, Math.round(img.naturalHeight * escala));
+    const canvasCom = document.createElement('canvas');
+    canvasCom.width = w; canvasCom.height = h;
+    const ctx = canvasCom.getContext('2d', {willReadFrequently: true});
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    // dá um respiro pra tela mostrar "Preparando..." antes do cálculo
+    await new Promise(r => setTimeout(r, 30));
+    const canvasSem = vfTirarFundoCanvasVF(canvasCom);
+    vfImagemComplementarVF = {arquivo, ehWebp: false, canvasCom, canvasSem, usarSemFundo: !!canvasSem};
+    if(canvasSem){
+      fundo.classList.remove('hidden');
+      vfEscolherFundoImagemVF(false);
+    }else{
+      vfMostrarCanvasPreviaImagemVF(canvasCom);
+      vfStatusImagemComplementarVF('Essa imagem não tem um fundo liso pra tirar. Vai como está, convertida pra WebP.');
+    }
+    btnInserir.disabled = false;
+  }catch(e){
+    vfStatusImagemComplementarVF(e?.message || 'Não consegui abrir essa imagem.');
+  }
+}
+function vfMostrarCanvasPreviaImagemVF(canvas){
+  const previa = document.getElementById('vf-imagem-complementar-previa');
+  if(!previa) return;
+  previa.innerHTML = '';
+  canvas.style.cssText = 'max-width:100%;max-height:280px;display:block;height:auto';
+  previa.appendChild(canvas);
+}
+function vfEscolherFundoImagemVF(comFundo){
+  const est = vfImagemComplementarVF;
+  if(!est || est.ehWebp || !est.canvasSem) return;
+  est.usarSemFundo = !comFundo;
+  document.getElementById('vf-imagem-btn-sem-fundo')?.classList.toggle('active', !comFundo);
+  document.getElementById('vf-imagem-btn-com-fundo')?.classList.toggle('active', !!comFundo);
+  vfMostrarCanvasPreviaImagemVF(comFundo ? est.canvasCom : est.canvasSem);
+  vfStatusImagemComplementarVF(comFundo ? 'Mantendo o fundo original.' : 'Fundo tirado. O quadriculado é a parte transparente.');
+}
+// ---- tirar o fundo ----
+// devolve um canvas NOVO sem o fundo, ou null quando a imagem não tem
+// um fundo liso (foto, borda variada) ou já é transparente
+function vfTirarFundoCanvasVF(canvasOrigem){
+  const w = canvasOrigem.width, h = canvasOrigem.height;
+  if(w < 8 || h < 8) return null;
+  const dadosOrig = canvasOrigem.getContext('2d', {willReadFrequently: true}).getImageData(0, 0, w, h);
+  const d = dadosOrig.data;
+  // 1. amostra a borda (faixa de 2 px nos 4 lados)
+  const amostras = [];
+  const somar = (x, y) => amostras.push((y * w + x) * 4);
+  for(let x = 0; x < w; x++){ somar(x, 0); somar(x, 1); somar(x, h - 1); somar(x, h - 2); }
+  for(let y = 2; y < h - 2; y++){ somar(0, y); somar(1, y); somar(w - 1, y); somar(w - 2, y); }
+  const opacas = amostras.filter(i => d[i + 3] > 200);
+  if(opacas.length < amostras.length * 0.5) return null; // borda já transparente: já não tem fundo
+  // 2. cor do fundo = mediana de cada canal na borda
+  const mediana = (c) => { const v = opacas.map(i => d[i + c]).sort((a, b) => a - b); return v[v.length >> 1]; };
+  const ref = [mediana(0), mediana(1), mediana(2)];
+  const distRef = (i) => { const r = d[i] - ref[0], g = d[i + 1] - ref[1], b = d[i + 2] - ref[2]; return Math.sqrt(r * r + g * g + b * b); };
+  const perto = opacas.filter(i => distRef(i) <= 48);
+  if(perto.length < opacas.length * 0.62) return null; // borda variada demais: não é um fundo liso
+  // cor média do fundo e quanto ele varia (papel escaneado tem grão)
+  const fundo = [0, 1, 2].map(c => perto.reduce((s, i) => s + d[i + c], 0) / perto.length);
+  const dist = (i) => { const r = d[i] - fundo[0], g = d[i + 1] - fundo[1], b = d[i + 2] - fundo[2]; return Math.sqrt(r * r + g * g + b * b); };
+  const variacao = Math.sqrt(perto.reduce((s, i) => s + dist(i) * dist(i), 0) / perto.length);
+  const tol = Math.max(26, Math.min(64, variacao * 3 + 16));
+  // 3. preenche a partir da borda: só o que é cor de fundo E está ligado à borda
+  const total = w * h;
+  const marcado = new Uint8Array(total);
+  const fila = new Int32Array(total);
+  let ini = 0, fim = 0;
+  const tentar = (p) => {
+    if(marcado[p]) return;
+    const i = p * 4;
+    if(d[i + 3] < 16 || dist(i) <= tol){ marcado[p] = 1; fila[fim++] = p; }
+  };
+  for(let x = 0; x < w; x++){ tentar(x); tentar((h - 1) * w + x); }
+  for(let y = 1; y < h - 1; y++){ tentar(y * w); tentar(y * w + w - 1); }
+  while(ini < fim){
+    const p = fila[ini++];
+    const x = p % w;
+    if(x > 0) tentar(p - 1);
+    if(x < w - 1) tentar(p + 1);
+    if(p >= w) tentar(p - w);
+    if(p < total - w) tentar(p + w);
+  }
+  const fracao = fim / total;
+  if(fracao < 0.03 || fracao > 0.97) return null; // quase nada (ou quase tudo) seria fundo: melhor não mexer
+  // 4. monta a imagem nova: fundo transparente e a borda do desenho
+  // suavizada - o pixel de transição (meio fundo, meio traço) fica
+  // semitransparente e perde a "cor do papel" que vinha misturada nele,
+  // senão sobraria um contorno claro em volta de tudo
+  const saida = new ImageData(new Uint8ClampedArray(d), w, h);
+  const o = saida.data;
+  const faixa = tol * 1.25;
+  for(let p = 0; p < total; p++){
+    const i = p * 4;
+    if(marcado[p]){ o[i + 3] = 0; continue; }
+    const x = p % w;
+    const vizinhoFundo = (x > 0 && marcado[p - 1]) || (x < w - 1 && marcado[p + 1]) || (p >= w && marcado[p - w]) || (p < total - w && marcado[p + w]);
+    if(!vizinhoFundo) continue;
+    const dd = dist(i);
+    if(dd >= tol + faixa) continue;
+    const a = Math.max(0.05, Math.min(1, (dd - tol) / faixa + 0.15));
+    for(let c = 0; c < 3; c++) o[i + c] = Math.max(0, Math.min(255, Math.round((d[i + c] - (1 - a) * fundo[c]) / a)));
+    o[i + 3] = Math.round(d[i + 3] * a);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').putImageData(saida, 0, 0);
+  return canvas;
+}
+// ---- WebP ----
+function vfCodificadorWebpVF(){
+  if(!vfPromessaCodificadorWebpVF){
+    vfPromessaCodificadorWebpVF = import(VF_URL_CODIFICADOR_WEBP_VF)
+      .then(m => m.default({noInitialRun: true}))
+      .catch(e => { vfPromessaCodificadorWebpVF = null; throw e; });
+  }
+  return vfPromessaCodificadorWebpVF;
+}
+async function vfCanvasParaWebpVF(canvas){
+  const nativo = await new Promise(r => { try{ canvas.toBlob(b => r(b), 'image/webp', VF_OPCOES_WEBP_VF.quality / 100); }catch(e){ r(null); } });
+  if(nativo && nativo.type === 'image/webp') return nativo;
+  const modulo = await vfCodificadorWebpVF();
+  const dados = canvas.getContext('2d', {willReadFrequently: true}).getImageData(0, 0, canvas.width, canvas.height);
+  const resultado = modulo.encode(dados.data, dados.width, dados.height, VF_OPCOES_WEBP_VF);
+  if(!resultado) throw new Error('Falha ao gerar o WebP.');
+  return new Blob([resultado], {type: 'image/webp'});
+}
+// ---- enviar e inserir ----
+async function vfInserirImagemComplementarVF(){
+  const est = vfImagemComplementarVF;
+  const btn = document.getElementById('vf-imagem-btn-inserir');
+  if(!est || !usuarioAtual) return;
+  btn.disabled = true;
+  let semFundoAplicado = false;
+  try{
+    let blob;
+    if(est.ehWebp){
+      blob = est.arquivo;
+    }else{
+      vfStatusImagemComplementarVF('Convertendo pra WebP...');
+      const canvas = est.usarSemFundo && est.canvasSem ? est.canvasSem : est.canvasCom;
+      semFundoAplicado = canvas === est.canvasSem;
+      blob = await vfCanvasParaWebpVF(canvas);
+    }
+    vfStatusImagemComplementarVF('Enviando...');
+    const caminho = `${usuarioAtual.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+    const {error} = await sb.storage.from(VF_BUCKET_IMAGENS_COMPLEMENTAR_VF).upload(caminho, blob, {contentType: 'image/webp', cacheControl: '31536000', upsert: false});
+    if(error) throw error;
+    const url = sb.storage.from(VF_BUCKET_IMAGENS_COMPLEMENTAR_VF).getPublicUrl(caminho)?.data?.publicUrl;
+    if(!url) throw new Error('Não consegui o endereço da imagem.');
+    vfInserirComandoImagemNoEditorVF(`\\imagem${semFundoAplicado ? '[semfundo]' : ''}{${url}}`);
+    vfCancelarImagemComplementarVF();
+  }catch(e){
+    btn.disabled = false;
+    vfStatusImagemComplementarVF('Não deu certo: ' + (e?.message || 'erro desconhecido') + '. Tenta de novo.');
+  }
+}
+function vfHtmlBlocoImagemEditorVF(comando, b64){
+  const url = (String(comando).match(/\{(https:\/\/[^\s{}"'<>]+)\}\s*$/) || [])[1] || '';
+  return `<div class="vf-editor-svg-wrap" contenteditable="false" data-svg-b64="${b64}" style="background:#F3F1EC;border-radius:8px;padding:10px;margin:6px 0;text-align:center">${url ? `<img src="${escapeHtml(url)}" alt="" style="max-width:100%;max-height:220px;display:inline-block;vertical-align:middle">` : ''}<div style="color:#888;font-size:var(--fs-b);margin-top:6px">Imagem</div></div>`;
+}
+function vfInserirComandoImagemNoEditorVF(comando){
+  const textarea = document.getElementById('vf-complementar-latex-novo');
+  const caixa = document.getElementById('vf-editor-rich-caixa');
+  if(textarea && !textarea.classList.contains('hidden')){
+    const valor = textarea.value;
+    const pos = (vfCursorCodigoImagemVF == null || vfCursorCodigoImagemVF > valor.length) ? valor.length : vfCursorCodigoImagemVF;
+    const antes = valor.slice(0, pos), depois = valor.slice(pos);
+    const trecho = (antes && !antes.endsWith('\n') ? '\n' : '') + comando + (depois && !depois.startsWith('\n') ? '\n' : '');
+    textarea.value = antes + trecho + depois;
+    textarea.selectionStart = textarea.selectionEnd = antes.length + trecho.length;
+    textarea.dispatchEvent(new Event('input', {bubbles: true}));
+    return;
+  }
+  if(!caixa) return;
+  const b64 = btoa(unescape(encodeURIComponent(comando)));
+  const html = vfHtmlBlocoImagemEditorVF(comando, b64) + '<div><br></div>';
+  caixa.focus();
+  if(vfRangeImagemComplementarVF && caixa.contains(vfRangeImagemComplementarVF.startContainer)){
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(vfRangeImagemComplementarVF);
+    document.execCommand('insertHTML', false, html);
+  }else{
+    caixa.insertAdjacentHTML('beforeend', html);
+  }
+  vfRangeImagemComplementarVF = null;
+  vfSincronizarEspelhoRichVF(caixa);
+}
+
 function vfAbrirEdicaoElementoHtmlVF(elementoHtmlId){
   const item = vfBibliotecaComplementarCacheVF.find(i => i.id === elementoHtmlId)
             || vfComparacoesCacheVF.find(i => i.id === elementoHtmlId); // aberta pela aba Comparações da Biblioteca
@@ -21950,6 +22282,7 @@ function vfAbrirEdicaoElementoHtmlVF(elementoHtmlId){
   // criando um elemento novo do zero
   document.getElementById('vf-complementar-btn-usar-local').classList.add('hidden');
   document.getElementById('vf-complementar-btn-salvar-biblioteca').textContent = 'Salvar alterações';
+  vfCancelarImagemComplementarVF();
   vfMarcarComparacaoNoFormularioVF(item.tipo === 'comparacao'); // dá pra marcar ou desmarcar qualquer item já salvo
   vfMudarAbaComplementarVF('criar');
   abrirModal('modal-complementar-vf');
@@ -22027,6 +22360,7 @@ function vfEditarComplementarLocalVF(questaoId){
   document.getElementById('vf-complementar-btn-remover-local').classList.remove('hidden');
   document.getElementById('vf-complementar-btn-usar-local').classList.remove('hidden');
   document.getElementById('vf-complementar-btn-salvar-biblioteca').textContent = 'Salvar na biblioteca';
+  vfCancelarImagemComplementarVF();
   vfMarcarComparacaoNoFormularioVF(false);
   vfMudarAbaComplementarVF('criar');
   abrirModal('modal-complementar-vf');
