@@ -3154,7 +3154,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-16-302';
+const VERSAO_APP = '2026-10-16-303';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -11686,8 +11686,46 @@ function vfPeriodoProgressoVF(){
   }
   return {p_inicio: null, p_fim: null, p_granularidade: 'dia', ini: null, fim: mais(d0,1)}; // tudo (ou custom incompleto)
 }
+// ---- tema no Flash (16/10): várias publicações como se fossem uma ----
+// usa a mesma tabela de temas do Quest (temas + tema_bibliografia, já em
+// temasCache). No Flash o tema fica em filtroVF.tema, SEPARADO de
+// filtroVF.publicacao - assim tudo que pede UMA publicação (capítulos,
+// recortes de capítulo, notas da biblioteca) vê "sem publicação" e segue
+// funcionando como no filtro só por módulo
+function vfTemaDoFiltroVF(){
+  return filtroVF.tema ? (temasCache || []).find(t => t.id === filtroVF.tema) || null : null;
+}
+function vfIdsBibliografiaDoFiltroVF(){
+  if(filtroVF.publicacao) return [filtroVF.publicacao];
+  const tema = vfTemaDoFiltroVF();
+  if(tema) return tema.bibliografiaIds.slice();
+  return filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null;
+}
+function vfNomePublicacaoDoFiltroVF(){
+  if(filtroVF.publicacao){
+    const b = bibliografiaCache.find(x => x.id === filtroVF.publicacao);
+    return b ? (b.nome_exibicao || b.titulo) : null;
+  }
+  return vfTemaDoFiltroVF()?.nome || null;
+}
+// opções de tema no topo da lista de publicações do Flash - mesmo jeito
+// do Quest. Tema cujas publicações não têm nenhum cartão fica cinza
+function vfOpcoesTemasFlashVF(modulo){
+  const temas = (temasCache || []).filter(t => t.modulo_pscpp === modulo && (t.bibliografiaIds || []).length);
+  if(!temas.length) return '';
+  return temas.map(t => {
+    const vazio = !t.bibliografiaIds.some(id => vfPublicacoesComQuestaoVF?.has(id));
+    return `<option value="tema:${t.id}" ${vazio ? 'disabled style="color:#ccc"' : ''}>🔵 ${escapeHtml(t.nome)} (junta ${t.bibliografiaIds.length} publicações)</option>`;
+  }).join('') + '<option disabled>──────────</option>';
+}
+// lê o select de publicação: "tema:<id>" vai pra filtroVF.tema
+function vfLerSelectPublicacaoFlashVF(){
+  const valor = document.getElementById('vf-filtro-publicacao')?.value || '';
+  if(valor.startsWith('tema:')){ filtroVF.tema = valor.slice(5); filtroVF.publicacao = null; }
+  else { filtroVF.tema = null; filtroVF.publicacao = valor || null; }
+}
 function vfFiltroAtualTemEscopoVF(){
-  return !!(filtroVF.publicacao || filtroVF.modulo || filtroVF.capitulo || filtroVF.numero || filtroVF.lista || filtroVF.data || filtroVF.inconsistente
+  return !!(filtroVF.publicacao || filtroVF.tema || filtroVF.modulo || filtroVF.capitulo || filtroVF.numero || filtroVF.lista || filtroVF.data || filtroVF.inconsistente
     || (filtroVF.filtrosInc||[]).length || (filtroVF.filtrosExc||[]).length);
 }
 
@@ -14460,8 +14498,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   // quando há módulo sem publicação a lista de ids do módulo já vai pra
   // RPC - menos linhas trafegando, mesmo resultado
   const vfMontarParamsPoolVF = () => {
-    const idsBib = filtroVF.publicacao ? [filtroVF.publicacao]
-      : (filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null);
+    const idsBib = vfIdsBibliografiaDoFiltroVF();
     return {p_ids_bibliografia: idsBib && idsBib.length ? idsBib : null, p_capitulo: filtroVF.capitulo || null,
       p_numero: !!filtroVF.numero, p_lista: !!filtroVF.lista, p_data: !!filtroVF.data, p_inconsistente: !!filtroVF.inconsistente};
   };
@@ -14511,6 +14548,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     // de volta os ~10MB que a otimização original tinha eliminado
     let q = sb.from('questoes_vf').select('id, eh_numero, eh_lista, inconsistente, capitulo, n_palavras, bibliografia_id, chave_familia_trecho, chave_familia_texto, eh_data, anulada', {count: 'exact'}).eq('anulada', false);
     if(filtroVF.publicacao) q = q.eq('bibliografia_id', filtroVF.publicacao);
+    else if(vfTemaDoFiltroVF()) q = q.in('bibliografia_id', vfTemaDoFiltroVF().bibliografiaIds);
     if(filtroVF.capitulo) q = q.eq('capitulo', filtroVF.capitulo);
     // Número + Lista + Data juntos = UNIÃO (ou uma coisa ou outra), não interseção —
     // decisão explícita do Carlos. Só um deles ativo continua sendo um
@@ -15093,7 +15131,7 @@ function vfLimparFiltroVF(){
   // vista de quem olha) de que o filtro anterior continuava valendo.
   // Agora o reset tem a mesma forma do estado inicial (ver o let filtroVF
   // lá em cima) e limpa também o que aparece na tela
-  filtroVF = {modulo: null, publicacao: null, capitulo: null, numero: false, lista: false, data: false, inconsistente: false,
+  filtroVF = {modulo: null, publicacao: null, tema: null, capitulo: null, numero: false, lista: false, data: false, inconsistente: false,
               termo: null, tagId: null, tagNome: null, filtrosInc: [], filtrosExc: [], varreduraDesde: null};
   vfSalvarFiltroNoStorageVF();
   const elTermo = document.getElementById('vf-filtro-termo');
@@ -15666,7 +15704,7 @@ async function vfRenderizarConteudoPainelSessaoVF(){
 // trocar de filtro permite o aviso repetir quando o mesmo momento
 // chegar nele
 function vfChaveFiltroAtualVF(){
-  return JSON.stringify({m: filtroVF.modulo, p: filtroVF.publicacao, c: filtroVF.capitulo, n: filtroVF.numero, l: filtroVF.lista, d: filtroVF.data, i: filtroVF.inconsistente, fi: filtroVF.filtrosInc || [], fe: filtroVF.filtrosExc || [], t: filtroVF.termo});
+  return JSON.stringify({m: filtroVF.modulo, p: filtroVF.publicacao, te: filtroVF.tema || null, c: filtroVF.capitulo, n: filtroVF.numero, l: filtroVF.lista, d: filtroVF.data, i: filtroVF.inconsistente, fi: filtroVF.filtrosInc || [], fe: filtroVF.filtrosExc || [], t: filtroVF.termo});
 }
 let vfAvisosRodeiTudoMostradosVF = new Set();
 
@@ -15674,7 +15712,7 @@ let vfAvisosRodeiTudoMostradosVF = new Set();
 // Marítima, cap. 1: 31 afirmações") - mesma lógica de nomes já usada no
 // placeholder do panorama, mas resumida numa linha só
 function vfNomeFiltroAtualVF(){
-  const nomePublicacao = filtroVF.publicacao ? (bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.nome_exibicao || bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.titulo) : null;
+  const nomePublicacao = vfNomePublicacaoDoFiltroVF(); // publicação ou tema
   const partes = [];
   if(nomePublicacao) partes.push(nomePublicacao);
   else if(filtroVF.modulo) partes.push(filtroVF.modulo);
@@ -15688,7 +15726,7 @@ function vfNomeFiltroAtualVF(){
 function vfMontarPlaceholderPanoramaVF(){
 
 
-  const nomePublicacao = filtroVF.publicacao ? (bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.nome_exibicao || bibliografiaCache.find(b=>b.id===filtroVF.publicacao)?.titulo) : null;
+  const nomePublicacao = vfNomePublicacaoDoFiltroVF(); // publicação ou tema
   const tiposDoFiltroVF = [filtroVF.numero ? 'Número' : null, filtroVF.lista ? 'Lista' : null, filtroVF.data ? 'Data' : null].filter(Boolean);
   const tipoBase = tiposDoFiltroVF.length ? tiposDoFiltroVF.join(' ou ') : null;
   const tipoTexto = filtroVF.inconsistente ? (tipoBase ? tipoBase + ' + Inconsistente' : 'Inconsistente') : tipoBase;
@@ -15726,9 +15764,7 @@ async function vfCarregarPanoramaFiltroVF(){
   // o filtro é por publicação específica, é só ela; quando é por módulo
   // inteiro, resolve pra todas as bibliografias daquele módulo (usando o
   // cache já em memória, sem busca nenhuma)
-  const idsBibliografia = filtroVF.publicacao
-    ? [filtroVF.publicacao]
-    : (filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null);
+  const idsBibliografia = vfIdsBibliografiaDoFiltroVF();
   // uma única chamada RPC calcula total + já-vistas em SQL, direto no
   // banco - achado real: buscar todos os IDs filtrados (podendo ser
   // centenas) só pra depois cruzar com repeticao_vf era o gargalo real
@@ -16503,6 +16539,7 @@ async function mudarModuloFiltroVF(){
   const modulo = document.getElementById('vf-filtro-modulo').value;
   filtroVF.modulo = modulo || null;
   filtroVF.publicacao = null;
+  filtroVF.tema = null;
   filtroVF.capitulo = null;
   const elPub = document.getElementById('vf-filtro-publicacao');
   const elCap = document.getElementById('vf-filtro-capitulo');
@@ -16520,7 +16557,7 @@ async function mudarModuloFiltroVF(){
     // (16/10) bibliografia.oculta_flash = true some SÓ desta lista do Flash -
     // continua existindo no resto do app (Quest, Biblioteca, importação...)
     const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo && !b.oculta_flash).sort(vfCompararPublicacoesVF);
-    elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>{
+    elPub.innerHTML = '<option value="">Todas as publicações</option>' + vfOpcoesTemasFlashVF(modulo) + pubs.map(p=>{
       const vazio = !vfPublicacoesComQuestaoVF.has(p.id);
       return `<option value="${p.id}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(p.nome_exibicao || p.titulo)}</option>`;
     }).join('');
@@ -16534,8 +16571,8 @@ async function mudarModuloFiltroVF(){
 // publicação (não uma lista genérica), e ordena numericamente quando dá
 async function mudarFiltroPublicacaoVF(){
   const geracaoVF = ++vfGeracaoCascataFiltroVF; // ver vfGeracaoCascataFiltroVF
-  const publicacao = document.getElementById('vf-filtro-publicacao').value;
-  filtroVF.publicacao = publicacao || null;
+  vfLerSelectPublicacaoFlashVF();
+  const publicacao = filtroVF.publicacao; // tema: fica null - capítulo não se aplica a várias publicações juntas
   filtroVF.capitulo = null;
   const elCap = document.getElementById('vf-filtro-capitulo');
   if(!publicacao){
@@ -16606,7 +16643,7 @@ function vfRecarregarPoolComDebounceVF(){
 }
 
 function mudarFiltroVF(){
-  filtroVF.publicacao = document.getElementById('vf-filtro-publicacao').value || null;
+  vfLerSelectPublicacaoFlashVF();
   filtroVF.capitulo = document.getElementById('vf-filtro-capitulo').value || null;
   vfAtualizarFiltrosCapituloVF(); // botões contextuais do escopo novo (zera ✓/✗ se o escopo mudou)
   vfRecarregarPoolComDebounceVF();
@@ -17329,9 +17366,7 @@ function vfRecalcularAutoVF(){
 // parâmetros do panorama_filtro_vf a partir do filtro atual - usados pelo
 // painel de sessão e pela linha de projeção (mesma chamada, um lugar só)
 function vfParametrosPanoramaFiltroVF(){
-  const idsBibliografia = filtroVF.publicacao
-    ? [filtroVF.publicacao]
-    : (filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null);
+  const idsBibliografia = vfIdsBibliografiaDoFiltroVF();
   const inc = (filtroVF.filtrosInc || []).filter(id => id !== 'geral');
   const exc = (filtroVF.filtrosExc || []).filter(id => id !== 'geral');
   return {
@@ -17418,18 +17453,19 @@ async function popularFiltroModuloVF(){
 // filtro funcionava "nos bastidores" mas a tela mostrava "Todos os
 // módulos" mesmo com um filtro ativo de verdade
 async function vfRestaurarUIFiltroVF(){
-  const {modulo, publicacao, capitulo, numero, lista, termo} = filtroVF;
+  const {modulo, publicacao, capitulo, numero, lista, termo, tema} = filtroVF;
   if(modulo){
     document.getElementById('vf-filtro-modulo').value = modulo;
     const elPub = document.getElementById('vf-filtro-publicacao');
     // (16/10) bibliografia.oculta_flash = true some SÓ desta lista do Flash -
     // continua existindo no resto do app (Quest, Biblioteca, importação...)
     const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo && !b.oculta_flash).sort(vfCompararPublicacoesVF);
-    elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>{
+    elPub.innerHTML = '<option value="">Todas as publicações</option>' + vfOpcoesTemasFlashVF(modulo) + pubs.map(p=>{
       const vazio = !vfPublicacoesComQuestaoVF?.has(p.id);
       return `<option value="${p.id}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(p.nome_exibicao || p.titulo)}</option>`;
     }).join('');
     elPub.disabled = false;
+    if(!publicacao && tema && [...elPub.options].some(o => o.value === 'tema:' + tema)) elPub.value = 'tema:' + tema;
   }
   if(publicacao){
     document.getElementById('vf-filtro-publicacao').value = publicacao;
@@ -21938,9 +21974,7 @@ function vfFecharAvisoVF(){
 // do painel de sessão (módulo/publicação/capítulo/tipo), cada uma com
 // botão pra desfazer a exclusão
 async function vfAbrirListaExcluidasVF(){
-  const idsBibliografia = filtroVF.publicacao
-    ? [filtroVF.publicacao]
-    : (filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null);
+  const idsBibliografia = vfIdsBibliografiaDoFiltroVF();
   const corpo = document.getElementById('vf-lista-excluidas-corpo');
   corpo.innerHTML = '<p style="text-align:center;color:#999;padding:20px 0">Carregando...</p>';
   abrirModal('modal-lista-excluidas-vf');
@@ -22006,9 +22040,7 @@ function vfRenderizarListaExcluidasVF(itens){
 // não tem hoje uma forma de "pular" pra uma questão específica fora do
 // fluxo normal do algoritmo, então esse atalho ficou fora do escopo)
 async function vfAbrirListaLeechesVF(){
-  const idsBibliografia = filtroVF.publicacao
-    ? [filtroVF.publicacao]
-    : (filtroVF.modulo ? bibliografiaCache.filter(b => b.modulo_pscpp === filtroVF.modulo).map(b => b.id) : null);
+  const idsBibliografia = vfIdsBibliografiaDoFiltroVF();
   const corpo = document.getElementById('vf-lista-leeches-corpo');
   corpo.innerHTML = '<p style="text-align:center;color:#999;padding:20px 0">Carregando...</p>';
   abrirModal('modal-lista-leeches-vf');
