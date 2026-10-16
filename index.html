@@ -3154,7 +3154,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-16-301';
+const VERSAO_APP = '2026-10-16-302';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -16517,7 +16517,9 @@ async function mudarModuloFiltroVF(){
       vfPublicacoesComQuestaoVF = new Set((data||[]).map(r => r.bibliografia_id).filter(Boolean));
     }
     if(geracaoVF !== vfGeracaoCascataFiltroVF) return; // trocou de módulo enquanto isso - quem mandou depois manda
-    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort(vfCompararPublicacoesVF);
+    // (16/10) bibliografia.oculta_flash = true some SÓ desta lista do Flash -
+    // continua existindo no resto do app (Quest, Biblioteca, importação...)
+    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo && !b.oculta_flash).sort(vfCompararPublicacoesVF);
     elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>{
       const vazio = !vfPublicacoesComQuestaoVF.has(p.id);
       return `<option value="${p.id}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(p.nome_exibicao || p.titulo)}</option>`;
@@ -17420,7 +17422,9 @@ async function vfRestaurarUIFiltroVF(){
   if(modulo){
     document.getElementById('vf-filtro-modulo').value = modulo;
     const elPub = document.getElementById('vf-filtro-publicacao');
-    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo).sort(vfCompararPublicacoesVF);
+    // (16/10) bibliografia.oculta_flash = true some SÓ desta lista do Flash -
+    // continua existindo no resto do app (Quest, Biblioteca, importação...)
+    const pubs = bibliografiaCache.filter(b=>b.modulo_pscpp===modulo && !b.oculta_flash).sort(vfCompararPublicacoesVF);
     elPub.innerHTML = '<option value="">Todas as publicações</option>' + pubs.map(p=>{
       const vazio = !vfPublicacoesComQuestaoVF?.has(p.id);
       return `<option value="${p.id}" ${vazio?'disabled style="color:#ccc"':''}>${escapeHtml(p.nome_exibicao || p.titulo)}</option>`;
