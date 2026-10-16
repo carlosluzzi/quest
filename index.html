@@ -3154,7 +3154,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-16-303';
+const VERSAO_APP = '2026-10-16-304';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -11715,8 +11715,8 @@ function vfOpcoesTemasFlashVF(modulo){
   if(!temas.length) return '';
   return temas.map(t => {
     const vazio = !t.bibliografiaIds.some(id => vfPublicacoesComQuestaoVF?.has(id));
-    return `<option value="tema:${t.id}" ${vazio ? 'disabled style="color:#ccc"' : ''}>🔵 ${escapeHtml(t.nome)} (junta ${t.bibliografiaIds.length} publicações)</option>`;
-  }).join('') + '<option disabled>──────────</option>';
+    return `<option value="tema:${t.id}" ${vazio ? 'disabled style="color:#ccc"' : ''}>${escapeHtml(t.nome)}</option>`; // só o nome (16/10: sem bolinha, contagem nem divisória)
+  }).join('');
 }
 // lê o select de publicação: "tema:<id>" vai pra filtroVF.tema
 function vfLerSelectPublicacaoFlashVF(){
