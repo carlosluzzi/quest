@@ -658,7 +658,7 @@ html[data-tema="escuro"] .textarea-padrao{border-color:#262626 !important;backgr
 html[data-tema="escuro"] .vf-cor-trecho{color:var(--cor-trecho-escuro) !important}
 /* chips de tags principais no seletor de tags (16/10) - mesma borda
    (1,5 px) aceso ou apagado, só o preenchimento muda */
-.vf-chip-tag-principal{height:36px;border-radius:8px;border:1.5px solid #B23A34;background:#fff;color:#B23A34;font-family:inherit;font-size:var(--fs-b);font-weight:700;letter-spacing:.03em;cursor:pointer;padding:0 6px;white-space:nowrap;min-width:0;-webkit-tap-highlight-color:transparent}
+.vf-chip-tag-principal{border-radius:8px;border:1.5px solid #B23A34;background:#fff;color:#B23A34;font-family:inherit;font-size:var(--fs-b);font-weight:600;line-height:inherit;cursor:pointer;padding:3.5px 6px;white-space:nowrap;min-width:0;-webkit-tap-highlight-color:transparent} /* mesma altura das tags que já aparecem no seletor (padding 3.5px, borda 1.5px) - era 36px fixo, alto demais */
 .vf-chip-tag-principal[aria-pressed="true"]{background:#B23A34;color:#fff}
 html[data-tema="escuro"] .vf-chip-tag-principal{background:transparent !important;color:#E07C6F !important;border-color:#E07C6F !important}
 html[data-tema="escuro"] .vf-chip-tag-principal[aria-pressed="true"]{background:#B23A34 !important;color:#fff !important;border-color:#B23A34 !important}
@@ -3154,7 +3154,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-16-299';
+const VERSAO_APP = '2026-10-16-301';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -14605,7 +14605,10 @@ async function carregarPoolVF(incluirDadosEntradaVF){
 
   const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: todasTagsData}, {data: questoesTagsData}, , {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, mapaFiltrosCapituloVF, ...resultadosEntradaVF] = await Promise.all([
     vfBuscarQuestoesPoolVF(aoCarregarRestanteQuestoesVF), // era buscarTudoPaginadoVF(montarQueryQuestoesVF, ...) - ver comentário da RPC acima
-    buscarTudoPaginadoVF(() => sb.from('repeticao_vf').select('*', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
+    // (16/10) progresso numa chamada só (RPC repeticao_do_usuario_vf, jsonb) -
+    // medido no Chrome: antes eram 12 requisições paginadas de 1000 linhas,
+    // ~3 s, o maior item da entrada depois do pool. Mesmo formato de linha
+    sb.rpc('repeticao_do_usuario_vf').then(({data, error}) => ({data: Array.isArray(data) ? data : (error ? null : []), error})),
     buscarTudoPaginadoVF(() => sb.from('exclusoes_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     buscarTudoPaginadoVF(() => sb.from('favoritos_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     buscarTudoPaginadoVF(() => sb.from('notas_vf').select('questao_vf_id, fixada', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
@@ -15875,7 +15878,8 @@ async function vfRestaurarSessaoFlashVF(){
     // caía no ramo "o banco já fechou" e descartava). Segue com a cópia
     // do aparelho, como "pausada", e o banco é relido na próxima volta
     salva = vfCarregarSessaoDoStorageVF();
-    if(salva && !salva.pausado && salva.id){ salva.pausado = true; }
+    if(salva && !salva.id) salva = null; // (16/10) formato antigo sem id: lixo, não restaura
+    if(salva && !salva.pausado){ salva.pausado = true; }
   }else if(salva){
     // sessão aberta sem nenhuma resposta e parada há mais de 10 min: some
     // sozinha, sem overlay "Retomar/Finalizar" - foi um "abri pra olhar"
@@ -15891,8 +15895,15 @@ async function vfRestaurarSessaoFlashVF(){
     if(local && local.id === salva.id){ salva = {...local, ...salva}; }
   }else{
     salva = vfCarregarSessaoDoStorageVF();
-    if(salva && salva.id){
-      // o localStorage lembra de uma sessão que o banco já fechou/apagou (finalizada em outro aparelho): descarta
+    if(salva){
+      // o localStorage lembra de uma sessão que o banco já fechou/apagou
+      // (finalizada em outro aparelho): descarta. (16/10) ACHADO REAL: uma
+      // sessão SEM id (formato antigo, de antes da sessão morar no banco -
+      // 22/09) também é descartada agora. O Mac guardava uma dessas de
+      // 28/08; ao abrir o app, ela "ressuscitou", foi encerrada como
+      // abandonada e contou 12.983 respostas (tudo desde agosto) numa
+      // sessão fantasma. Desde 22/09 toda sessão de verdade tem linha no
+      // banco - cópia local sem id é lixo, nunca sessão
       try{ localStorage.removeItem(VF_SESSAO_LOCALSTORAGE_KEY); }catch(e){}
       salva = null;
     }
