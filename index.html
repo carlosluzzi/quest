@@ -3228,7 +3228,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-19-311';
+const VERSAO_APP = '2026-10-19-313';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9596,11 +9596,15 @@ let vfBotaoPendenteToqueInfo = null; // {x, y, identifier, limiar} - toque come�
 // ao tocar (mesmo sem intenção nenhuma de arrastar) já ultrapassava esse
 // limiar, cancelando o clique e virando traço de desenho, fazendo botões
 // normais ficarem quase impossíveis de clicar com a caneta
-const VF_LIMIAR_ARRASTO_BOTAO_PX = 16;
+// (19/10) 16 -> 28: a pedido do Carlos ("clicar com a caneta tem que ser
+// fácil e sensível"). Botão não é papel: um toque que anda um pouco (a
+// Pencil tremendo, a mão apoiando) ainda é toque. Só vira traço se
+// atravessar 28 px ou se ficar segurando e andando (ver touchmove)
+const VF_LIMIAR_ARRASTO_BOTAO_PX = 28;
 // menu lateral/de baixo usa um limiar bem mais generoso - a Apple Pencil
 // tem um tremor natural mesmo parada (documentado antes), e isso fazia
 // clicar no menu com a caneta falhar com mais frequência que com o dedo
-const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 20;
+const VF_LIMIAR_ARRASTO_NAV_ITEM_PX = 28; // (19/10) 20 -> 28, mesmo motivo do botão
 // alternativa do Quest: é papel de escrever (X pra marcar falsa, risco
 // numa palavra) - limiar menor, um X de 10px já vira traço. O toque de
 // selecionar é parado, não passa disso (24/09, Carlos)
@@ -9849,9 +9853,16 @@ document.addEventListener('touchmove', (e) => {
       info.comprimento += Math.hypot(touchPendente.clientX - info.ultimoX, touchPendente.clientY - info.ultimoY);
       info.ultimoX = touchPendente.clientX; info.ultimoY = touchPendente.clientY;
       const deslocamento = Math.hypot(dx, dy);
+      // (19/10) só a ALTERNATIVA (papel) mantém as regras finas de caminho
+      // percorrido e de tempo curto (150 ms + 4 px). Botão/menu: clique
+      // até 28 px de deslocamento; vira traço só se passar disso, ou se a
+      // caneta ficar segurada mais de 350 ms E andar mais de 8 px (escrita
+      // lenta por cima do botão). Toque normal, mesmo meio torto, é clique
+      const ehAlternativaVF = info.limiar <= VF_LIMIAR_ARRASTO_ALTERNATIVA_PX;
       const viraTraco = deslocamento > info.limiar
-        || (!info.ehMenu && info.comprimento > info.limiar)
-        || (!info.ehMenu && (Date.now() - info.t0) > (info.limiar <= VF_LIMIAR_ARRASTO_ALTERNATIVA_PX ? 150 : 220) && deslocamento > 4);
+        || (ehAlternativaVF && info.comprimento > info.limiar)
+        || (ehAlternativaVF && (Date.now() - info.t0) > 150 && deslocamento > 4)
+        || (!ehAlternativaVF && !info.ehMenu && (Date.now() - info.t0) > 350 && deslocamento > 8);
       if(viraTraco){
         // virou arrasto de verdade - começa o traço retroativamente a
         // partir do ponto onde o dedo/caneta tocou primeiro, não de onde
@@ -26097,6 +26108,10 @@ function vfIniciarPressionarEnunciadoQuestVF(evento){
   clearTimeout(vfTimerPressionarEnunciadoQuestVF);
   const ponto = evento && (evento.touches ? evento.touches[0] : evento);
   vfPosicaoInicialPressionarEnunciadoQuestVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
+  // (19/10) igual ao Flash: editar (segurar) só depois de responder -
+  // enquanto a questão está sendo feita, o texto não abre pra edição
+  const qAtual = questoesCaderno && questoesCaderno[indiceQuestaoAtual];
+  if(!qAtual || !respostasPorQuestao[qAtual.id]) return;
   vfTimerPressionarEnunciadoQuestVF = setTimeout(() => {
     vfTimerPressionarEnunciadoQuestVF = null;
     vfArmarEdicaoAoSoltarVF(vfIniciarEdicaoEnunciadoQuestVF);
@@ -26119,7 +26134,7 @@ function vfCancelarPressionarEnunciadoQuestVFSilencioso(evento){
 }
 function vfIniciarEdicaoEnunciadoQuestVF(){
   const q = questoesCaderno[indiceQuestaoAtual];
-  if(!q) return;
+  if(!q || !respostasPorQuestao[q.id]) return;
   const div = document.getElementById('quest-enunciado-atual');
   if(!div || div.dataset.editando === '1') return;
   div.dataset.editando = '1';
@@ -26179,6 +26194,8 @@ function vfIniciarPressionarAlternativaQuestVF(evento, letra){
   vfLetraPressionadaAtualQuestVF = letra;
   const ponto = evento && (evento.touches ? evento.touches[0] : evento);
   vfPosicaoInicialPressionarAlternativaQuestVF = ponto ? {x: ponto.clientX, y: ponto.clientY} : null;
+  const qAtual = questoesCaderno && questoesCaderno[indiceQuestaoAtual];
+  if(!qAtual || !respostasPorQuestao[qAtual.id]) return; // só depois de responder
   vfTimerPressionarAlternativaQuestVF = setTimeout(() => {
     vfTimerPressionarAlternativaQuestVF = null;
     vfArmarEdicaoAoSoltarVF(() => vfIniciarEdicaoAlternativaQuestVF(letra));
@@ -26201,7 +26218,7 @@ function vfCancelarPressionarAlternativaQuestVFSilencioso(evento){
 }
 function vfIniciarEdicaoAlternativaQuestVF(letra){
   const q = questoesCaderno[indiceQuestaoAtual];
-  if(!q) return;
+  if(!q || !respostasPorQuestao[q.id]) return;
   const div = document.getElementById('quest-alt-atual-'+letra);
   if(!div || div.dataset.editando === '1') return;
   div.dataset.editando = '1';
