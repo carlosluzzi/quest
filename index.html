@@ -3228,7 +3228,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-19-313';
+const VERSAO_APP = '2026-10-19-314';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -28537,8 +28537,8 @@ const BIBLIOGRAFIA_FECHADA = [
   {modulo:"Navegação em Águas Restritas", autorBusca:["normam-202"], autor:"MARINHA DO BRASIL", titulo:"NORMAM-202/DPC", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["miguens"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte (v.1 e v.3, exceto cap. 45)", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["ciência e a arte"], autor:"MIGUENS, A. P.", titulo:"Navegação: a Ciência e a Arte (v.1 e v.3, exceto cap. 45)", capitulos:null},
-  {modulo:"Navegação em Águas Restritas", autorBusca:["nayak", "pilotage"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6)", capitulos:[5, 6, 13]},
-  {modulo:"Navegação em Águas Restritas", autorBusca:["tpmp"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6)", capitulos:[5, 6, 13]},
+  {modulo:"Arte Naval", autorBusca:["nayak", "pilotage"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6)", capitulos:[5, 6, 13]},
+  {modulo:"Arte Naval", autorBusca:["tpmp"], autor:"NAYAK, S. K.", titulo:"Theory and Practices of Marine Pilotage (caps. 5, 6)", capitulos:[5, 6, 13]},
   {modulo:"Navegação em Águas Restritas", autorBusca:["swift", "bailey"], autor:"SWIFT, A. J.; BAILEY, T. J.", titulo:"Bridge Team Management: a Practical Guide", capitulos:null},
   {modulo:"Navegação em Águas Restritas", autorBusca:["btm"], autor:"SWIFT, A. J.; BAILEY, T. J.", titulo:"Bridge Team Management: a Practical Guide", capitulos:null},
 ];
