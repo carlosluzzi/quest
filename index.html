@@ -25,6 +25,7 @@
 <link rel="preconnect" href="https://jenzxycerdtjpkrzesia.supabase.co">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;500;800&display=swap" rel="stylesheet">
 <style>
 :root{
   /* Escala tipográfica: razão consistente Major Second (1.125), mesma
@@ -656,6 +657,43 @@ html[data-tema="escuro"] .textarea-padrao{border-color:#262626 !important;backgr
    versao adaptada pro escuro viajam juntas na propria tag, em variaveis -
    CSS nao sabe ler atributo pra pintar, mas sabe ler variavel */
 html[data-tema="escuro"] .vf-cor-trecho{color:var(--cor-trecho-escuro) !important}
+/* ---- versão para imprimir do caderno do Quest (19/10) ----
+   a área só existe na impressão: na tela fica escondida; na impressão
+   todo o resto some. O app trava html/body (position:fixed, overflow
+   hidden, altura 100%) - sem destravar aqui, só a 1ª página sairia */
+.sq-chip-autor{display:inline-flex;align-items:center;gap:7px;border-radius:8px;border:1.5px solid #B23A34;background:#fff;color:#B23A34;font-family:inherit;font-size:var(--fs-d);font-weight:600;line-height:inherit;padding:6px 10px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sq-chip-autor .sq-chip-n{font-weight:400;font-size:var(--fs-b);opacity:0.75}
+.sq-chip-autor[aria-pressed="true"]{background:#B23A34;color:#fff}
+html[data-tema="escuro"] .sq-chip-autor{background:transparent !important;color:#E07C6F !important;border-color:#E07C6F !important}
+html[data-tema="escuro"] .sq-chip-autor[aria-pressed="true"]{background:#B23A34 !important;color:#fff !important;border-color:#B23A34 !important}
+#area-impressao{display:none}
+@media print{
+  @page :first{@bottom-center{content:none}}
+  @page{size:A4;margin:16mm 15mm 18mm 10mm;@bottom-center{content:"– " counter(page) " de " counter(pages) " –";font-family:'Roboto Condensed','Arial Narrow',sans-serif;font-size:9.5pt;color:#333}}
+  html,body{height:auto !important;overflow:visible !important;position:static !important;inset:auto !important;background:#fff !important}
+  body > *:not(#area-impressao){display:none !important}
+  #area-impressao{display:block !important;color:#111;background:#fff;font-family:'PQMatematica','Roboto Condensed','Arial Narrow','Avenir Next Condensed',sans-serif;font-weight:300;font-size:10.5pt;line-height:1.38;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* padrão do caderno do Curso Prático: capa, "QUESTÃO n", enunciado
+     justificado, uma alternativa por linha "(a) ...", texto lateral
+     vertical na margem esquerda e "– n de N –" no rodapé */
+  #area-impressao .ai-capa{position:relative;z-index:2;background:#fff;height:262mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;break-after:page;page-break-after:always;border-top:5mm solid #B23A34;border-bottom:5mm solid #B23A34;box-sizing:border-box}
+  #area-impressao .ai-capa-t1{font-weight:800;font-size:30pt;line-height:1.25;color:#B23A34}
+  #area-impressao .ai-capa-t2{font-weight:800;font-size:22pt;line-height:1.3;color:#B23A34;margin-top:6pt}
+  #area-impressao .ai-lateral{position:fixed;left:3.5mm;top:50%;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center;white-space:nowrap;font-weight:500;font-size:9pt;letter-spacing:0.06em;color:#9a9a9a;z-index:1}
+  #area-impressao .ai-questoes{margin-left:14mm}
+  #area-impressao .ai-questao{break-inside:avoid;page-break-inside:avoid;margin:0 0 20pt}
+  #area-impressao .ai-q-titulo{font-weight:400;font-size:11pt;margin:0 0 4pt;break-after:avoid;page-break-after:avoid}
+  #area-impressao .ai-enunciado{text-align:justify;margin:0 0 6pt}
+  #area-impressao .ai-alt{margin:0 0 5pt;text-align:justify}
+  #area-impressao .ai-pagina{break-before:page;page-break-before:always}
+  #area-impressao .ai-gab-titulo{font-weight:500;font-size:13pt;margin:0 0 10pt}
+  #area-impressao table.ai-gab{border-collapse:collapse;width:100%;table-layout:fixed;font-size:10.5pt}
+  #area-impressao table.ai-gab th,#area-impressao table.ai-gab td{border:0.75pt solid #999;padding:3.5pt 4pt;text-align:center}
+  #area-impressao table.ai-gab th{background:#EEE;font-weight:500;font-size:9pt}
+  #area-impressao table.ai-gab td.n{color:#555}
+  #area-impressao table.ai-gab td.g{font-weight:500}
+  #area-impressao table.ai-gab td.sep{border-top:none;border-bottom:none;width:6pt}
+}
 /* chips de tags principais no seletor de tags (16/10) - mesma borda
    (1,5 px) aceso ou apagado, só o preenchimento muda */
 .vf-chip-tag-principal{border-radius:8px;border:1.5px solid #B23A34;background:#fff;color:#B23A34;font-family:inherit;font-size:var(--fs-b);font-weight:600;line-height:inherit;cursor:pointer;padding:3.5px 6px;white-space:nowrap;min-width:0;-webkit-tap-highlight-color:transparent} /* mesma altura das tags que já aparecem no seletor (padding 3.5px, borda 1.5px) - era 36px fixo, alto demais */
@@ -1686,7 +1724,7 @@ textarea, input[type="text"], input[type="search"], input[type="number"], input[
 
     <div id="quests-filtros">
 
-      <button id="btn-super-quest" onclick="gerarSuperQuest()" style="width:100%;background:#B23A34;color:#fff;border:none;border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-bottom:36px;font-weight:700;font-size:var(--fs-e);text-transform:uppercase;letter-spacing:0.02em">
+      <button id="btn-super-quest" onclick="abrirSuperQuestVF()" style="width:100%;background:#B23A34;color:#fff;border:none;border-radius:14px;padding:16px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-bottom:36px;font-weight:700;font-size:var(--fs-e);text-transform:uppercase;letter-spacing:0.02em">
         <span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></span>
         Gerar SuperQuest
       </button>
@@ -1781,7 +1819,10 @@ textarea, input[type="text"], input[type="search"], input[type="number"], input[
     </div>
 
     <div id="quests-resolucao" class="hidden">
-      <div style="color:#444;cursor:pointer;margin-bottom:16px;font-size:var(--fs-d)" onclick="fecharCadernoResolucao()">← Quest</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px">
+        <div style="color:#444;cursor:pointer;font-size:var(--fs-d)" onclick="fecharCadernoResolucao()">← Quest</div>
+        <button type="button" onclick="imprimirCadernoAtual()" title="Versão para imprimir (ou salvar em PDF)" style="display:flex;align-items:center;gap:6px;background:#fff;border:0.5px solid #ddd;border-radius:8px;padding:7px 12px;color:#444;font-family:inherit;font-size:var(--fs-c);cursor:pointer;-webkit-tap-highlight-color:transparent"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir</button>
+      </div>
       <div id="pills-nav-caderno" class="pills-nav"></div>
       <div id="questao-atual"></div>
     </div>
@@ -2456,6 +2497,23 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
   </div>
 </div>
 
+
+<div class="modal-overlay hidden" id="modal-superquest" onclick="if(event.target===this) fecharModal('modal-superquest')">
+  <div class="modal-conteudo" style="max-width:420px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <h3 class="config-title" style="margin:0">SuperQuest</h3>
+      <button type="button" class="btn-icone-pequeno" onclick="fecharModal('modal-superquest')" aria-label="Fechar" style="font-size:18px;line-height:1;color:#888;padding:4px 6px">✕</button>
+    </div>
+    <p style="color:#666;margin:6px 0 14px">70 questões repartidas entre os módulos, em ordem misturada.</p>
+    <div style="font-weight:600;margin-bottom:8px">Autores das questões</div>
+    <div id="sq-autores" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    <div id="sq-contagem" style="color:#888;font-size:var(--fs-c);margin:12px 0 16px;min-height:18px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button type="button" id="sq-btn-app" class="btn-secundario" onclick="confirmarSuperQuestVF(false)">Resolver no app</button>
+      <button type="button" id="sq-btn-imprimir" class="btn-primario" onclick="confirmarSuperQuestVF(true)">Imprimir</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-overlay hidden" id="modal-info-wilson">
   <div class="modal-conteudo">
@@ -3154,7 +3212,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-16-305';
+const VERSAO_APP = '2026-10-19-307';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -24799,9 +24857,187 @@ function anteriorVF(){
 // podem ser refinadas depois (ex: balancear por módulo), essa é a v1 simples.
 const QUANTIDADE_SUPERQUEST = 70;
 
-async function gerarSuperQuest(){
+// (19/10) equilibrado por módulo: as 70 são repartidas igualmente entre
+// os módulos que TÊM questão (hoje Comunicações não tem nenhuma, então
+// fica 12/12/12/12/11/11 entre os outros 6; quando tiver, vira 10 de
+// cada). A repartição é uma por vez, em rodízio, e um módulo que acaba
+// sai da roda - o que sobrar vai pros outros. Depois a ordem é toda
+// misturada (gerarSuperQuest) - é a mesma ordem na tela e no papel
+const VF_ORDEM_MODULOS_PROVA_VF = ['Manobrabilidade', 'Arte Naval', 'Navegação em Águas Restritas', 'Legislação', 'Meteorologia e Oceanografia', 'Comunicações', 'Conhecimentos Gerais'];
+function vfMontarSuperQuestEquilibradoVF(pool, total){
+  const porModulo = new Map(VF_ORDEM_MODULOS_PROVA_VF.map(m => [m, []]));
+  pool.forEach(q => {
+    const m = q.modulo_pscpp || 'Outros';
+    if(!porModulo.has(m)) porModulo.set(m, []);
+    porModulo.get(m).push(q);
+  });
+  const modulos = [...porModulo.keys()].filter(m => porModulo.get(m).length);
+  modulos.forEach(m => porModulo.set(m, embaralharFisherYates(porModulo.get(m))));
+  const cota = new Map(modulos.map(m => [m, 0]));
+  let restante = total;
+  while(restante > 0){
+    let andou = false;
+    for(const m of modulos){
+      if(restante <= 0) break;
+      if(cota.get(m) < porModulo.get(m).length){ cota.set(m, cota.get(m) + 1); restante--; andou = true; }
+    }
+    if(!andou) break;
+  }
+  return modulos.flatMap(m => porModulo.get(m).slice(0, cota.get(m)));
+}
+
+// ---- versão para imprimir (19/10) ----
+// monta a prova inteira numa área que só aparece na impressão (ver CSS
+// #area-impressao) e chama o imprimir do sistema - no iPad, "Imprimir"
+// também salva em PDF. Ordem e numeração iguais às da tela (Q01 = a 1ª
+// pílula), pra depois lançar o resultado sem confusão. Folhas: prova,
+// folha de respostas (bolinhas) e, na última, o gabarito em tabela
+async function imprimirCadernoAtual(){
+  if(!cadernoAtual || !questoesCaderno || !questoesCaderno.length) return;
+  const qs = questoesCaderno;
+  const nome = cadernoAtual.nome || 'Caderno';
+
+  const questoes = qs.map((q, i) => {
+    const alts = extrairAlternativas(q.alternativas);
+    const altsHtml = alts.length
+      ? alts.map(a => `<div class="ai-alt">(${escapeHtml(String(a.letra).toLowerCase())}) ${a.texto}</div>`).join('')
+      : '<div class="ai-alt" style="color:#900">(alternativas não identificadas nessa questão)</div>';
+    return `<div class="ai-questao"><div class="ai-q-titulo">QUESTÃO ${i + 1}</div><div class="ai-enunciado">${formatarEnunciado(q.enunciado)}</div>${altsHtml}</div>`;
+  }).join('');
+
+  // gabarito: grade de 7 colunas (nº + letra), lendo de cima pra baixo
+  const COLS = 7;
+  const linhas = Math.ceil(qs.length / COLS);
+  let corpo = '';
+  for(let r = 0; r < linhas; r++){
+    const cels = [];
+    for(let c = 0; c < COLS; c++){
+      const i = c * linhas + r;
+      if(c) cels.push('<td class="sep"></td>');
+      if(i < qs.length){
+        const gab = String(qs[i].gabarito || '').trim().toUpperCase() || '–';
+        cels.push(`<td class="n">${i + 1}</td><td class="g">${escapeHtml(gab)}</td>`);
+      } else cels.push('<td class="n"></td><td class="g"></td>');
+    }
+    corpo += '<tr>' + cels.join('') + '</tr>';
+  }
+  const cab = Array.from({length: COLS}, (_, c) => (c ? '<th class="sep" style="background:none;border:none"></th>' : '') + '<th>Nº</th><th>Gab.</th>').join('');
+  const gabarito = `<div class="ai-gab-titulo">Gabarito</div><table class="ai-gab"><thead><tr>${cab}</tr></thead><tbody>${corpo}</tbody></table>`;
+
+  const html = `
+    <div class="ai-lateral">CADERNO DE QUESTÕES · ${escapeHtml(nome.toUpperCase())}</div>
+    <div class="ai-capa"><div class="ai-capa-t1">Caderno de Questões</div><div class="ai-capa-t2">${escapeHtml(nome)}</div></div>
+    <div class="ai-questoes">${questoes}</div>
+    <div class="ai-pagina ai-questoes">${gabarito}</div>`;
+
+  let area = document.getElementById('area-impressao');
+  if(!area){ area = document.createElement('div'); area.id = 'area-impressao'; document.body.appendChild(area); }
+  area.innerHTML = html;
+  // a fonte condensada só baixa quando é usada: garante que chegou antes
+  // de abrir a impressão (no máximo 1,5 s; senão sai na fonte reserva)
+  try{
+    const pesos = ['300', '400', '500', '800'];
+    if(document.fonts && !pesos.every(w => document.fonts.check(`${w} 11pt "Roboto Condensed"`))){
+      await Promise.race([
+        Promise.all(pesos.map(w => document.fonts.load(`${w} 11pt "Roboto Condensed"`))),
+        new Promise(r => setTimeout(r, 1500))
+      ]);
+    }
+  }catch(e){}
+  // no tema escuro o conteúdo formatado (tabelas, desenhos) viria com as
+  // cores do escuro: imprime sempre no claro e volta depois
+  const raiz = document.documentElement;
+  const temaAntes = raiz.getAttribute('data-tema');
+  let restaurado = false;
+  const restaurar = () => {
+    if(restaurado) return;
+    restaurado = true;
+    if(temaAntes === 'escuro') raiz.setAttribute('data-tema', 'escuro');
+    window.removeEventListener('afterprint', restaurar);
+    document.removeEventListener('pointerdown', restaurar, true);
+  };
+  if(temaAntes === 'escuro') raiz.setAttribute('data-tema', 'claro');
+  window.addEventListener('afterprint', restaurar);
+  // rede de segurança: se o sistema não avisar que terminou, o primeiro
+  // toque de volta no app restaura o tema
+  setTimeout(() => document.addEventListener('pointerdown', restaurar, true), 1500);
+  setTimeout(() => window.print(), 60);
+}
+
+// ---- escolha de autores do SuperQuest (19/10) ----
+// vale pros dois jeitos: resolver no app e gerar pra imprimir. Todos
+// vêm marcados; a última escolha fica lembrada neste aparelho
+let vfSuperQuestAutoresVF = []; // [{id, nome, total}]
+let vfSuperQuestSelecionadosVF = new Set();
+let vfSuperQuestQuestoesLevesVF = []; // [{autor_id, modulo_pscpp}]
+
+async function abrirSuperQuestVF(){
+  abrirModal('modal-superquest');
+  const elLista = document.getElementById('sq-autores');
+  elLista.innerHTML = '<div style="color:#888;font-size:var(--fs-c)">Carregando autores...</div>';
+  vfAtualizarBotoesSuperQuestVF(false, 'Carregando...');
+  try{ if(document.fonts) ['300', '400', '500', '800'].forEach(w => document.fonts.load(`${w} 11pt "Roboto Condensed"`)); }catch(e){}
+  const [{data: autores, error}, {data: leves}, {data: exclusoes}] = await Promise.all([
+    sb.rpc('usuarios_com_questoes'),
+    buscarTudoPaginadoVF(() => sb.from('questoes').select('id, autor_id, modulo_pscpp', {count: 'exact'}).eq('anulada', false).order('id')),
+    buscarTudoPaginadoVF(() => sb.from('exclusoes').select('questao_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('resolvido_em', null).order('id'))
+  ]);
+  if(error){ elLista.innerHTML = '<div style="color:#B23A34">Erro ao carregar autores.</div>'; return; }
+  const excluidos = new Set((exclusoes||[]).map(e => e.questao_id));
+  vfSuperQuestQuestoesLevesVF = (leves||[]).filter(q => !excluidos.has(q.id));
+  const totais = {};
+  vfSuperQuestQuestoesLevesVF.forEach(q => { totais[q.autor_id] = (totais[q.autor_id]||0) + 1; });
+  vfSuperQuestAutoresVF = (autores||[])
+    .map(a => ({id: a.autor_id, nome: a.nome, total: totais[a.autor_id] || 0}))
+    .filter(a => a.total > 0)
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
+  let lembrados = null;
+  try{ lembrados = JSON.parse(localStorage.getItem('pq_superquest_autores') || 'null'); }catch(e){}
+  const ids = vfSuperQuestAutoresVF.map(a => a.id);
+  const validos = Array.isArray(lembrados) ? lembrados.filter(id => ids.includes(id)) : [];
+  vfSuperQuestSelecionadosVF = new Set(validos.length ? validos : ids);
+  vfRenderizarSuperQuestVF();
+}
+
+function vfAlternarAutorSuperQuestVF(id){
+  if(vfSuperQuestSelecionadosVF.has(id)) vfSuperQuestSelecionadosVF.delete(id);
+  else vfSuperQuestSelecionadosVF.add(id);
+  try{ localStorage.setItem('pq_superquest_autores', JSON.stringify([...vfSuperQuestSelecionadosVF])); }catch(e){}
+  vfRenderizarSuperQuestVF();
+}
+
+function vfAtualizarBotoesSuperQuestVF(ativo, texto){
+  ['sq-btn-app', 'sq-btn-imprimir'].forEach(id => { const b = document.getElementById(id); if(b){ b.disabled = !ativo; b.style.opacity = ativo ? '' : '0.45'; } });
+  const el = document.getElementById('sq-contagem');
+  if(el && texto !== undefined) el.innerHTML = texto;
+}
+
+function vfRenderizarSuperQuestVF(){
+  const elLista = document.getElementById('sq-autores');
+  elLista.innerHTML = vfSuperQuestAutoresVF.map(a => `<button type="button" class="sq-chip-autor" aria-pressed="${vfSuperQuestSelecionadosVF.has(a.id)}" onclick="vfAlternarAutorSuperQuestVF('${a.id}')"><span>${escapeHtml(a.nome)}</span><span class="sq-chip-n">${a.total.toLocaleString('pt-BR')}</span></button>`).join('')
+    || '<div style="color:#888;font-size:var(--fs-c)">Nenhum autor com questões ainda.</div>';
+  const pool = vfSuperQuestQuestoesLevesVF.filter(q => vfSuperQuestSelecionadosVF.has(q.autor_id));
+  const modulos = new Set(pool.map(q => q.modulo_pscpp).filter(Boolean));
+  if(!vfSuperQuestSelecionadosVF.size){ vfAtualizarBotoesSuperQuestVF(false, 'Escolhe pelo menos um autor.'); return; }
+  const linha = `${pool.length.toLocaleString('pt-BR')} questões disponíveis · ${modulos.size} ${modulos.size === 1 ? 'módulo' : 'módulos'}`;
+  if(pool.length < QUANTIDADE_SUPERQUEST){ vfAtualizarBotoesSuperQuestVF(false, `${linha}<br><span style="color:#B23A34">Precisa de pelo menos ${QUANTIDADE_SUPERQUEST}.</span>`); return; }
+  vfAtualizarBotoesSuperQuestVF(true, linha);
+}
+
+async function confirmarSuperQuestVF(imprimir){
+  const todos = vfSuperQuestAutoresVF.length && vfSuperQuestAutoresVF.every(a => vfSuperQuestSelecionadosVF.has(a.id));
+  const autores = todos ? null : vfSuperQuestAutoresVF.filter(a => vfSuperQuestSelecionadosVF.has(a.id));
+  vfAtualizarBotoesSuperQuestVF(false);
+  fecharModal('modal-superquest');
+  await gerarSuperQuest({autores, imprimir});
+}
+
+async function gerarSuperQuest(opcoes = {}){
+  // autores: null = todos; senão [{id, nome}] escolhidos no modal
+  const autores = opcoes.autores || null;
+  const idsAutores = autores ? autores.map(a => a.id) : null;
   const [{data: todasQuestoes, error}, {data: exclusoes}] = await Promise.all([
-    buscarTudoPaginadoVF(() => sb.from('questoes').select('*', {count: 'exact'}).eq('anulada', false).order('id')),
+    buscarTudoPaginadoVF(() => { let q = sb.from('questoes').select('*', {count: 'exact'}).eq('anulada', false); if(idsAutores) q = q.in('autor_id', idsAutores); return q.order('id'); }),
     buscarTudoPaginadoVF(() => sb.from('exclusoes').select('questao_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('resolvido_em', null).order('id'))
   ]);
   if(error){ alert('Erro ao buscar questões: '+error.message); return; }
@@ -24810,17 +25046,21 @@ async function gerarSuperQuest(){
   let pool = (todasQuestoes||[]).filter(q=>!idsExcluidos.has(q.id));
 
   if(pool.length < QUANTIDADE_SUPERQUEST){
-    alert(`O banco ainda não tem ${QUANTIDADE_SUPERQUEST} questões disponíveis pra montar um SuperQuest (tem ${pool.length} agora). Sobe mais PDFs pra desbloquear essa opção.`);
+    alert(autores
+      ? `Os autores escolhidos têm só ${pool.length} questões disponíveis – o SuperQuest precisa de ${QUANTIDADE_SUPERQUEST}. Marca mais algum autor.`
+      : `O banco ainda não tem ${QUANTIDADE_SUPERQUEST} questões disponíveis pra montar um SuperQuest (tem ${pool.length} agora). Sobe mais PDFs pra desbloquear essa opção.`);
     return;
   }
 
-  pool = embaralharFisherYates(pool).slice(0, QUANTIDADE_SUPERQUEST);
+  // a quantidade continua repartida por módulo, mas a ORDEM é toda
+  // misturada (19/10: "tem que ser tudo misturado")
+  pool = embaralharFisherYates(vfMontarSuperQuestEquilibradoVF(pool, QUANTIDADE_SUPERQUEST));
 
-  const nomeCaderno = `SuperQuest ${new Date().toLocaleDateString('pt-BR')}`;
+  const nomeCaderno = `SuperQuest ${new Date().toLocaleDateString('pt-BR')}` + (autores ? ` · ${autores.map(a => a.nome).join(', ')}` : '');
   const {data: novoCaderno} = await sb.from('cadernos').insert({
     usuario_id: usuarioAtual.id,
     nome: nomeCaderno,
-    filtros_aplicados: {superquest: true, questao_ids: pool.map(q=>q.id)},
+    filtros_aplicados: {superquest: true, equilibrado: true, misturado: true, autores: autores ? autores.map(a => ({id: a.id, nome: a.nome})) : 'todos', questao_ids: pool.map(q=>q.id)},
     status: 'em_andamento'
   }).select().single();
 
@@ -24838,6 +25078,7 @@ async function gerarSuperQuest(){
   document.getElementById('quests-filtros').classList.add('hidden');
   document.getElementById('quests-resolucao').classList.remove('hidden');
   renderizarQuestaoAtual();
+  if(opcoes.imprimir) imprimirCadernoAtual();
 }
 
 async function montarCaderno(){
