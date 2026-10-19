@@ -3228,7 +3228,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-19-309';
+const VERSAO_APP = '2026-10-19-310';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -9665,7 +9665,29 @@ document.addEventListener('touchstart', (e) => {
   // continua abrindo a nota normalmente
   const noCardDeNotaVF = e.target.closest('#vf-preview-notas-container, #vf-preview-notas-irmas-container');
   const controleDoCardVF = e.target.closest('.vf-alca-nota-preview, .vf-nota-clicavel, button, [data-identificador-anotacao]');
-  const botaoIcone = (noCardDeNotaVF && !controleDoCardVF)
+  // (19/10) ALTERNATIVA DO QUEST É PAPEL. Achado real (vídeo do Carlos):
+  // escrever em cima do texto de uma alternativa saía picado - cada
+  // traço começava "pendente" (clique ou traço?) e só virava tinta depois
+  // de 10 px / 150 ms, então pingos, acentos, o pé do "i" e o começo de
+  // cada letra sumiam, e os traços curtos viravam clique na alternativa.
+  // Regra nova: com a CANETA, só a coluna da letra ("c)") continua sendo
+  // botão (toque = selecionar, segurar = riscar, arrastar = traço). Em
+  // cima do texto, a caneta desenha NA HORA, como no enunciado - sem
+  // clique, sem risco, sem decisão adiada. Dedo não muda nada (nunca
+  // desenha): toca em qualquer lugar e seleciona, como sempre
+  let papelDeAlternativaVF = false;
+  const altQuestVF = e.target.closest('.banco-alt-btn');
+  if(altQuestVF && vfEhToqueDeCaneta(touch)){
+    const spanLetra = altQuestVF.querySelector('span > span');
+    const rLetra = spanLetra ? spanLetra.getBoundingClientRect() : null;
+    const naColunaDaLetra = !rLetra || touch.clientX <= rLetra.right + 10;
+    if(!naColunaDaLetra){
+      papelDeAlternativaVF = true;
+      if(typeof cancelarPressionarAlternativa === 'function') cancelarPressionarAlternativa();
+      if(typeof pressMoveu !== 'undefined') pressMoveu = true; // o touchend do botão não seleciona
+    }
+  }
+  const botaoIcone = (papelDeAlternativaVF || (noCardDeNotaVF && !controleDoCardVF))
     ? null
     : (itemMenu || e.target.closest('button, [onclick], [data-identificador-anotacao]'));
   if(botaoIcone){
