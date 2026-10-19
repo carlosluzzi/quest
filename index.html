@@ -234,6 +234,17 @@ trocando a custom property de cada slider individualmente */
 }
 #metricas-filtro-tipo,#metricas-data-inicio,#metricas-data-fim{height:32px;min-height:32px;max-height:32px;padding-top:0;padding-bottom:0;box-sizing:border-box}
 #aba-quests .filter-select{height:32px;box-sizing:border-box;padding-top:0;padding-bottom:0}
+#vf-biblioteca-filtros .filter-select{height:32px;box-sizing:border-box;padding-top:0;padding-bottom:0}
+/* interruptor (mesmo desenho do "Varredura" do Flash), em cima de um
+   checkbox de verdade - quem lê .checked continua funcionando igual */
+.pq-switch{position:relative;display:inline-block;width:44px;height:26px;flex-shrink:0;cursor:pointer}
+.pq-switch input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:1}
+.pq-switch span{position:absolute;inset:0;border-radius:13px;background:#ddd;transition:background 0.2s;pointer-events:none}
+.pq-switch span::after{content:'';position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:transform 0.2s}
+.pq-switch input:checked + span{background:#B23A34}
+.pq-switch input:checked + span::after{transform:translateX(18px)}
+html[data-tema="escuro"] .pq-switch span{background:#3A3A37}
+html[data-tema="escuro"] .pq-switch input:checked + span{background:#7A2F2A}
 /* Progresso: botões no mesmo padrão dos botões de filtro do Flash (.vf-btn-filtro-tipo) */
 .vf-prog-linha{display:flex;gap:6px;width:100%}
 .vf-prog-linha .vf-prog-btn{flex:1 1 0;min-width:0}
@@ -2059,18 +2070,22 @@ textarea, input[type="text"], input[type="search"], input[type="number"], input[
   <div class="view-aba hidden" id="aba-biblioteca">
     <!-- 6 abas numa grade 3 x 2: todas com a MESMA largura (com flex-wrap
          cada uma ficava de um tamanho) -->
-    <div id="vf-biblioteca-abas-secao" style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px;margin-bottom:12px">
-      <button id="vf-biblioteca-secao-afirmacoes" class="btn-secundario active" style="width:100%;padding-left:4px;padding-right:4px" onclick="vfMudarSecaoBibliotecaVF('afirmacoes')">Afirmações</button>
-      <button id="vf-biblioteca-secao-notas" class="btn-secundario" style="width:100%;padding-left:4px;padding-right:4px" onclick="vfMudarSecaoBibliotecaVF('notas')">Notas</button>
-      <button id="vf-biblioteca-secao-mnemonicos" class="btn-secundario" style="width:100%;padding-left:4px;padding-right:4px" onclick="vfMudarSecaoBibliotecaVF('mnemonicos')">Mnemônicos</button>
-      <button id="vf-biblioteca-secao-bizus" class="btn-secundario" style="width:100%;padding-left:4px;padding-right:4px" onclick="vfMudarSecaoBibliotecaVF('bizus')">Bizus</button>
-      <button id="vf-biblioteca-secao-divergencia" class="btn-secundario" style="width:100%;padding-left:4px;padding-right:4px" onclick="vfMudarSecaoBibliotecaVF('divergencia')">Divergência</button>
-      <button id="vf-biblioteca-secao-comparacoes" class="btn-secundario" style="width:100%;padding-left:4px;padding-right:4px" onclick="vfMudarSecaoBibliotecaVF('comparacoes')">Comparações</button>
+    <div id="vf-biblioteca-abas-secao" style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:6px;margin-bottom:12px">
+      <button id="vf-biblioteca-secao-afirmacoes" class="vf-prog-btn ativo" style="width:100%" onclick="vfMudarSecaoBibliotecaVF('afirmacoes')">Afirmações</button>
+      <button id="vf-biblioteca-secao-notas" class="vf-prog-btn" style="width:100%" onclick="vfMudarSecaoBibliotecaVF('notas')">Notas</button>
+      <button id="vf-biblioteca-secao-mnemonicos" class="vf-prog-btn" style="width:100%" onclick="vfMudarSecaoBibliotecaVF('mnemonicos')">Mnemônicos</button>
+      <button id="vf-biblioteca-secao-bizus" class="vf-prog-btn" style="width:100%" onclick="vfMudarSecaoBibliotecaVF('bizus')">Bizus</button>
+      <button id="vf-biblioteca-secao-divergencia" class="vf-prog-btn" style="width:100%" onclick="vfMudarSecaoBibliotecaVF('divergencia')">Divergência</button>
+      <button id="vf-biblioteca-secao-comparacoes" class="vf-prog-btn" style="width:100%" onclick="vfMudarSecaoBibliotecaVF('comparacoes')">Comparações</button>
     </div>
     <div id="vf-biblioteca-conteudo-notas" class="hidden"></div>
     <div id="vf-biblioteca-conteudo-divergencia" class="hidden"></div>
     <div id="vf-biblioteca-conteudo-comparacoes" class="hidden"></div>
     <div id="vf-biblioteca-conteudo-afirmacoes">
+    <!-- (19/10) mesmo cartão e mesmas medidas dos Filtros do Flash: campos
+         de 32 px, botões compactos, linhas "rótulo à esquerda, controle à
+         direita" separadas por um fio -->
+    <div id="vf-biblioteca-filtros" style="background:#fff;border:0.5px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);border-radius:10px;padding:14px 16px">
     <select id="vf-biblioteca-filtro-modulo" class="filter-select" style="margin-bottom:8px" onchange="vfBibliotecaMudarModuloVF()">
       <option value="">Todos os módulos</option>
     </select>
@@ -2080,9 +2095,13 @@ textarea, input[type="text"], input[type="search"], input[type="number"], input[
     <select id="vf-biblioteca-filtro-capitulo" class="filter-select" style="margin-bottom:8px" disabled>
       <option value="">Todos os capítulos</option>
     </select>
+    <div style="display:flex;gap:8px;align-items:stretch">
+      <input id="vf-biblioteca-busca" type="search" class="filter-select" placeholder="Palavra em português ou inglês" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;min-width:0;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfBuscarBibliotecaVF();}">
+      <button class="btn-primario" style="width:auto;flex-shrink:0;padding:0 16px;font-size:var(--fs-d);height:32px;border-radius:6px" onclick="vfBuscarBibliotecaVF()">Buscar</button>
+    </div>
     <!-- mesmos três do Tipo do Flash (mesma classe, mesmo visual, mesmas
          colunas do banco: eh_numero, eh_lista, eh_data, inconsistente) -->
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px">
       <span style="display:flex;align-items:center;gap:6px;font-size:var(--fs-d);color:#333;flex-shrink:0">Tipo</span>
       <span style="display:flex;justify-content:flex-end;gap:6px;flex:1;min-width:0">
         <button id="vf-biblioteca-filtro-numero" onclick="vfBibliotecaToggleTipoVF('numero')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Número</button>
@@ -2091,15 +2110,12 @@ textarea, input[type="text"], input[type="search"], input[type="number"], input[
         <button id="vf-biblioteca-filtro-inconsistente" onclick="vfBibliotecaToggleTipoVF('inconsistente')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Inconsistente</button>
       </span>
     </div>
-    <div style="display:flex;gap:8px;align-items:stretch;margin-top:12px">
-      <input id="vf-biblioteca-busca" type="search" class="filter-select" placeholder="Palavra em português ou inglês" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfBuscarBibliotecaVF();}">
-      <button class="btn-primario" style="width:auto;padding:0 18px;align-self:stretch" onclick="vfBuscarBibliotecaVF()">Buscar</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
+      <label for="vf-biblioteca-so-grifadas" style="font-size:var(--fs-d);color:#333;cursor:pointer">Só as que eu grifei</label>
+      <label class="pq-switch"><input type="checkbox" id="vf-biblioteca-so-grifadas"><span></span></label>
     </div>
-    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:var(--fs-d);color:#333;cursor:pointer">
-      <input type="checkbox" id="vf-biblioteca-so-grifadas" style="width:18px;height:18px;flex-shrink:0;accent-color:#B23A34">
-      Só as que eu grifei
-    </label>
-    <p id="vf-biblioteca-resumo" style="font-size:var(--fs-c);color:#888;margin:10px 0 0 0;min-height:1.3em;line-height:1.4"></p>
+    </div>
+    <p id="vf-biblioteca-resumo" style="font-size:var(--fs-c);color:#888;margin:12px 0 0 0;min-height:1.3em;line-height:1.4"></p>
     <div id="vf-biblioteca-lista" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"></div>
     </div>
     <!-- a afirmacao aberta pela Biblioteca mora AQUI: o proprio #vf-conteudo
@@ -3212,7 +3228,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-19-308';
+const VERSAO_APP = '2026-10-19-309';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -23486,7 +23502,7 @@ function vfMudarSecaoBibliotecaVF(secao){
   document.getElementById('vf-biblioteca-conteudo-divergencia').classList.toggle('hidden', secao !== 'divergencia');
   document.getElementById('vf-biblioteca-conteudo-comparacoes').classList.toggle('hidden', secao !== 'comparacoes');
   ['afirmacoes', 'notas', 'mnemonicos', 'bizus', 'divergencia', 'comparacoes'].forEach(nome => {
-    document.getElementById(`vf-biblioteca-secao-${nome}`)?.classList.toggle('active', secao === nome);
+    document.getElementById(`vf-biblioteca-secao-${nome}`)?.classList.toggle('ativo', secao === nome);
   });
   if(usaListaDeNotas){
     vfAbrirBibliotecaNotasVF('aba', 'vf-biblioteca-conteudo-notas', true).then(() => {
