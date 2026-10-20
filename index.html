@@ -1363,37 +1363,39 @@ html[data-tema="escuro"] [style*="border:1.5px solid #bbb"]{border-color:#3A3A36
    texto) recebe o cursor mas o iOS NÃO abre o teclado. Campos de digitação
    sempre selecionáveis, estejam onde estiverem */
 textarea, input[type="text"], input[type="search"], input[type="number"], input[type="email"], input[type="password"], [contenteditable="true"]{-webkit-user-select:text !important;user-select:text !important;-webkit-touch-callout:default}
-/* ===== teclado do app (v315) - teclado flutuante pequeno no lugar do
-   teclado da Apple, no estilo do teclado flutuante do iPad. Tamanho fixo
-   em px de propósito (igual ao da Apple): não acompanha o slider de fonte */
-#pq-teclado{position:fixed;left:0;top:0;z-index:2147483000;width:332px;box-sizing:border-box;padding:7px 3px 0;border-radius:14px;background:var(--tk-fundo);box-shadow:0 10px 34px rgba(0,0,0,0.28),0 0 0 0.5px rgba(0,0,0,0.14);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;display:none;
-  --tk-fundo:#D1D4DB;--tk-tecla:#FFFFFF;--tk-especial:#ACB1BB;--tk-texto:#000000;--tk-sombra:rgba(0,0,0,0.32);--tk-tecla-ativa:#ACB1BB;--tk-especial-ativa:#FFFFFF;--tk-alca:rgba(0,0,0,0.28);--tk-icone:#3C3C43}
+/* ===== teclado do app (v315/316) - teclado flutuante pequeno no lugar do
+   teclado da Apple, no modelo do teclado flutuante do iPad (v316: visual
+   "clean" igual ao da Apple - fundo translúcido com desfoque, todas as
+   teclas brancas sem sombra, cantos bem redondos, espaço sem rótulo e a
+   pílula de três pontinhos pra arrastar). Tamanho fixo em px de
+   propósito (igual ao da Apple): não acompanha o slider de fonte */
+#pq-teclado{position:fixed;left:0;top:0;z-index:2147483000;width:340px;box-sizing:border-box;padding:10px 8px 0;border-radius:26px;background:var(--tk-fundo);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:0 12px 40px rgba(0,0,0,0.16),0 0 0 0.5px rgba(0,0,0,0.07);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;display:none;
+  --tk-fundo:rgba(228,229,234,0.84);--tk-tecla:#FFFFFF;--tk-texto:#000000;--tk-tecla-ativa:#D3D4D9;--tk-icone:#8E8E93;--tk-pilula:rgba(120,120,128,0.2);--tk-ponto:#8E8E93}
 #pq-teclado.aberto{display:block}
-html[data-tema="escuro"] #pq-teclado{--tk-fundo:#2C2C2E;--tk-tecla:#6A6A6E;--tk-especial:#46464A;--tk-texto:#FFFFFF;--tk-sombra:rgba(0,0,0,0.65);--tk-tecla-ativa:#46464A;--tk-especial-ativa:#6A6A6E;--tk-alca:rgba(255,255,255,0.35);--tk-icone:#D8D8DC;box-shadow:0 10px 34px rgba(0,0,0,0.6),0 0 0 0.5px rgba(255,255,255,0.08)}
+html[data-tema="escuro"] #pq-teclado{--tk-fundo:rgba(44,44,46,0.86);--tk-tecla:#5C5C60;--tk-texto:#FFFFFF;--tk-tecla-ativa:#7C7C81;--tk-icone:#A1A1A6;--tk-pilula:rgba(255,255,255,0.14);--tk-ponto:#C7C7CC;box-shadow:0 12px 40px rgba(0,0,0,0.55),0 0 0 0.5px rgba(255,255,255,0.08)}
 #pq-teclado *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.pq-tk-linha{display:flex;gap:5px;padding:0 2px;margin-bottom:9px;height:40px}
-.pq-tk-linha.recuo{padding:0 calc(2px + 4.7%)}
-.pq-tk-tecla{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;background:var(--tk-tecla);color:var(--tk-texto);border-radius:5px;box-shadow:0 1px 0 var(--tk-sombra);font-size:22px;font-weight:400;line-height:1;position:relative;cursor:pointer}
-.pq-tk-tecla.esp{background:var(--tk-especial);font-size:15px}
-.pq-tk-tecla.larga{flex:1.38 1 0}
-.pq-tk-linha .pq-tk-tecla.larga:first-child{margin-right:7px}
-.pq-tk-linha .pq-tk-tecla.larga:last-child{margin-left:7px}
-.pq-tk-tecla.modo{flex:1.3 1 0}
-.pq-tk-tecla.espaco{flex:5 1 0;font-size:15px}
-.pq-tk-tecla.retorno{flex:2.2 1 0}
+.pq-tk-linha{display:flex;gap:6px;margin-bottom:10px;height:38px}
+.pq-tk-linha.recuo{padding:0 4.6%}
+.pq-tk-tecla{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;background:var(--tk-tecla);color:var(--tk-texto);border-radius:9px;font-size:22px;font-weight:400;line-height:1;position:relative;cursor:pointer}
+.pq-tk-tecla.esp{font-size:16px}
+.pq-tk-tecla.larga{flex:1.4 1 0}
+.pq-tk-linha .pq-tk-tecla.larga:first-child{margin-right:6px}
+.pq-tk-linha .pq-tk-tecla.larga:last-child{margin-left:6px}
+.pq-tk-tecla.modo{flex:1.35 1 0}
+.pq-tk-tecla.espaco{flex:4.6 1 0}
+.pq-tk-tecla.retorno{flex:1.9 1 0}
 .pq-tk-tecla.pressionada{background:var(--tk-tecla-ativa)}
-.pq-tk-tecla.esp.pressionada{background:var(--tk-especial-ativa)}
-.pq-tk-tecla.shift-ligado{background:var(--tk-tecla)}
-.pq-tk-tecla.espaco.trackpad{color:transparent}
+.pq-tk-tecla.espaco.trackpad{background:var(--tk-tecla-ativa)}
 .pq-tk-tecla svg{display:block}
-.pq-tk-rodape{display:flex;align-items:center;height:28px;padding:0 4px 1px}
-.pq-tk-icone{width:34px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--tk-icone);cursor:pointer;border-radius:6px}
-.pq-tk-icone.pressionada{background:rgba(127,127,127,0.25)}
-.pq-tk-alca{flex:1;height:28px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
-.pq-tk-alca::after{content:'';width:46px;height:5px;border-radius:3px;background:var(--tk-alca)}
-.pq-tk-previa{position:absolute;display:none;align-items:center;justify-content:center;background:var(--tk-tecla);color:var(--tk-texto);border-radius:9px;box-shadow:0 2px 8px rgba(0,0,0,0.3),0 0 0 0.5px rgba(0,0,0,0.1);font-size:32px;pointer-events:none;z-index:3}
-.pq-tk-variantes{position:absolute;display:none;gap:2px;padding:4px;background:var(--tk-tecla);border-radius:9px;box-shadow:0 2px 10px rgba(0,0,0,0.32),0 0 0 0.5px rgba(0,0,0,0.1);pointer-events:none;z-index:4}
-.pq-tk-var{width:30px;height:40px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--tk-texto);border-radius:6px}
+.pq-tk-rodape{display:flex;align-items:center;height:36px;padding:0 6px 2px}
+.pq-tk-icone{width:36px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--tk-icone);cursor:pointer;border-radius:8px}
+.pq-tk-icone.pressionada{background:var(--tk-pilula)}
+.pq-tk-alca{flex:1;height:34px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
+.pq-tk-pontos{display:flex;align-items:center;justify-content:center;gap:5px;width:46px;height:24px;border-radius:12px;background:var(--tk-pilula)}
+.pq-tk-pontos i{width:6px;height:6px;border-radius:50%;background:var(--tk-ponto)}
+.pq-tk-previa{position:absolute;display:none;align-items:center;justify-content:center;background:var(--tk-tecla);color:var(--tk-texto);border-radius:11px;box-shadow:0 4px 14px rgba(0,0,0,0.18),0 0 0 0.5px rgba(0,0,0,0.06);font-size:32px;pointer-events:none;z-index:3}
+.pq-tk-variantes{position:absolute;display:none;gap:2px;padding:4px;background:var(--tk-tecla);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.2),0 0 0 0.5px rgba(0,0,0,0.06);pointer-events:none;z-index:4}
+.pq-tk-var{width:30px;height:40px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--tk-texto);border-radius:8px}
 .pq-tk-var.sel{background:#0A84FF;color:#fff}
 </style>
 <script>
@@ -3268,7 +3270,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-20-315';
+const VERSAO_APP = '2026-10-20-316';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -31349,7 +31351,7 @@ async function buscarCadernoAdmin(){
   // fileiras de cada modo. String = caractere; objeto = tecla de ação
   const SHIFT = {acao:'shift', classe:'esp larga'};
   const APAGAR = {acao:'apagar', classe:'esp larga'};
-  const ESPACO = {acao:'espaco', rotulo:'espaço', classe:'espaco'};
+  const ESPACO = {acao:'espaco', rotulo:'', classe:'espaco'}; // sem rótulo, igual ao da Apple
   const RETORNO = {acao:'retorno', classe:'esp retorno'};
   const PARA = (modo, rotulo) => ({acao:'modo', modo, rotulo, classe:'esp modo'});
   const MODOS = {
@@ -31562,7 +31564,7 @@ async function buscarCadernoAdmin(){
     teclado.innerHTML = `<div class="pq-tk-linhas"></div>
       <div class="pq-tk-rodape">
         <div class="pq-tk-icone" data-icone="sistema" title="Usar o teclado da Apple neste campo">${ICONES.globo}</div>
-        <div class="pq-tk-alca" title="Arrastar"></div>
+        <div class="pq-tk-alca" title="Arrastar"><span class="pq-tk-pontos"><i></i><i></i><i></i></span></div>
         <div class="pq-tk-icone" data-icone="esconder" title="Esconder teclado">${ICONES.esconder}</div>
       </div>
       <div class="pq-tk-previa"></div>
