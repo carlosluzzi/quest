@@ -1369,12 +1369,12 @@ textarea, input[type="text"], input[type="search"], input[type="number"], input[
    teclas brancas sem sombra, cantos bem redondos, espaço sem rótulo e a
    pílula de três pontinhos pra arrastar). Tamanho fixo em px de
    propósito (igual ao da Apple): não acompanha o slider de fonte */
-#pq-teclado{position:fixed;left:0;top:0;z-index:2147483000;width:340px;box-sizing:border-box;padding:10px 8px 0;border-radius:26px;background:var(--tk-fundo);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:0 12px 40px rgba(0,0,0,0.16),0 0 0 0.5px rgba(0,0,0,0.07);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;display:none;
+#pq-teclado{position:fixed;left:0;top:0;z-index:2147483000;width:374px;box-sizing:border-box;padding:10px 8px 0;border-radius:26px;background:var(--tk-fundo);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:0 12px 40px rgba(0,0,0,0.16),0 0 0 0.5px rgba(0,0,0,0.07);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;display:none;
   --tk-fundo:rgba(228,229,234,0.84);--tk-tecla:#FFFFFF;--tk-texto:#000000;--tk-tecla-ativa:#D3D4D9;--tk-icone:#8E8E93;--tk-pilula:rgba(120,120,128,0.2);--tk-ponto:#8E8E93}
 #pq-teclado.aberto{display:block}
 html[data-tema="escuro"] #pq-teclado{--tk-fundo:rgba(44,44,46,0.86);--tk-tecla:#5C5C60;--tk-texto:#FFFFFF;--tk-tecla-ativa:#7C7C81;--tk-icone:#A1A1A6;--tk-pilula:rgba(255,255,255,0.14);--tk-ponto:#C7C7CC;box-shadow:0 12px 40px rgba(0,0,0,0.55),0 0 0 0.5px rgba(255,255,255,0.08)}
 #pq-teclado *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.pq-tk-linha{display:flex;gap:6px;margin-bottom:10px;height:38px}
+.pq-tk-linha{display:flex;gap:5px;margin-bottom:10px;height:39px} /* v317: teclas mais largas (Carlos achou finas) */
 .pq-tk-linha.recuo{padding:0 4.6%}
 .pq-tk-tecla{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;background:var(--tk-tecla);color:var(--tk-texto);border-radius:9px;font-size:22px;font-weight:400;line-height:1;position:relative;cursor:pointer}
 .pq-tk-tecla.esp{font-size:16px}
@@ -1395,7 +1395,7 @@ html[data-tema="escuro"] #pq-teclado{--tk-fundo:rgba(44,44,46,0.86);--tk-tecla:#
 .pq-tk-pontos i{width:6px;height:6px;border-radius:50%;background:var(--tk-ponto)}
 .pq-tk-previa{position:absolute;display:none;align-items:center;justify-content:center;background:var(--tk-tecla);color:var(--tk-texto);border-radius:11px;box-shadow:0 4px 14px rgba(0,0,0,0.18),0 0 0 0.5px rgba(0,0,0,0.06);font-size:32px;pointer-events:none;z-index:3}
 .pq-tk-variantes{position:absolute;display:none;gap:2px;padding:4px;background:var(--tk-tecla);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.2),0 0 0 0.5px rgba(0,0,0,0.06);pointer-events:none;z-index:4}
-.pq-tk-var{width:30px;height:40px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--tk-texto);border-radius:8px}
+.pq-tk-var{width:34px;height:40px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--tk-texto);border-radius:8px}
 .pq-tk-var.sel{background:#0A84FF;color:#fff}
 </style>
 <script>
@@ -3270,7 +3270,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-20-316';
+const VERSAO_APP = '2026-10-20-317';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -31620,7 +31620,7 @@ async function buscarCadernoAdmin(){
   // ---------- posição ----------
   function posicionar(xDesejado, yDesejado){
     if(!teclado) return;
-    const w = teclado.offsetWidth || 332, h = teclado.offsetHeight || 230;
+    const w = teclado.offsetWidth || 374, h = teclado.offsetHeight || 230;
     const larguraTela = window.innerWidth, alturaTela = window.innerHeight;
     let x = xDesejado, y = yDesejado;
     if(x === undefined){
