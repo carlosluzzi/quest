@@ -220,7 +220,10 @@ trocando a custom property de cada slider individualmente */
 .pq-flash-titulo-icone{display:inline-flex;flex-shrink:0;color:#B23A34}
 .pq-flash-titulo-icone svg{width:16px;height:16px}
 .pq-mapa-lista{margin:0 -13px -13px;border-top:0.5px solid #eee}
-.pq-mapa-cab,.pq-mapa-linha{display:grid;grid-template-columns:minmax(0,1fr) 64px 88px 112px;align-items:center}
+.pq-mapa-cab,.pq-mapa-linha{display:grid;grid-template-columns:minmax(0,1fr) 64px 108px;align-items:center}
+.pq-mapa-linha.pq-clicavel{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pq-mapa-linha.pq-clicavel:active{background:#EFEFEC}
+.pq-mapa-linha.pq-sem-cards .pq-mapa-nome{color:#aaa}
 .pq-mapa-cab{font-size:var(--fs-c);color:#888;font-weight:500;border-bottom:0.5px solid #eee;height:32px}
 .pq-mapa-cab>div{padding:0 10px;height:100%;display:flex;align-items:center;justify-content:flex-end;border-left:0.5px solid #eee}
 .pq-mapa-cab>div:first-child{justify-content:flex-start;border-left:none;padding-left:43px}
@@ -238,18 +241,15 @@ trocando a custom property de cada slider individualmente */
 .pq-flash-atualizar svg{width:14px;height:14px}
 .pq-flash-atualizar.girando svg{animation:ptr-girar 0.8s linear infinite}
 .pq-flash-vazio{padding:14px 10px;font-size:var(--fs-d);color:#888}
-.pq-flash-btn{width:100%;background:#B23A34;color:#fff;border:none;border-radius:8px;padding:7px 0;font-family:inherit;font-size:var(--fs-d);font-weight:600;cursor:pointer;line-height:1.2}
-.pq-flash-btn.pq-flash-btn-continuar{background:#E6F1FB;color:#202A45}
-.pq-flash-acao{padding:0 10px 0 4px !important;display:flex;align-items:center}
 .pq-chip-fila-flash{display:inline-flex;align-items:center;gap:4px;background:#E6F1FB;color:#202A45;border-radius:999px;padding:2px 10px;font-size:var(--fs-b);font-weight:600;white-space:nowrap}
 @media(max-width:767px){
-  .pq-mapa-cab,.pq-mapa-linha{grid-template-columns:minmax(0,1fr) 50px 72px 98px}
+  .pq-mapa-cab,.pq-mapa-linha{grid-template-columns:minmax(0,1fr) 50px 92px}
   .pq-mapa-linha>div,.pq-mapa-cab>div{padding:0 6px}
   .pq-mapa-cab>div:first-child{padding-left:35px}
   .pq-mapa-nome{gap:5px}
-  .pq-flash-acao{padding:0 6px 0 2px !important}
 }
 html[data-tema="escuro"] .pq-mapa-linha.pq-mapa-par{background:#161616}
+html[data-tema="escuro"] .pq-mapa-linha.pq-clicavel:active{background:#222}
 html[data-tema="escuro"] .pq-mapa-cab,html[data-tema="escuro"] .pq-mapa-lista{border-color:#262626}
 html[data-tema="escuro"] .pq-mapa-cab>div{border-color:#262626}
 html[data-tema="escuro"] .pq-mapa-nome,html[data-tema="escuro"] .pq-flash-titulo,html[data-tema="escuro"] .pq-flash-faltam{color:#D9D5CD}
@@ -3351,7 +3351,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-05-327';
+const VERSAO_APP = '2026-11-05-329';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -20414,20 +20414,18 @@ function vfRenderizarFilaFlashHojeVF(){
     const semCards = !t.cards.length;
     const zerado = t.faltam === 0;
     const faltamHtml = zerado ? '<span class="pq-flash-feitas">zerado</span>' : `<span class="pq-flash-faltam">${t.faltam}</span><span class="pq-flash-feitas"> de ${t.cota}</span>`;
-    const btn = semCards
-      ? `<button class="pq-flash-btn pq-flash-btn-continuar" disabled title="Nenhum card seu nesse trecho" style="opacity:.5">Sem cards</button>`
-      : `<button class="pq-flash-btn${zerado?' pq-flash-btn-continuar':''}" onclick="vfComecarTarefaFilaFlashVF('${t.id}')">${zerado?'Continuar':'Começar'}</button>`;
-    return `<div class="pq-mapa-linha${i%2===1?' pq-mapa-par':''}">
+    // começar = tocar na linha (no nome do trecho); sem cards meus, a linha fica apagada e não abre nada
+    const attrs = semCards ? ' title="Nenhum card seu nesse trecho"' : ` onclick="vfComecarTarefaFilaFlashVF('${t.id}')"`;
+    return `<div class="pq-mapa-linha${i%2===1?' pq-mapa-par':''}${semCards?' pq-sem-cards':' pq-clicavel'}"${attrs}>
       <div class="pq-mapa-nome"><span class="pq-mapa-seta" style="visibility:hidden">▶</span>${VF_MAPA_DOC_VF}<span class="pq-mapa-t">${escapeHtml(vfRotuloTrechoFilaFlashVF(t))}</span></div>
       <div class="pq-mapa-num">${t.rodada}ª</div>
       <div class="pq-mapa-num">${faltamHtml}</div>
-      <div class="pq-flash-acao">${btn}</div>
     </div>`;
   }).join('');
   el.innerHTML = `<div class="card-inicio" id="pq-flash-hoje-card">
     <div class="pq-flash-titulo"><span class="pq-flash-titulo-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span><span>Flash de hoje</span>${direita}</div>
     <div class="pq-mapa-lista">
-      <div class="pq-mapa-cab"><div>Trecho</div><div>Rodada</div><div>Faltam</div><div></div></div>
+      <div class="pq-mapa-cab"><div>Trecho</div><div>Rodada</div><div>Faltam</div></div>
       ${corpo}
     </div>
   </div>`;
