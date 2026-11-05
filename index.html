@@ -3355,7 +3355,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-05-336';
+const VERSAO_APP = '2026-11-05-337';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -20551,8 +20551,15 @@ function vfRenderizarFilaFlashHojeVF(){
 }
 // "Começar": monta o filtro do trecho (como se fosse na mão) e abre o treino
 async function vfComecarTarefaFilaFlashVF(tarefaId){
+  // (05/11 -337) nunca falha em silêncio: diz na tela o que impediu e grava o motivo
+  const avisar = (texto) => { try{ vfMostrarAvisoVF(texto, 'Flash de hoje'); }catch(e){ alert(texto); } try{ sb.from('diagnostico_cliente_vf').insert({versao: VERSAO_APP, aparelho: navigator.userAgent, contexto: 'comecar-fila', total_ms: 0, marcas: [{m: 'erro', x: String(texto).slice(0, 300)}]}).then(() => {}); }catch(e){} };
   const t = vfFilaFlashTarefasVF.find(x => x.id === tarefaId);
-  if(!t || !t.bib || !t.cards.length) return;
+  if(!t){ avisar('Não achei essa tarefa na lista. Toca em atualizar e tenta de novo.'); return; }
+  if(!t.bib){ avisar(`Não achei a publicação "${t.publicacao}" na bibliografia do Pilotquest.`); return; }
+  if(!t.cards.length){ avisar(`Nenhum card seu no trecho "${vfRotuloTrechoFilaFlashVF(t)}".`); return; }
+  try{ await vfComecarTarefaFilaFlashInternoVF(t); }catch(e){ console.error('Flash de hoje (começar):', e); avisar('Não consegui abrir o treino: ' + ((e && e.message) || e)); }
+}
+async function vfComecarTarefaFilaFlashInternoVF(t){
   filtroVF = {modulo: t.bib.modulo_pscpp || null, publicacao: t.bib.id, tema: null, capitulo: t.capPQ || null,
               numero: false, lista: false, data: false, inconsistente: false, termo: null, tagId: null, tagNome: null,
               filtrosInc: t.filtroId ? [t.filtroId] : [], filtrosExc: [], varreduraDesde: null};
