@@ -3351,7 +3351,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-05-331';
+const VERSAO_APP = '2026-11-05-333';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -16634,8 +16634,11 @@ async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
   el.querySelectorAll('.loading-spinner').forEach(s => s.closest('div')?.remove());
   const overlaySpinner = document.createElement('div');
   overlaySpinner.id = 'vf-overlay-spinner-recarga';
-  overlaySpinner.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:flex-start;justify-content:center;padding-top:80px;z-index:6;pointer-events:none';
-  overlaySpinner.innerHTML = `<svg class="loading-spinner" viewBox="0 0 50 50" width="36" height="36"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>`;
+  // (05/11 -333) MESMO lugar e tamanho do spinner da entrada (fixo, centrado
+  // na área útil da tela): antes este ficava no alto do conteúdo (absolute,
+  // 80px) e o da entrada no centro - dois círculos em lugares diferentes
+  overlaySpinner.style.cssText = 'position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:var(--carregando-esquerda, 0px);right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:6;pointer-events:none';
+  overlaySpinner.innerHTML = `<svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg>`;
   el.appendChild(overlaySpinner);
   document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
 
@@ -20354,6 +20357,7 @@ let vfFilaFlashTarefasVF = [];
 let vfFilaFlashCarregandoVF = false;
 let vfFilaFlashUltimaCargaVF = 0;
 let vfFilaFlashErroVF = '';
+const vfFilaFlashCardsCacheVF = new Map(); // tarefa -> {bib, capPQ, filtroId, cards} resolvido (vale pela sessão)
 let vfTarefaFilaFlashAtivaVF = null; // {id, rotulo, cota, faltam, cards:Set} - tarefa que o "Começar" abriu (chip no treino)
 const VF_MAPA_DOC_VF = '<svg class="pq-mapa-ico" viewBox="0 0 20 16"><path d="M5.5 1h6.2L15 4.3v9.9c0 .5-.4.8-.8.8H5.5c-.5 0-.8-.4-.8-.8V1.8c0-.5.4-.8.8-.8z" fill="#fff" stroke="#c7c7cc" stroke-width=".8"/><path d="M11.7 1v3.3H15" fill="none" stroke="#c7c7cc" stroke-width=".8"/></svg>';
 function vfChaveDiaLocalVF(d){
@@ -20436,10 +20440,19 @@ async function vfCarregarFilaFlashHojeVF(forcar){
       logs = l || [];
     }
     marca('logs', logs.length);
+    // (05/11 -332) trechos resolvidos em PARALELO e guardados por tarefa
+    // (medido no iPad: 6 trechos em série = 4,6 s; o conjunto de cards de
+    // uma tarefa não muda entre uma atualização e outra, só os feitos)
+    const resolvidos = await Promise.all(tarefas.map(f => {
+      const chave = f.id + '|' + f.publicacao + '|' + f.capitulo;
+      const c = vfFilaFlashCardsCacheVF.get(chave);
+      if(c) return Promise.resolve(c);
+      return vfCardsDoTrechoFilaFlashVF(f, mapa).then(r => { vfFilaFlashCardsCacheVF.set(chave, r); return r; });
+    }));
+    marca('trechos', resolvidos.length);
     const prontas = [];
-    for(const f of tarefas){
-      const r = await vfCardsDoTrechoFilaFlashVF(f, mapa);
-      marca('trecho', r.cards.length);
+    for(let i = 0; i < tarefas.length; i++){
+      const f = tarefas[i], r = resolvidos[i];
       const set = new Set(r.cards);
       const desde = vfInicioContagemFilaFlashVF(f).getTime();
       const feitas = logs.filter(x => set.has(x.questao_vf_id) && new Date(x.respondida_em).getTime() >= desde).length;
