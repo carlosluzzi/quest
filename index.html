@@ -241,7 +241,11 @@ trocando a custom property de cada slider individualmente */
 .pq-flash-atualizar svg{width:14px;height:14px}
 .pq-flash-atualizar.girando svg{animation:ptr-girar 0.8s linear infinite}
 .pq-flash-vazio{padding:14px 10px;font-size:var(--fs-d);color:#888}
-.pq-chip-fila-flash{display:inline-flex;align-items:center;gap:4px;background:#E6F1FB;color:#202A45;border-radius:999px;padding:2px 10px;font-size:var(--fs-b);font-weight:600;white-space:nowrap}
+.pq-chip-fila-flash{display:inline-flex;align-items:center;gap:6px;border:0.5px solid #ddd;border-radius:999px;padding:3px 11px;font-size:var(--fs-c);color:#888;white-space:nowrap;flex-shrink:0;background:#fff}
+.pq-chip-fila-flash svg{width:15px;height:15px;color:#B23A34;flex-shrink:0}
+.pq-chip-fila-flash .pq-chip-n{color:#111;font-weight:500}
+html[data-tema="escuro"] .pq-chip-fila-flash{background:#0F0F0E;border-color:#333331;color:#9D9A93}
+html[data-tema="escuro"] .pq-chip-fila-flash .pq-chip-n{color:#D9D5CD}
 @media(max-width:767px){
   .pq-mapa-cab,.pq-mapa-linha{grid-template-columns:minmax(0,1fr) 50px 92px}
   .pq-mapa-linha>div,.pq-mapa-cab>div{padding:0 6px}
@@ -3355,7 +3359,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-05-339';
+const VERSAO_APP = '2026-11-05-340';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -18012,7 +18016,7 @@ function renderizarItemVF(){
     ${contadorVarreduraHtml}
     <div style="display:flex;flex-direction:column;gap:2px;padding:2px 2px 14px;color:#888;font-size:var(--fs-c)">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${vfChipFilaFlashVF()}${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao} certas nessa sessão <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
+        <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao} certas nessa sessão <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>${vfChipFilaFlashVF()}
       </div>
     </div>`;
 
@@ -20625,18 +20629,21 @@ async function vfComecarTarefaFilaFlashInternoVF(t){
     if(!vfSessaoAtivaVF) vfAtualizarOverlaySessaoVF(); // não iniciou (sem conexão, por exemplo): botão de volta
   }
 }
+function vfChipFilaFlashTextoVF(t){
+  return t.faltam > 0 ? `<span class="pq-chip-n">${t.faltam}</span> de ${t.cota}` : 'zerado';
+}
 function vfChipFilaFlashVF(){
   const t = vfTarefaFilaFlashAtivaVF;
   if(!t) return '';
-  const texto = t.faltam > 0 ? `Faltam: ${t.faltam} de ${t.cota}` : 'zerado';
-  return `<span class="pq-chip-fila-flash" id="vf-chip-fila-flash" title="${escapeHtml(t.rotulo)}">${texto}</span>`;
+  // (05/11 -340) opção 5: contador discreto à direita da linha "N de M certas" - relógio vermelho + "29 de 37"
+  return `<span class="pq-chip-fila-flash" id="vf-chip-fila-flash" title="${escapeHtml(t.rotulo)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg><span>${vfChipFilaFlashTextoVF(t)}</span></span>`;
 }
 function vfContarRespostaFilaFlashVF(questaoVfId){
   const t = vfTarefaFilaFlashAtivaVF;
   if(!t || !t.cards.has(questaoVfId)) return;
   if(t.faltam > 0) t.faltam--;
   const chip = document.getElementById('vf-chip-fila-flash');
-  if(chip) chip.textContent = t.faltam > 0 ? `Faltam: ${t.faltam} de ${t.cota}` : 'zerado';
+  if(chip && chip.lastElementChild) chip.lastElementChild.innerHTML = vfChipFilaFlashTextoVF(t);
   // a linha da Início também acompanha, sem ir ao banco
   const linha = vfFilaFlashTarefasVF.find(x => x.id === t.id);
   if(linha){ linha.feitas++; linha.faltam = Math.max(0, linha.faltam - 1); }
