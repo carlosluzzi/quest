@@ -3351,7 +3351,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-05-330';
+const VERSAO_APP = '2026-11-05-331';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -14918,7 +14918,13 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     ? sb.rpc('buscar_questoes_por_termo_vf', {p_termo: filtroVF.termo})
     : Promise.resolve({data: null, error: null});
 
-  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, , {data: notaData}, {data: todasTagsData}, {data: questoesTagsData}, , {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, mapaFiltrosCapituloVF, ...resultadosEntradaVF] = await Promise.all([
+  // (05/11 -331) ATENÇÃO: desestruturação POSICIONAL - cada consulta abaixo
+  // precisa de uma posição aqui, na mesma ordem (vazia pra quem resolve
+  // dentro do próprio then: Revisar, Mais questões). A -324 enfileirou os
+  // pedidos de Mais questões sem reservar a posição e deslocou tudo (notas
+  // viraram pedidos, tags viraram notas, relógio virou filtro...) - Flash
+  // travava na entrada
+  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, /* revisar */, /* mais questões */, {data: notaData}, {data: todasTagsData}, {data: questoesTagsData}, /* bibliografia */, {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, mapaFiltrosCapituloVF, ...resultadosEntradaVF] = await Promise.all([
     vfBuscarQuestoesPoolVF(aoCarregarRestanteQuestoesVF), // era buscarTudoPaginadoVF(montarQueryQuestoesVF, ...) - ver comentário da RPC acima
     // (16/10) progresso numa chamada só (RPC repeticao_do_usuario_vf, jsonb) -
     // medido no Chrome: antes eram 12 requisições paginadas de 1000 linhas,
