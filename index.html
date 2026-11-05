@@ -3355,7 +3355,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-05-337';
+const VERSAO_APP = '2026-11-05-339';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -16442,11 +16442,45 @@ function vfAplicarAtualizacaoQuestaoVF(nova){
     const atual = estadoVF.posicao >= 0 ? estadoVF.historico[estadoVF.posicao] : null;
     naTela = !!(atual && atual.item && atual.item.id === nova.id);
   }
-  if(naTela && !vfDesenhandoAgora && !vfAlgumModalAbertoVF() && typeof renderizarItemVF === 'function'){
+  if(!naTela) return;
+  // (05/11 -339) achado real: correção chegava com um modal aberto (ou o
+  // card "virado") e ficava só na memória - o texto velho continuava na
+  // frente até o próximo card. Agora: redesenha na hora se puder; senão
+  // fica PENDENTE e redesenha assim que o modal fechar (com o toast). A
+  // explicação aberta é refeita na hora, porque não bloqueia a tela
+  const modalExplicacao = document.getElementById('modal-explicacao-vf');
+  const explicacaoAberta = modalExplicacao && !modalExplicacao.classList.contains('hidden') && vfQuestaoIdExplicacaoAtual === nova.id;
+  if(explicacaoAberta && typeof abrirExplicacaoVF === 'function'){ try{ abrirExplicacaoVF(nova.id); }catch(e){} }
+  if(!vfDesenhandoAgora && !vfAlgumModalAbertoVF() && typeof renderizarItemVF === 'function'){
     renderizarItemVF();
     vfMostrarToastLeveVF('Afirmação atualizada');
+    return;
   }
+  vfAtualizacaoPendenteRedesenhoVF = true;
+  vfArmarRedesenhoPendenteVF();
 }
+let vfAtualizacaoPendenteRedesenhoVF = false;
+let vfTimerRedesenhoPendenteVF = null;
+function vfArmarRedesenhoPendenteVF(){
+  if(vfTimerRedesenhoPendenteVF) return;
+  vfTimerRedesenhoPendenteVF = setInterval(() => {
+    if(!vfAtualizacaoPendenteRedesenhoVF){ clearInterval(vfTimerRedesenhoPendenteVF); vfTimerRedesenhoPendenteVF = null; return; }
+    if(vfDesenhandoAgora || vfAlgumModalAbertoVF()) return; // ainda bloqueado - tenta de novo daqui a pouco
+    vfAtualizacaoPendenteRedesenhoVF = false;
+    clearInterval(vfTimerRedesenhoPendenteVF); vfTimerRedesenhoPendenteVF = null;
+    try{ if(estadoVF && estadoVF.posicao >= 0){ renderizarItemVF(); vfMostrarToastLeveVF('Afirmação atualizada'); } }catch(e){ console.warn('redesenho pendente:', e); }
+  }, 400);
+}
+// voltou do segundo plano: se o canal caiu (iPad bloqueado, rede
+// trocada), reassina - senão as correções seguintes nunca chegariam
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState !== 'visible' || !vfCanalRealtimeVF) return;
+  const estado = vfCanalRealtimeVF.state;
+  if(estado === 'joined' || estado === 'joining') return;
+  try{ sb.removeChannel(vfCanalRealtimeVF); }catch(e){}
+  vfCanalRealtimeVF = null;
+  vfLigarRealtimeQuestoesVF();
+});
 // avisinho não-bloqueante (pílula no topo, some sozinho) - o modal de
 // aviso interromperia o estudo só pra dizer que uma correção chegou
 function vfMostrarToastLeveVF(texto){
@@ -20565,6 +20599,15 @@ async function vfComecarTarefaFilaFlashInternoVF(t){
               filtrosInc: t.filtroId ? [t.filtroId] : [], filtrosExc: [], varreduraDesde: null};
   vfSalvarFiltroNoStorageVF();
   vfTarefaFilaFlashAtivaVF = {id: t.id, rotulo: vfRotuloTrechoFilaFlashVF(t), cota: t.cota || 0, faltam: t.faltam, cards: new Set(t.cards)};
+  // (05/11 -338) sem sessão, a aba Flash nasceria com o botão "Iniciar sessão"
+  // por um instante antes do treino abrir sozinho - esconde o overlay já e
+  // põe o spinner no lugar; se nada iniciar, vfAtualizarOverlaySessaoVF
+  // devolve o botão
+  if(!vfSessaoAtivaVF){
+    const ov = document.getElementById('vf-overlay-iniciar-sessao'); if(ov) ov.classList.add('hidden');
+    const el = document.getElementById('vf-conteudo');
+    if(el) el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:var(--carregando-esquerda, 0px);right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
+  }
   trocarAba('vf');
   try{
     await popularFiltroModuloVF();   // primeira vez: popula e já reflete o filtro
@@ -20579,6 +20622,7 @@ async function vfComecarTarefaFilaFlashInternoVF(t){
     else await vfCarregarPoolInicialVF();
   }else{
     await vfIniciarSessaoFlashVF(); // sessão nova carrega o pool já com o filtroVF do trecho
+    if(!vfSessaoAtivaVF) vfAtualizarOverlaySessaoVF(); // não iniciou (sem conexão, por exemplo): botão de volta
   }
 }
 function vfChipFilaFlashVF(){
