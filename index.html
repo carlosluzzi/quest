@@ -398,7 +398,8 @@ box-shadow direto no próprio botão redondo sempre saem arredondados junto */
 .vf-barra-fixa{position:fixed;bottom:var(--nav-height, 76px);left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#FBFBFA;padding:14px 16px 18px;display:flex;flex-direction:column;gap:20px;z-index:150;box-sizing:border-box}
 .vf-barra-fixa,.vf-barra-fixa *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .vf-barra-fixa-principal{display:flex;gap:10px}
-.vf-barra-fixa-acoes{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.vf-barra-fixa-acoes{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px} /* (05/11 -335) sempre UMA linha, botões da mesma largura, qualquer quantidade */
+.vf-barra-fixa-acoes .banco-acao-btn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 @media(min-width:1100px){.vf-barra-fixa{max-width:none;left:250px;right:0;transform:none;width:auto}}
 /* telas de carregamento em tela cheia: a partir de 1100px o menu vira barra
    lateral fixa de 250px, e o centro da ÁREA DE CONTEÚDO não é mais o centro
@@ -2277,6 +2278,9 @@ html[data-tema="escuro"] #pq-teclado{--tk-fundo:rgba(44,44,46,0.86);--tk-tecla:#
     <div class="nav-item hidden" id="nav-item-vf" data-aba="vf" onclick="trocarAba('vf')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></span><span class="nav-label">Flash</span>
     </div>
+    <div class="nav-item hidden" id="nav-item-progresso-vf" onclick="vfAbrirProgressoVF()">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="13" width="4" height="8"/><rect x="10" y="8" width="4" height="13"/><rect x="15" y="3" width="4" height="18"/></svg></span><span class="nav-label">Progresso Flash</span>
+    </div>
     <div class="nav-item" data-aba="quests" onclick="trocarAba('quests')">
       <span class="nav-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 21 7l-9 4.5L3 7l9-4.5Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 17l9 4.5 9-4.5"/></svg></span><span class="nav-label">Quest</span>
     </div>
@@ -3351,7 +3355,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-05-334';
+const VERSAO_APP = '2026-11-05-336';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4271,6 +4275,7 @@ async function mostrarAppShell(){
   document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${primeiroNomeDe(usuarioAtual.nome)}!`;
   document.getElementById('inicio-contagem-pscpp-texto').textContent = `Faltam ${diasAteOPscpp()} dias para o PSCPP`;
   vfCarregarFilaFlashHojeVF(true); // (05/11) Flash de hoje - não espera, enche o bloco quando chegar
+  setTimeout(() => { try{ vfPreaquecerEntradaVF(); }catch(e){} }, 2500); // (05/11 -336) depois da Início assentar, aquece a entrada do Flash
   atualizarAvatarUI();
   document.getElementById('perfil-nome-exibicao').textContent = usuarioAtual.nome_completo || usuarioAtual.nome;
   if(usuarioAtual.is_admin){
@@ -4280,6 +4285,7 @@ async function mostrarAppShell(){
     // (05/11) TUDO que menciona o Flash passa por temAcessoFlashVF():
     // menu Flash, Biblioteca, sessão restaurada, bloco Flash de hoje
     document.getElementById('nav-item-vf').classList.remove('hidden');
+    document.getElementById('nav-item-progresso-vf').classList.remove('hidden'); // (05/11 -335) Progresso do Flash direto do menu, sem precisar abrir um flash
     document.getElementById('nav-item-biblioteca').classList.remove('hidden');
   }
   if(souCarlos()){
@@ -14320,7 +14326,7 @@ async function vfCarregarBibliografiaCacheVF(){
   if(vfBibliografiaCache.size > 0) return; // já carregado nessa sessão
   const {data, error} = await buscarTudoPaginadoVF(() => sb.from('bibliografia').select('id, titulo, nome_exibicao, modulo_pscpp, rotulo_capitulo', {count: 'exact'}).order('id'));
   if(error || !data) return;
-  vfBibliografiaCache = new Map(data.map(b => [b.id, {titulo: b.nome_exibicao || b.titulo, modulo_pscpp: b.modulo_pscpp, rotulo_capitulo: b.rotulo_capitulo}]));
+  vfBibliografiaCache = new Map(data.map(b => [b.id, {titulo: b.nome_exibicao || b.titulo, modulo_pscpp: b.modulo_pscpp, rotulo_capitulo: b.rotulo_capitulo, tituloOriginal: b.titulo, nomeExibicao: b.nome_exibicao}])); // (05/11 -335) tituloOriginal/nomeExibicao: o Flash de hoje casa a publicação do Tracker com qualquer um dos dois
 }
 
 // busca o conteúdo PESADO (texto/explicação/correção) de uma questão sob
@@ -14759,6 +14765,54 @@ async function vfObterListaCompactaVF(){
   return vfListaCompactaEmVooVF;
 }
 
+// (05/11 -336) PRÉ-AQUECIMENTO DA ENTRADA: medido no iPad (-334), a entrada
+// levava 3,1 s e 1,7 s era só esperar as consultas de apoio (repetição
+// espaçada, favoritos, tags, notas...) depois do toque em Iniciar. Elas não
+// dependem do filtro, então são disparadas ANTES - ao abrir a aba Flash e
+// no login - e a entrada só colhe o resultado. Válido por 90 s; passado
+// isso (ou já consumido), a entrada consulta ao vivo como sempre. A lista
+// compacta do pool (IndexedDB + diferença) é aquecida junto
+const VF_PREAQUECIMENTO_VALIDO_MS_VF = 90000;
+let vfApoioPreaquecidoVF = null; // {em, consultas}
+function vfConsultasApoioEntradaVF(){
+  return {
+    // (16/10) progresso numa chamada só (RPC repeticao_do_usuario_vf, jsonb) -
+    // medido no Chrome: antes eram 12 requisições paginadas de 1000 linhas
+    repeticao: sb.rpc('repeticao_do_usuario_vf').then(({data, error}) => ({data: Array.isArray(data) ? data : (error ? null : []), error})),
+    exclusoes: buscarTudoPaginadoVF(() => sb.from('exclusoes_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
+    favoritos: buscarTudoPaginadoVF(() => sb.from('favoritos_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
+    revisar: buscarTudoPaginadoVF(() => sb.from('questoes_vf_revisar').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('resolvido_em', null).order('questao_vf_id')).then(({data}) => { vfRevisarVF = new Set((data||[]).map(r => r.questao_vf_id)); return {data}; }), // (05/11) Revisar pendentes
+    pedidos: buscarTudoPaginadoVF(() => sb.from('pedidos_mais_flash').select('id, questao_vf_id, qtd_falsas, qtd_verdadeiras, trecho_alvo, observacao', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('atendido_em', null).order('questao_vf_id')).then(({data}) => { vfPedidosMaisFlashVF = new Map((data||[]).map(r => [r.questao_vf_id, r])); return {data}; }), // (05/11) Mais questões pendentes
+    notas: buscarTudoPaginadoVF(() => sb.from('notas_vf').select('questao_vf_id, fixada', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
+    tags: buscarTudoPaginadoVF(() => sb.from('tags_vf').select('id, nome, oculta', {count: 'exact'}).order('nome').order('id')),
+    questoesTags: buscarTudoPaginadoVF(() => sb.from('questoes_vf_tags').select('questao_vf_id, tags_vf(id, nome, oculta)', {count: 'exact'}).order('questao_vf_id').order('tag_id')),
+    bibliografia: vfCarregarBibliografiaCacheVF(), // idempotente - só busca de verdade na primeira vez da sessão
+    // leve: só os ids das questões que têm elemento anexado, pra saber
+    // ANTES de responder se vale a pena pré-buscar o conteúdo completo
+    elementos: buscarTudoPaginadoVF(() => sb.from('questao_elemento_html_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id'))
+  };
+}
+function vfPreaquecerEntradaVF(){
+  if(!usuarioAtual || !temAcessoFlashVF()) return;
+  if(estadoVF && Array.isArray(estadoVF.pool) && estadoVF.pool.length) return; // pool já carregado: a entrada já aconteceu, nada a aquecer
+  if(vfApoioPreaquecidoVF && Date.now() - vfApoioPreaquecidoVF.em < VF_PREAQUECIMENTO_VALIDO_MS_VF) return; // já tem um quente
+  try{
+    vfApoioPreaquecidoVF = {em: Date.now(), consultas: vfConsultasApoioEntradaVF()};
+    Object.values(vfApoioPreaquecidoVF.consultas).forEach(p => { if(p && p.catch) p.catch(() => {}); }); // sem "unhandled" se der erro antes de alguém colher
+    vfObterListaCompactaVF().catch(() => {}); // IndexedDB + diferença já na mão
+  }catch(e){ vfApoioPreaquecidoVF = null; }
+}
+function vfObterConsultasApoioEntradaVF(ehEntrada){
+  const q = vfApoioPreaquecidoVF;
+  if(ehEntrada && q && Date.now() - q.em < VF_PREAQUECIMENTO_VALIDO_MS_VF){
+    vfApoioPreaquecidoVF = null; // consumido - a próxima entrada aquece de novo
+    vfMarcaVF('apoio-preaquecido', Math.round((Date.now() - q.em)/100)/10);
+    return q.consultas;
+  }
+  vfApoioPreaquecidoVF = null;
+  return vfConsultasApoioEntradaVF();
+}
+
 async function carregarPoolVF(incluirDadosEntradaVF){
   const tokenDestaCargaVF = ++vfTokenGeracaoPoolVF;
   // v102 (18/09): o pool vem de UMA chamada à RPC pool_questoes_vf, em
@@ -14845,6 +14899,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     sb.from('usuarios').select('contador_respostas_vf').eq('id', usuarioAtual.id).single(),
     sb.rpc('now_ms')
   ] : [];
+  const apoio = vfObterConsultasApoioEntradaVF(incluirDadosEntradaVF);
 
   // ENTRADA PROGRESSIVA (ideia do Carlos, confirmada pelo Fable): na
   // entrada inicial, não espera as 7.700+ questões todas chegarem - a
@@ -14926,23 +14981,13 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   // travava na entrada
   const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, /* revisar */, /* mais questões */, {data: notaData}, {data: todasTagsData}, {data: questoesTagsData}, /* bibliografia */, {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, mapaFiltrosCapituloVF, ...resultadosEntradaVF] = await Promise.all([
     vfBuscarQuestoesPoolVF(aoCarregarRestanteQuestoesVF), // era buscarTudoPaginadoVF(montarQueryQuestoesVF, ...) - ver comentário da RPC acima
-    // (16/10) progresso numa chamada só (RPC repeticao_do_usuario_vf, jsonb) -
-    // medido no Chrome: antes eram 12 requisições paginadas de 1000 linhas,
-    // ~3 s, o maior item da entrada depois do pool. Mesmo formato de linha
-    sb.rpc('repeticao_do_usuario_vf').then(({data, error}) => ({data: Array.isArray(data) ? data : (error ? null : []), error})),
-    buscarTudoPaginadoVF(() => sb.from('exclusoes_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
-    buscarTudoPaginadoVF(() => sb.from('favoritos_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
-    buscarTudoPaginadoVF(() => sb.from('questoes_vf_revisar').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('resolvido_em', null).order('questao_vf_id')).then(({data}) => { vfRevisarVF = new Set((data||[]).map(r => r.questao_vf_id)); return {data}; }), // (05/11) Revisar pendentes - resolve dentro do próprio then pra não mexer na desestruturação de baixo
-    buscarTudoPaginadoVF(() => sb.from('pedidos_mais_flash').select('id, questao_vf_id, qtd_falsas, qtd_verdadeiras, trecho_alvo, observacao', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('atendido_em', null).order('questao_vf_id')).then(({data}) => { vfPedidosMaisFlashVF = new Map((data||[]).map(r => [r.questao_vf_id, r])); return {data}; }), // (05/11) Mais questões pendentes - mesmo padrão do Revisar
-    buscarTudoPaginadoVF(() => sb.from('notas_vf').select('questao_vf_id, fixada', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
-    buscarTudoPaginadoVF(() => sb.from('tags_vf').select('id, nome, oculta', {count: 'exact'}).order('nome').order('id')),
-    buscarTudoPaginadoVF(() => sb.from('questoes_vf_tags').select('questao_vf_id, tags_vf(id, nome, oculta)', {count: 'exact'}).order('questao_vf_id').order('tag_id')),
-    vfCarregarBibliografiaCacheVF(), // idempotente - só busca de verdade na primeira vez da sessão
+    // (05/11 -336) as consultas de apoio vêm do pré-aquecimento quando a
+    // entrada é inicial (disparadas ao abrir a aba Flash / no login, antes
+    // do toque em Iniciar) - ver vfConsultasApoioEntradaVF. Fora da
+    // entrada, mesmas consultas, ao vivo
+    apoio.repeticao, apoio.exclusoes, apoio.favoritos, apoio.revisar, apoio.pedidos, apoio.notas, apoio.tags, apoio.questoesTags, apoio.bibliografia,
     promiseTermoVF,
-    // leve: só os ids das questões que têm elemento anexado, pra saber
-    // ANTES de responder se vale a pena pré-buscar o conteúdo completo
-    // (P1 - evita ida ao servidor pras questões sem nada anexado)
-    buscarTudoPaginadoVF(() => sb.from('questao_elemento_html_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
+    apoio.elementos,
     vfCarregarMapaFiltrosCapituloVF(), // null quando nenhum ✓/✗ está marcado (não custa nada)
     ...consultasEntradaVF
   ]);
@@ -16419,6 +16464,7 @@ function vfMostrarToastLeveVF(texto){
 }
 
 async function entrarNoModoVF(){
+  vfPreaquecerEntradaVF(); // (05/11 -336) consultas de apoio já em voo antes do toque em Iniciar
   popularFiltroModuloVF();
   vfLigarRealtimeQuestoesVF();
   vfAtualizarVisualTogglesFiltroVF();
@@ -19618,10 +19664,6 @@ function renderizarBarraFixaVF(item, jaRespondida){
         <span>Notas</span>
         ${notasVF.has(item.id)?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
-      <button class="banco-acao-btn" onclick="vfAbrirProgressoVF()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="13" width="4" height="8"/><rect x="10" y="8" width="4" height="13"/><rect x="15" y="3" width="4" height="18"/></svg>
-        <span>Progresso</span>
-      </button>
     </div>
   `;
   medirAlturaBarraFixaVF(); // mede de verdade — testei e confirmei que tela
@@ -20368,7 +20410,12 @@ function vfInicioContagemFilaFlashVF(f){
   return new Date(f.data_prevista + 'T00:00:00');
 }
 function vfBibsDaPublicacaoFilaFlashVF(publicacao){
-  return (bibliografiaCache || []).filter(b => b.nome_exibicao === publicacao || b.titulo === publicacao);
+  // (05/11 -335) achado real: usava bibliografiaCache (array de OUTRO carregador,
+  // que podia ainda estar vazio na hora) e o resultado vazio ficava em cache -
+  // todos os trechos "Sem cards". Agora usa o Map do Flash, já aguardado
+  const out = [];
+  vfBibliografiaCache.forEach((b, id) => { if(b.nomeExibicao === publicacao || b.tituloOriginal === publicacao) out.push({id, titulo: b.tituloOriginal, nome_exibicao: b.nomeExibicao, modulo_pscpp: b.modulo_pscpp}); });
+  return out;
 }
 function vfRotuloTrechoFilaFlashVF(t){
   const bib = t.bib;
@@ -20447,7 +20494,7 @@ async function vfCarregarFilaFlashHojeVF(forcar){
       const chave = f.id + '|' + f.publicacao + '|' + f.capitulo;
       const c = vfFilaFlashCardsCacheVF.get(chave);
       if(c) return Promise.resolve(c);
-      return vfCardsDoTrechoFilaFlashVF(f, mapa).then(r => { vfFilaFlashCardsCacheVF.set(chave, r); return r; });
+      return vfCardsDoTrechoFilaFlashVF(f, mapa).then(r => { if(r.bib) vfFilaFlashCardsCacheVF.set(chave, r); return r; }); // só guarda quando a publicação foi reconhecida
     }));
     marca('trechos', resolvidos.length);
     const prontas = [];
