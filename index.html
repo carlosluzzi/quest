@@ -213,6 +213,46 @@ trocando a custom property de cada slider individualmente */
 
 /* --- Cards --- */
 .card-inicio{background:#fff;border-radius:18px;padding:13px;box-shadow:0 1px 4px rgba(0,0,0,0.05);margin-bottom:14px;position:relative;overflow:hidden}
+/* (05/11) FLASH DE HOJE - mesmo componente do "Mapa de estudo"/"Flash de hoje" do PSCPP
+   Tracker (lista estilo Finder: setinha, ícone, linhas alternadas, números em cinza).
+   CSS copiado de lá com prefixo pq- */
+.pq-flash-titulo{font-size:var(--fs-e);font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.pq-flash-titulo-icone{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#E6F1FB;color:#202A45}
+.pq-flash-titulo-icone svg{width:16px;height:16px}
+.pq-mapa-lista{margin:0 -13px -13px;border-top:0.5px solid #eee}
+.pq-mapa-cab,.pq-mapa-linha{display:grid;grid-template-columns:minmax(0,1fr) 64px 88px 112px;align-items:center}
+.pq-mapa-cab{font-size:var(--fs-b);color:#888;font-weight:500;border-bottom:0.5px solid #eee;height:30px}
+.pq-mapa-cab>div{padding:0 10px;height:100%;display:flex;align-items:center;justify-content:flex-end;border-left:0.5px solid #eee}
+.pq-mapa-cab>div:first-child{justify-content:flex-start;border-left:none;padding-left:43px}
+.pq-mapa-linha{min-height:44px}
+.pq-mapa-linha.pq-mapa-par{background:#F7F7F5}
+.pq-mapa-linha>div{padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pq-mapa-num{font-size:var(--fs-c);color:#888;text-align:right}
+.pq-mapa-nome{display:flex;align-items:center;gap:7px;min-width:0;font-size:var(--fs-d);color:#111}
+.pq-mapa-nome .pq-mapa-t{overflow:hidden;text-overflow:ellipsis}
+.pq-mapa-seta{width:16px;flex-shrink:0;color:#aaa;font-size:11px;text-align:center}
+.pq-mapa-ico{width:20px;height:16px;flex-shrink:0}
+.pq-flash-feitas{font-size:var(--fs-a);color:#aaa}
+.pq-flash-atualizar{width:24px;height:24px;border-radius:7px;border:0.5px solid #ddd;background:#fff;color:#555;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.pq-flash-atualizar svg{width:14px;height:14px}
+.pq-flash-atualizar.girando svg{animation:ptr-girar 0.8s linear infinite}
+.pq-flash-vazio{padding:14px 10px;font-size:var(--fs-c);color:#888}
+.pq-flash-btn{width:100%;background:#B23A34;color:#fff;border:none;border-radius:8px;padding:7px 0;font-family:inherit;font-size:var(--fs-c);font-weight:600;cursor:pointer;line-height:1.2}
+.pq-flash-btn.pq-flash-btn-continuar{background:#E6F1FB;color:#202A45}
+.pq-flash-acao{padding:0 10px 0 4px !important;display:flex;align-items:center}
+.pq-chip-fila-flash{display:inline-flex;align-items:center;gap:4px;background:#E6F1FB;color:#202A45;border-radius:999px;padding:2px 10px;font-size:var(--fs-b);font-weight:600;white-space:nowrap}
+@media(max-width:767px){
+  .pq-mapa-cab,.pq-mapa-linha{grid-template-columns:minmax(0,1fr) 50px 72px 98px}
+  .pq-mapa-linha>div,.pq-mapa-cab>div{padding:0 6px}
+  .pq-mapa-cab>div:first-child{padding-left:35px}
+  .pq-mapa-nome{gap:5px}
+  .pq-flash-acao{padding:0 6px 0 2px !important}
+}
+html[data-tema="escuro"] .pq-mapa-linha.pq-mapa-par{background:#161616}
+html[data-tema="escuro"] .pq-mapa-cab,html[data-tema="escuro"] .pq-mapa-lista{border-color:#262626}
+html[data-tema="escuro"] .pq-mapa-cab>div{border-color:#262626}
+html[data-tema="escuro"] .pq-mapa-nome{color:#D9D5CD}
+html[data-tema="escuro"] .pq-flash-atualizar{background:#0F0F0E;border-color:#333331;color:#9D9A93}
 
 /* --- Botões --- */
 .btn-primario{background:#B23A34;color:#fff;border-radius:8px;padding:10px;font-size:var(--fs-e);font-weight:500;width:100%;border:none;cursor:pointer;font-family:inherit}
@@ -631,6 +671,15 @@ tarja por cima não tapa nada */
 .badge-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#E24B4A}
 .banco-acao-btn.ativo{background:#F2DAD8;border-color:#B23A34;color:#B23A34}
 .banco-acao-btn.favoritada{background:#FEF6E4;border-color:#EF9F27;color:#854F0B}
+.banco-acao-btn.revisar-marcada{background:#FEF6E4;border-color:#EF9F27;color:#854F0B}
+/* (05/11) Mais questões: pontinho enquanto houver pedido pendente - o botão em si não muda */
+.banco-acao-btn.mais-pendente::after{content:'';position:absolute;top:7px;right:9px;width:7px;height:7px;border-radius:50%;background:#B23A34}
+.vf-mais-seg{display:flex;gap:6px;margin:6px 0 14px}
+.vf-mais-seg button{flex:1;min-width:0;padding:9px 0;border-radius:9px;border:1px solid #ddd;background:#fff;color:#555;font-family:inherit;font-size:var(--fs-c);font-weight:600;cursor:pointer}
+.vf-mais-seg button.sel{background:#B23A34;border-color:#B23A34;color:#fff}
+.vf-mais-rotulo{font-size:var(--fs-b);color:#777;font-weight:600}
+html[data-tema="escuro"] .vf-mais-seg button{background:#0F0F0E;border-color:#333331;color:#B4B0A8}
+html[data-tema="escuro"] .vf-mais-seg button.sel{background:#B23A34;border-color:#B23A34;color:#fff}
 .banco-acao-btn svg{width:19px;height:19px}
 .banco-acao-btn span{font-size:var(--fs-a)}
 .pills-nav{display:grid;grid-template-columns:repeat(auto-fill, minmax(32px, 1fr));justify-items:center;gap:6px;margin-bottom:14px}
@@ -779,6 +828,7 @@ html[data-tema="escuro"] .btn-icone-pequeno{border-color:#262626 !important;back
 html[data-tema="escuro"] .banco-acao-btn{border-color:#262626 !important;background-color:#0F0F0E !important;color:#B4B0A8 !important}
 html[data-tema="escuro"] .banco-acao-btn.ativo{background-color:#161616 !important;color:#DE9490 !important}
 html[data-tema="escuro"] .banco-acao-btn.favoritada{background-color:#0F0F0E !important;color:#DEBC90 !important}
+html[data-tema="escuro"] .banco-acao-btn.revisar-marcada{background-color:#0F0F0E !important;color:#DEBC90 !important}
 html[data-tema="escuro"] .pill-questao{border-color:#262626 !important;background-color:#0F0F0E !important;color:#B4B0A8 !important}
 html[data-tema="escuro"] .pill-questao.atual{background-color:#4A4A45 !important;border-color:#4A4A45 !important}
 html[data-tema="escuro"] .pill-questao.acertou{background-color:#161616 !important;color:#B4DE90 !important}
@@ -1387,11 +1437,11 @@ html[data-tema="escuro"] #pq-teclado{--tk-fundo:rgba(44,44,46,0.86);--tk-tecla:#
 .pq-tk-tecla.pressionada{background:var(--tk-tecla-ativa)}
 .pq-tk-tecla.espaco.trackpad{background:var(--tk-tecla-ativa)}
 .pq-tk-tecla svg{display:block}
-.pq-tk-rodape{display:flex;align-items:center;height:36px;padding:0 6px 2px}
+.pq-tk-rodape{display:flex;align-items:center;height:34px;padding:0 6px 2px}
 .pq-tk-icone{width:36px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--tk-icone);cursor:pointer;border-radius:8px}
 .pq-tk-icone.pressionada{background:var(--tk-pilula)}
 .pq-tk-alca{flex:1;height:34px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
-.pq-tk-pontos{display:flex;align-items:center;justify-content:center;gap:5px;width:46px;height:24px;border-radius:12px;background:var(--tk-pilula)}
+.pq-tk-pontos{display:flex;align-items:center;justify-content:center;gap:5px;width:46px;height:24px} /* v319: só os três pontinhos, sem a pílula em volta */
 .pq-tk-pontos i{width:6px;height:6px;border-radius:50%;background:var(--tk-ponto)}
 .pq-tk-previa{position:absolute;display:none;align-items:center;justify-content:center;background:var(--tk-tecla);color:var(--tk-texto);border-radius:11px;box-shadow:0 4px 14px rgba(0,0,0,0.18),0 0 0 0.5px rgba(0,0,0,0.06);font-size:32px;pointer-events:none;z-index:3}
 .pq-tk-variantes{position:absolute;display:none;gap:2px;padding:4px;background:var(--tk-tecla);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.2),0 0 0 0.5px rgba(0,0,0,0.06);pointer-events:none;z-index:4}
@@ -1738,6 +1788,8 @@ html[data-tema="escuro"] #pq-teclado{--tk-fundo:rgba(44,44,46,0.86);--tk-tecla:#
       <div style="font-size:var(--fs-f);font-weight:600" id="inicio-saudacao">Olá!</div>
       <div style="font-size:var(--fs-d);opacity:0.85;display:flex;align-items:center;gap:6px" id="inicio-contagem-pscpp"><span id="inicio-contagem-pscpp-texto">Faltam ... dias para o PSCPP</span> <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-contagem-pscpp')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></div>
     </div>
+
+    <div id="pq-flash-hoje"></div>
 
     <div id="caderno-em-andamento" class="hidden">
       <button class="card-inicio" style="width:100%;text-align:left;color:#111" onclick="retomarCaderno()">
@@ -2523,7 +2575,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
         <label for="pq-teclado-toggle" class="config-label" style="margin-bottom:0;cursor:pointer">Teclado do app</label>
         <label class="pq-switch"><input type="checkbox" id="pq-teclado-toggle" onchange="pqTecladoLigarVF(this.checked)"><span></span></label>
       </div>
-      <div class="config-tema-dica">Teclado pequeno flutuante no lugar do da Apple, com letras gregas. Arraste pela barrinha de baixo; o globo volta pro teclado da Apple naquele campo.</div>
+      <div class="config-tema-dica">Teclado pequeno flutuante no lugar do da Apple, com letras gregas. Arraste pelos três pontinhos de baixo. Só a tela de login continua com o teclado da Apple.</div>
     </div>
 
     <div style="border-top:0.5px solid #eee;margin:20px 0 14px"></div>
@@ -2878,6 +2930,34 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
       <button class="btn-primario" style="width:100%" id="vf-btn-desfazer-grupo"></button>
       <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-desfazer-exclusao-familia-vf')">Cancelar</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-revisar-vf" onclick="if(event.target===this) fecharModal('modal-revisar-vf')">
+  <div class="modal-conteudo" style="max-width:420px">
+    <h3 class="config-title">Marcar pra revisar</h3>
+    <p style="margin:0 0 10px 0;color:#555">Esse card vai pra lista de revisão do PSCPP Tracker. O treino continua normal.</p>
+    <input type="text" id="vf-revisar-observacao" class="filter-select" placeholder="O que te deixou em dúvida? (opcional)" style="width:100%;box-sizing:border-box;margin-bottom:14px" onkeydown="if(event.key==='Enter'){event.preventDefault();vfConfirmarRevisarVF();}">
+    <div style="display:flex;gap:8px">
+      <button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-revisar-vf')">Cancelar</button>
+      <button class="btn-primario" style="flex:1" onclick="vfConfirmarRevisarVF()">Marcar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-mais-questoes-vf" onclick="if(event.target===this) fecharModal('modal-mais-questoes-vf')">
+  <div class="modal-conteudo" style="max-width:460px">
+    <h3 class="config-title" id="vf-mais-titulo">Mais questões desse trecho</h3>
+    <p style="margin:0 0 12px 0;color:#555">Fica registrado o pedido; as questões são geradas depois, fora do app.</p>
+    <div class="vf-mais-rotulo">Falsas a mais</div>
+    <div class="vf-mais-seg" id="vf-mais-falsas"></div>
+    <div class="vf-mais-rotulo">Verdadeiras a mais</div>
+    <div class="vf-mais-seg" id="vf-mais-verdadeiras"></div>
+    <div class="vf-mais-rotulo">Trecho a variar (opcional)</div>
+    <textarea id="vf-mais-trecho" class="filter-select" rows="4" placeholder="Deixa só a parte do trecho que interessa" style="width:100%;box-sizing:border-box;margin:6px 0 14px;resize:vertical;font-family:inherit;line-height:1.4"></textarea>
+    <div class="vf-mais-rotulo">Observação (opcional)</div>
+    <input type="text" id="vf-mais-observacao" class="filter-select" placeholder="O que você tinha em mente" style="width:100%;box-sizing:border-box;margin:6px 0 16px">
+    <div style="display:flex;gap:8px" id="vf-mais-rodape"></div>
   </div>
 </div>
 
@@ -3270,7 +3350,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-10-20-317';
+const VERSAO_APP = '2026-11-05-326';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -4189,16 +4269,20 @@ async function concluirOnboarding(){
 async function mostrarAppShell(){
   document.getElementById('inicio-saudacao').textContent = `${saudacaoHora()}, ${primeiroNomeDe(usuarioAtual.nome)}!`;
   document.getElementById('inicio-contagem-pscpp-texto').textContent = `Faltam ${diasAteOPscpp()} dias para o PSCPP`;
+  vfCarregarFilaFlashHojeVF(true); // (05/11) Flash de hoje - não espera, enche o bloco quando chegar
   atualizarAvatarUI();
   document.getElementById('perfil-nome-exibicao').textContent = usuarioAtual.nome_completo || usuarioAtual.nome;
   if(usuarioAtual.is_admin){
     document.getElementById('btn-abrir-admin').classList.remove('hidden');
   }
+  if(temAcessoFlashVF()){
+    // (05/11) TUDO que menciona o Flash passa por temAcessoFlashVF():
+    // menu Flash, Biblioteca, sessão restaurada, bloco Flash de hoje
+    document.getElementById('nav-item-vf').classList.remove('hidden');
+    document.getElementById('nav-item-biblioteca').classList.remove('hidden');
+  }
   if(souCarlos()){
     document.getElementById('bloco-upload-marinha').classList.remove('hidden');
-    document.getElementById('nav-item-vf').classList.remove('hidden'); // Flash de volta, a pedido do Carlos
-    // Biblioteca: mesma regra do Flash em si - só o Carlos vê
-    document.getElementById('nav-item-biblioteca').classList.remove('hidden');
     document.getElementById('motivo-exclusao-questao').classList.remove('hidden');
     sb.rpc('concursos_disponiveis').then(({data})=>{
       document.getElementById('lista-concursos-existentes').innerHTML = (data||[]).map(c=>`<option value="${escapeHtml(c.concurso)}">`).join('');
@@ -4231,7 +4315,7 @@ async function mostrarAppShell(){
   document.getElementById('bottom-nav').classList.remove('teclado-aberto'); // trava de segurança
   document.getElementById('vf-barra-fixa')?.classList.remove('teclado-aberto-vf');
   iniciarRealtimeForum();
-  try{ if(souCarlos()) Promise.resolve(vfRestaurarSessaoFlashVF()).catch(e => console.error('Erro ao restaurar sessão do Flash:', e)); }catch(e){ console.error('Erro ao restaurar sessão do Flash:', e); } // só depois do login confirmado - nunca antes. Virou assíncrona (pode ir ao banco procurar sessão órfã), por isso o catch também na promessa
+  try{ if(temAcessoFlashVF()) Promise.resolve(vfRestaurarSessaoFlashVF()).catch(e => console.error('Erro ao restaurar sessão do Flash:', e)); }catch(e){ console.error('Erro ao restaurar sessão do Flash:', e); } // só depois do login confirmado - nunca antes. Virou assíncrona (pode ir ao banco procurar sessão órfã), por isso o catch também na promessa
 }
 
 // o ponto de quebra dos 1100px é lido pelo MESMO mecanismo que o CSS usa
@@ -4686,6 +4770,7 @@ function trocarAba(nome, pularContadorQuest){
   document.getElementById('wrapper-barra-adicionar').classList.toggle('hidden', nome!=='inicio');
   document.getElementById('content').scrollTop = 0;
   if(nome==='forum'){ carregarForum(); }
+  if(nome==='inicio' && typeof vfCarregarFilaFlashHojeVF === 'function') vfCarregarFilaFlashHojeVF(false); // (05/11) Flash de hoje
   if(nome==='placar') carregarMetricasPessoais();
   if(nome==='quests' && !pularContadorQuest) contarDisponiveisAgora();
   if(nome==='vf') entrarNoModoVF();
@@ -8890,6 +8975,11 @@ function vfSalvarFiltroNoStorageVF(){
 // em si (o termo continua salvo, só não foi aplicado nessa carga)
 let vfFiltroTermoIgnoradoVF = false;
 let favoritosVF = new Set();
+// (05/11) "Revisar": ids com linha PENDENTE (resolvido_em nulo) em
+// questoes_vf_revisar. Só serve pra acender o botão - o Tracker é quem
+// resolve; quando resolver, o id simplesmente não volta na próxima entrada
+let vfRevisarVF = new Set();
+let vfPedidosMaisFlashVF = new Map(); // (05/11) questao_vf_id -> pedido pendente em pedidos_mais_flash
 // v5 (16/10) - cartões com a tag ABSURDO. Derivado de vfTagsPorQuestaoVF
 // (ver vfRecalcularAbsurdosVF) e mantido em dia ao marcar/desmarcar
 let absurdosVF = new Set();
@@ -14241,7 +14331,7 @@ async function vfGarantirConteudoCompletoVF(item){
   if(item.explicacao !== undefined) return; // já carregado nesse próprio objeto (explicacao é o sinal certo agora - texto já vem preenchido desde o pool leve, por causa da Regra 2/família)
   const emCache = vfConteudoCompletoCache.get(item.id);
   if(emCache){ Object.assign(item, emCache); return; }
-  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', item.id).single();
+  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, trechos_fonte, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', item.id).single();
   if(error || !data) return;
   vfRegistrarInconsistenciaVF(data);
   vfConteudoCompletoCache.set(item.id, data);
@@ -14293,7 +14383,7 @@ async function vfBuscarConteudoEmLoteVF(itens){
   const pendentes = itens.filter(item => item.explicacao === undefined && !vfConteudoCompletoCache.has(item.id));
   if(!pendentes.length) return;
   const ids = pendentes.map(item => item.id);
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, trechos_fonte, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
   if(error || !data) return;
   data.forEach(vfRegistrarInconsistenciaVF);
   const porId = new Map(data.map(d => [d.id, d]));
@@ -14793,7 +14883,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     ? sb.rpc('buscar_questoes_por_termo_vf', {p_termo: filtroVF.termo})
     : Promise.resolve({data: null, error: null});
 
-  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, {data: notaData}, {data: todasTagsData}, {data: questoesTagsData}, , {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, mapaFiltrosCapituloVF, ...resultadosEntradaVF] = await Promise.all([
+  const [{data: questoes, count: totalGeralQuestoesVF}, {data: estados, error: erroEstados}, {data: excluidas}, {data: favData}, , {data: notaData}, {data: todasTagsData}, {data: questoesTagsData}, , {data: idsTermoData, error: erroTermoVF}, {data: elementosLigData}, mapaFiltrosCapituloVF, ...resultadosEntradaVF] = await Promise.all([
     vfBuscarQuestoesPoolVF(aoCarregarRestanteQuestoesVF), // era buscarTudoPaginadoVF(montarQueryQuestoesVF, ...) - ver comentário da RPC acima
     // (16/10) progresso numa chamada só (RPC repeticao_do_usuario_vf, jsonb) -
     // medido no Chrome: antes eram 12 requisições paginadas de 1000 linhas,
@@ -14801,6 +14891,8 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     sb.rpc('repeticao_do_usuario_vf').then(({data, error}) => ({data: Array.isArray(data) ? data : (error ? null : []), error})),
     buscarTudoPaginadoVF(() => sb.from('exclusoes_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
     buscarTudoPaginadoVF(() => sb.from('favoritos_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('questao_vf_id')),
+    buscarTudoPaginadoVF(() => sb.from('questoes_vf_revisar').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('resolvido_em', null).order('questao_vf_id')).then(({data}) => { vfRevisarVF = new Set((data||[]).map(r => r.questao_vf_id)); return {data}; }), // (05/11) Revisar pendentes - resolve dentro do próprio then pra não mexer na desestruturação de baixo
+    buscarTudoPaginadoVF(() => sb.from('pedidos_mais_flash').select('id, questao_vf_id, qtd_falsas, qtd_verdadeiras, trecho_alvo, observacao', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('atendido_em', null).order('questao_vf_id')).then(({data}) => { vfPedidosMaisFlashVF = new Map((data||[]).map(r => [r.questao_vf_id, r])); return {data}; }), // (05/11) Mais questões pendentes - mesmo padrão do Revisar
     buscarTudoPaginadoVF(() => sb.from('notas_vf').select('questao_vf_id, fixada', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
     buscarTudoPaginadoVF(() => sb.from('tags_vf').select('id, nome, oculta', {count: 'exact'}).order('nome').order('id')),
     buscarTudoPaginadoVF(() => sb.from('questoes_vf_tags').select('questao_vf_id, tags_vf(id, nome, oculta)', {count: 'exact'}).order('questao_vf_id').order('tag_id')),
@@ -15273,6 +15365,7 @@ async function vfIniciarSessaoFlashVF(){
 // nova (ver vfIniciarSessaoFlashVF), pra a próxima vez que a tela de
 // filtros aparecer vir sempre limpa, não com a escolha da sessão anterior
 function vfLimparFiltroVF(){
+  vfTarefaFilaFlashAtivaVF = null; // (05/11) finalizou: sem tarefa ativa
   // ACHADO REAL (06/10, Carlos): finalizou uma sessão, abriu pra começar
   // outra e a tela de início ainda estava com filtro aplicado. O objeto
   // de reset aqui só tinha SETE campos - faltavam palavra-chave (termo),
@@ -16769,6 +16862,7 @@ async function mudarFiltroPublicacaoVF(){
 // só dispara de verdade quando a pessoa já parou de mexer nos filtros
 let vfTimerDebounceRecarregarPoolVF = null;
 function vfRecarregarPoolComDebounceVF(){
+  if(vfTarefaFilaFlashAtivaVF){ vfTarefaFilaFlashAtivaVF = null; } // (05/11) mexeu no filtro na mão: o chip da tarefa do Flash de hoje some
   clearTimeout(vfTimerDebounceRecarregarPoolVF);
   vfTimerDebounceRecarregarPoolVF = setTimeout(() => {
     vfTimerDebounceRecarregarPoolVF = null;
@@ -17783,7 +17877,7 @@ function renderizarItemVF(){
     ${contadorVarreduraHtml}
     <div style="display:flex;flex-direction:column;gap:2px;padding:2px 2px 14px;color:#888;font-size:var(--fs-c)">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="display:flex;align-items:center;gap:6px">${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao} certas nessa sessão <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
+        <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${vfChipFilaFlashVF()}${estadoVF.acertosSessao} de ${estadoVF.respondidasSessao} certas nessa sessão <button class="btn-icone-pequeno" onclick="abrirModal('modal-info-fisher-yates-vf')"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></span>
       </div>
     </div>`;
 
@@ -19452,6 +19546,14 @@ function renderizarBarraFixaVF(item, jaRespondida){
         <svg viewBox="0 0 24 24" fill="${favoritosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
         <span>Favoritar</span>
       </button>
+      <button class="banco-acao-btn ${vfRevisarVF.has(item.id)?'revisar-marcada':''}" onclick="toggleRevisarVF('${item.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>Revisar</span>
+      </button>
+      <button class="banco-acao-btn ${vfPedidosMaisFlashVF.has(item.id)?'mais-pendente':''}" onclick="vfAbrirMaisQuestoesVF('${item.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Mais questões</span>
+      </button>
       <button class="banco-acao-btn" onclick="vfAbrirComplementarVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
         <span>Complementar</span>
@@ -19522,6 +19624,7 @@ async function responderVF(resposta){
   estadoVF.bloqueadoAteMs = agoraMs + 400;
   estadoVF.respondidasSessao++;
   if(acertou) estadoVF.acertosSessao++;
+  vfContarRespostaFilaFlashVF(item.id); // (05/11) só o chip "Faltam: N de M" da tarefa do Flash de hoje - não toca no registro
   vfPersistirEstadoSessaoVF(); // guarda o estado real da sessão - sem isso, fechar e reabrir o app "zerava" as questões da sessão mesmo com a sessão ainda pausada/ativa
 
   const estadoAntes = item.estado;
@@ -20066,6 +20169,315 @@ async function vfApagarTagOrfaVF(tagId){
   if(datalist) datalist.innerHTML = vfTodasTagsCacheVF.map(t => `<option value="${escapeHtml(t.nome)}">`).join('');
   if(typeof vfRenderizarTodasTagsVF === 'function') vfRenderizarTodasTagsVF();
 }
+
+// ---- (05/11) Revisar: "quero estudar isso mais a fundo" ----
+// Tabela questoes_vf_revisar (lida/atualizada também pelo PSCPP Tracker).
+// Marcar: popup com observação opcional -> insert com resolvido_em nulo.
+// Desmarcar: apaga só a linha PENDENTE. Otimista nos dois sentidos, como
+// o Favoritar. Não toca em resposta, repetição espaçada nem log
+let vfRevisarQuestaoIdPendenteVF = null;
+function toggleRevisarVF(questaoVfId){
+  if(!usuarioAtual) return;
+  if(vfRevisarVF.has(questaoVfId)){
+    vfRevisarVF.delete(questaoVfId);
+    renderizarItemVF();
+    sb.from('questoes_vf_revisar').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).is('resolvido_em', null).then(({error}) => {
+      if(error){ vfRevisarVF.add(questaoVfId); renderizarItemVF(); console.error('erro ao desmarcar revisar:', error); }
+    });
+    return;
+  }
+  vfRevisarQuestaoIdPendenteVF = questaoVfId;
+  const campo = document.getElementById('vf-revisar-observacao');
+  if(campo) campo.value = '';
+  abrirModal('modal-revisar-vf');
+  if(campo) setTimeout(() => { try{ campo.focus(); }catch(e){} }, 50);
+}
+function vfConfirmarRevisarVF(){
+  const questaoVfId = vfRevisarQuestaoIdPendenteVF;
+  vfRevisarQuestaoIdPendenteVF = null;
+  fecharModal('modal-revisar-vf');
+  if(!questaoVfId || !usuarioAtual) return;
+  const campo = document.getElementById('vf-revisar-observacao');
+  const observacao = ((campo && campo.value) || '').trim() || null;
+  vfRevisarVF.add(questaoVfId);
+  renderizarItemVF();
+  sb.from('questoes_vf_revisar').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoVfId, observacao}).then(({error}) => {
+    // 23505 = já existe linha pendente (índice único): fica marcado, sem erro
+    if(error && error.code !== '23505'){ vfRevisarVF.delete(questaoVfId); renderizarItemVF(); console.error('erro ao marcar revisar:', error); }
+  });
+}
+
+// ---- (05/11) Mais questões: "esse trecho merece mais flashs" ----
+// Tabela pedidos_mais_flash. O app só GUARDA o pedido (quantidades, trecho
+// a variar, observação); quem gera as questões é o Claude depois, lendo os
+// pendentes (atendido_em nulo). Um pendente por card (índice único parcial).
+// Tocar com pedido pendente abre o mesmo popup em modo edição/cancelar.
+// Não toca em resposta, repetição espaçada nem log
+let vfMaisQuestaoIdPendenteVF = null;
+let vfMaisFalsasVF = 1, vfMaisVerdadeirasVF = 0;
+function vfMaisRenderSegVF(){
+  const f = document.getElementById('vf-mais-falsas'), v = document.getElementById('vf-mais-verdadeiras');
+  if(f) f.innerHTML = [1,2,3,4,5].map(n => `<button class="${vfMaisFalsasVF===n?'sel':''}" onclick="vfMaisFalsasVF=${n};vfMaisRenderSegVF()">${n}</button>`).join('');
+  if(v) v.innerHTML = [0,1,2,3].map(n => `<button class="${vfMaisVerdadeirasVF===n?'sel':''}" onclick="vfMaisVerdadeirasVF=${n};vfMaisRenderSegVF()">${n}</button>`).join('');
+}
+async function vfAbrirMaisQuestoesVF(questaoVfId){
+  if(!usuarioAtual || !estadoVF || estadoVF.posicao < 0) return;
+  const entrada = estadoVF.historico[estadoVF.posicao];
+  const item = entrada && entrada.item && entrada.item.id === questaoVfId ? entrada.item : null;
+  const pendente = vfPedidosMaisFlashVF.get(questaoVfId) || null;
+  vfMaisQuestaoIdPendenteVF = questaoVfId;
+  vfMaisFalsasVF = pendente ? Math.min(5, Math.max(1, pendente.qtd_falsas)) : 1;
+  vfMaisVerdadeirasVF = pendente ? Math.min(3, Math.max(0, pendente.qtd_verdadeiras)) : 0;
+  const titulo = document.getElementById('vf-mais-titulo');
+  if(titulo) titulo.textContent = pendente ? 'Pedido pendente' : 'Mais questões desse trecho';
+  const trecho = document.getElementById('vf-mais-trecho');
+  const obs = document.getElementById('vf-mais-observacao');
+  if(obs) obs.value = pendente ? (pendente.observacao || '') : '';
+  if(trecho) trecho.value = pendente ? (pendente.trecho_alvo || '') : '';
+  const rodape = document.getElementById('vf-mais-rodape');
+  if(rodape) rodape.innerHTML = pendente
+    ? `<button class="btn-secundario" style="flex:1" onclick="vfCancelarPedidoMaisFlashVF()">Cancelar pedido</button><button class="btn-primario" style="flex:1" onclick="vfConfirmarMaisQuestoesVF()">Salvar</button>`
+    : `<button class="btn-secundario" style="flex:1" onclick="fecharModal('modal-mais-questoes-vf')">Cancelar</button><button class="btn-primario" style="flex:1" onclick="vfConfirmarMaisQuestoesVF()">Pedir</button>`;
+  vfMaisRenderSegVF();
+  abrirModal('modal-mais-questoes-vf');
+  if(!pendente && item){
+    // pré-preenche com o trecho de origem do card (conteúdo completo pode ainda não ter chegado)
+    if(item.trechos_fonte === undefined) await vfGarantirConteudoCompletoVF(item);
+    if(trecho && vfMaisQuestaoIdPendenteVF === questaoVfId && !trecho.value) trecho.value = (item.trechos_fonte || '').trim();
+  }
+}
+function vfConfirmarMaisQuestoesVF(){
+  const questaoVfId = vfMaisQuestaoIdPendenteVF;
+  if(!questaoVfId || !usuarioAtual) return;
+  const trecho = ((document.getElementById('vf-mais-trecho') || {}).value || '').trim() || null;
+  const observacao = ((document.getElementById('vf-mais-observacao') || {}).value || '').trim() || null;
+  const campos = {qtd_falsas: vfMaisFalsasVF, qtd_verdadeiras: vfMaisVerdadeirasVF, trecho_alvo: trecho, observacao};
+  const anterior = vfPedidosMaisFlashVF.get(questaoVfId) || null;
+  vfMaisQuestaoIdPendenteVF = null;
+  fecharModal('modal-mais-questoes-vf');
+  vfPedidosMaisFlashVF.set(questaoVfId, {...(anterior || {questao_vf_id: questaoVfId}), ...campos});
+  renderizarItemVF();
+  const reverter = (error) => { if(anterior) vfPedidosMaisFlashVF.set(questaoVfId, anterior); else vfPedidosMaisFlashVF.delete(questaoVfId); renderizarItemVF(); console.error('erro no pedido de mais questões:', error); };
+  if(anterior && anterior.id){
+    sb.from('pedidos_mais_flash').update(campos).eq('id', anterior.id).is('atendido_em', null).then(({error}) => { if(error) reverter(error); });
+  }else{
+    sb.from('pedidos_mais_flash').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoVfId, ...campos}).select('id').single().then(({data, error}) => {
+      if(error && error.code === '23505') return; // já existia pendente (toque duplo): fica marcado
+      if(error) return reverter(error);
+      if(data) vfPedidosMaisFlashVF.set(questaoVfId, {...vfPedidosMaisFlashVF.get(questaoVfId), id: data.id});
+    });
+  }
+}
+function vfCancelarPedidoMaisFlashVF(){
+  const questaoVfId = vfMaisQuestaoIdPendenteVF;
+  vfMaisQuestaoIdPendenteVF = null;
+  fecharModal('modal-mais-questoes-vf');
+  if(!questaoVfId || !usuarioAtual) return;
+  const anterior = vfPedidosMaisFlashVF.get(questaoVfId);
+  if(!anterior) return;
+  vfPedidosMaisFlashVF.delete(questaoVfId);
+  renderizarItemVF();
+  sb.from('pedidos_mais_flash').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).is('atendido_em', null).then(({error}) => {
+    if(error){ vfPedidosMaisFlashVF.set(questaoVfId, anterior); renderizarItemVF(); console.error('erro ao cancelar pedido:', error); }
+  });
+}
+
+// ============================================================================
+// FLASH DE HOJE (05/11/2026) - tarefas da fila do PSCPP Tracker (fila_flash)
+//
+// O Tracker cria as tarefas ("fazer N flashs desse trecho", rodadas 1/2/3) e é
+// quem conclui. Aqui o Pilotquest SÓ LÊ: mostra as pendentes de hoje e o botão
+// "Começar" monta o filtro do trecho e abre o treino. Nada é escrito em
+// fila_flash. Mesmas regras do Tracker pra o número bater nos dois blocos:
+// - cards do trecho: publicação -> bibliografia (nome_exibicao ou titulo);
+//   capítulo numérico -> questoes_vf.capitulo; "Chapter N – X" -> filtro
+//   (filtros_capitulo_vf capitulo=N nome=X) -> questoes_vf_filtros; outro
+//   rótulo -> fila_flash_mapa_trechos. Sempre só meus cards (autor_id).
+// - feitos: minhas respostas em log_respostas_vf a esses cards desde o
+//   início da contagem - rodada 1 desde criado_em, rodadas 2 e 3 só a partir
+//   das 00:00 de data_prevista (regra inicioContagemFlash do Tracker).
+// - faltam = max(cota - feitos, 0).
+// ============================================================================
+let vfFilaFlashTarefasVF = [];
+let vfFilaFlashCarregandoVF = false;
+let vfFilaFlashUltimaCargaVF = 0;
+let vfFilaFlashErroVF = '';
+let vfTarefaFilaFlashAtivaVF = null; // {id, rotulo, cota, faltam, cards:Set} - tarefa que o "Começar" abriu (chip no treino)
+const VF_MAPA_DOC_VF = '<svg class="pq-mapa-ico" viewBox="0 0 20 16"><path d="M5.5 1h6.2L15 4.3v9.9c0 .5-.4.8-.8.8H5.5c-.5 0-.8-.4-.8-.8V1.8c0-.5.4-.8.8-.8z" fill="#fff" stroke="#c7c7cc" stroke-width=".8"/><path d="M11.7 1v3.3H15" fill="none" stroke="#c7c7cc" stroke-width=".8"/></svg>';
+function vfChaveDiaLocalVF(d){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function vfInicioContagemFilaFlashVF(f){
+  if(f.rodada === 1 || !f.data_prevista) return new Date(f.criado_em);
+  return new Date(f.data_prevista + 'T00:00:00');
+}
+function vfBibsDaPublicacaoFilaFlashVF(publicacao){
+  return (bibliografiaCache || []).filter(b => b.nome_exibicao === publicacao || b.titulo === publicacao);
+}
+function vfRotuloTrechoFilaFlashVF(t){
+  const bib = t.bib;
+  const nome = bib ? (bib.nome_exibicao || bib.titulo) : t.publicacao;
+  const cap = String(t.capitulo || '');
+  if(!cap) return nome;
+  if(/^\d+$/.test(cap) && bib) return nome + ' – ' + vfEtiquetaCapituloVF(rotuloCapituloDoLivro(bib.titulo), cap);
+  return nome + ' – ' + cap;
+}
+// resolve o trecho de uma tarefa nos MEUS cards do Pilotquest (mesma
+// sequência de cardsDoTrechoFlash do Tracker)
+async function vfCardsDoTrechoFilaFlashVF(f, mapa){
+  const bibs = vfBibsDaPublicacaoFilaFlashVF(f.publicacao);
+  const bibIds = bibs.map(b => b.id);
+  const uid = usuarioAtual.id;
+  const resultado = {bib: bibs[0] || null, capPQ: String(f.capitulo || ''), filtroId: null, cards: []};
+  if(!bibIds.length) return resultado;
+  const cap = String(f.capitulo || '');
+  let filtroId = null;
+  const m0 = (mapa || []).find(m => m.publicacao === f.publicacao && m.capitulo_tracker === cap);
+  if(m0) filtroId = m0.filtro_id;
+  if(!filtroId){
+    const m = cap.match(/^Chapter\s+(\S+)\s+[–—-]\s+(.+)$/i);
+    if(m){
+      const {data} = await sb.from('filtros_capitulo_vf').select('id, capitulo').in('bibliografia_id', bibIds).eq('capitulo', m[1]).eq('nome', m[2].trim()).limit(1);
+      if(data && data.length){ filtroId = data[0].id; resultado.capPQ = data[0].capitulo || ''; }
+    }
+  }
+  if(filtroId){
+    resultado.filtroId = filtroId;
+    if(!m0 || !resultado.capPQ || resultado.capPQ === cap){
+      const {data: fi} = await sb.from('filtros_capitulo_vf').select('capitulo').eq('id', filtroId).maybeSingle();
+      if(fi && fi.capitulo) resultado.capPQ = fi.capitulo;
+    }
+    const {data: ligadas} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf_filtros').select('questao_vf_id', {count: 'exact'}).eq('filtro_id', filtroId).order('questao_vf_id'));
+    const setFiltro = new Set((ligadas || []).map(l => l.questao_vf_id));
+    const {data: meus} = await buscarTudoPaginadoVF(() => { let q = sb.from('questoes_vf').select('id', {count: 'exact'}).in('bibliografia_id', bibIds).eq('autor_id', uid); if(resultado.capPQ) q = q.eq('capitulo', resultado.capPQ); return q.order('id'); });
+    resultado.cards = (meus || []).map(q => q.id).filter(id => setFiltro.has(id));
+    return resultado;
+  }
+  const {data: meus} = await buscarTudoPaginadoVF(() => { let q = sb.from('questoes_vf').select('id', {count: 'exact'}).in('bibliografia_id', bibIds).eq('autor_id', uid); if(cap) q = q.eq('capitulo', cap); return q.order('id'); });
+  resultado.cards = (meus || []).map(q => q.id);
+  return resultado;
+}
+async function vfCarregarFilaFlashHojeVF(forcar){
+  if(!usuarioAtual || !document.getElementById('pq-flash-hoje')) return;
+  if(!temAcessoFlashVF()){ const el = document.getElementById('pq-flash-hoje'); if(el) el.innerHTML = ''; return; } // (05/11) só quem tem acesso ao Flash vê menção a ele
+  if(vfFilaFlashCarregandoVF) return;
+  if(!forcar && Date.now() - vfFilaFlashUltimaCargaVF < 15000){ vfRenderizarFilaFlashHojeVF(); return; }
+  vfFilaFlashCarregandoVF = true; vfFilaFlashErroVF = '';
+  if(!vfFilaFlashTarefasVF.length) vfRenderizarFilaFlashHojeVF(); // esqueleto "Carregando…"
+  document.querySelectorAll('.pq-flash-atualizar').forEach(b => b.classList.add('girando'));
+  try{
+    const hoje = vfChaveDiaLocalVF(new Date());
+    const [{data: fila, error: erroFila}, {data: mapa}] = await Promise.all([
+      sb.from('fila_flash').select('id, modulo, publicacao, capitulo, rodada, cota, total_cards, data_prevista, criado_em').eq('usuario_id', usuarioAtual.id).is('concluido_em', null).lte('data_prevista', hoje).order('rodada').order('criado_em'),
+      sb.from('fila_flash_mapa_trechos').select('publicacao, capitulo_tracker, filtro_id'),
+      vfCarregarBibliografiaCacheVF()
+    ]);
+    if(erroFila) throw erroFila;
+    const tarefas = fila || [];
+    let logs = [];
+    if(tarefas.length){
+      const desdeMs = Math.min(...tarefas.map(f => vfInicioContagemFilaFlashVF(f).getTime()));
+      const {data: l} = await buscarTudoPaginadoVF(() => sb.from('log_respostas_vf').select('questao_vf_id, respondida_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).gte('respondida_em', new Date(desdeMs).toISOString()).order('respondida_em'));
+      logs = l || [];
+    }
+    const prontas = [];
+    for(const f of tarefas){
+      const r = await vfCardsDoTrechoFilaFlashVF(f, mapa);
+      const set = new Set(r.cards);
+      const desde = vfInicioContagemFilaFlashVF(f).getTime();
+      const feitas = logs.filter(x => set.has(x.questao_vf_id) && new Date(x.respondida_em).getTime() >= desde).length;
+      prontas.push({...f, bib: r.bib, capPQ: r.capPQ, filtroId: r.filtroId, cards: r.cards, feitas, faltam: Math.max(0, (f.cota || 0) - feitas)});
+    }
+    vfFilaFlashTarefasVF = prontas;
+    vfFilaFlashUltimaCargaVF = Date.now();
+  }catch(e){
+    console.error('Flash de hoje:', e);
+    vfFilaFlashErroVF = (e && e.message) || 'erro de rede';
+  }finally{
+    vfFilaFlashCarregandoVF = false;
+    document.querySelectorAll('.pq-flash-atualizar').forEach(b => b.classList.remove('girando'));
+    vfRenderizarFilaFlashHojeVF();
+  }
+}
+function vfRenderizarFilaFlashHojeVF(){
+  const el = document.getElementById('pq-flash-hoje');
+  if(!el) return;
+  const tarefas = vfFilaFlashTarefasVF;
+  const total = tarefas.reduce((a, t) => a + t.faltam, 0);
+  const direita = `<span style="margin-left:auto;flex-shrink:0;display:inline-flex;align-items:center;gap:10px"><span style="font-size:var(--fs-c);color:#888;font-weight:500;text-transform:none;letter-spacing:0">${total} card${total===1?'':'s'}</span><button class="pq-flash-atualizar${vfFilaFlashCarregandoVF?' girando':''}" onclick="event.stopPropagation();vfCarregarFilaFlashHojeVF(true)" aria-label="Atualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/></svg></button></span>`;
+  let corpo;
+  if(vfFilaFlashCarregandoVF && !tarefas.length) corpo = '<div class="pq-flash-vazio">Carregando…</div>';
+  else if(vfFilaFlashErroVF && !tarefas.length) corpo = `<div class="pq-flash-vazio">Não consegui carregar a fila agora (${escapeHtml(vfFilaFlashErroVF)}). Toca em atualizar.</div>`;
+  else if(!tarefas.length) corpo = '<div class="pq-flash-vazio">Nenhum flash pendente.</div>';
+  else corpo = tarefas.map((t, i) => {
+    const semCards = !t.cards.length;
+    const zerado = t.faltam === 0;
+    const faltamHtml = zerado ? '<span class="pq-flash-feitas">zerado</span>' : `${t.faltam}<span class="pq-flash-feitas"> de ${t.cota}</span>`;
+    const btn = semCards
+      ? `<button class="pq-flash-btn pq-flash-btn-continuar" disabled title="Nenhum card seu nesse trecho" style="opacity:.5">Sem cards</button>`
+      : `<button class="pq-flash-btn${zerado?' pq-flash-btn-continuar':''}" onclick="vfComecarTarefaFilaFlashVF('${t.id}')">${zerado?'Continuar':'Começar'}</button>`;
+    return `<div class="pq-mapa-linha${i%2===1?' pq-mapa-par':''}">
+      <div class="pq-mapa-nome"><span class="pq-mapa-seta" style="visibility:hidden">▶</span>${VF_MAPA_DOC_VF}<span class="pq-mapa-t">${escapeHtml(vfRotuloTrechoFilaFlashVF(t))}</span></div>
+      <div class="pq-mapa-num">${t.rodada}ª</div>
+      <div class="pq-mapa-num">${faltamHtml}</div>
+      <div class="pq-flash-acao">${btn}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="card-inicio" id="pq-flash-hoje-card">
+    <div class="pq-flash-titulo"><span class="pq-flash-titulo-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span><span>Flash de hoje</span>${direita}</div>
+    <div class="pq-mapa-lista">
+      <div class="pq-mapa-cab"><div>Trecho</div><div>Rodada</div><div>Faltam</div><div></div></div>
+      ${corpo}
+    </div>
+  </div>`;
+}
+// "Começar": monta o filtro do trecho (como se fosse na mão) e abre o treino
+async function vfComecarTarefaFilaFlashVF(tarefaId){
+  const t = vfFilaFlashTarefasVF.find(x => x.id === tarefaId);
+  if(!t || !t.bib || !t.cards.length) return;
+  filtroVF = {modulo: t.bib.modulo_pscpp || null, publicacao: t.bib.id, tema: null, capitulo: t.capPQ || null,
+              numero: false, lista: false, data: false, inconsistente: false, termo: null, tagId: null, tagNome: null,
+              filtrosInc: t.filtroId ? [t.filtroId] : [], filtrosExc: [], varreduraDesde: null};
+  vfSalvarFiltroNoStorageVF();
+  vfTarefaFilaFlashAtivaVF = {id: t.id, rotulo: vfRotuloTrechoFilaFlashVF(t), cota: t.cota || 0, faltam: t.faltam, cards: new Set(t.cards)};
+  trocarAba('vf');
+  try{
+    await popularFiltroModuloVF();   // primeira vez: popula e já reflete o filtro
+    await vfRestaurarUIFiltroVF();   // demais vezes: sincroniza os selects com o filtroVF novo
+  }catch(e){ console.warn('Flash de hoje: UI do filtro', e); }
+  if(vfSessaoAtivaVF && vfSessaoRestauradaAguardandoDecisaoVF){
+    // sessão pausada esperando Retomar/Finalizar: retoma e já carrega com o filtro do trecho
+    vfRetomarSessaoRestauradaVF();
+    if(estadoVF && estadoVF.posicao >= 0) recarregarPoolEContinuarVF();
+  }else if(vfSessaoAtivaVF){
+    if(estadoVF && estadoVF.posicao >= 0) recarregarPoolEContinuarVF();
+    else await vfCarregarPoolInicialVF();
+  }else{
+    await vfIniciarSessaoFlashVF(); // sessão nova carrega o pool já com o filtroVF do trecho
+  }
+}
+function vfChipFilaFlashVF(){
+  const t = vfTarefaFilaFlashAtivaVF;
+  if(!t) return '';
+  const texto = t.faltam > 0 ? `Faltam: ${t.faltam} de ${t.cota}` : 'zerado';
+  return `<span class="pq-chip-fila-flash" id="vf-chip-fila-flash" title="${escapeHtml(t.rotulo)}">${texto}</span>`;
+}
+function vfContarRespostaFilaFlashVF(questaoVfId){
+  const t = vfTarefaFilaFlashAtivaVF;
+  if(!t || !t.cards.has(questaoVfId)) return;
+  if(t.faltam > 0) t.faltam--;
+  const chip = document.getElementById('vf-chip-fila-flash');
+  if(chip) chip.textContent = t.faltam > 0 ? `Faltam: ${t.faltam} de ${t.cota}` : 'zerado';
+  // a linha da Início também acompanha, sem ir ao banco
+  const linha = vfFilaFlashTarefasVF.find(x => x.id === t.id);
+  if(linha){ linha.feitas++; linha.faltam = Math.max(0, linha.faltam - 1); }
+}
+// voltar o app pra frente com a Início aberta: atualiza (com a mesma trava de 15 s)
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState !== 'visible') return;
+  const inicio = document.getElementById('aba-inicio');
+  if(inicio && !inicio.classList.contains('hidden')) vfCarregarFilaFlashHojeVF(false);
+});
 
 async function toggleFavoritoVF(questaoVfId){
   if(vfFoiToqueLongoFavoritar){
@@ -24301,8 +24713,28 @@ function abrirExplicacaoVF(questaoVfId){
   el.innerHTML = explicacao
     ? `<div ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;line-height:1.4;color:#111;position:relative">${explicacaoFormatada}</div>`
     : `<p ${atributosEdicao} style="background:#f7f7f5;border:0.5px solid #eee;box-sizing:border-box;border-radius:10px;padding:8px;margin:0;color:#666;position:relative">${souCarlos() ? 'Sem explicação cadastrada – segure aqui pra adicionar.' : 'Sem explicação cadastrada pra essa questão.'}</p>`;
+  // (05/11) "Fonte" recolhida abaixo da explicação: o trecho da publicação
+  // de onde a afirmação saiu (questoes_vf.trechos_fonte). Só aparece
+  // quando existe; começa fechada, abre num toque
+  const trechoFonte = (entrada.item.trechos_fonte || '').trim();
+  if(trechoFonte){
+    el.insertAdjacentHTML('beforeend', `<div id="vf-fonte-bloco" style="margin-top:10px">
+      <button type="button" onclick="vfAlternarFonteVF()" style="display:flex;align-items:center;gap:6px;background:none;border:none;padding:4px 0;cursor:pointer;color:#666;font-family:inherit;font-size:var(--fs-c);font-weight:600">
+        <svg id="vf-fonte-seta" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .15s"><polyline points="9 18 15 12 9 6"/></svg>Fonte
+      </button>
+      <div id="vf-fonte-texto" class="hidden" style="background:#f7f7f5;border:0.5px solid #eee;border-radius:10px;padding:8px;margin-top:4px;line-height:1.45;color:#333;font-size:var(--fs-c);white-space:pre-wrap">${escapeHtml(trechoFonte)}</div>
+    </div>`);
+  }
   abrirModal('modal-explicacao-vf');
   vfAbrirCanvasExplicacaoVF();
+}
+
+function vfAlternarFonteVF(){
+  const texto = document.getElementById('vf-fonte-texto'), seta = document.getElementById('vf-fonte-seta');
+  if(!texto) return;
+  const abrir = texto.classList.contains('hidden');
+  texto.classList.toggle('hidden', !abrir);
+  if(seta) seta.style.transform = abrir ? 'rotate(90deg)' : '';
 }
 
 // ---- editar a explicação segurando nela (só Carlos), mesmo sistema já
@@ -27176,6 +27608,12 @@ function podeUsarIntegracaoTracker(){
 // questões de Marinha)
 function souCarlos(){
   return usuarioAtual?.email === 'luzzipratico@gmail.com';
+}
+// (05/11) quem tem acesso ao Flash (aba, Biblioteca, sessão, Flash de hoje).
+// Regra: só pode haver menção ao Flash pra quem tem acesso a ele. Hoje é só
+// o Carlos; quando liberar pra outros, muda SÓ aqui
+function temAcessoFlashVF(){
+  return souCarlos();
 }
 
 async function finalizarCaderno(){
@@ -31319,8 +31757,8 @@ async function buscarCadernoAdmin(){
 // Modos: letras (com acentos segurando a tecla), 123, #+= e letras gregas.
 // Arrasta pela barrinha de baixo; a posição fica guardada no aparelho.
 // Só liga em aparelho de toque (iPad/iPhone) - no Mac não muda nada. Dá
-// pra desligar em Perfil > Teclado do app, e o globo do teclado troca pro
-// teclado da Apple só naquele campo, até sair dele
+// pra desligar em Perfil > Teclado do app. Email/senha (login) ficam com o
+// teclado da Apple, por causa do Face ID/Touch ID (v318)
 (function(){
   const CHAVE_LIGADO = 'pq-teclado-ligado';
   const CHAVE_POSICAO = 'pq-teclado-posicao';
@@ -31397,7 +31835,12 @@ async function buscarCadernoAdmin(){
     if(el.tagName === 'TEXTAREA') return (el.readOnly || el.disabled) ? null : el;
     if(el.tagName === 'INPUT'){
       const tipo = (el.getAttribute('type') || 'text').toLowerCase();
-      if(!['text','search','email','url','password','tel'].includes(tipo)) return null;
+      // v320: SÓ a tela de login (os três formulários login-form-*: entrar,
+      // definir senha e convite) fica com o teclado da Apple - é ele que
+      // oferece o Face ID/Touch ID. Dentro do app, qualquer campo usa o
+      // teclado do app, inclusive número, email e senha (Carlos, 21/10)
+      if(el.closest('[id^="login-form"]')) return null;
+      if(!['text','search','url','tel','email','password','number'].includes(tipo)) return null;
       if(el.readOnly || el.disabled) return null;
       return el;
     }
@@ -31482,8 +31925,12 @@ async function buscarCadernoAdmin(){
     let ok = false;
     try{ ok = document.execCommand('insertText', false, texto); }catch(_){ ok = false; }
     if(!ok && ehCampoNativo(c)){
-      const ini = c.selectionStart ?? c.value.length, fim = c.selectionEnd ?? ini;
-      c.setRangeText(texto, ini, fim, 'end');
+      let ini = null, fim = null;
+      try{ ini = c.selectionStart; fim = c.selectionEnd; }catch(_){}
+      // input type=number não tem cursor (selectionStart null) - aí só
+      // acrescenta no fim, que é como se digita número mesmo
+      if(ini === null || ini === undefined) c.value = String(c.value || '') + texto;
+      else c.setRangeText(texto, ini, fim ?? ini, 'end');
       c.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText', data: texto}));
     }
   }
@@ -31493,9 +31940,16 @@ async function buscarCadernoAdmin(){
     let ok = false;
     try{ ok = document.execCommand('delete', false); }catch(_){ ok = false; }
     if(!ok && ehCampoNativo(c)){
-      let ini = c.selectionStart ?? 0, fim = c.selectionEnd ?? ini;
-      if(ini === fim){ if(ini === 0) return; ini = ini - 1; }
-      c.setRangeText('', ini, fim, 'end');
+      let ini = null, fim = null;
+      try{ ini = c.selectionStart; fim = c.selectionEnd; }catch(_){}
+      if(ini === null || ini === undefined){
+        const v = String(c.value || '');
+        if(!v) return;
+        c.value = v.slice(0, -1);
+      } else {
+        if(ini === fim){ if(ini === 0) return; ini = ini - 1; }
+        c.setRangeText('', ini, fim, 'end');
+      }
       c.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'deleteContentBackward'}));
     }
   }
@@ -31503,7 +31957,7 @@ async function buscarCadernoAdmin(){
     const c = campoAtual;
     if(!c) return '';
     if(ehCampoNativo(c)){
-      try{ return String(c.value || '').slice(0, c.selectionStart ?? 0); }catch(_){ return String(c.value || ''); }
+      try{ const p = c.selectionStart; return String(c.value || '').slice(0, (p === null || p === undefined) ? undefined : p); }catch(_){ return String(c.value || ''); }
     }
     const sel = window.getSelection();
     if(!sel || !sel.rangeCount) return '';
@@ -31563,9 +32017,7 @@ async function buscarCadernoAdmin(){
     teclado.id = 'pq-teclado';
     teclado.innerHTML = `<div class="pq-tk-linhas"></div>
       <div class="pq-tk-rodape">
-        <div class="pq-tk-icone" data-icone="sistema" title="Usar o teclado da Apple neste campo">${ICONES.globo}</div>
         <div class="pq-tk-alca" title="Arrastar"><span class="pq-tk-pontos"><i></i><i></i><i></i></span></div>
-        <div class="pq-tk-icone" data-icone="esconder" title="Esconder teclado">${ICONES.esconder}</div>
       </div>
       <div class="pq-tk-previa"></div>
       <div class="pq-tk-variantes"></div>`;
@@ -31639,7 +32091,7 @@ async function buscarCadernoAdmin(){
     construir();
     if(trocouDeCampo || !teclado.classList.contains('aberto')){
       const tipo = (campoAtual.getAttribute('type') || '').toLowerCase();
-      modo = tipo === 'tel' ? 'numeros' : 'letras';
+      modo = (tipo === 'tel' || tipo === 'number') ? 'numeros' : 'letras';
       shift = 'off';
       desenhar();
     }
