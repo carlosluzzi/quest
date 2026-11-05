@@ -3351,7 +3351,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-05-329';
+const VERSAO_APP = '2026-11-05-330';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -14329,6 +14329,7 @@ async function vfCarregarBibliografiaCacheVF(){
 // conteúdo (seja porque já foi mostrada, seja porque foi pré-buscada em
 // segundo plano), não busca de novo
 async function vfGarantirConteudoCompletoVF(item){
+  if(vfRastroVF && !vfRastroVF.renderizou) vfMarcaVF('conteudo', item.explicacao !== undefined ? 'cache' : 'rede');
   if(item.explicacao !== undefined) return; // já carregado nesse próprio objeto (explicacao é o sinal certo agora - texto já vem preenchido desde o pool leve, por causa da Regra 2/família)
   const emCache = vfConteudoCompletoCache.get(item.id);
   if(emCache){ Object.assign(item, emCache); return; }
@@ -14642,6 +14643,28 @@ function vfProcessarQuestoesCruasVF(questoesCruas, estadoPorId, idsExcluidos){
 // filtro é filtro em memória, zero rede. Se o IndexedDB não existir ou
 // falhar, continua funcionando só com a cópia em memória (ainda evita a
 // rebaixada a cada filtro dentro da mesma sessão)
+// (05/11) RASTRO DE TEMPO da entrada do Flash - mede no próprio aparelho
+// onde o tempo vai (rede já medida: tudo volta em <1 s; o resto é local).
+// Grava em diagnostico_cliente_vf quando a entrada passa de 3 s, pra ler
+// depois. Zero efeito no fluxo
+let vfRastroVF = null;
+function vfRastroIniciarVF(contexto){ vfRastroVF = {contexto, t0: performance.now(), marcas: [], renderizou: false, timer: null}; }
+function vfMarcaVF(nome, extra){
+  if(!vfRastroVF) return;
+  vfRastroVF.marcas.push({m: nome, ms: Math.round(performance.now() - vfRastroVF.t0), ...(extra ? {x: extra} : {})});
+  clearTimeout(vfRastroVF.timer);
+  vfRastroVF.timer = setTimeout(vfRastroGravarVF, 4000); // 4 s sem marca nova = acabou
+}
+function vfRastroGravarVF(){
+  const r = vfRastroVF; if(!r || r.gravado) return;
+  r.gravado = true;
+  const total = r.marcas.length ? r.marcas[r.marcas.length - 1].ms : 0;
+  try{ localStorage.setItem('vf_rastro_ultimo', JSON.stringify({contexto: r.contexto, total, marcas: r.marcas})); }catch(e){}
+  if(total < 3000 || !usuarioAtual) return;
+  try{
+    sb.from('diagnostico_cliente_vf').insert({versao: VERSAO_APP, aparelho: navigator.userAgent, contexto: r.contexto, total_ms: total, marcas: r.marcas}).then(() => {});
+  }catch(e){}
+}
 const VF_CACHE_POOL_DB_VF = 'pilotquest_vf';
 const VF_CACHE_POOL_STORE_VF = 'pool_compacto';
 const VF_CACHE_POOL_VERSAO_VF = 1; // mude quando o formato das linhas mudar
@@ -14681,13 +14704,14 @@ async function vfLerCachePoolVF(){
   });
 }
 async function vfGravarCachePoolVF(lista){
+  vfMarcaVF('idb-gravando');
   const db = await vfAbrirCacheDbVF();
   if(!db) return false;
   return new Promise((res) => {
     try{
       const tx = db.transaction(VF_CACHE_POOL_STORE_VF, 'readwrite');
       tx.objectStore(VF_CACHE_POOL_STORE_VF).put({versao: VF_CACHE_POOL_VERSAO_VF, cursor: lista.cursor, total: lista.total, json: JSON.stringify(Array.from(lista.linhas.values())), gravadoEm: Date.now()}, 'lista');
-      tx.oncomplete = () => { try{ db.close(); }catch(e){} res(true); };
+      tx.oncomplete = () => { try{ db.close(); }catch(e){} vfMarcaVF('idb-gravado'); res(true); };
       tx.onerror = () => { try{ db.close(); }catch(e){} res(false); };
       tx.onabort = () => { try{ db.close(); }catch(e){} res(false); };
     }catch(e){ try{ db.close(); }catch(e2){} res(false); }
@@ -14702,12 +14726,17 @@ async function vfObterListaCompactaVF(){
   if(vfListaCompactaEmVooVF) return vfListaCompactaEmVooVF;
   vfListaCompactaEmVooVF = (async () => {
     if(!vfListaCompactaVF){
+      vfMarcaVF('idb-lendo');
       const c = await vfLerCachePoolVF();
+      vfMarcaVF('idb-lido', c ? c.linhas.length : 'vazio');
       if(c) vfListaCompactaVF = {linhas: new Map(c.linhas.map(l => [l[0], l])), cursor: c.cursor, total: c.total, sincronizadoEm: 0};
+      vfMarcaVF('idb-mapa');
     }
     if(vfListaCompactaVF && (Date.now() - vfListaCompactaVF.sincronizadoEm) < VF_LISTA_COMPACTA_FRESCA_MS_VF) return vfListaCompactaVF;
     const desde = vfListaCompactaVF ? vfListaCompactaVF.cursor : null;
+    vfMarcaVF('delta-pedindo', desde ? 'delta' : 'completo');
     const {data, error} = await sb.rpc('pool_questoes_vf_delta', {p_desde: desde});
+    vfMarcaVF('delta-chegou', data && Array.isArray(data.linhas) ? data.linhas.length : (error ? 'erro' : '?'));
     if(error || !data || !Array.isArray(data.linhas)){
       if(vfListaCompactaVF) return vfListaCompactaVF; // sem rede: segue com o que tem
       throw (error || new Error('pool_questoes_vf_delta sem dados'));
@@ -14723,6 +14752,7 @@ async function vfObterListaCompactaVF(){
       }
     }
     vfListaCompactaVF = {linhas: mapa, cursor, total, sincronizadoEm: Date.now()};
+    vfMarcaVF('lista-pronta', mapa.size);
     if(mudou){ const alvo = vfListaCompactaVF; setTimeout(() => { vfGravarCachePoolVF(alvo).catch(() => {}); }, 1500); } // grava depois da primeira questão já estar na tela (stringify de 58 mil linhas custa uns décimos no iPad)
     return vfListaCompactaVF;
   })().finally(() => { vfListaCompactaEmVooVF = null; });
@@ -14768,6 +14798,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     });
     linhas.sort((a, b) => a[0] < b[0] ? -1 : (a[0] > b[0] ? 1 : 0));
     const total = linhas.length;
+    vfMarcaVF('filtrado', total);
     const PRIMEIRA_LEVA_VF = 1000;
     if(aoCarregarRestante && total > PRIMEIRA_LEVA_VF){
       const resto = linhas.slice(PRIMEIRA_LEVA_VF);
@@ -14856,9 +14887,11 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     await new Promise(r => setTimeout(r, 0));
     if(tokenDestaCargaVF !== vfTokenGeracaoPoolVF) return; // filtro mudou no meio - descarta, é de uma carga velha
     if(!estadoVF || !estadoVF.pool) return;
+    vfMarcaVF('resto-inicio', questoesCruasExtras.length);
     const idsJaNoPool = new Set(estadoVF.pool.map(q => q.id));
     let processadas = vfProcessarQuestoesCruasVF(questoesCruasExtras, estadoPorIdParaCallbackVF, idsExcluidosParaCallbackVF)
       .filter(q => !idsJaNoPool.has(q.id));
+    vfMarcaVF('resto-processado', processadas.length);
     // mesma interseção por termo aplicada no pool principal (abaixo) -
     // páginas seguintes (que chegam depois, em segundo plano) também
     // precisam respeitar o termo, senão questão fora do termo "vazava"
@@ -14871,6 +14904,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
     if(processadas.length){
       estadoVF.pool = estadoVF.pool.concat(processadas);
       vfCalcularFamiliasNoPoolVF(estadoVF.pool); // recalcula pro pool inteiro - as recém-chegadas podem formar família com quem já estava lá
+      vfMarcaVF('resto-familias', estadoVF.pool.length);
     }
   } : undefined;
 
@@ -14943,8 +14977,10 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   // bem depois daqui
   idsExcluidosParaCallbackVF = idsExcluidos;
   estadoPorIdParaCallbackVF = estadoPorId;
+  vfMarcaVF('entrada-dados', (questoes||[]).length);
 
   let poolPronto = vfProcessarQuestoesCruasVF(questoes, estadoPorId, idsExcluidos);
+  vfMarcaVF('processado-1a-leva', poolPronto.length);
   // interseção por termo (palavra-chave pt/en) - nunca falha silenciosamente:
   // se a RPC deu erro, avisa e carrega o pool sem o termo (não trava o
   // Flash inteiro por causa de uma busca que falhou). vfFiltroTermoIgnoradoVF
@@ -14991,6 +15027,7 @@ async function carregarPoolVF(incluirDadosEntradaVF){
   // rápidos em filtros disparavam duas cargas concorrentes, e a mais
   // lenta podia escrever por cima com dados do filtro ANTERIOR)
   poolPronto.tokenDestaCargaVF = tokenDestaCargaVF;
+  vfMarcaVF('pool-devolvido', poolPronto.length);
   return poolPronto;
 }
 
@@ -15311,6 +15348,7 @@ function vfFormatarTempoSessaoVF(ms){
 }
 
 async function vfIniciarSessaoFlashVF(){
+  vfRastroIniciarVF('iniciar-sessao');
   // (29/09) apertou "iniciar": o relógio SEMPRE aparece. Ocultar o tempo
   // continua salvo no aparelho, mas só vale dentro da sessão - esconde,
   // troca de aba, volta, continua escondido; iniciou de novo, reaparece.
@@ -16496,6 +16534,8 @@ async function vfReconstruirHistoricoDaSessaoVF(){
 }
 
 async function vfCarregarPoolInicialVF(){
+  if(!vfRastroVF) vfRastroIniciarVF('pool-inicial');
+  vfMarcaVF('pool-inicial');
   const el = document.getElementById('vf-conteudo');
   el.innerHTML = `<div style="position:fixed;top:calc(var(--vv-top, 0px) + var(--topbar-height, 70px));left:var(--carregando-esquerda, 0px);right:0;bottom:var(--nav-height, 76px);display:flex;align-items:center;justify-content:center;z-index:5"><svg class="loading-spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke="#999" stroke-width="4" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" values="1,150;90,150;1,150" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" values="0;-35;-125" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="2s" repeatCount="indefinite"/></circle></svg></div>`;
   document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
@@ -16531,6 +16571,7 @@ async function vfCarregarPoolInicialVF(){
   // sem isso, fechar e reabrir "zerava" as questões da sessão mesmo com
   // a sessão ainda ativa/pausada, só porque estadoVF vive em memória
   const restaurado = await vfReconstruirHistoricoDaSessaoVF();
+  vfMarcaVF('historico-reconstruido');
   if(restaurado) Object.assign(estadoVF, restaurado);
   // (10/10) rede de segurança pros CONTADORES da sessão restaurada: se a
   // reconstrução do histórico falhou ou veio curta (achado real: sessão de
@@ -16552,6 +16593,7 @@ async function vfCarregarPoolInicialVF(){
   // userRow/now_ms/total geral agora entram NO MESMO Promise.all da busca
   // do pool (dentro de carregarPoolVF) - antes eram uma rodada sequencial
   // separada, pagando uma viagem de rede inteira a mais só na entrada
+  vfMarcaVF('contadores-ok');
   await recarregarPoolEContinuarVF(true);
 }
 
@@ -16633,6 +16675,7 @@ async function recarregarPoolEContinuarVF(ehEntradaInicialVF){
     estadoVF.posicao--;
   }
   vfLimparOverlayCargaFiltroVF(el); // restaura opacity/pointer-events antes de renderizar a questão de verdade
+  vfMarcaVF('pool-no-estado', estadoVF.pool.length);
   await avancarParaProximaVF();
 }
 
@@ -16683,6 +16726,7 @@ async function avancarParaProximaVF(){
   const pick = filtroVF.varreduraDesde
     ? vfEscolherProximaVarreduraVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.sementeSessao)
     : escolherProximaVF(estadoVF.pool, agoraMs, estadoVF.contadorGlobal, estadoVF.sementeSessao, estadoVF.creditoNovaVF || 0, estadoVF.creditoRepVF || 0, estadoVF.contadorRepVF || 0, favoritosVF, absurdosVF);
+  vfMarcaVF('escolhida');
   if(!pick || pick.esgotado){
     vfMostrarTelaEsgotadoVF(pick?.motivo, !!filtroVF.varreduraDesde);
     document.getElementById('vf-barra-fixa').className = 'vf-barra-fixa hidden'; document.documentElement.style.setProperty('--vf-barra-fixa-altura', '0px');
@@ -17746,6 +17790,7 @@ async function vfRestaurarUIFiltroVF(){
 function renderizarItemVF(){
   const el = document.getElementById('vf-conteudo');
   if(!estadoVF || estadoVF.posicao < 0) return;
+  if(vfRastroVF && !vfRastroVF.renderizou){ vfRastroVF.renderizou = true; vfMarcaVF('render'); }
   const entrada = estadoVF.historico[estadoVF.posicao];
   if(!entrada) return;
   const item = entrada.item;
@@ -20366,6 +20411,8 @@ async function vfCarregarFilaFlashHojeVF(forcar){
   vfFilaFlashCarregandoVF = true; vfFilaFlashErroVF = '';
   if(!vfFilaFlashTarefasVF.length) vfRenderizarFilaFlashHojeVF(); // esqueleto "Carregando…"
   document.querySelectorAll('.pq-flash-atualizar').forEach(b => b.classList.add('girando'));
+  const t0 = performance.now(), marcas = [];
+  const marca = (m, x) => marcas.push({m, ms: Math.round(performance.now() - t0), ...(x !== undefined ? {x} : {})});
   try{
     const hoje = vfChaveDiaLocalVF(new Date());
     const [{data: fila, error: erroFila}, {data: mapa}] = await Promise.all([
@@ -20375,15 +20422,18 @@ async function vfCarregarFilaFlashHojeVF(forcar){
     ]);
     if(erroFila) throw erroFila;
     const tarefas = fila || [];
+    marca('fila', tarefas.length);
     let logs = [];
     if(tarefas.length){
       const desdeMs = Math.min(...tarefas.map(f => vfInicioContagemFilaFlashVF(f).getTime()));
       const {data: l} = await buscarTudoPaginadoVF(() => sb.from('log_respostas_vf').select('questao_vf_id, respondida_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).gte('respondida_em', new Date(desdeMs).toISOString()).order('respondida_em'));
       logs = l || [];
     }
+    marca('logs', logs.length);
     const prontas = [];
     for(const f of tarefas){
       const r = await vfCardsDoTrechoFilaFlashVF(f, mapa);
+      marca('trecho', r.cards.length);
       const set = new Set(r.cards);
       const desde = vfInicioContagemFilaFlashVF(f).getTime();
       const feitas = logs.filter(x => set.has(x.questao_vf_id) && new Date(x.respondida_em).getTime() >= desde).length;
@@ -20391,6 +20441,9 @@ async function vfCarregarFilaFlashHojeVF(forcar){
     }
     vfFilaFlashTarefasVF = prontas;
     vfFilaFlashUltimaCargaVF = Date.now();
+    marca('fim');
+    const totalMs = Math.round(performance.now() - t0);
+    if(totalMs >= 3000 && usuarioAtual){ try{ sb.from('diagnostico_cliente_vf').insert({versao: VERSAO_APP, aparelho: navigator.userAgent, contexto: 'flash-hoje', total_ms: totalMs, marcas}).then(() => {}); }catch(e){} }
   }catch(e){
     console.error('Flash de hoje:', e);
     vfFilaFlashErroVF = (e && e.message) || 'erro de rede';
