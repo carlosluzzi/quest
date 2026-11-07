@@ -2188,7 +2188,7 @@ html[data-tema="escuro"] #pq-teclado{--tk-fundo:rgba(44,44,46,0.86);--tk-tecla:#
       <option value="">Todos os capítulos</option>
     </select>
     <div style="display:flex;gap:8px;align-items:stretch">
-      <input id="vf-biblioteca-busca" type="search" class="filter-select" placeholder="Palavra em português ou inglês" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;min-width:0;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfBuscarBibliotecaVF();}">
+      <input id="vf-biblioteca-busca" type="search" class="filter-select" placeholder="Palavra em português ou inglês" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;min-width:0;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();vfBuscarBibliotecaVF();}" oninput="vfBibliotecaCampoLimpouVF(this)" onsearch="vfBibliotecaCampoLimpouVF(this)">
       <button class="btn-primario" style="width:auto;flex-shrink:0;padding:0 16px;font-size:var(--fs-d);height:32px;border-radius:6px" onclick="vfBuscarBibliotecaVF()">Buscar</button>
     </div>
     <!-- mesmos três do Tipo do Flash (mesma classe, mesmo visual, mesmas
@@ -3359,7 +3359,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-05-340';
+const VERSAO_APP = '2026-11-07-341';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -11348,6 +11348,16 @@ function vfPintarBotoesTipoBibliotecaVF(){
   });
 }
 
+// (07/11 -341) o "×" nativo do campo de busca (Safari) só apagava o texto -
+// a lista continuava filtrada pelo termo antigo. Agora, campo esvaziado com
+// um termo ainda em vigor = refaz a busca na hora (com os outros filtros,
+// ou volta pra dica se não sobrar nenhum)
+function vfBibliotecaCampoLimpouVF(campo){
+  if((campo.value || '').trim() !== '') return;
+  if(!vfBibliotecaTermoVF) return;
+  vfBibliotecaTermoVF = '';
+  vfBuscarBibliotecaVF();
+}
 async function vfBuscarBibliotecaVF(){
   const termo = (document.getElementById('vf-biblioteca-busca').value || '').trim();
   const modulo = document.getElementById('vf-biblioteca-filtro-modulo').value;
