@@ -2645,7 +2645,7 @@ pausado) trocam só via classList, sem reescrever HTML nenhum -->
 <div class="modal-overlay hidden" id="modal-info-contagem-pscpp">
   <div class="modal-conteudo">
     <h3 class="config-title">Contagem regressiva</h3>
-    <p>Quantos dias faltam até a data prevista do PSCPP: <strong>06/11/2027</strong>. É só uma referência pra ajudar a planejar o ritmo de estudo.</p>
+    <p>Quantos dias faltam até a data prevista do PSCPP: <strong>01/11/2027</strong>. É só uma referência pra ajudar a planejar o ritmo de estudo.</p>
     <button class="btn-secundario" style="width:100%" onclick="fecharModal('modal-info-contagem-pscpp')">Fechar</button>
   </div>
 </div>
@@ -3359,7 +3359,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-07-341';
+const VERSAO_APP = '2026-11-08-343';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -3420,7 +3420,7 @@ function saudacaoHora(){
 
 // data prevista do PSCPP - compartilhada entre a contagem regressiva da
 // Início e a consciência de prova do algoritmo de repetição (VF_ALGO)
-const PSCPP_DATA_PROVA_MS = new Date(2027, 10, 6).getTime(); // mês é 0-indexado: 10 = novembro
+const PSCPP_DATA_PROVA_MS = new Date(2027, 10, 1).getTime(); // mês é 0-indexado: 10 = novembro
 
 // contagem regressiva de dias até a data prevista do PSCPP — atualizada
 // junto com a saudação, toda vez que a aba Início carrega
@@ -11872,7 +11872,7 @@ function vfSairDoModoVisualizacaoSalvoVF(){
 // pré-carregado no boot pelo Placar). Cache de 60 s por período+escopo em
 // memória; os gráficos são destruídos ao fechar a página (iPad: três
 // instâncias vivas o tempo todo é peso à toa).
-const VF_DATA_PROVA = '2027-11-06';
+const VF_DATA_PROVA = '2027-11-01';
 const VF_PROGRESSO_CACHE_MS = 60000;
 let vfProgressoVF = {periodo: 'hoje', escopo: 'banco', dataInicio: null, dataFim: null, modoGrafico: 'respostas', ordemCadernos: 'vistas', dados: null, requisicao: 0, gruposAbertos: new Set(), cadernosAbertos: new Set()};
 const vfProgressoCacheVF = new Map(); // chave -> {dados, em}
@@ -20519,40 +20519,19 @@ async function vfCarregarFilaFlashHojeVF(forcar){
   const t0 = performance.now(), marcas = [];
   const marca = (m, x) => marcas.push({m, ms: Math.round(performance.now() - t0), ...(x !== undefined ? {x} : {})});
   try{
+    // (08/11 -343) UMA chamada só: fila_flash_hoje_vf resolve no servidor as
+    // tarefas, as publicações, os filtros de capítulo, os cards e os feitos
+    // (medido: 133 ms pra 8 tarefas). Antes eram 10+ consultas do aparelho e
+    // a de cards varria questoes_vf inteira sem índice (9 a 11 s no iPad)
     const hoje = vfChaveDiaLocalVF(new Date());
-    const [{data: fila, error: erroFila}, {data: mapa}] = await Promise.all([
-      sb.from('fila_flash').select('id, modulo, publicacao, capitulo, rodada, cota, total_cards, data_prevista, criado_em').eq('usuario_id', usuarioAtual.id).is('concluido_em', null).lte('data_prevista', hoje).order('rodada').order('criado_em'),
-      sb.from('fila_flash_mapa_trechos').select('publicacao, capitulo_tracker, filtro_id'),
+    const [{data, error}] = await Promise.all([
+      sb.rpc('fila_flash_hoje_vf', {p_hoje: hoje}),
       vfCarregarBibliografiaCacheVF()
     ]);
-    if(erroFila) throw erroFila;
-    const tarefas = fila || [];
-    marca('fila', tarefas.length);
-    let logs = [];
-    if(tarefas.length){
-      const desdeMs = Math.min(...tarefas.map(f => vfInicioContagemFilaFlashVF(f).getTime()));
-      const {data: l} = await buscarTudoPaginadoVF(() => sb.from('log_respostas_vf').select('questao_vf_id, respondida_em', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).gte('respondida_em', new Date(desdeMs).toISOString()).order('respondida_em'));
-      logs = l || [];
-    }
-    marca('logs', logs.length);
-    // (05/11 -332) trechos resolvidos em PARALELO e guardados por tarefa
-    // (medido no iPad: 6 trechos em série = 4,6 s; o conjunto de cards de
-    // uma tarefa não muda entre uma atualização e outra, só os feitos)
-    const resolvidos = await Promise.all(tarefas.map(f => {
-      const chave = f.id + '|' + f.publicacao + '|' + f.capitulo;
-      const c = vfFilaFlashCardsCacheVF.get(chave);
-      if(c) return Promise.resolve(c);
-      return vfCardsDoTrechoFilaFlashVF(f, mapa).then(r => { if(r.bib) vfFilaFlashCardsCacheVF.set(chave, r); return r; }); // só guarda quando a publicação foi reconhecida
-    }));
-    marca('trechos', resolvidos.length);
-    const prontas = [];
-    for(let i = 0; i < tarefas.length; i++){
-      const f = tarefas[i], r = resolvidos[i];
-      const set = new Set(r.cards);
-      const desde = vfInicioContagemFilaFlashVF(f).getTime();
-      const feitas = logs.filter(x => set.has(x.questao_vf_id) && new Date(x.respondida_em).getTime() >= desde).length;
-      prontas.push({...f, bib: r.bib, capPQ: r.capPQ, filtroId: r.filtroId, cards: r.cards, feitas, faltam: Math.max(0, (f.cota || 0) - feitas)});
-    }
+    if(error) throw error;
+    const tarefas = Array.isArray(data) ? data : [];
+    marca('rpc', tarefas.length);
+    const prontas = tarefas.map(t => ({...t, cards: Array.isArray(t.cards) ? t.cards : [], feitas: t.feitas || 0, faltam: Math.max(0, (t.cota || 0) - (t.feitas || 0))}));
     vfFilaFlashTarefasVF = prontas;
     vfFilaFlashUltimaCargaVF = Date.now();
     marca('fim');
