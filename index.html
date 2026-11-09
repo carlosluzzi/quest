@@ -3359,7 +3359,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-08-343';
+const VERSAO_APP = '2026-11-09-344';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -11587,10 +11587,13 @@ function vfHtmlCardBibliotecaVF(q){
       ${grifo && grifo.passadas > 1 ? `<p style="color:#999;font-size:var(--fs-a);margin:8px 0 0 0">Grifada em ${grifo.passadas} passadas · mostrando a última</p>` : ''}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
         <button id="vf-bib-btn-abrir-${q.id}" style="${estiloAcao};color:#B23A34;border-color:#E8C4C2;font-weight:600" onclick="vfAbrirNoFlashDaBibliotecaVF('${q.id}')">Abrir</button>
-        <button id="vf-bib-btn-notas-${q.id}" style="${estiloAcao}${notasVF.has(q.id) ? ';color:#B23A34;border-color:#E8C4C2' : ''}" onclick="vfAbrirNotaDaBibliotecaVF('${q.id}')">Notas${notasVF.has(q.id) ? ' •' : ''}</button>
         <button style="${estiloAcao}" onclick="vfEditarDaBibliotecaVF('${q.id}')">Editar</button>
-        <button style="${estiloAcao}${favorita ? ';color:#B23A34;border-color:#E8C4C2' : ''}" onclick="vfAlternarFavoritoBibliotecaVF('${q.id}')">${favorita ? 'Desfavoritar' : 'Favoritar'}</button>
         ${excluida ? '' : `<button style="${estiloAcao};color:#A32D2D" onclick="vfExcluirDaBibliotecaVF('${q.id}')">Excluir</button>`}
+        <button style="${estiloAcao}${favorita ? ';color:#B23A34;border-color:#E8C4C2' : ''}" onclick="vfAlternarFavoritoBibliotecaVF('${q.id}')">${favorita ? 'Desfavoritar' : 'Favoritar'}</button>
+        <button style="${estiloAcao}" onclick="vfAbrirComplementarVF('${q.id}')">Complementar</button>
+        <button id="vf-bib-btn-notas-${q.id}" style="${estiloAcao}${notasVF.has(q.id) ? ';color:#B23A34;border-color:#E8C4C2' : ''}" onclick="vfAbrirNotaDaBibliotecaVF('${q.id}')">Notas${notasVF.has(q.id) ? ' •' : ''}</button>
+        <button id="vf-bib-btn-mais-${q.id}" style="${estiloAcao}${vfPedidosMaisFlashVF.has(q.id) ? ';color:#B23A34;border-color:#E8C4C2' : ''}" onclick="vfAbrirMaisQuestoesVF('${q.id}')">Mais questões${vfPedidosMaisFlashVF.has(q.id) ? ' •' : ''}</button>
+        <button id="vf-bib-btn-revisar-${q.id}" style="${estiloAcao}${vfRevisarVF.has(q.id) ? ';color:#854F0B;border-color:#EF9F27' : ''}" onclick="toggleRevisarVF('${q.id}')">Revisar${vfRevisarVF.has(q.id) ? ' •' : ''}</button>
       </div>
     </div>`;
 }
@@ -14300,9 +14303,15 @@ function vfGarantirMarcadoresVF(){
   if(vfMarcadoresEmVooVF) return vfMarcadoresEmVooVF;
   vfMarcadoresEmVooVF = Promise.all([
     buscarTudoPaginadoVF(() => sb.from('notas_vf').select('questao_vf_id, fixada', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
-    buscarTudoPaginadoVF(() => sb.from('questao_elemento_html_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id'))
-  ]).then(([{data: notaData, error: e1}, {data: elemData, error: e2}]) => {
+    buscarTudoPaginadoVF(() => sb.from('questao_elemento_html_vf').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).order('id')),
+    // (09/11) Revisar e Mais questões agora também aparecem no card da
+    // Biblioteca - quando ela é a primeira tela, o Flash ainda não trouxe
+    buscarTudoPaginadoVF(() => sb.from('questoes_vf_revisar').select('questao_vf_id', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('resolvido_em', null).order('questao_vf_id')),
+    buscarTudoPaginadoVF(() => sb.from('pedidos_mais_flash').select('id, questao_vf_id, qtd_falsas, qtd_verdadeiras, trecho_alvo, observacao', {count: 'exact'}).eq('usuario_id', usuarioAtual.id).is('atendido_em', null).order('questao_vf_id'))
+  ]).then(([{data: notaData, error: e1}, {data: elemData, error: e2}, {data: revData, error: e3}, {data: pedData, error: e4}]) => {
     vfMarcadoresEmVooVF = null;
+    if(!e3) (revData||[]).forEach(r => vfRevisarVF.add(r.questao_vf_id)); // soma, não substitui: não apaga marcação feita agora
+    if(!e4) (pedData||[]).forEach(p => { if(!vfPedidosMaisFlashVF.has(p.questao_vf_id)) vfPedidosMaisFlashVF.set(p.questao_vf_id, p); });
     if(e1 || e2) return; // sem marcar como carregado - tenta de novo na próxima
     notasVF = new Set((notaData||[]).map(n=>n.questao_vf_id));
     notasFixadasVF = new Set((notaData||[]).filter(n=>n.fixada).map(n=>n.questao_vf_id));
@@ -19687,6 +19696,7 @@ function renderizarBarraFixaVF(item, jaRespondida){
   barraFixa.innerHTML = `
     <div class="vf-barra-fixa-principal">${linhaPrincipal}</div>
     <div class="vf-barra-fixa-acoes">
+      <!-- (09/11) ordem pedida pelo Carlos, igual na Biblioteca: Excluir, Favoritar, Complementar, Notas, Mais questões, Revisar -->
       <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         <span>Excluir</span>
@@ -19694,14 +19704,6 @@ function renderizarBarraFixaVF(item, jaRespondida){
       <button class="banco-acao-btn ${favoritosVF.has(item.id)?'favoritada':''}" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar(event)" ontouchend="vfCancelarPressionarFavoritar(event,'${item.id}')" ontouchmove="vfCancelarPressionarFavoritar(event)" onmousedown="vfIniciarPressionarFavoritar(event)" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
         <svg viewBox="0 0 24 24" fill="${favoritosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
         <span>Favoritar</span>
-      </button>
-      <button class="banco-acao-btn ${vfRevisarVF.has(item.id)?'revisar-marcada':''}" onclick="toggleRevisarVF('${item.id}')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <span>Revisar</span>
-      </button>
-      <button class="banco-acao-btn ${vfPedidosMaisFlashVF.has(item.id)?'mais-pendente':''}" onclick="vfAbrirMaisQuestoesVF('${item.id}')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span>Mais questões</span>
       </button>
       <button class="banco-acao-btn" onclick="vfAbrirComplementarVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
@@ -19711,6 +19713,14 @@ function renderizarBarraFixaVF(item, jaRespondida){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M17 4v5h3"/></svg>
         <span>Notas</span>
         ${notasVF.has(item.id)?'<span class="badge-dot" style="background:#888"></span>':''}
+      </button>
+      <button class="banco-acao-btn ${vfPedidosMaisFlashVF.has(item.id)?'mais-pendente':''}" onclick="vfAbrirMaisQuestoesVF('${item.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Mais questões</span>
+      </button>
+      <button class="banco-acao-btn ${vfRevisarVF.has(item.id)?'revisar-marcada':''}" onclick="toggleRevisarVF('${item.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>Revisar</span>
       </button>
     </div>
   `;
@@ -20326,8 +20336,9 @@ function toggleRevisarVF(questaoVfId){
   if(vfRevisarVF.has(questaoVfId)){
     vfRevisarVF.delete(questaoVfId);
     renderizarItemVF();
+    vfAtualizarAcoesCardBibliotecaVF(questaoVfId);
     sb.from('questoes_vf_revisar').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).is('resolvido_em', null).then(({error}) => {
-      if(error){ vfRevisarVF.add(questaoVfId); renderizarItemVF(); console.error('erro ao desmarcar revisar:', error); }
+      if(error){ vfRevisarVF.add(questaoVfId); renderizarItemVF(); vfAtualizarAcoesCardBibliotecaVF(questaoVfId); console.error('erro ao desmarcar revisar:', error); }
     });
     return;
   }
@@ -20346,9 +20357,10 @@ function vfConfirmarRevisarVF(){
   const observacao = ((campo && campo.value) || '').trim() || null;
   vfRevisarVF.add(questaoVfId);
   renderizarItemVF();
+  vfAtualizarAcoesCardBibliotecaVF(questaoVfId);
   sb.from('questoes_vf_revisar').insert({usuario_id: usuarioAtual.id, questao_vf_id: questaoVfId, observacao}).then(({error}) => {
     // 23505 = já existe linha pendente (índice único): fica marcado, sem erro
-    if(error && error.code !== '23505'){ vfRevisarVF.delete(questaoVfId); renderizarItemVF(); console.error('erro ao marcar revisar:', error); }
+    if(error && error.code !== '23505'){ vfRevisarVF.delete(questaoVfId); renderizarItemVF(); vfAtualizarAcoesCardBibliotecaVF(questaoVfId); console.error('erro ao marcar revisar:', error); }
   });
 }
 
@@ -20366,9 +20378,12 @@ function vfMaisRenderSegVF(){
   if(v) v.innerHTML = [0,1,2,3].map(n => `<button class="${vfMaisVerdadeirasVF===n?'sel':''}" onclick="vfMaisVerdadeirasVF=${n};vfMaisRenderSegVF()">${n}</button>`).join('');
 }
 async function vfAbrirMaisQuestoesVF(questaoVfId){
-  if(!usuarioAtual || !estadoVF || estadoVF.posicao < 0) return;
-  const entrada = estadoVF.historico[estadoVF.posicao];
-  const item = entrada && entrada.item && entrada.item.id === questaoVfId ? entrada.item : null;
+  if(!usuarioAtual) return;
+  // (09/11) vale também pelo card da Biblioteca, sem sessão do Flash aberta:
+  // o card vem da afirmação na tela OU da lista já carregada da Biblioteca
+  const entrada = (estadoVF && estadoVF.posicao >= 0) ? estadoVF.historico[estadoVF.posicao] : null;
+  const item = (entrada && entrada.item && entrada.item.id === questaoVfId) ? entrada.item
+    : ((typeof vfBibliotecaCarregadasVF !== 'undefined' ? vfBibliotecaCarregadasVF : []).find(q => q && q.id === questaoVfId) || null);
   const pendente = vfPedidosMaisFlashVF.get(questaoVfId) || null;
   vfMaisQuestaoIdPendenteVF = questaoVfId;
   vfMaisFalsasVF = pendente ? Math.min(5, Math.max(1, pendente.qtd_falsas)) : 1;
@@ -20402,7 +20417,8 @@ function vfConfirmarMaisQuestoesVF(){
   fecharModal('modal-mais-questoes-vf');
   vfPedidosMaisFlashVF.set(questaoVfId, {...(anterior || {questao_vf_id: questaoVfId}), ...campos});
   renderizarItemVF();
-  const reverter = (error) => { if(anterior) vfPedidosMaisFlashVF.set(questaoVfId, anterior); else vfPedidosMaisFlashVF.delete(questaoVfId); renderizarItemVF(); console.error('erro no pedido de mais questões:', error); };
+  vfAtualizarAcoesCardBibliotecaVF(questaoVfId);
+  const reverter = (error) => { if(anterior) vfPedidosMaisFlashVF.set(questaoVfId, anterior); else vfPedidosMaisFlashVF.delete(questaoVfId); renderizarItemVF(); vfAtualizarAcoesCardBibliotecaVF(questaoVfId); console.error('erro no pedido de mais questões:', error); };
   if(anterior && anterior.id){
     sb.from('pedidos_mais_flash').update(campos).eq('id', anterior.id).is('atendido_em', null).then(({error}) => { if(error) reverter(error); });
   }else{
@@ -20422,8 +20438,9 @@ function vfCancelarPedidoMaisFlashVF(){
   if(!anterior) return;
   vfPedidosMaisFlashVF.delete(questaoVfId);
   renderizarItemVF();
+  vfAtualizarAcoesCardBibliotecaVF(questaoVfId);
   sb.from('pedidos_mais_flash').delete().eq('usuario_id', usuarioAtual.id).eq('questao_vf_id', questaoVfId).is('atendido_em', null).then(({error}) => {
-    if(error){ vfPedidosMaisFlashVF.set(questaoVfId, anterior); renderizarItemVF(); console.error('erro ao cancelar pedido:', error); }
+    if(error){ vfPedidosMaisFlashVF.set(questaoVfId, anterior); renderizarItemVF(); vfAtualizarAcoesCardBibliotecaVF(questaoVfId); console.error('erro ao cancelar pedido:', error); }
   });
 }
 
@@ -24573,6 +24590,20 @@ function vfAtualizarBotaoNotasBibliotecaVF(questaoVfId){
   btn.textContent = 'Notas' + (tem ? ' •' : '');
   btn.style.color = tem ? '#B23A34' : '#666';
   btn.style.borderColor = tem ? '#E8C4C2' : '#ddd';
+}
+
+// (09/11) Mais questões e Revisar também ficam no card da Biblioteca -
+// depois de pedir/cancelar/marcar, atualiza só os dois botões (a lista é
+// longa e perderia a rolagem se fosse redesenhada inteira)
+function vfAtualizarAcoesCardBibliotecaVF(questaoVfId){
+  const pintar = (btn, rotulo, ativo, cor, borda) => {
+    if(!btn) return;
+    btn.textContent = rotulo + (ativo ? ' •' : '');
+    btn.style.color = ativo ? cor : '#666';
+    btn.style.borderColor = ativo ? borda : '#ddd';
+  };
+  pintar(document.getElementById(`vf-bib-btn-mais-${questaoVfId}`), 'Mais questões', vfPedidosMaisFlashVF.has(questaoVfId), '#B23A34', '#E8C4C2');
+  pintar(document.getElementById(`vf-bib-btn-revisar-${questaoVfId}`), 'Revisar', vfRevisarVF.has(questaoVfId), '#854F0B', '#EF9F27');
 }
 
 async function abrirNotaVF(questaoVfId){
