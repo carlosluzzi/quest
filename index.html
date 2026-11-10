@@ -691,7 +691,7 @@ html[data-tema="escuro"] .vf-mais-seg button.sel{background:#B23A34;border-color
    (favorita, nota, pedido, revisar, tópico) e sem clique - pra marca nenhuma
    influenciar a resposta. Depois de responder volta tudo como sempre foi */
 .acoes-bloqueadas{pointer-events:none}
-.acoes-bloqueadas .banco-acao-btn svg,.acoes-bloqueadas .banco-acao-btn span{opacity:0.3} /* (10/11) só ícone e texto apagados - o botão (fundo e borda) fica normal */
+.acoes-bloqueadas .banco-acao-btn svg,.acoes-bloqueadas .banco-acao-btn span{opacity:0.45} /* (10/11) só ícone e texto apagados - o botão (fundo e borda) fica normal */
 .banco-acao-btn span{font-size:var(--fs-a)}
 .pills-nav{display:grid;grid-template-columns:repeat(auto-fill, minmax(32px, 1fr));justify-items:center;gap:6px;margin-bottom:14px}
 .pill-questao{width:32px;height:32px;border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#888;font-size:var(--fs-c);font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer}
@@ -3364,7 +3364,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-10-346';
+const VERSAO_APP = '2026-11-10-347';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
