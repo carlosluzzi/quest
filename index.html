@@ -3364,7 +3364,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-10-347';
+const VERSAO_APP = '2026-11-10-348';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7565,7 +7565,7 @@ function vfProcessarColunasNotaVF(texto){
 function vfProcessarListasNotaVF(texto, aceitarNumeracao){
   const linhas = texto.split('\n');
   const blocos = [];
-  let itens = null, tipoAtual = null;
+  let itens = null, tipoAtual = null, recuoLivreVF = '';
   // fecha a lista aberta - chamado ao trocar de tipo (bolinha <-> número),
   // ao encontrar linha comum, e no fim do texto
   const fechar = () => {
@@ -7573,8 +7573,9 @@ function vfProcessarListasNotaVF(texto, aceitarNumeracao){
     // os dois tipos usam marcador proprio (list-style:none): o disco
     // nativo do <ul> e visivelmente maior que o "•" que a grade de \tab
     // desenha, e as duas coisas aparecem lado a lado na mesma nota
-    blocos.push(`<ul style="margin:6px 0;padding-left:2px;list-style:none">${itens.join('')}</ul>`);
-    itens = null; tipoAtual = null;
+    if(tipoAtual === 'livre') blocos.push(`<div class="vf-lista-livre" style="display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:7px;row-gap:2px;margin:6px 0;padding-left:2px;font-variant-numeric:tabular-nums;${recuoLivreVF}">${itens.join('')}</div><!--COLFIM-->`);
+    else blocos.push(`<ul style="margin:6px 0;padding-left:2px;list-style:none">${itens.join('')}</ul>`);
+    itens = null; tipoAtual = null; recuoLivreVF = '';
   };
   for(const linhaBruta of linhas){
     // espaço no começo da linha (a tecla Tab escreve 3 de cada vez, ver
@@ -7589,7 +7590,7 @@ function vfProcessarListasNotaVF(texto, aceitarNumeracao){
     const simples = linha.match(/^(?:[*\-•]|--)\s+(.+)$/); // "- ", "-- ", "* " ou "• " no começo da linha viram item de lista (espaço obrigatório - "-5 m" não é lista)
     const livre = linha.match(VF_MARCADOR_LISTA_LIVRE_VF);
     const numeradaAuto = !simples && !livre && aceitarNumeracao ? linha.match(VF_MARCADOR_LISTA_NUMERADA_VF) : null;
-    const numerada = livre || numeradaAuto; // mesmo desenho de duas colunas nos dois casos
+    const numerada = numeradaAuto;
     if(simples){
       if(tipoAtual !== 'simples') fechar();
       tipoAtual = 'simples';
@@ -7598,6 +7599,20 @@ function vfProcessarListasNotaVF(texto, aceitarNumeracao){
       // lista numerada: marcador fora, texto que quebra alinha embaixo do
       // TEXTO, nao embaixo da bolinha
       itens.push(`<li style="display:flex;gap:5px;margin:2px 0;${estiloRecuo}"><span style="flex-shrink:0;width:0.6em">•</span><span style="min-width:0">${simples[1]}</span></li>`);
+    }else if(livre){
+      // (10/11) marcador livre (#+ 2#, #0#, #- 1#): as linhas seguidas viram
+      // UMA grade, com a coluna do marcador do tamanho do maior marcador e
+      // ele ALINHADO À DIREITA - assim "+ 2", "0" e "- 1" terminam no mesmo
+      // ponto e o texto de todas começa na mesma coluna. Espaço no começo
+      // ou no fim do marcador é ignorado (o alinhamento é que resolve)
+      if(tipoAtual !== 'livre') fechar();
+      tipoAtual = 'livre';
+      itens = itens || [];
+      if(itens.length === 0) recuoLivreVF = estiloRecuo;
+      // "- 1" com hífen fica mais estreito que "+ 1": o hífen de sinal vira
+      // o menos de verdade (−), da mesma largura do +, e os sinais alinham
+      const marcadorLivre = livre[1].replace(/^(?:&nbsp;|\s)+|(?:&nbsp;|\s)+$/g, '').replace(/^-(?=(?:&nbsp;|\s)*\d)/, '−');
+      itens.push(`<span style="text-align:right;white-space:nowrap">${marcadorLivre}</span><span style="min-width:0">${livre[2]}</span>`);
     }else if(numerada){
       if(tipoAtual !== 'numerada') fechar();
       tipoAtual = 'numerada';
@@ -8354,6 +8369,7 @@ function formatarTextoItemVF(texto, opcoes){
     // que o bloco já daria sozinho
     .replace(/((?:<br>)+)(<(?:ul|ol)[ >])/g, (m, quebras, bloco) => (quebras.length === 4 ? '' : quebras) + bloco)
     .replace(/((?:<br>)+)(<div class="vf-colunas-nota")/g, (m, quebras, bloco) => (quebras.length === 4 ? '' : quebras) + bloco)
+    .replace(/((?:<br>)+)(<div class="vf-lista-livre")/g, (m, quebras, bloco) => (quebras.length === 4 ? '' : quebras) + bloco)
     .replace(/<!--COLFIM-->|<!--ESPFIM-->/g, '');
   resultado = vfAplicarSobrescritoESubscritoJuntosVF(resultado); // b^2_{crit} - os dois no mesmo símbolo, empilhados
   resultado = vfAplicarMarcacaoMatematicaVF(resultado); // gregas, operadores, sqrt, sobrescrito com chaves
@@ -18055,8 +18071,8 @@ function renderizarItemVF(){
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center;flex-shrink:0;max-width:60%">
           ${tagsPublicacao}
-          ${recortesHtml}
           ${tagsCustomizadasHtml}
+          ${recortesHtml}
           ${iconeTagAdicionar}
         </div>
       </div>
