@@ -687,6 +687,11 @@ tarja por cima não tapa nada */
 html[data-tema="escuro"] .vf-mais-seg button{background:#0F0F0E;border-color:#333331;color:#B4B0A8}
 html[data-tema="escuro"] .vf-mais-seg button.sel{background:#B23A34;border-color:#B23A34;color:#fff}
 .banco-acao-btn svg{width:19px;height:19px}
+/* (10/11) antes de responder: fileira de ações apagada, sem nenhuma informação
+   (favorita, nota, pedido, revisar, tópico) e sem clique - pra marca nenhuma
+   influenciar a resposta. Depois de responder volta tudo como sempre foi */
+.acoes-bloqueadas{pointer-events:none}
+.acoes-bloqueadas .banco-acao-btn{opacity:0.38}
 .banco-acao-btn span{font-size:var(--fs-a)}
 .pills-nav{display:grid;grid-template-columns:repeat(auto-fill, minmax(32px, 1fr));justify-items:center;gap:6px;margin-bottom:14px}
 .pill-questao{width:32px;height:32px;border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#888;font-size:var(--fs-c);font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer}
@@ -3359,7 +3364,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-09-344';
+const VERSAO_APP = '2026-11-10-345';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -19668,6 +19673,9 @@ async function vfSalvarEdicaoCorrecaoVF(questaoId, textoOriginal){
 }
 
 function renderizarBarraFixaVF(item, jaRespondida){
+  // (10/11) ações só depois de responder (aberta pela Biblioteca não tem
+  // resposta - lá fica tudo liberado, como antes)
+  const acoesLiberadasVF = !!(jaRespondida || vfVeioDaBibliotecaVF);
   const barraFixa = document.getElementById('vf-barra-fixa');
   // a barra é position:fixed e mora FORA da aba do Flash, então não
   // some sozinha quando você troca de aba. Achado real: uma renderização
@@ -19695,14 +19703,14 @@ function renderizarBarraFixaVF(item, jaRespondida){
 
   barraFixa.innerHTML = `
     <div class="vf-barra-fixa-principal">${linhaPrincipal}</div>
-    <div class="vf-barra-fixa-acoes">
+    <div class="vf-barra-fixa-acoes${acoesLiberadasVF ? '' : ' acoes-bloqueadas'}"${acoesLiberadasVF ? '' : ' aria-disabled="true"'}>
       <!-- (09/11) ordem pedida pelo Carlos, igual na Biblioteca: Excluir, Favoritar, Complementar, Notas, Mais questões, Revisar -->
       <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         <span>Excluir</span>
       </button>
-      <button class="banco-acao-btn ${favoritosVF.has(item.id)?'favoritada':''}" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar(event)" ontouchend="vfCancelarPressionarFavoritar(event,'${item.id}')" ontouchmove="vfCancelarPressionarFavoritar(event)" onmousedown="vfIniciarPressionarFavoritar(event)" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
-        <svg viewBox="0 0 24 24" fill="${favoritosVF.has(item.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
+      <button class="banco-acao-btn ${(acoesLiberadasVF && favoritosVF.has(item.id))?'favoritada':''}" onclick="toggleFavoritoVF('${item.id}')" ontouchstart="vfIniciarPressionarFavoritar(event)" ontouchend="vfCancelarPressionarFavoritar(event,'${item.id}')" ontouchmove="vfCancelarPressionarFavoritar(event)" onmousedown="vfIniciarPressionarFavoritar(event)" onmouseup="vfCancelarPressionarFavoritar()" onmouseleave="vfCancelarPressionarFavoritar()">
+        <svg viewBox="0 0 24 24" fill="${(acoesLiberadasVF && favoritosVF.has(item.id))?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
         <span>Favoritar</span>
       </button>
       <button class="banco-acao-btn" onclick="vfAbrirComplementarVF('${item.id}')">
@@ -19712,13 +19720,13 @@ function renderizarBarraFixaVF(item, jaRespondida){
       <button class="banco-acao-btn" onclick="abrirNotaVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M17 4v5h3"/></svg>
         <span>Notas</span>
-        ${notasVF.has(item.id)?'<span class="badge-dot" style="background:#888"></span>':''}
+        ${(acoesLiberadasVF && notasVF.has(item.id))?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
-      <button class="banco-acao-btn ${vfPedidosMaisFlashVF.has(item.id)?'mais-pendente':''}" onclick="vfAbrirMaisQuestoesVF('${item.id}')">
+      <button class="banco-acao-btn ${(acoesLiberadasVF && vfPedidosMaisFlashVF.has(item.id))?'mais-pendente':''}" onclick="vfAbrirMaisQuestoesVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span>Mais questões</span>
       </button>
-      <button class="banco-acao-btn ${vfRevisarVF.has(item.id)?'revisar-marcada':''}" onclick="toggleRevisarVF('${item.id}')">
+      <button class="banco-acao-btn ${(acoesLiberadasVF && vfRevisarVF.has(item.id))?'revisar-marcada':''}" onclick="toggleRevisarVF('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <span>Revisar</span>
       </button>
@@ -27623,24 +27631,24 @@ function renderizarQuestaoAtual(){
       <button style="flex:1;padding:10px;font-size:var(--fs-e);border-radius:8px;background:#fff;color:#A32D2D;border:0.5px solid #F7C1C1;font-family:inherit;cursor:pointer" data-id="${cadernoAtual.id}" data-nome="${nomeCadernoEscapado}" data-status="em_andamento" onclick="abrirConfirmacaoExclusaoCaderno(this)">Excluir caderno</button>
       ${!modoRevisaoCaderno ? `<button class="btn-primario" style="flex:1" onclick="finalizarCaderno()">Finalizar caderno</button>` : ''}
     </div>` : ''}
-    ${!excluida ? `<div class="banco-acoes">
+    ${!excluida ? `<div class="banco-acoes${jaRespondida ? '' : ' acoes-bloqueadas'}"${jaRespondida ? '' : ' aria-disabled="true"'}>
       <button class="banco-acao-btn" onclick="abrirConfirmacaoExclusaoQuestao('${q.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         <span>Excluir</span>
       </button>
-      <button class="banco-acao-btn ${favoritosDoUsuario.has(q.id)?'favoritada':''}" onclick="toggleFavorito('${q.id}')">
-        <svg viewBox="0 0 24 24" fill="${favoritosDoUsuario.has(q.id)?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
+      <button class="banco-acao-btn ${(jaRespondida && favoritosDoUsuario.has(q.id))?'favoritada':''}" onclick="toggleFavorito('${q.id}')">
+        <svg viewBox="0 0 24 24" fill="${(jaRespondida && favoritosDoUsuario.has(q.id))?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
         <span>Favoritar</span>
       </button>
       <button class="banco-acao-btn" onclick="abrirDiscussaoDoCaderno('${q.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
         <span>Discutir</span>
-        ${topicosPendentesDoUsuario.has(q.id)?'<span class="badge-dot"></span>':''}
+        ${(jaRespondida && topicosPendentesDoUsuario.has(q.id))?'<span class="badge-dot"></span>':''}
       </button>
       <button class="banco-acao-btn" onclick="abrirNotaQuestao('${q.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M17 4v5h3"/></svg>
         <span>Notas</span>
-        ${notasDoUsuario.has(q.id)?'<span class="badge-dot" style="background:#888"></span>':''}
+        ${(jaRespondida && notasDoUsuario.has(q.id))?'<span class="badge-dot" style="background:#888"></span>':''}
       </button>
       <button class="banco-acao-btn" onclick="copiarQuestaoAtualVF(this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
