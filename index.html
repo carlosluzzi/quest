@@ -3364,7 +3364,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-18-350';
+const VERSAO_APP = '2026-11-18-351';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -11860,7 +11860,7 @@ async function vfIrParaQuestaoSalvaVF(questaoVfId){
   const posicaoOriginal = estadoVF.posicao;
   document.getElementById('vf-conteudo').innerHTML = `<div style="padding:60px 20px;text-align:center;color:#999">Carregando...</div>`;
   const [{data: questao, error: erroQuestao}, {data: ultimaResposta}] = await Promise.all([
-    sb.from('questoes_vf').select('*, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', questaoVfId).single(),
+    sb.from('questoes_vf').select('*, inconsistencias_vf(*), divergencias_vf(*, bibliografia(titulo)), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', questaoVfId).single(),
     sb.from('log_respostas_vf').select('acertou, respondida_em').eq('questao_vf_id', questaoVfId).eq('usuario_id', usuarioAtual.id).order('respondida_em', {ascending: false}).limit(1).maybeSingle()
   ]);
   if(erroQuestao || !questao){
@@ -14393,7 +14393,7 @@ async function vfGarantirConteudoCompletoVF(item){
   if(item.explicacao !== undefined) return; // já carregado nesse próprio objeto (explicacao é o sinal certo agora - texto já vem preenchido desde o pool leve, por causa da Regra 2/família)
   const emCache = vfConteudoCompletoCache.get(item.id);
   if(emCache){ Object.assign(item, emCache); return; }
-  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, trechos_fonte, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', item.id).single();
+  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, trechos_fonte, inconsistencias_vf(*), divergencias_vf(*, bibliografia(titulo)), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', item.id).single();
   if(error || !data) return;
   vfRegistrarInconsistenciaVF(data);
   vfConteudoCompletoCache.set(item.id, data);
@@ -14445,7 +14445,7 @@ async function vfBuscarConteudoEmLoteVF(itens){
   const pendentes = itens.filter(item => item.explicacao === undefined && !vfConteudoCompletoCache.has(item.id));
   if(!pendentes.length) return;
   const ids = pendentes.map(item => item.id);
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, trechos_fonte, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, trechos_fonte, inconsistencias_vf(*), divergencias_vf(*, bibliografia(titulo)), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
   if(error || !data) return;
   data.forEach(vfRegistrarInconsistenciaVF);
   const porId = new Map(data.map(d => [d.id, d]));
@@ -16632,7 +16632,7 @@ async function vfReconstruirHistoricoDaSessaoVF(){
   }
   if(!resumo || !resumo.length) return null;
   const ids = resumo.map(r => r.id);
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('*, inconsistencias_vf(*), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('*, inconsistencias_vf(*), divergencias_vf(*, bibliografia(titulo)), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
   if(error || !data) return null;
   data.forEach(vfRegistrarInconsistenciaVF);
   const porId = new Map(data.map(d => [d.id, d]));
@@ -18036,6 +18036,7 @@ function renderizarItemVF(){
     `<span title="Recorte deste capítulo" style="color:#666;font-weight:600;font-size:var(--fs-a);border:1.5px solid #bbb;border-radius:4px;padding:1.5px 7.5px;white-space:nowrap;display:inline-flex;align-items:center;text-transform:uppercase;letter-spacing:0.03em">${escapeHtml(r.nome)}</span>`
   ).join('');
   const tagsCustomizadasHtml = tagsDaQuestao.map(t =>
+    (jaRespondida && vfChaveSimplesVF(t.nome) === 'divergencia' && (vfDivergenciasVF.get(item.id) || []).length) ? vfHtmlBadgeDivergenciaVF(item.id) : // só depois de responder: abre o painel com o que cada outra publicação diz
     `<span onclick="vfAbrirPopupTagsVF('${item.id}')" style="color:#B23A34;font-weight:600;font-size:var(--fs-a);border:1.5px solid #B23A34;border-radius:4px;padding:1.5px 7.5px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center">${escapeHtml(t.nome)}</span>`
   ).join('');
   // ícone de tag + "+" combinados - botão só de adicionar quando ainda
@@ -21455,6 +21456,8 @@ const VF_GRAVIDADE_INCONSISTENCIA_VF = {
 // registra no mapa - chamada em todo lugar que carrega questoes_vf
 function vfRegistrarInconsistenciaVF(linhaQuestao){
   if(!linhaQuestao || !linhaQuestao.id) return;
+  // divergências entre fontes (divergencias_vf, 1:N - uma linha por publicação que diz diferente)
+  if(Array.isArray(linhaQuestao.divergencias_vf)) vfDivergenciasVF.set(linhaQuestao.id, linhaQuestao.divergencias_vf);
   const bruto = linhaQuestao.inconsistencias_vf;
   const resumo = Array.isArray(bruto) ? (bruto[0] || null) : (bruto || null);
   if(resumo) vfInconsistenciasVF.set(linhaQuestao.id, resumo);
@@ -21474,12 +21477,45 @@ function vfHtmlBadgeInconsistenteVF(questaoVfId){
   return `<button type="button" class="vf-badge-inconsistente" data-questao-id="${questaoVfId}" aria-expanded="false" onclick="event.stopPropagation();vfAlternarPainelInconsistenciaVF(this,'${questaoVfId}')" style="${estiloBase};border:none;cursor:pointer;font-family:inherit" title="Ver o resumo do erro da fonte">INCONSISTENTE<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>`;
 }
 let vfPainelInconsistenciaAbertoParaVF = null;
+
+// ---- Divergência entre fontes (tabela divergencias_vf) ----
+// 1:N - cada linha é UMA outra publicação do edital que afirma diferente
+// do livro deste card (bibliografia_id + referencia + o_que_a_outra_fonte_diz).
+// Vem junto no select da questão (divergencias_vf(*, bibliografia(titulo))).
+// Um badge só; no painel, um bloco por publicação. Só leitura no app
+let vfDivergenciasVF = new Map(); // questao_vf_id -> [linhas de divergencias_vf]
+function vfHtmlBadgeDivergenciaVF(questaoVfId){
+  return `<button type="button" class="vf-badge-inconsistente" data-questao-id="${questaoVfId}" aria-expanded="false" onclick="event.stopPropagation();vfAlternarPainelDivergenciaVF(this,'${questaoVfId}')" style="color:#B23A34;background:#fff;font-weight:600;font-size:var(--fs-a);border:1.5px solid #B23A34;border-radius:4px;padding:1.5px 7.5px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:inherit" title="Ver o que as outras publicações dizem">DIVERGÊNCIA<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>`;
+}
+function vfAlternarPainelDivergenciaVF(btn, questaoVfId){
+  const chaveVF = 'div:' + questaoVfId;
+  if(vfPainelInconsistenciaAbertoParaVF === chaveVF){ vfFecharPainelInconsistenciaVF(); return; }
+  const linhas = (vfDivergenciasVF.get(questaoVfId) || []).slice().sort((a, b) => String(a.bibliografia?.titulo || '').localeCompare(String(b.bibliografia?.titulo || '')));
+  if(!linhas.length) return;
+  const blocos = linhas.map((d, i) => `
+    <div style="margin-top:12px;${i ? 'padding-top:12px;border-top:0.5px solid #E6E6E3' : ''}">
+      <div style="font-size:var(--fs-c);font-weight:700;color:#111;line-height:1.3">${escapeHtml(d.bibliografia?.titulo || 'Outra publicação')}</div>
+      ${d.referencia ? `<div style="font-size:var(--fs-a);color:#888;margin-top:1px">${escapeHtml(d.referencia)}</div>` : ''}
+      <div style="font-size:var(--fs-c);line-height:1.4;color:#111;margin-top:5px">${formatarTextoItemVF(d.o_que_a_outra_fonte_diz || '')}</div>
+    </div>`).join('');
+  const comoEstudar = (linhas.find(d => d.como_estudar) || {}).como_estudar;
+  const html = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="background:#FAEEDA;color:#633806;font-size:var(--fs-a);font-weight:700;padding:4px 10px;border-radius:6px;letter-spacing:.03em">${linhas.length > 1 ? linhas.length + ' publicações dizem diferente' : 'Outra publicação diz diferente'}</span>
+      <button type="button" onclick="vfFecharPainelInconsistenciaVF()" style="background:none;border:none;color:#888;font-size:var(--fs-e);cursor:pointer;padding:4px 6px;line-height:1" title="Fechar">✕</button>
+    </div>
+    ${blocos}
+    ${comoEstudar ? `<div style="margin-top:14px;font-size:var(--fs-c);line-height:1.4;background:#FAEEDA;border-left:4px solid #EF9F27;border-radius:6px;padding:8px 10px;color:#4A2E05">${formatarTextoItemVF(comoEstudar)}</div>` : ''}`;
+  vfAbrirPainelInconsistenciaVF(btn, questaoVfId, html);
+  vfPainelInconsistenciaAbertoParaVF = chaveVF;
+}
 function vfAlternarPainelInconsistenciaVF(btn, questaoVfId){
   if(vfPainelInconsistenciaAbertoParaVF === questaoVfId){ vfFecharPainelInconsistenciaVF(); return; }
   vfAbrirPainelInconsistenciaVF(btn, questaoVfId);
 }
-function vfAbrirPainelInconsistenciaVF(btn, questaoVfId){
-  const resumo = vfInconsistenciasVF.get(questaoVfId);
+function vfAbrirPainelInconsistenciaVF(btn, questaoVfId, htmlProntoVF){
+  // htmlProntoVF: o painel da DIVERGÊNCIA reaproveita este mesmo painel (posição, sheet, fechar) com outro conteúdo
+  const resumo = vfInconsistenciasVF.get(questaoVfId) || (htmlProntoVF ? {} : null);
   if(!resumo) return;
   vfFecharPainelInconsistenciaVF();
   const painel = document.getElementById('vf-painel-inconsistencia');
@@ -21489,7 +21525,7 @@ function vfAbrirPainelInconsistenciaVF(btn, questaoVfId){
       <div style="font-size:var(--fs-a);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#888;margin-bottom:3px">${rotulo}</div>
       <div style="font-size:var(--fs-c);line-height:1.4;color:#111;${extra || ''}">${formatarTextoItemVF(texto)}</div>
     </div>` : '';
-  painel.innerHTML = `
+  painel.innerHTML = htmlProntoVF || `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
       <span style="background:${grav.fundo};color:${grav.texto};font-size:var(--fs-a);font-weight:700;padding:4px 10px;border-radius:6px;letter-spacing:.03em;text-transform:capitalize">${escapeHtml(resumo.gravidade || '')}</span>
       <button type="button" onclick="vfFecharPainelInconsistenciaVF()" style="background:none;border:none;color:#888;font-size:var(--fs-e);cursor:pointer;padding:4px 6px;line-height:1" title="Fechar">✕</button>
