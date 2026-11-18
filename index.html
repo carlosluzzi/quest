@@ -3364,7 +3364,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-18-352';
+const VERSAO_APP = '2026-11-18-354';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -11860,7 +11860,7 @@ async function vfIrParaQuestaoSalvaVF(questaoVfId){
   const posicaoOriginal = estadoVF.posicao;
   document.getElementById('vf-conteudo').innerHTML = `<div style="padding:60px 20px;text-align:center;color:#999">Carregando...</div>`;
   const [{data: questao, error: erroQuestao}, {data: ultimaResposta}] = await Promise.all([
-    sb.from('questoes_vf').select('*, inconsistencias_vf(*), divergencias_vf(*, bibliografia(titulo)), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', questaoVfId).single(),
+    sb.from('questoes_vf').select('*, inconsistencias_vf(*), divergencias_vf(*, bibliografia(titulo), contestacoes_divergencia_vf(id, motivo, resolvido_em)), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', questaoVfId).single(),
     sb.from('log_respostas_vf').select('acertou, respondida_em').eq('questao_vf_id', questaoVfId).eq('usuario_id', usuarioAtual.id).order('respondida_em', {ascending: false}).limit(1).maybeSingle()
   ]);
   if(erroQuestao || !questao){
@@ -14393,7 +14393,7 @@ async function vfGarantirConteudoCompletoVF(item){
   if(item.explicacao !== undefined) return; // já carregado nesse próprio objeto (explicacao é o sinal certo agora - texto já vem preenchido desde o pool leve, por causa da Regra 2/família)
   const emCache = vfConteudoCompletoCache.get(item.id);
   if(emCache){ Object.assign(item, emCache); return; }
-  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, trechos_fonte, inconsistencias_vf(*), divergencias_vf(*, bibliografia(titulo)), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', item.id).single();
+  const {data, error} = await sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, trechos_fonte, inconsistencias_vf(*), divergencias_vf(*, bibliografia(titulo), contestacoes_divergencia_vf(id, motivo, resolvido_em)), questoes_vf_filtros(filtros_capitulo_vf(id, nome))').eq('id', item.id).single();
   if(error || !data) return;
   vfRegistrarInconsistenciaVF(data);
   vfConteudoCompletoCache.set(item.id, data);
@@ -14445,7 +14445,7 @@ async function vfBuscarConteudoEmLoteVF(itens){
   const pendentes = itens.filter(item => item.explicacao === undefined && !vfConteudoCompletoCache.has(item.id));
   if(!pendentes.length) return;
   const ids = pendentes.map(item => item.id);
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, trechos_fonte, inconsistencias_vf(*), divergencias_vf(*, bibliografia(titulo)), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('id, texto, resposta, explicacao, correcao, dificuldade, inconsistente, complementar_local, complementar_local_em, trechos_fonte, inconsistencias_vf(*), divergencias_vf(*, bibliografia(titulo), contestacoes_divergencia_vf(id, motivo, resolvido_em)), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
   if(error || !data) return;
   data.forEach(vfRegistrarInconsistenciaVF);
   const porId = new Map(data.map(d => [d.id, d]));
@@ -16632,7 +16632,7 @@ async function vfReconstruirHistoricoDaSessaoVF(){
   }
   if(!resumo || !resumo.length) return null;
   const ids = resumo.map(r => r.id);
-  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('*, inconsistencias_vf(*), divergencias_vf(*, bibliografia(titulo)), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
+  const {data, error} = await buscarTudoPaginadoVF(() => sb.from('questoes_vf').select('*, inconsistencias_vf(*), divergencias_vf(*, bibliografia(titulo), contestacoes_divergencia_vf(id, motivo, resolvido_em)), questoes_vf_filtros(filtros_capitulo_vf(id, nome))', {count: 'exact'}).in('id', ids).order('id'));
   if(error || !data) return null;
   data.forEach(vfRegistrarInconsistenciaVF);
   const porId = new Map(data.map(d => [d.id, d]));
@@ -21488,22 +21488,91 @@ function vfHtmlBadgeDivergenciaVF(questaoVfId){
 function vfAlternarPainelDivergenciaVF(btn, questaoVfId){
   const chaveVF = 'div:' + questaoVfId;
   if(vfPainelInconsistenciaAbertoParaVF === chaveVF){ vfFecharPainelInconsistenciaVF(); return; }
+  if(!(vfDivergenciasVF.get(questaoVfId) || []).length) return;
+  vfAbrirPainelInconsistenciaVF(btn, questaoVfId, vfHtmlPainelDivergenciaVF(questaoVfId, null));
+  vfPainelInconsistenciaAbertoParaVF = chaveVF;
+}
+// ---- contestar uma divergência (tabela contestacoes_divergencia_vf) ----
+// o app só GUARDA a contestação (por publicação, não pelo card inteiro);
+// quem confere nos dois livros e resolve é o Claude, fora do app. Vem
+// embutida no select da divergência - só as do próprio usuário (RLS)
+function vfContestacaoPendenteVF(d){
+  return (d.contestacoes_divergencia_vf || []).find(c => !c.resolvido_em) || null;
+}
+function vfHtmlPainelDivergenciaVF(questaoVfId, editandoDivIdVF){
   const linhas = (vfDivergenciasVF.get(questaoVfId) || []).slice().sort((a, b) => String(a.bibliografia?.titulo || '').localeCompare(String(b.bibliografia?.titulo || '')));
-  if(!linhas.length) return;
-  const blocos = linhas.map((d, i) => `
+  const btnMiniVF = 'background:none;border:none;color:#888;font-size:var(--fs-a);cursor:pointer;padding:4px 0;font-family:inherit;text-decoration:underline';
+  const blocos = linhas.map((d, i) => {
+    const pend = vfContestacaoPendenteVF(d);
+    let contestarHtml;
+    if(editandoDivIdVF === d.id){
+      contestarHtml = `<div style="margin-top:8px">
+        <textarea id="vf-contestacao-texto" rows="3" placeholder="O que está errado? (pode deixar em branco)" style="width:100%;box-sizing:border-box;border:0.5px solid #ccc;border-radius:8px;padding:8px;font-family:inherit;font-size:var(--fs-c);line-height:1.35;resize:vertical;background:transparent;color:inherit">${escapeHtml(pend?.motivo || '')}</textarea>
+        <div style="display:flex;gap:16px;justify-content:flex-end;margin-top:4px">
+          ${pend ? `<button type="button" style="${btnMiniVF}" onclick="vfRetirarContestacaoVF('${questaoVfId}','${d.id}')">Retirar</button>` : ''}
+          <button type="button" style="${btnMiniVF}" onclick="vfRenderizarPainelDivergenciaVF('${questaoVfId}')">Cancelar</button>
+          <button type="button" style="${btnMiniVF};color:#B23A34;font-weight:700" onclick="vfSalvarContestacaoVF('${questaoVfId}','${d.id}')">Salvar</button>
+        </div>
+      </div>`;
+    }else if(pend){
+      contestarHtml = `<div style="margin-top:8px;display:flex;gap:10px;align-items:flex-start;font-size:var(--fs-a);line-height:1.35;color:#8A6D1D">
+        <span style="flex:1;min-width:0"><b>● Contestada</b>${pend.motivo ? ': ' + escapeHtml(pend.motivo) : ''}</span>
+        <button type="button" style="${btnMiniVF};padding:0" onclick="vfRenderizarPainelDivergenciaVF('${questaoVfId}','${d.id}')">Editar</button>
+      </div>`;
+    }else{
+      contestarHtml = `<div style="text-align:right;margin-top:2px"><button type="button" style="${btnMiniVF}" onclick="vfRenderizarPainelDivergenciaVF('${questaoVfId}','${d.id}')">Contestar</button></div>`;
+    }
+    return `
     <div style="margin-top:${i ? 12 : 6}px;${i ? 'padding-top:12px;border-top:0.5px solid #E6E6E3' : ''}">
-      <div style="font-size:var(--fs-c);font-weight:700;color:#111;line-height:1.3">${escapeHtml(d.bibliografia?.titulo || 'Outra publicação')}</div>
-      ${d.referencia ? `<div style="font-size:var(--fs-a);color:#888;margin-top:1px">${escapeHtml(d.referencia)}</div>` : ''}
-      <div style="font-size:var(--fs-c);line-height:1.4;color:#111;margin-top:5px">${formatarTextoItemVF(d.o_que_a_outra_fonte_diz || '')}</div>
-    </div>`).join('');
-  const html = `
+      <div onclick="event.stopPropagation();vfCopiarTextoElementoVF(this)" title="Tocar para copiar" style="position:relative;cursor:pointer">
+        <div style="font-size:var(--fs-c);font-weight:700;color:#111;line-height:1.3">${escapeHtml(d.bibliografia?.titulo || 'Outra publicação')}</div>
+        ${d.referencia ? `<div style="font-size:var(--fs-a);color:#888;margin-top:1px">${escapeHtml(d.referencia)}</div>` : ''}
+        <div style="font-size:var(--fs-c);line-height:1.4;color:#111;margin-top:5px">${formatarTextoItemVF(d.o_que_a_outra_fonte_diz || '')}</div>
+      </div>
+      ${contestarHtml}
+    </div>`;
+  }).join('');
+  return `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
       <span style="font-size:var(--fs-a);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#888">Divergência</span>
       <button type="button" onclick="vfFecharPainelInconsistenciaVF()" style="background:none;border:none;color:#888;font-size:var(--fs-e);cursor:pointer;padding:4px 6px;line-height:1" title="Fechar">✕</button>
     </div>
     ${blocos}`;
-  vfAbrirPainelInconsistenciaVF(btn, questaoVfId, html);
-  vfPainelInconsistenciaAbertoParaVF = chaveVF;
+}
+// redesenha o painel já aberto (sem mexer na posição): entrar/sair do
+// modo de escrever a contestação e depois de salvar/retirar
+function vfRenderizarPainelDivergenciaVF(questaoVfId, editandoDivIdVF){
+  const painel = document.getElementById('vf-painel-inconsistencia');
+  if(!painel || painel.classList.contains('hidden')) return;
+  painel.innerHTML = vfHtmlPainelDivergenciaVF(questaoVfId, editandoDivIdVF || null);
+  if(editandoDivIdVF) document.getElementById('vf-contestacao-texto')?.focus();
+}
+async function vfSalvarContestacaoVF(questaoVfId, divId){
+  const d = (vfDivergenciasVF.get(questaoVfId) || []).find(x => x.id === divId);
+  if(!d) return;
+  const motivo = (document.getElementById('vf-contestacao-texto')?.value || '').trim() || null;
+  const pend = vfContestacaoPendenteVF(d);
+  let erro = null;
+  if(pend){
+    const r = await sb.from('contestacoes_divergencia_vf').update({motivo}).eq('id', pend.id);
+    erro = r.error;
+    if(!erro) pend.motivo = motivo;
+  }else{
+    const r = await sb.from('contestacoes_divergencia_vf').insert({divergencia_id: divId, usuario_id: usuarioAtual.id, motivo}).select('id, motivo, resolvido_em').single();
+    erro = r.error;
+    if(!erro) d.contestacoes_divergencia_vf = [...(d.contestacoes_divergencia_vf || []), r.data];
+  }
+  if(erro){ alert('Não consegui salvar a contestação: ' + (erro.message || erro)); return; }
+  vfRenderizarPainelDivergenciaVF(questaoVfId);
+}
+async function vfRetirarContestacaoVF(questaoVfId, divId){
+  const d = (vfDivergenciasVF.get(questaoVfId) || []).find(x => x.id === divId);
+  const pend = d ? vfContestacaoPendenteVF(d) : null;
+  if(!pend) return;
+  const {error} = await sb.from('contestacoes_divergencia_vf').delete().eq('id', pend.id);
+  if(error){ alert('Não consegui retirar a contestação: ' + (error.message || error)); return; }
+  d.contestacoes_divergencia_vf = (d.contestacoes_divergencia_vf || []).filter(c => c.id !== pend.id);
+  vfRenderizarPainelDivergenciaVF(questaoVfId);
 }
 function vfAlternarPainelInconsistenciaVF(btn, questaoVfId){
   if(vfPainelInconsistenciaAbertoParaVF === questaoVfId){ vfFecharPainelInconsistenciaVF(); return; }
@@ -21599,7 +21668,7 @@ function vfAbrirPainelInconsistenciaVF(btn, questaoVfId, htmlProntoVF){
   }, 0);
 }
 function vfFecharPainelInconsistenciaSeForaVF(e){
-  if(e && e.target && (e.target.closest('#vf-painel-inconsistencia') || e.target.closest('.vf-badge-inconsistente'))) return;
+  if(e && e.target && (e.target.closest('#vf-painel-inconsistencia') || e.target.closest('.vf-badge-inconsistente') || e.target.closest('#pq-teclado'))) return; // #pq-teclado: digitar a contestação no teclado do app não é tocar fora
   vfFecharPainelInconsistenciaVF();
 }
 function vfFecharPainelInconsistenciaVF(){
