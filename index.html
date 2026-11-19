@@ -102,6 +102,7 @@ DENTRO das próprias bordas, nunca é cortado pelo overflow do pai */
    largura exata do conteúdo, com fração empilhada dentro ou sem */
 .vf-raiz{display:inline-flex;align-items:stretch;vertical-align:middle;margin:0 1px}
 .vf-raiz-sinal{width:.58em;flex-shrink:0;align-self:stretch;overflow:visible}
+.vf-raiz-indice{font-size:.58em;line-height:1;align-self:flex-start;margin-right:-.5em;margin-top:-.15em;position:relative;z-index:1}
 .vf-raiz-miolo{display:inline-flex;align-items:center;border-top:1.3px solid currentColor;padding:2px 4px 2px 2px}
 .vf-editor-nota{background:#FAEEDA;border-bottom:1.5px dotted #EF9F27;border-radius:4px;padding:0 3px;cursor:pointer}
 #vf-balao-editor-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -3364,7 +3365,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-18-354';
+const VERSAO_APP = '2026-11-19-355';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -7041,13 +7042,16 @@ const VF_SVG_RADICAL_VF = '<svg class="vf-raiz-sinal" viewBox="0 0 12 24" preser
 function vfProcessarRaizesVF(texto){
   let resultado = '';
   let pos = 0;
-  const regexInicio = /\\sqrt\s*\{/g;
+  // \sqrt[n]{conteudo} (19/11): índice da raiz (raiz quinta etc.), como o livro
+  // imprime - o índice vai pequeno, encaixado no canto de cima do sinal
+  const regexInicio = /\\sqrt\s*(?:\[([^\[\]{}]{1,8})\])?\s*\{/g;
   let match;
   while((match = regexInicio.exec(texto))){
     const grupo = vfExtrairGrupoBalanceadoVF(texto, match.index + match[0].length - 1);
     if(!grupo){ regexInicio.lastIndex = match.index + match[0].length; continue; }
     resultado += texto.slice(pos, match.index);
-    resultado += `<span class="vf-raiz">${VF_SVG_RADICAL_VF}<span class="vf-raiz-miolo">${vfProcessarRaizesVF(grupo.conteudo)}</span></span>`;
+    const indiceRaizVF = match[1] ? `<span class="vf-raiz-indice">${match[1]}</span>` : '';
+    resultado += `<span class="vf-raiz">${indiceRaizVF}${VF_SVG_RADICAL_VF}<span class="vf-raiz-miolo">${vfProcessarRaizesVF(grupo.conteudo)}</span></span>`;
     pos = grupo.fimPos + 1;
     regexInicio.lastIndex = pos;
   }
