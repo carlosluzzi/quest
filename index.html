@@ -3365,7 +3365,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-19-356';
+const VERSAO_APP = '2026-11-22-357';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -16138,7 +16138,7 @@ function vfMontarPlaceholderPanoramaVF(){
     <div style="height:1px;background:#eee;margin:14px 0"></div>
     <div class="vf-secao-titulo">${tituloSecao}</div>
     ${linhasFiltro}
-    <div class="vf-filtro-linha"><span>Total de afirmações</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha"><span>Afirmações disponíveis</span><span class="vf-filtro-valor">—</span></div>
     <div class="vf-filtro-linha"><span>Vistas ao menos uma vez</span><span class="vf-filtro-valor">—</span></div>
     <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor">—</span></div>
     <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaExcluidasVF()"><span>Excluídas nesse filtro ›</span><span class="vf-filtro-valor">—</span></div>
@@ -16179,13 +16179,17 @@ async function vfCarregarPanoramaFiltroVF(){
   const valores = elAtual.querySelectorAll('.vf-filtro-valor');
   const nValores = valores.length;
   if(nValores >= 6){
-    valores[nValores-6].textContent = totalFiltro||0;
-    valores[nValores-5].textContent = jaVistas;
-    // nunca vistas = total - excluídas - vistas: excluídas nunca voltam
-    // a aparecer na fila, então não contam como "ainda por ver" - achado
-    // real: antes não descontava excluídas, contando-as como se
-    // pudessem aparecer de novo
-    valores[nValores-4].textContent = Math.max(0,(totalFiltro||0)-excluidas-jaVistas);
+    // (22/11) "Afirmações disponíveis" = total - excluídas: excluída não
+    // volta nunca mais, então não interessa no número de cima (Carlos:
+    // 69 no capítulo, excluiu 4, tem que mostrar 65). As vistas também
+    // passam a contar só as disponíveis (o ja_vistas do banco inclui as
+    // excluídas que ele chegou a ver), e nunca vistas = disponíveis -
+    // vistas - assim as duas linhas de baixo sempre somam a de cima
+    const disponiveisVF = Math.max(0, (totalFiltro||0) - excluidas);
+    const vistasDisponiveisVF = Math.max(0, jaVistas - Math.max(0, excluidas - excluidasSemVer));
+    valores[nValores-6].textContent = disponiveisVF;
+    valores[nValores-5].textContent = vistasDisponiveisVF;
+    valores[nValores-4].textContent = Math.max(0, disponiveisVF - vistasDisponiveisVF);
     valores[nValores-3].textContent = excluidas;
     valores[nValores-2].textContent = excluidasSemVer;
     valores[nValores-1].textContent = leeches;
