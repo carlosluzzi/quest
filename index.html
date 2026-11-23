@@ -2206,6 +2206,7 @@ html[data-tema="escuro"] #pq-teclado{--tk-fundo:rgba(44,44,46,0.86);--tk-tecla:#
         <button id="vf-biblioteca-filtro-lista" onclick="vfBibliotecaToggleTipoVF('lista')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Lista</button>
         <button id="vf-biblioteca-filtro-data" onclick="vfBibliotecaToggleTipoVF('data')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Data</button>
         <button id="vf-biblioteca-filtro-inconsistente" onclick="vfBibliotecaToggleTipoVF('inconsistente')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Inconsistente</button>
+        <button id="vf-biblioteca-filtro-excluidas" onclick="vfBibliotecaToggleExcluidasVF()" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Excluídas</button>
       </span>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
@@ -3365,7 +3366,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-22-357';
+const VERSAO_APP = '2026-11-23-358';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -11366,6 +11367,19 @@ async function vfBibliotecaMudarPublicacaoVF(){
 // no filtroVF da sessão do Flash - lá eles decidem o pool das próximas
 // afirmações; aqui só filtram a consulta da Biblioteca)
 let vfBibliotecaTipoVF = {numero: false, lista: false, data: false, inconsistente: false};
+// (23/11 -358) excluída não aparece mais na Biblioteca. Esse botão,
+// desligado por padrão, mostra SÓ as excluídas (pra rever e restaurar)
+let vfBibliotecaVerExcluidasVF = false;
+function vfBibliotecaToggleExcluidasVF(){
+  vfBibliotecaVerExcluidasVF = !vfBibliotecaVerExcluidasVF;
+  const btn = document.getElementById('vf-biblioteca-filtro-excluidas');
+  if(btn){
+    btn.style.background = vfBibliotecaVerExcluidasVF ? '#B23A34' : '#fff';
+    btn.style.color = vfBibliotecaVerExcluidasVF ? '#fff' : '#888';
+    btn.style.borderColor = vfBibliotecaVerExcluidasVF ? '#B23A34' : '#ddd';
+  }
+  vfBuscarBibliotecaVF();
+}
 function vfBibliotecaToggleTipoVF(tipo){
   if(!VF_FILTROS_TIPO_VF.includes(tipo)) return;
   vfBibliotecaTipoVF[tipo] = !vfBibliotecaTipoVF[tipo];
@@ -11406,7 +11420,7 @@ async function vfBuscarBibliotecaVF(){
   vfBibliotecaGrifosVF = new Map();
   lista.innerHTML = '';
   const algumTipoVF = vfBibliotecaTipoVF.numero || vfBibliotecaTipoVF.lista || vfBibliotecaTipoVF.data || vfBibliotecaTipoVF.inconsistente;
-  if(!termo && !modulo && !publicacao && !soGrifadas && !algumTipoVF){
+  if(!termo && !modulo && !publicacao && !soGrifadas && !algumTipoVF && !vfBibliotecaVerExcluidasVF){
     resumo.textContent = 'Digite uma palavra, escolha um módulo/publicação, um tipo, ou marque "só as que eu grifei".';
     return;
   }
@@ -11414,7 +11428,8 @@ async function vfBuscarBibliotecaVF(){
   vfBibliotecaDescricaoFiltroVF = [
     publicacao ? (() => { const b = (bibliografiaCache || []).find(x => x.id === publicacao); return b ? (b.nome_exibicao || b.titulo) : null; })() : modulo,
     capitulo ? vfEtiquetaCapituloVF(rotuloCapituloDoLivro(((bibliografiaCache || []).find(x => x.id === publicacao) || {}).titulo), capitulo) : null,
-    [vfBibliotecaTipoVF.numero ? 'Número' : null, vfBibliotecaTipoVF.lista ? 'Lista' : null, vfBibliotecaTipoVF.data ? 'Data' : null, vfBibliotecaTipoVF.inconsistente ? 'Inconsistente' : null].filter(Boolean).join(' + ') || null
+    [vfBibliotecaTipoVF.numero ? 'Número' : null, vfBibliotecaTipoVF.lista ? 'Lista' : null, vfBibliotecaTipoVF.data ? 'Data' : null, vfBibliotecaTipoVF.inconsistente ? 'Inconsistente' : null].filter(Boolean).join(' + ') || null,
+    vfBibliotecaVerExcluidasVF ? 'Excluídas' : null
   ].filter(Boolean).join(' · ');
   resumo.textContent = 'Procurando…';
   // três coisas em paralelo: a busca por palavra (quando tem palavra), os
@@ -11478,6 +11493,14 @@ async function vfBuscarBibliotecaVF(){
     }else{
       vfBibliotecaIdsVF = grifadas; // marcou só o "grifadas", sem palavra nem filtro
     }
+  }
+  // (23/11 -358) excluída fora da vista; com o botão "Excluídas" ligado, só elas
+  if(vfBibliotecaVerExcluidasVF){
+    vfBibliotecaIdsVF = (termo || modulo || publicacao || algumTipoVF || soGrifadas)
+      ? vfBibliotecaIdsVF.filter(id => vfBibliotecaExcluidasVF.has(id))
+      : [...vfBibliotecaExcluidasVF];
+  }else{
+    vfBibliotecaIdsVF = vfBibliotecaIdsVF.filter(id => !vfBibliotecaExcluidasVF.has(id));
   }
   if(!vfBibliotecaIdsVF.length){
     resumo.innerHTML = termo
@@ -15797,6 +15820,7 @@ function vfMostrarBalaoSessaoFlashVF(){
   vfAtualizarDisplayBalaoSessaoVF();
   if(vfIntervalSessaoVF) clearInterval(vfIntervalSessaoVF);
   vfIntervalSessaoVF = setInterval(vfAtualizarDisplayBalaoSessaoVF, 1000);
+  if(typeof vfPrecarregarPanoramaVF === 'function') vfPrecarregarPanoramaVF(); // (23/11 -358) número do painel já pronto quando tocar no balão
 }
 
 // a posição do balão é salva em pixels absolutos (arrasto livre) - isso
@@ -16134,67 +16158,134 @@ function vfMontarPlaceholderPanoramaVF(){
     filtroVF.termo ? `<div class="vf-filtro-linha"><span>Palavra-chave</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">"${escapeHtml(filtroVF.termo)}"${vfFiltroTermoIgnoradoVF ? ' <span style="color:#B23A34">(ignorada - erro de rede)</span>' : ''}</span></div>` : ''
   ].filter(Boolean).join('');
   const tituloSecao = linhasFiltro ? 'Panorama desse filtro (todo o banco)' : 'Panorama geral (todo o banco)';
+  // (23/11 -358) se já existe número guardado pra esse filtro, o painel já nasce com ele
+  const pCache = (typeof vfPanoramaCacheVF !== 'undefined' && usuarioAtual) ? vfPanoramaCacheVF.get(vfChavePanoramaVF()) : null;
   return `
     <div style="height:1px;background:#eee;margin:14px 0"></div>
     <div class="vf-secao-titulo">${tituloSecao}</div>
     ${linhasFiltro}
-    <div class="vf-filtro-linha"><span>Afirmações disponíveis</span><span class="vf-filtro-valor">—</span></div>
-    <div class="vf-filtro-linha"><span>Vistas ao menos uma vez</span><span class="vf-filtro-valor">—</span></div>
-    <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor">—</span></div>
-    <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaExcluidasVF()"><span>Excluídas nesse filtro ›</span><span class="vf-filtro-valor">—</span></div>
-    <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaExcluidasVF()"><span>Excluídas sem nunca ter visto ›</span><span class="vf-filtro-valor">—</span></div>
-    <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaLeechesVF()"><span>Leeches (4+ erros) ›</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha"><span>Afirmações disponíveis</span><span class="vf-filtro-valor" data-campo="disponiveis">${pCache ? pCache.disponiveis : '—'}</span></div>
+    <div class="vf-filtro-linha"><span>Vistas ao menos uma vez</span><span class="vf-filtro-valor" data-campo="vistas">${pCache ? pCache.vistas : '—'}</span></div>
+    <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor" data-campo="nunca">${pCache ? pCache.nunca : '—'}</span></div>
+    <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaLeechesVF()"><span>Leeches (4+ erros) ›</span><span class="vf-filtro-valor" data-campo="leeches">${pCache ? pCache.leeches : '—'}</span></div>
   `;
 }
 
 // busca só quando há filtro ativo - total de afirmações com esse
 // filtro, e quantas já têm pelo menos 1 registro em repeticao_vf (já
 // vistas alguma vez, não só nessa sessão)
+// (23/11 -358) Reescrita a pedido do Carlos: o painel mostrava travessão,
+// demorava e às vezes escrevia ZERO. Causas: (a) o erro da chamada era
+// ignorado e virava zero; (b) lista de publicações vazia (cache de
+// bibliografia/tema ainda não carregado) ia pro banco como filtro válido
+// e voltava zero de verdade; (c) nenhuma memória entre aberturas.
+// Agora: guarda o último resultado bom por filtro (memória + localStorage),
+// escreve na hora, atualiza em segundo plano, nunca escreve zero por erro,
+// descarta resposta velha, e escreve por nome de campo (data-campo).
+let vfPanoramaCacheVF = new Map();
+let vfPanoramaReqVF = 0;
+let vfPanoramaEmVooVF = new Map();
+const VF_PANORAMA_LS_VF = 'pq_panorama_vf_v1';
+(function vfLerPanoramaGuardadoVF(){
+  try{
+    const bruto = JSON.parse(localStorage.getItem(VF_PANORAMA_LS_VF) || '[]');
+    if(Array.isArray(bruto)) bruto.forEach(par => { if(Array.isArray(par) && par.length === 2) vfPanoramaCacheVF.set(par[0], par[1]); });
+  }catch(e){}
+})();
+function vfGuardarPanoramaVF(){
+  try{
+    const pares = [...vfPanoramaCacheVF.entries()].slice(-80); // os 80 filtros mais recentes
+    localStorage.setItem(VF_PANORAMA_LS_VF, JSON.stringify(pares));
+  }catch(e){}
+}
+function vfChavePanoramaVF(){
+  return (usuarioAtual?.id || '') + '|' + vfChaveFiltroAtualVF();
+}
+// o filtro só está pronto pra consulta quando a lista de publicações dele
+// existe de verdade: módulo/tema escolhido com lista vazia = cache ainda
+// não carregou, e NÃO pode ir pro banco (voltaria zero)
+function vfFiltroPanoramaProntoVF(){
+  if(filtroVF.publicacao) return true;
+  if(filtroVF.tema && !vfTemaDoFiltroVF()) return false;
+  const ids = vfIdsBibliografiaDoFiltroVF();
+  if(Array.isArray(ids) && !ids.length) return false;
+  return true;
+}
+// busca no banco (até 3 tentativas). Devolve os números ou null - nunca zero por erro
+function vfBuscarPanoramaVF(){
+  if(!usuarioAtual) return Promise.resolve(null);
+  const chave = vfChavePanoramaVF();
+  if(vfPanoramaEmVooVF.has(chave)) return vfPanoramaEmVooVF.get(chave);
+  const promessa = (async () => {
+    const esperas = [0, 400, 1200];
+    for(let i = 0; i < esperas.length; i++){
+      if(esperas[i]) await new Promise(r => setTimeout(r, esperas[i]));
+      if(chave !== vfChavePanoramaVF()) return null; // o filtro mudou no meio
+      if(!vfFiltroPanoramaProntoVF()){
+        try{ if(typeof vfCarregarBibliografiaCacheVF === 'function') await vfCarregarBibliografiaCacheVF(); }catch(e){}
+        if(!vfFiltroPanoramaProntoVF()) continue;
+      }
+      try{
+        const {data: panorama, error} = await sb.rpc('panorama_filtro_vf', vfParametrosPanoramaFiltroVF());
+        const linha = !error && Array.isArray(panorama) ? panorama[0] : null;
+        if(linha){
+          const totalFiltro = linha.total || 0;
+          const jaVistas = linha.ja_vistas || 0;
+          const excluidas = linha.excluidas || 0;
+          const excluidasSemVer = linha.excluidas_sem_ver || 0;
+          // (22/11) "Afirmações disponíveis" = total - excluídas; as vistas
+          // contam só as disponíveis; nunca vistas = disponíveis - vistas
+          const disponiveis = Math.max(0, totalFiltro - excluidas);
+          const vistas = Math.max(0, jaVistas - Math.max(0, excluidas - excluidasSemVer));
+          const valores = {disponiveis, vistas, nunca: Math.max(0, disponiveis - vistas), leeches: linha.leeches || 0};
+          vfPanoramaCacheVF.delete(chave); // regrava no fim: o mais recente fica por último
+          vfPanoramaCacheVF.set(chave, valores);
+          vfGuardarPanoramaVF();
+          return valores;
+        }
+        if(error) console.warn('panorama_filtro_vf falhou (tentativa ' + (i + 1) + '):', error.message || error);
+      }catch(e){ console.warn('panorama_filtro_vf falhou (tentativa ' + (i + 1) + '):', e); }
+    }
+    return null;
+  })();
+  vfPanoramaEmVooVF.set(chave, promessa);
+  promessa.finally(() => vfPanoramaEmVooVF.delete(chave));
+  return promessa;
+}
+// deixa o número pronto ANTES de o painel abrir (chamada quando o balão aparece)
+function vfPrecarregarPanoramaVF(){
+  try{ vfBuscarPanoramaVF().catch(() => {}); }catch(e){}
+}
+function vfEscreverPanoramaVF(valores, semConexao){
+  const el = document.getElementById('vf-painel-secao-filtro');
+  if(!el) return;
+  ['disponiveis', 'vistas', 'nunca', 'leeches'].forEach(campo => {
+    const span = el.querySelector('[data-campo="' + campo + '"]');
+    if(!span) return;
+    if(valores){
+      span.textContent = valores[campo];
+      span.style.fontSize = '';
+      span.style.color = '';
+    }else if(semConexao && campo === 'disponiveis'){
+      span.textContent = 'sem conexão';
+      span.style.fontSize = 'var(--fs-c)';
+      span.style.color = '#B23A34';
+    }
+  });
+}
 async function vfCarregarPanoramaFiltroVF(){
   const elSecao = document.getElementById('vf-painel-secao-filtro');
   if(!elSecao || !usuarioAtual) return;
-  // questoes_vf não tem modulo_pscpp direto - só bibliografia_id. Quando
-  // o filtro é por publicação específica, é só ela; quando é por módulo
-  // inteiro, resolve pra todas as bibliografias daquele módulo (usando o
-  // cache já em memória, sem busca nenhuma)
-  const idsBibliografia = vfIdsBibliografiaDoFiltroVF();
-  // uma única chamada RPC calcula total + já-vistas em SQL, direto no
-  // banco - achado real: buscar todos os IDs filtrados (podendo ser
-  // centenas) só pra depois cruzar com repeticao_vf era o gargalo real
-  // de lentidão nessa seção
-  const paramsPanorama = vfParametrosPanoramaFiltroVF();
-  const {data: panorama} = await sb.rpc('panorama_filtro_vf', paramsPanorama);
-  const totalFiltro = panorama?.[0]?.total || 0;
-  const jaVistas = panorama?.[0]?.ja_vistas || 0;
-  const excluidas = panorama?.[0]?.excluidas || 0;
-  const excluidasSemVer = panorama?.[0]?.excluidas_sem_ver || 0;
-  const leeches = panorama?.[0]?.leeches || 0;
-  // se o painel já foi fechado enquanto essa busca rodava, não escreve nada
-  const elAtual = document.getElementById('vf-painel-secao-filtro');
-  if(!elAtual) return;
-  // só troca os 6 números - a estrutura (título/linhas de filtro) já foi
-  // montada pelo placeholder síncrono (vfMontarPlaceholderPanoramaVF),
-  // então a altura do painel não muda mais nesse momento, sem o pulo
-  // visual de antes
-  const valores = elAtual.querySelectorAll('.vf-filtro-valor');
-  const nValores = valores.length;
-  if(nValores >= 6){
-    // (22/11) "Afirmações disponíveis" = total - excluídas: excluída não
-    // volta nunca mais, então não interessa no número de cima (Carlos:
-    // 69 no capítulo, excluiu 4, tem que mostrar 65). As vistas também
-    // passam a contar só as disponíveis (o ja_vistas do banco inclui as
-    // excluídas que ele chegou a ver), e nunca vistas = disponíveis -
-    // vistas - assim as duas linhas de baixo sempre somam a de cima
-    const disponiveisVF = Math.max(0, (totalFiltro||0) - excluidas);
-    const vistasDisponiveisVF = Math.max(0, jaVistas - Math.max(0, excluidas - excluidasSemVer));
-    valores[nValores-6].textContent = disponiveisVF;
-    valores[nValores-5].textContent = vistasDisponiveisVF;
-    valores[nValores-4].textContent = Math.max(0, disponiveisVF - vistasDisponiveisVF);
-    valores[nValores-3].textContent = excluidas;
-    valores[nValores-2].textContent = excluidasSemVer;
-    valores[nValores-1].textContent = leeches;
-  }
-  vfReajustarAlturaPainelSessaoVF(); // proteção extra - normalmente não muda nada agora, já que o placeholder já tinha a altura certa
+  const chave = vfChavePanoramaVF();
+  const guardado = vfPanoramaCacheVF.get(chave);
+  if(guardado) vfEscreverPanoramaVF(guardado); // na hora
+  const req = ++vfPanoramaReqVF;
+  const novo = await vfBuscarPanoramaVF();
+  if(req !== vfPanoramaReqVF) return; // chegou uma chamada mais nova depois desta
+  if(chave !== vfChavePanoramaVF()) return;
+  if(novo) vfEscreverPanoramaVF(novo);
+  else if(!guardado) vfEscreverPanoramaVF(null, true); // nunca houve número e não deu pra buscar: avisa, não inventa zero
+  vfReajustarAlturaPainelSessaoVF();
 }
 
 // mede o conteúdo de novo e ajusta o painel (altura + reposição
