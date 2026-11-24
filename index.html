@@ -2206,7 +2206,6 @@ html[data-tema="escuro"] #pq-teclado{--tk-fundo:rgba(44,44,46,0.86);--tk-tecla:#
         <button id="vf-biblioteca-filtro-lista" onclick="vfBibliotecaToggleTipoVF('lista')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Lista</button>
         <button id="vf-biblioteca-filtro-data" onclick="vfBibliotecaToggleTipoVF('data')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Data</button>
         <button id="vf-biblioteca-filtro-inconsistente" onclick="vfBibliotecaToggleTipoVF('inconsistente')" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Inconsistente</button>
-        <button id="vf-biblioteca-filtro-excluidas" onclick="vfBibliotecaToggleExcluidasVF()" class="vf-btn-filtro-tipo" style="border-radius:6px;border:0.5px solid #ddd;background:#fff;color:#888;padding:6px 8px;font-size:var(--fs-c);font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;text-align:center">Excluídas</button>
       </span>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:0.5px solid #eee">
@@ -3366,7 +3365,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-23-358';
+const VERSAO_APP = '2026-11-24-358';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -5496,6 +5495,13 @@ function renderizarFiltroTipoQuestao(){
 // (usuário → módulo → publicação → capítulo → tipo)
 async function carregarFiltroUsuarioAdmin(){
   const elFiltro = document.getElementById('filtro-usuario-admin');
+  if(questSoAsProprias()){
+    // sem filtro de usuário na tela; as listas de módulo/publicação/tipo
+    // são recalculadas já no escopo das próprias questões
+    elFiltro.classList.add('hidden');
+    await selecionarFiltroSelect('usuario', '');
+    return;
+  }
   // usa uma função no banco que já devolve só os autores distintos, em vez
   // de buscar toda questão do banco pra filtrar aqui — isso cresceria sem
   // necessidade conforme o banco de questões aumenta (bug real: com 100
@@ -5510,6 +5516,28 @@ async function carregarFiltroUsuarioAdmin(){
 
 let filtroSelecionado = {usuario:null, origem:'usuarios', concurso:null, ano:null, modulo:null, publicacao:null, capitulo:null, tipoQuestao:null};
 let quantidadeSelecionada = 15;
+
+// (24/11/2026, Carlos) QUEST SÓ COM AS PRÓPRIAS QUESTÕES. Quem está nesta
+// lista não vê o filtro de usuário no Quest e estuda sempre filtrado nele
+// mesmo: o caderno, o contador e as listas de módulo/publicação/capítulo
+// só enxergam questões cujo autor é o próprio usuário. Para os demais,
+// nada muda (o filtro de usuário continua aparecendo e valendo).
+const QUEST_SO_AS_PROPRIAS = new Set(['79b8fb3f-22b4-452c-8c90-86be1b940945']);
+function questSoAsProprias(){ return !!(usuarioAtual && QUEST_SO_AS_PROPRIAS.has(usuarioAtual.id)); }
+function autorFiltroQuest(){ return questSoAsProprias() ? usuarioAtual.id : filtroSelecionado.usuario; }
+
+// (24/11/2026, Carlos) PUBLICAÇÃO DE CAPÍTULO ÚNICO: o seletor de capítulo
+// já aparece em "Único" e travado, porque não há o que escolher. Vale para
+// o Quest e para o Flash (sessão, Biblioteca e Favoritos). Devolve true
+// quando travou; quem chama só monta a lista normal se vier false.
+function capituloUnicoTravado(elCap, bib, capitulos){
+  const lista = capitulos || [];
+  const unico = (lista.length === 1 && lista[0] === 'Único') || (bib?.capitulo_unico === true && lista.length <= 1);
+  if(!unico || !elCap) return false;
+  elCap.innerHTML = '<option value="">Único</option>';
+  elCap.disabled = true;
+  return true;
+}
 
 // consulta o campo real do banco (bibliografia.rotulo_capitulo) primeiro -
 // a versão antiga tentava ADIVINHAR isso com regex de palavras-chave no
@@ -5591,7 +5619,7 @@ async function selecionarFiltroSelect(nivel, valor){
 
     let montarQuery = () => {
       let q = sb.from('questoes').select('modulo_pscpp, bibliografia_id, tipo_questao', {count: 'exact'});
-      if(filtroSelecionado.usuario) q = q.eq('autor_id', filtroSelecionado.usuario);
+      if(autorFiltroQuest()) q = q.eq('autor_id', autorFiltroQuest());
       return q.order('id');
     };
     const {data} = await buscarTudoPaginadoVF(montarQuery);
@@ -5637,7 +5665,7 @@ async function selecionarFiltroSelect(nivel, valor){
       const idsPublicacoes = tema?.bibliografiaIds || [];
       const montarQueryCapTema = () => {
         let q = sb.from('questoes').select('capitulo', {count: 'exact'}).in('bibliografia_id', idsPublicacoes);
-        if(filtroSelecionado.usuario) q = q.eq('autor_id', filtroSelecionado.usuario);
+        if(autorFiltroQuest()) q = q.eq('autor_id', autorFiltroQuest());
         return q.order('id');
       };
       buscarTudoPaginadoVF(montarQueryCapTema).then(({data})=>{
@@ -5654,15 +5682,17 @@ async function selecionarFiltroSelect(nivel, valor){
       // capítulos vêm das próprias questões já cadastradas com essa bibliografia (campo livre por questão)
       const montarQueryCap = () => {
         let q = sb.from('questoes').select('capitulo', {count: 'exact'}).eq('bibliografia_id', valor);
-        if(filtroSelecionado.usuario) q = q.eq('autor_id', filtroSelecionado.usuario);
+        if(autorFiltroQuest()) q = q.eq('autor_id', autorFiltroQuest());
         return q.order('id');
       };
       buscarTudoPaginadoVF(montarQueryCap).then(({data})=>{
         const caps = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))].sort((a,b)=>vfOrdemCapituloVF(a)-vfOrdemCapituloVF(b)||a.localeCompare(b,'pt'));
         const livro = bibliografiaCache.find(b=>b.id===valor);
         const rotulo = rotuloCapituloDoLivro(livro?.titulo);
-        elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`).join('');
-        elCap.disabled = false;
+        if(!capituloUnicoTravado(elCap, livro, caps)){
+          elCap.innerHTML = '<option value="">Todos os capítulos</option>' + caps.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`).join('');
+          elCap.disabled = false;
+        }
         atualizarContadorDisponiveis();
       });
     }else{
@@ -5721,7 +5751,7 @@ function selecionarQuantidade(botao, valor){
 async function buscarQuestoesFiltradas(apenasContagem = false){
   const montarQuery = () => {
     let query = sb.from('questoes').select(apenasContagem ? 'id' : '*', {count: 'exact'}).eq('anulada', false);
-    if(filtroSelecionado.usuario) query = query.eq('autor_id', filtroSelecionado.usuario);
+    if(autorFiltroQuest()) query = query.eq('autor_id', autorFiltroQuest());
     if(filtroSelecionado.origem === 'usuarios') query = query.is('concurso_origem', null);
     else if(filtroSelecionado.origem === 'marinha'){
       query = query.not('concurso_origem', 'is', null);
@@ -11171,6 +11201,7 @@ function vfPopularCapitulosFavoritosVF(){
     .filter(Boolean)
     .map(c => String(c).replace(/^cap(?:[íi]tulo)?\.?\s*/i, '')))]
     .sort((a, b) => vfOrdemCapituloVF(a) - vfOrdemCapituloVF(b) || a.localeCompare(b, 'pt'));
+  if(capituloUnicoTravado(elCap, bib, capitulos)) return;
   elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c =>
     `<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`
   ).join('');
@@ -11358,6 +11389,7 @@ async function vfBibliotecaMudarPublicacaoVF(){
   }
   const capitulos = [...new Set((data || []).map(q => q.capitulo).filter(Boolean))]
     .sort((a, b) => vfOrdemCapituloVF(a) - vfOrdemCapituloVF(b) || a.localeCompare(b, 'pt'));
+  if(capituloUnicoTravado(elCap, bib, capitulos)) return;
   elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c =>
     `<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`
   ).join('');
@@ -11367,19 +11399,6 @@ async function vfBibliotecaMudarPublicacaoVF(){
 // no filtroVF da sessão do Flash - lá eles decidem o pool das próximas
 // afirmações; aqui só filtram a consulta da Biblioteca)
 let vfBibliotecaTipoVF = {numero: false, lista: false, data: false, inconsistente: false};
-// (23/11 -358) excluída não aparece mais na Biblioteca. Esse botão,
-// desligado por padrão, mostra SÓ as excluídas (pra rever e restaurar)
-let vfBibliotecaVerExcluidasVF = false;
-function vfBibliotecaToggleExcluidasVF(){
-  vfBibliotecaVerExcluidasVF = !vfBibliotecaVerExcluidasVF;
-  const btn = document.getElementById('vf-biblioteca-filtro-excluidas');
-  if(btn){
-    btn.style.background = vfBibliotecaVerExcluidasVF ? '#B23A34' : '#fff';
-    btn.style.color = vfBibliotecaVerExcluidasVF ? '#fff' : '#888';
-    btn.style.borderColor = vfBibliotecaVerExcluidasVF ? '#B23A34' : '#ddd';
-  }
-  vfBuscarBibliotecaVF();
-}
 function vfBibliotecaToggleTipoVF(tipo){
   if(!VF_FILTROS_TIPO_VF.includes(tipo)) return;
   vfBibliotecaTipoVF[tipo] = !vfBibliotecaTipoVF[tipo];
@@ -11420,7 +11439,7 @@ async function vfBuscarBibliotecaVF(){
   vfBibliotecaGrifosVF = new Map();
   lista.innerHTML = '';
   const algumTipoVF = vfBibliotecaTipoVF.numero || vfBibliotecaTipoVF.lista || vfBibliotecaTipoVF.data || vfBibliotecaTipoVF.inconsistente;
-  if(!termo && !modulo && !publicacao && !soGrifadas && !algumTipoVF && !vfBibliotecaVerExcluidasVF){
+  if(!termo && !modulo && !publicacao && !soGrifadas && !algumTipoVF){
     resumo.textContent = 'Digite uma palavra, escolha um módulo/publicação, um tipo, ou marque "só as que eu grifei".';
     return;
   }
@@ -11428,8 +11447,7 @@ async function vfBuscarBibliotecaVF(){
   vfBibliotecaDescricaoFiltroVF = [
     publicacao ? (() => { const b = (bibliografiaCache || []).find(x => x.id === publicacao); return b ? (b.nome_exibicao || b.titulo) : null; })() : modulo,
     capitulo ? vfEtiquetaCapituloVF(rotuloCapituloDoLivro(((bibliografiaCache || []).find(x => x.id === publicacao) || {}).titulo), capitulo) : null,
-    [vfBibliotecaTipoVF.numero ? 'Número' : null, vfBibliotecaTipoVF.lista ? 'Lista' : null, vfBibliotecaTipoVF.data ? 'Data' : null, vfBibliotecaTipoVF.inconsistente ? 'Inconsistente' : null].filter(Boolean).join(' + ') || null,
-    vfBibliotecaVerExcluidasVF ? 'Excluídas' : null
+    [vfBibliotecaTipoVF.numero ? 'Número' : null, vfBibliotecaTipoVF.lista ? 'Lista' : null, vfBibliotecaTipoVF.data ? 'Data' : null, vfBibliotecaTipoVF.inconsistente ? 'Inconsistente' : null].filter(Boolean).join(' + ') || null
   ].filter(Boolean).join(' · ');
   resumo.textContent = 'Procurando…';
   // três coisas em paralelo: a busca por palavra (quando tem palavra), os
@@ -11493,14 +11511,6 @@ async function vfBuscarBibliotecaVF(){
     }else{
       vfBibliotecaIdsVF = grifadas; // marcou só o "grifadas", sem palavra nem filtro
     }
-  }
-  // (23/11 -358) excluída fora da vista; com o botão "Excluídas" ligado, só elas
-  if(vfBibliotecaVerExcluidasVF){
-    vfBibliotecaIdsVF = (termo || modulo || publicacao || algumTipoVF || soGrifadas)
-      ? vfBibliotecaIdsVF.filter(id => vfBibliotecaExcluidasVF.has(id))
-      : [...vfBibliotecaExcluidasVF];
-  }else{
-    vfBibliotecaIdsVF = vfBibliotecaIdsVF.filter(id => !vfBibliotecaExcluidasVF.has(id));
   }
   if(!vfBibliotecaIdsVF.length){
     resumo.innerHTML = termo
@@ -15820,7 +15830,6 @@ function vfMostrarBalaoSessaoFlashVF(){
   vfAtualizarDisplayBalaoSessaoVF();
   if(vfIntervalSessaoVF) clearInterval(vfIntervalSessaoVF);
   vfIntervalSessaoVF = setInterval(vfAtualizarDisplayBalaoSessaoVF, 1000);
-  if(typeof vfPrecarregarPanoramaVF === 'function') vfPrecarregarPanoramaVF(); // (23/11 -358) número do painel já pronto quando tocar no balão
 }
 
 // a posição do balão é salva em pixels absolutos (arrasto livre) - isso
@@ -16158,134 +16167,67 @@ function vfMontarPlaceholderPanoramaVF(){
     filtroVF.termo ? `<div class="vf-filtro-linha"><span>Palavra-chave</span><span class="vf-filtro-valor" style="font-size:var(--fs-d)">"${escapeHtml(filtroVF.termo)}"${vfFiltroTermoIgnoradoVF ? ' <span style="color:#B23A34">(ignorada - erro de rede)</span>' : ''}</span></div>` : ''
   ].filter(Boolean).join('');
   const tituloSecao = linhasFiltro ? 'Panorama desse filtro (todo o banco)' : 'Panorama geral (todo o banco)';
-  // (23/11 -358) se já existe número guardado pra esse filtro, o painel já nasce com ele
-  const pCache = (typeof vfPanoramaCacheVF !== 'undefined' && usuarioAtual) ? vfPanoramaCacheVF.get(vfChavePanoramaVF()) : null;
   return `
     <div style="height:1px;background:#eee;margin:14px 0"></div>
     <div class="vf-secao-titulo">${tituloSecao}</div>
     ${linhasFiltro}
-    <div class="vf-filtro-linha"><span>Afirmações disponíveis</span><span class="vf-filtro-valor" data-campo="disponiveis">${pCache ? pCache.disponiveis : '—'}</span></div>
-    <div class="vf-filtro-linha"><span>Vistas ao menos uma vez</span><span class="vf-filtro-valor" data-campo="vistas">${pCache ? pCache.vistas : '—'}</span></div>
-    <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor" data-campo="nunca">${pCache ? pCache.nunca : '—'}</span></div>
-    <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaLeechesVF()"><span>Leeches (4+ erros) ›</span><span class="vf-filtro-valor" data-campo="leeches">${pCache ? pCache.leeches : '—'}</span></div>
+    <div class="vf-filtro-linha"><span>Afirmações disponíveis</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha"><span>Vistas ao menos uma vez</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha"><span>Nunca vistas</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaExcluidasVF()"><span>Excluídas nesse filtro ›</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaExcluidasVF()"><span>Excluídas sem nunca ter visto ›</span><span class="vf-filtro-valor">—</span></div>
+    <div class="vf-filtro-linha" style="cursor:pointer" onclick="vfAbrirListaLeechesVF()"><span>Leeches (4+ erros) ›</span><span class="vf-filtro-valor">—</span></div>
   `;
 }
 
 // busca só quando há filtro ativo - total de afirmações com esse
 // filtro, e quantas já têm pelo menos 1 registro em repeticao_vf (já
 // vistas alguma vez, não só nessa sessão)
-// (23/11 -358) Reescrita a pedido do Carlos: o painel mostrava travessão,
-// demorava e às vezes escrevia ZERO. Causas: (a) o erro da chamada era
-// ignorado e virava zero; (b) lista de publicações vazia (cache de
-// bibliografia/tema ainda não carregado) ia pro banco como filtro válido
-// e voltava zero de verdade; (c) nenhuma memória entre aberturas.
-// Agora: guarda o último resultado bom por filtro (memória + localStorage),
-// escreve na hora, atualiza em segundo plano, nunca escreve zero por erro,
-// descarta resposta velha, e escreve por nome de campo (data-campo).
-let vfPanoramaCacheVF = new Map();
-let vfPanoramaReqVF = 0;
-let vfPanoramaEmVooVF = new Map();
-const VF_PANORAMA_LS_VF = 'pq_panorama_vf_v1';
-(function vfLerPanoramaGuardadoVF(){
-  try{
-    const bruto = JSON.parse(localStorage.getItem(VF_PANORAMA_LS_VF) || '[]');
-    if(Array.isArray(bruto)) bruto.forEach(par => { if(Array.isArray(par) && par.length === 2) vfPanoramaCacheVF.set(par[0], par[1]); });
-  }catch(e){}
-})();
-function vfGuardarPanoramaVF(){
-  try{
-    const pares = [...vfPanoramaCacheVF.entries()].slice(-80); // os 80 filtros mais recentes
-    localStorage.setItem(VF_PANORAMA_LS_VF, JSON.stringify(pares));
-  }catch(e){}
-}
-function vfChavePanoramaVF(){
-  return (usuarioAtual?.id || '') + '|' + vfChaveFiltroAtualVF();
-}
-// o filtro só está pronto pra consulta quando a lista de publicações dele
-// existe de verdade: módulo/tema escolhido com lista vazia = cache ainda
-// não carregou, e NÃO pode ir pro banco (voltaria zero)
-function vfFiltroPanoramaProntoVF(){
-  if(filtroVF.publicacao) return true;
-  if(filtroVF.tema && !vfTemaDoFiltroVF()) return false;
-  const ids = vfIdsBibliografiaDoFiltroVF();
-  if(Array.isArray(ids) && !ids.length) return false;
-  return true;
-}
-// busca no banco (até 3 tentativas). Devolve os números ou null - nunca zero por erro
-function vfBuscarPanoramaVF(){
-  if(!usuarioAtual) return Promise.resolve(null);
-  const chave = vfChavePanoramaVF();
-  if(vfPanoramaEmVooVF.has(chave)) return vfPanoramaEmVooVF.get(chave);
-  const promessa = (async () => {
-    const esperas = [0, 400, 1200];
-    for(let i = 0; i < esperas.length; i++){
-      if(esperas[i]) await new Promise(r => setTimeout(r, esperas[i]));
-      if(chave !== vfChavePanoramaVF()) return null; // o filtro mudou no meio
-      if(!vfFiltroPanoramaProntoVF()){
-        try{ if(typeof vfCarregarBibliografiaCacheVF === 'function') await vfCarregarBibliografiaCacheVF(); }catch(e){}
-        if(!vfFiltroPanoramaProntoVF()) continue;
-      }
-      try{
-        const {data: panorama, error} = await sb.rpc('panorama_filtro_vf', vfParametrosPanoramaFiltroVF());
-        const linha = !error && Array.isArray(panorama) ? panorama[0] : null;
-        if(linha){
-          const totalFiltro = linha.total || 0;
-          const jaVistas = linha.ja_vistas || 0;
-          const excluidas = linha.excluidas || 0;
-          const excluidasSemVer = linha.excluidas_sem_ver || 0;
-          // (22/11) "Afirmações disponíveis" = total - excluídas; as vistas
-          // contam só as disponíveis; nunca vistas = disponíveis - vistas
-          const disponiveis = Math.max(0, totalFiltro - excluidas);
-          const vistas = Math.max(0, jaVistas - Math.max(0, excluidas - excluidasSemVer));
-          const valores = {disponiveis, vistas, nunca: Math.max(0, disponiveis - vistas), leeches: linha.leeches || 0};
-          vfPanoramaCacheVF.delete(chave); // regrava no fim: o mais recente fica por último
-          vfPanoramaCacheVF.set(chave, valores);
-          vfGuardarPanoramaVF();
-          return valores;
-        }
-        if(error) console.warn('panorama_filtro_vf falhou (tentativa ' + (i + 1) + '):', error.message || error);
-      }catch(e){ console.warn('panorama_filtro_vf falhou (tentativa ' + (i + 1) + '):', e); }
-    }
-    return null;
-  })();
-  vfPanoramaEmVooVF.set(chave, promessa);
-  promessa.finally(() => vfPanoramaEmVooVF.delete(chave));
-  return promessa;
-}
-// deixa o número pronto ANTES de o painel abrir (chamada quando o balão aparece)
-function vfPrecarregarPanoramaVF(){
-  try{ vfBuscarPanoramaVF().catch(() => {}); }catch(e){}
-}
-function vfEscreverPanoramaVF(valores, semConexao){
-  const el = document.getElementById('vf-painel-secao-filtro');
-  if(!el) return;
-  ['disponiveis', 'vistas', 'nunca', 'leeches'].forEach(campo => {
-    const span = el.querySelector('[data-campo="' + campo + '"]');
-    if(!span) return;
-    if(valores){
-      span.textContent = valores[campo];
-      span.style.fontSize = '';
-      span.style.color = '';
-    }else if(semConexao && campo === 'disponiveis'){
-      span.textContent = 'sem conexão';
-      span.style.fontSize = 'var(--fs-c)';
-      span.style.color = '#B23A34';
-    }
-  });
-}
 async function vfCarregarPanoramaFiltroVF(){
   const elSecao = document.getElementById('vf-painel-secao-filtro');
   if(!elSecao || !usuarioAtual) return;
-  const chave = vfChavePanoramaVF();
-  const guardado = vfPanoramaCacheVF.get(chave);
-  if(guardado) vfEscreverPanoramaVF(guardado); // na hora
-  const req = ++vfPanoramaReqVF;
-  const novo = await vfBuscarPanoramaVF();
-  if(req !== vfPanoramaReqVF) return; // chegou uma chamada mais nova depois desta
-  if(chave !== vfChavePanoramaVF()) return;
-  if(novo) vfEscreverPanoramaVF(novo);
-  else if(!guardado) vfEscreverPanoramaVF(null, true); // nunca houve número e não deu pra buscar: avisa, não inventa zero
-  vfReajustarAlturaPainelSessaoVF();
+  // questoes_vf não tem modulo_pscpp direto - só bibliografia_id. Quando
+  // o filtro é por publicação específica, é só ela; quando é por módulo
+  // inteiro, resolve pra todas as bibliografias daquele módulo (usando o
+  // cache já em memória, sem busca nenhuma)
+  const idsBibliografia = vfIdsBibliografiaDoFiltroVF();
+  // uma única chamada RPC calcula total + já-vistas em SQL, direto no
+  // banco - achado real: buscar todos os IDs filtrados (podendo ser
+  // centenas) só pra depois cruzar com repeticao_vf era o gargalo real
+  // de lentidão nessa seção
+  const paramsPanorama = vfParametrosPanoramaFiltroVF();
+  const {data: panorama} = await sb.rpc('panorama_filtro_vf', paramsPanorama);
+  const totalFiltro = panorama?.[0]?.total || 0;
+  const jaVistas = panorama?.[0]?.ja_vistas || 0;
+  const excluidas = panorama?.[0]?.excluidas || 0;
+  const excluidasSemVer = panorama?.[0]?.excluidas_sem_ver || 0;
+  const leeches = panorama?.[0]?.leeches || 0;
+  // se o painel já foi fechado enquanto essa busca rodava, não escreve nada
+  const elAtual = document.getElementById('vf-painel-secao-filtro');
+  if(!elAtual) return;
+  // só troca os 6 números - a estrutura (título/linhas de filtro) já foi
+  // montada pelo placeholder síncrono (vfMontarPlaceholderPanoramaVF),
+  // então a altura do painel não muda mais nesse momento, sem o pulo
+  // visual de antes
+  const valores = elAtual.querySelectorAll('.vf-filtro-valor');
+  const nValores = valores.length;
+  if(nValores >= 6){
+    // (22/11) "Afirmações disponíveis" = total - excluídas: excluída não
+    // volta nunca mais, então não interessa no número de cima (Carlos:
+    // 69 no capítulo, excluiu 4, tem que mostrar 65). As vistas também
+    // passam a contar só as disponíveis (o ja_vistas do banco inclui as
+    // excluídas que ele chegou a ver), e nunca vistas = disponíveis -
+    // vistas - assim as duas linhas de baixo sempre somam a de cima
+    const disponiveisVF = Math.max(0, (totalFiltro||0) - excluidas);
+    const vistasDisponiveisVF = Math.max(0, jaVistas - Math.max(0, excluidas - excluidasSemVer));
+    valores[nValores-6].textContent = disponiveisVF;
+    valores[nValores-5].textContent = vistasDisponiveisVF;
+    valores[nValores-4].textContent = Math.max(0, disponiveisVF - vistasDisponiveisVF);
+    valores[nValores-3].textContent = excluidas;
+    valores[nValores-2].textContent = excluidasSemVer;
+    valores[nValores-1].textContent = leeches;
+  }
+  vfReajustarAlturaPainelSessaoVF(); // proteção extra - normalmente não muda nada agora, já que o placeholder já tinha a altura certa
 }
 
 // mede o conteúdo de novo e ajusta o painel (altura + reposição
@@ -17133,10 +17075,12 @@ async function mudarFiltroPublicacaoVF(){
     }
     const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
       .sort((a,b) => vfOrdemCapituloVF(a) - vfOrdemCapituloVF(b) || a.localeCompare(b,'pt'));
-    elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
-      `<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`
-    ).join('');
-    elCap.disabled = false;
+    if(!capituloUnicoTravado(elCap, bib, capitulos)){
+      elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
+        `<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`
+      ).join('');
+      elCap.disabled = false;
+    }
   }
   mudarFiltroVF();
 }
@@ -18009,11 +17953,13 @@ async function vfRestaurarUIFiltroVF(){
     const {data} = await sb.rpc('capitulos_distintos_por_publicacao_vf', {p_bibliografia_id: publicacao});
     const capitulos = [...new Set((data||[]).map(q=>q.capitulo).filter(Boolean))]
       .sort((a,b) => vfOrdemCapituloVF(a) - vfOrdemCapituloVF(b) || a.localeCompare(b,'pt'));
-    elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
-      `<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`
-    ).join('');
-    elCap.disabled = false;
-    if(capitulo) elCap.value = capitulo;
+    if(!capituloUnicoTravado(elCap, bib, capitulos)){
+      elCap.innerHTML = '<option value="">Todos os capítulos</option>' + capitulos.map(c=>
+        `<option value="${escapeHtml(c)}">${escapeHtml(vfEtiquetaCapituloVF(rotulo, c))}</option>`
+      ).join('');
+      elCap.disabled = false;
+      if(capitulo) elCap.value = capitulo;
+    }
   }
   vfPintarBotoesFiltroTipoVF(); // Número/Lista/Data/Inconsistente do filtro restaurado
   if(termo){
@@ -30767,6 +30713,37 @@ let extracaoEmAndamento = false; // protege a mensagem de status de ser
 // pra tabela questoes_vf (banco à parte), nunca pra questoes do
 // Pilotquest normal. Ver uso em processarArquivoUpload.
 // ============================================================
+// ============================================================
+// CÓDIGO DE CADASTRO  "#PQ# CODIGO"   (24/11/2026, Carlos)
+// O arquivo gerado pelas skills traz uma linha "#PQ# PP-8". O código é
+// procurado na tabela `codigos_upload` do banco, que diz o livro
+// (bibliografia_id), o capítulo exatamente como deve ser gravado e, se
+// houver, o filtro de divisão (filtro_id, ex.: "Parte 3" da MARPOL).
+// Com código, NADA é adivinhado: todas as questões do arquivo vão para
+// esse livro e capítulo, e as afirmações V/F já saem ligadas ao filtro.
+// Sem código, vale a identificação de sempre (título, seção, cabeçalho).
+// Divisão nova = linha nova na tabela; este trecho não muda.
+// Código escrito no arquivo mas ausente da tabela PARA o upload com
+// erro: cadastrar no lugar errado em silêncio é o defeito que isto veio
+// resolver (questão do cap. 11 no cap. 6; "Capítulo 8 e Anexo I" em
+// "Anexo I").
+// ============================================================
+const RE_CODIGO_PQ = /#\s*PQ\s*#\s*([A-Za-z0-9]+(?:-[A-Za-z0-9]+)+)/;
+async function resolverCodigoUploadPQ(texto){
+  const m = (texto || '').match(RE_CODIGO_PQ);
+  if(!m) return null;
+  const codigo = m[1].toUpperCase();
+  const {data, error} = await sb.from('codigos_upload').select('codigo, bibliografia_id, capitulo, filtro_id').eq('codigo', codigo).maybeSingle();
+  if(error) return {erro: `não consegui consultar o código de cadastro ${codigo} (${error.message}). Nada foi cadastrado.`};
+  if(!data) return {erro: `o código de cadastro ${codigo} não existe na tabela de códigos. Nada foi cadastrado.`};
+  const bib = (bibliografiaCache || []).find(b => b.id === data.bibliografia_id);
+  if(!bib) return {erro: `o código de cadastro ${codigo} aponta para uma publicação que não encontrei. Nada foi cadastrado.`};
+  return {...data, bibEntrada: {modulo: bib.modulo_pscpp, titulo: bib.titulo}};
+}
+function removerCodigoUploadPQ(texto){
+  return (texto || '').replace(new RegExp(RE_CODIGO_PQ.source, 'g'), '');
+}
+
 function ehArquivoVF(textoCompleto){
   return /^\s*#VF#/.test(textoCompleto);
 }
@@ -30919,7 +30896,7 @@ function parsearArquivoVF(textoCompleto){
   return {questoes, erros, capituloDoArquivo, tituloCabecalhoArquivo};
 }
 
-async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
+async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId, codigoPQ){
   const {questoes, erros, capituloDoArquivo, tituloCabecalhoArquivo} = parsearArquivoVF(textoBruto);
   if(!questoes.length){
     return {erro: `"${nomeArquivoAtual}": código #VF# encontrado, mas não consegui extrair nenhuma questão do formato esperado.`, cadastradas:0, puladas:0, rascunho:0};
@@ -30956,7 +30933,9 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     let bibCapituloUnico = false;
     let bibValorCapituloFixo = null;
     let bibCapitulosValidos = null;
-    if(bibEncontrada){
+    if(codigoPQ){
+      bibliografiaId = codigoPQ.bibliografia_id; // código de cadastro manda: sem identificação por título
+    }else if(bibEncontrada){
       const {data: bibRow} = await sb.from('bibliografia')
         .select('id, capitulo_unico, valor_capitulo_fixo, capitulos_validos')
         .eq('modulo_pscpp', bibEncontrada.modulo)
@@ -31019,8 +30998,17 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     const {data: inserida, error} = await vfQuestoesVfEscritaVF().insert({
       ...camposComuns,
       bibliografia_id: bibliografiaId,
-      capitulo: bibCapituloUnico ? (bibValorCapituloFixo || 'Único') : vfCapituloConformeValidosVF(capituloDoArquivo, bibCapitulosValidos)
+      capitulo: codigoPQ ? codigoPQ.capitulo : (bibCapituloUnico ? (bibValorCapituloFixo || 'Único') : vfCapituloConformeValidosVF(capituloDoArquivo, bibCapitulosValidos))
     }).select('id').single();
+
+    // divisão do código de cadastro (ex.: "Parte 3"): a afirmação já entra
+    // ligada ao filtro. Falha aqui não desfaz o cadastro (quem não é admin
+    // não grava filtro); o resultado avisa quantas ficaram sem ligar.
+    let filtroNaoLigado = false;
+    if(!error && inserida?.id && codigoPQ?.filtro_id){
+      const {error: erroFiltro} = await sb.from('questoes_vf_filtros').insert({questao_vf_id: inserida.id, filtro_id: codigoPQ.filtro_id});
+      if(erroFiltro) filtroNaoLigado = true;
+    }
 
     // segunda camada — se duas rotinas checaram ao mesmo tempo e as duas
     // acharam "não existe" antes de qualquer uma inserir (janela de corrida),
@@ -31028,7 +31016,7 @@ async function processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadId){
     // Trata isso como "pulada", não como erro de verdade
     if(error?.code === '23505') return {ok: false, pulada: true, texto: q.texto};
 
-    return {ok: !error, erro: error?.message, id: inserida?.id, texto: q.texto};
+    return {ok: !error, erro: error?.message, id: inserida?.id, texto: q.texto, filtroNaoLigado};
   }));
 
   const cadastradas = resultados.filter(r => r.ok && !r.viraRascunho).length;
@@ -31058,11 +31046,18 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
 
   // arquivo do formato V/F (código #VF# no início) — desvia completamente
   // do fluxo normal de questões, vai pra tabela separada questoes_vf
+  // código de cadastro "#PQ# CODIGO": resolvido uma vez por arquivo e
+  // retirado do texto antes de qualquer leitura, para não sobrar dentro
+  // de enunciado, explicação ou cabeçalho
+  const codigoPQ = await resolverCodigoUploadPQ(textoBruto);
+  if(codigoPQ?.erro) return {erro: `"${nomeArquivoAtual}": ${codigoPQ.erro}`, cadastradas:0, puladas:0, rascunho:0};
+  if(codigoPQ) textoBruto = removerCodigoUploadPQ(textoBruto);
+
   if(ehArquivoVF(textoBruto)){
     mostrarBarraProgresso(status, 75, `${prefixoProgresso}Identificando as afirmações V/F...`);
     const loteUploadIdVF = crypto.randomUUID();
     try{
-      return await processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadIdVF);
+      return await processarArquivoVF(textoBruto, nomeArquivoAtual, loteUploadIdVF, codigoPQ);
     }catch(e){
       // nunca mais deixa travar silenciosamente em algum %: se algo
       // inesperado quebrar aqui, aparece como erro de verdade na tela
@@ -31086,9 +31081,13 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
   }
 
   mostrarBarraProgresso(status, 82, `${prefixoProgresso}Identificando a bibliografia...`);
-  const bibliografias = resolverBibliografiaDoLote(
-    questoesParsed.map(q=>({explicacao: q.explicacao, enunciado: q.textoBrutoParaBibliografia, capituloDetectado: q.capituloDetectado}))
-  );
+  // com código de cadastro, todas as questões do arquivo são do livro do
+  // código; sem ele, a identificação de sempre, questão por questão
+  const bibliografias = codigoPQ
+    ? questoesParsed.map(() => codigoPQ.bibEntrada)
+    : resolverBibliografiaDoLote(
+        questoesParsed.map(q=>({explicacao: q.explicacao, enunciado: q.textoBrutoParaBibliografia, capituloDetectado: q.capituloDetectado}))
+      );
 
   // separa em 2 grupos: as que identificaram bibliografia vão direto pro
   // banco de verdade; as que não identificaram vão pro rascunho, esperando
@@ -31149,7 +31148,7 @@ async function processarArquivoUpload(arquivo, prefixoProgresso, status, concurs
           alternativas: q.alternativas,
           gabarito: q.gabarito,
           autor_id: usuarioAtual.id,
-          capitulo: ehFonteCapituloUnico(bib.titulo) ? 'Único' : (q.capituloDetectado || extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null),
+          capitulo: codigoPQ ? codigoPQ.capitulo : (ehFonteCapituloUnico(bib.titulo) ? 'Único' : (q.capituloDetectado || extrairCapituloDoTexto(q.explicacao || q.textoBrutoParaBibliografia) || null)),
           tipo_questao: null,
           modulo_pscpp: bib.modulo,
           bibliografia_id: mapaBibliografiaId[bib.modulo+'|'+bib.titulo],
