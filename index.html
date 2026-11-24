@@ -688,6 +688,10 @@ tarja por cima não tapa nada */
 html[data-tema="escuro"] .vf-mais-seg button{background:#0F0F0E;border-color:#333331;color:#B4B0A8}
 html[data-tema="escuro"] .vf-mais-seg button.sel{background:#B23A34;border-color:#B23A34;color:#fff}
 .banco-acao-btn svg{width:19px;height:19px}
+/* (24/11) \titulo{} - titulo de bloco no texto formatado */
+.vf-titulo-texto{font-weight:700;font-size:1.12em;line-height:1.3;margin:14px 0 8px}
+.vf-titulo-texto.vf-titulo-inicio{margin-top:0}
+.vf-titulo-texto + .vf-tabela-bloco,.vf-titulo-texto + .vf-svg-bloco{margin-top:0 !important}
 /* (10/11) antes de responder: fileira de ações apagada, sem nenhuma informação
    (favorita, nota, pedido, revisar, tópico) e sem clique - pra marca nenhuma
    influenciar a resposta. Depois de responder volta tudo como sempre foi */
@@ -3365,7 +3369,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-24-360';
+const VERSAO_APP = '2026-11-24-361';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -6972,6 +6976,9 @@ function vfProcessarTextoPequenoVF(texto){
   // processamento) somava com o margin-top, afastando a legenda do bloco
   // anterior mais do que o espaçamento pedido
   texto = texto.replace(/(?:<br>\s*)+(?=\\(?:small|legenda|paragrafo|lista|alinhar)[\[{])/g, '');
+  // \titulo e um bloco com respiro proprio em cima: engole UM enter antes
+  // (dois enters continuam dando a linha em branco que foram pedidos)
+  texto = texto.replace(/((?:<br>\s*)+)(?=\\titulo[\[{])/g, (m) => ((m.match(/<br>/g) || []).length === 1 ? '' : m));
   texto = vfProcessarComandoComOpcaoVF(texto, 'small', (opcao, conteudo) =>
     `<div class="vf-legenda-solta" style="font-size:var(--fs-b);color:#6B6B66;margin-top:2px;padding-left:10px">${conteudo}</div>`);
   // \legenda[espaco]{texto} - igual \small, mas com o espaçamento acima
@@ -7011,8 +7018,24 @@ function vfProcessarTextoPequenoVF(texto){
   // pra texto normal e texto dentro de tabela
   texto = vfProcessarComandoComOpcaoVF(texto, 'alinhar', (alinhamento, conteudo) => {
     if(alinhamento !== 'centro' && alinhamento !== 'direita') return conteudo; // opção obrigatória pra esse comando específico - sem uma válida, não tem o que alinhar
-    return `<div style="text-align:${alinhamento === 'centro' ? 'center' : 'right'}">${conteudo}</div>`;
+    return `<div style="text-align:${alinhamento === 'centro' ? 'center' : 'right'}">${conteudo}</div><!--BLKFIM-->`;
   });
+  // \titulo{texto} ou \titulo[centro|direita]{texto} (24/11, Carlos) -
+  // titulo de verdade: negrito, um pouco maior, colado no que vem embaixo
+  // (tabela, lista, paragrafo). Uma tabela logo depois perde o respiro de
+  // cima dela (CSS .vf-titulo-texto + .vf-tabela-bloco), senao o titulo
+  // ficava solto, longe da tabela que ele nomeia
+  texto = vfProcessarComandoComOpcaoVF(texto, 'titulo', (alinhamento, conteudo) => {
+    const alinhar = alinhamento === 'centro' ? 'center' : (alinhamento === 'direita' ? 'right' : 'left');
+    return `<div class="vf-titulo-texto" style="text-align:${alinhar}">${conteudo}</div><!--BLKFIM-->`;
+  });
+  // o bloco ja quebra a linha sozinho: o enter logo depois dele (que a
+  // essa altura ja virou <br>) somava uma linha inteira em branco - era o
+  // vao gigante entre "\alinhar[centro]{**Frente Quente**}" e a tabela
+  texto = texto.replace(/<!--BLKFIM-->(?:<br>)?/g, '');
+  // titulo que abre o texto nao precisa do respiro de cima (o :first-child
+  // do CSS nao serve: texto solto antes dele nao conta como elemento)
+  texto = texto.replace(/^(\s*)<div class="vf-titulo-texto"/, '$1<div class="vf-titulo-texto vf-titulo-inicio"');
   return texto;
 }
 
