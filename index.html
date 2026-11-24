@@ -3365,7 +3365,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-24-358';
+const VERSAO_APP = '2026-11-24-359';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -29692,6 +29692,7 @@ function parsearQuestoesDoTexto(textoBruto){
       .replace(/^\s*Page\s+\d+\s*(of\s*\d+)?\s*$/gim, '') // idem em inglês
       .replace(/\s*P[áa]gina\s+\d+\s*(de\s*\d+)?\s*$/i, '') // idem, mas colado sem quebra de linha antes
       .replace(/\s*Page\s+\d+\s*(of\s*\d+)?\s*$/i, '')
+      .replace(/\s*PSCPP\s*[–\-—]\s*BANCO\s+DE\s+QUEST[ÕO]ES[^\n]{0,200}?(?:\((?:situa[çc][ãa]o|item\s+espec[íi]fico)\)|(?=\n|$))/gi, ' ') // cabeçalho de página no meio da explicação: tira só ele, sem cortar o resto (359)
       .replace(/\s*(?:Simulado\s+)?PSCPP\s*(?:v[\d.]+\s*)?[•·\-–—].*$/is, '') // rodapé de página repetido (formato varia bastante)
       .replace(/\s*[A-ZÀ-Ú][a-zA-ZÀ-ú\s]{10,70}\([A-ZÀ-Ú][^)]*\)\s*\|\s*\d+\s*quest(ões|oes).*$/is, '') // rodapé tipo "Nome do Livro (Autor) | N questões"
         .replace(/\s*DIREITO\s+PROCESSUAL\s+MARÍTIMO\s*—.*?Caps?\..*?\d+\s*quest(ões|oes).*$/is, '') // rodapé de citação ABNT completa (autor, título, edição...) — específico do jeito que a Pantoja cita o BENTO/Navegação Integrada
