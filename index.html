@@ -3365,7 +3365,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Muda esse valor toda vez que uma versão nova do index.html for entregue —
 // é o que permite ao app avisar "carreguei a versão nova" na primeira
 // abertura depois do deploy, sem precisar adivinhar se já propagou ou não
-const VERSAO_APP = '2026-11-24-359';
+const VERSAO_APP = '2026-11-24-360';
 
 function verificarVersaoNova(){
   if(!usuarioAtual?.is_admin) return; // esse aviso é só uma ferramenta de conferência pra quem publica as correções
@@ -27874,11 +27874,104 @@ function copiarQuestaoAtualVF(botao){
   promessa.catch(() => alert('Não consegui copiar automaticamente. Tenta selecionar o texto manualmente.'));
 }
 
+// ---- (360) questão boa / questão ruim ----
+// Toque curto no joinha marca (ou desmarca); segurar abre a caixa pra
+// escrever o que gostou / não gostou. Grava em avaliacoes_questao.
+let avaliacoesQuest = {};
+let avaliacoesQuestCarregou = false;
+let avalQuestTimer = null;
+let avalQuestLongo = false;
+const AVAL_SVG_BOA = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+const AVAL_SVG_RUIM = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>';
+function htmlAvaliacaoQuest(qid){
+  if(!avaliacoesQuestCarregou) carregarAvaliacoesQuest();
+  const a = avaliacoesQuest[qid] || {};
+  const botao = (voto, svg, corAtiva, fundoAtivo, titulo) => {
+    const ativo = a.voto === voto;
+    const ponto = (ativo && a.comentario) ? `<span style="position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:${corAtiva}"></span>` : '';
+    return `<button class="btn-icone-pequeno" title="${titulo} (segure para comentar)" style="position:relative;width:34px;height:34px;border-radius:9px;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;${ativo ? `color:${corAtiva};background:${fundoAtivo};border-color:${corAtiva}` : ''}" onpointerdown="avalQuestDown(event,'${qid}',${voto})" onpointerup="avalQuestUp(event,'${qid}',${voto})" onpointerleave="avalQuestCancela()" onpointercancel="avalQuestCancela()" oncontextmenu="return false">${svg}${ponto}</button>`;
+  };
+  return `<span class="aval-quest" data-q="${qid}" style="position:absolute;left:0;top:50%;transform:translateY(-50%);display:flex;gap:6px">${botao(1, AVAL_SVG_BOA, '#3B6D11', '#EAF3DE', 'Questão boa')}${botao(-1, AVAL_SVG_RUIM, '#A32D2D', '#FBEAEA', 'Questão ruim')}</span>`;
+}
+function avalQuestRedesenhar(){
+  document.querySelectorAll('.aval-quest').forEach(el => { el.outerHTML = htmlAvaliacaoQuest(el.dataset.q); });
+}
+async function carregarAvaliacoesQuest(){
+  if(avaliacoesQuestCarregou || !usuarioAtual) return;
+  avaliacoesQuestCarregou = true;
+  const {data, error} = await sb.from('avaliacoes_questao').select('questao_id,voto,comentario').eq('usuario_id', usuarioAtual.id).range(0, 9999);
+  if(error){ avaliacoesQuestCarregou = false; return; }
+  (data || []).forEach(r => { avaliacoesQuest[r.questao_id] = {voto: r.voto, comentario: r.comentario || ''}; });
+  avalQuestRedesenhar();
+}
+function avalQuestDown(evento, qid, voto){
+  avalQuestLongo = false;
+  clearTimeout(avalQuestTimer);
+  avalQuestTimer = setTimeout(() => {
+    avalQuestTimer = null;
+    avalQuestLongo = true;
+    abrirComentarioAvaliacaoQuest(qid, voto);
+  }, 550);
+}
+function avalQuestCancela(){ clearTimeout(avalQuestTimer); avalQuestTimer = null; }
+function avalQuestUp(evento, qid, voto){
+  if(avalQuestLongo){ avalQuestLongo = false; return; }
+  if(!avalQuestTimer) return;
+  avalQuestCancela();
+  const atual = avaliacoesQuest[qid];
+  if(atual && atual.voto === voto && !atual.comentario) salvarAvaliacaoQuest(qid, 0, '');
+  else salvarAvaliacaoQuest(qid, voto, (atual && atual.voto === voto) ? atual.comentario : '');
+}
+async function salvarAvaliacaoQuest(qid, voto, comentario){
+  const antes = avaliacoesQuest[qid];
+  if(voto === 0) delete avaliacoesQuest[qid]; else avaliacoesQuest[qid] = {voto, comentario: comentario || ''};
+  avalQuestRedesenhar();
+  const r = voto === 0
+    ? await sb.from('avaliacoes_questao').delete().eq('usuario_id', usuarioAtual.id).eq('questao_id', qid)
+    : await sb.from('avaliacoes_questao').upsert({usuario_id: usuarioAtual.id, questao_id: qid, voto, comentario: comentario || null, atualizado_em: new Date().toISOString()}, {onConflict: 'usuario_id,questao_id'});
+  if(r.error){
+    if(antes) avaliacoesQuest[qid] = antes; else delete avaliacoesQuest[qid];
+    avalQuestRedesenhar();
+    alert('Não consegui gravar a avaliação: ' + r.error.message);
+  }
+}
+function abrirComentarioAvaliacaoQuest(qid, voto){
+  fecharComentarioAvaliacaoQuest();
+  const atual = avaliacoesQuest[qid];
+  const texto = (atual && atual.voto === voto) ? (atual.comentario || '') : '';
+  const cor = voto === 1 ? '#3B6D11' : '#A32D2D';
+  const fundo = document.createElement('div');
+  fundo.id = 'avalQuestModal';
+  fundo.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px';
+  fundo.innerHTML = `<div style="background:#fff;border-radius:14px;padding:18px;width:min(520px,100%);box-shadow:0 10px 40px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:${cor};margin-bottom:10px">${voto === 1 ? AVAL_SVG_BOA : AVAL_SVG_RUIM}<span>${voto === 1 ? 'Questão boa: o que você gostou?' : 'Questão ruim: o que não gostou?'}</span></div>
+    <textarea id="avalQuestTexto" rows="5" style="width:100%;box-sizing:border-box;border:1px solid #D8D5CC;border-radius:10px;padding:10px;font:inherit;font-size:16px;resize:vertical"></textarea>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+      <button id="avalQuestCancelar" style="padding:9px 16px;border-radius:9px;border:1px solid #D8D5CC;background:#fff;font:inherit;cursor:pointer">Cancelar</button>
+      <button id="avalQuestSalvar" style="padding:9px 16px;border-radius:9px;border:0;background:${cor};color:#fff;font:inherit;font-weight:600;cursor:pointer">Salvar</button>
+    </div></div>`;
+  document.body.appendChild(fundo);
+  const area = fundo.querySelector('#avalQuestTexto');
+  area.value = texto;
+  // o dedo ainda está na tela quando a caixa abre: só aceita fechar/salvar depois de um instante
+  const aberto = Date.now();
+  fundo.addEventListener('click', e => { if(e.target === fundo && Date.now() - aberto > 500) fecharComentarioAvaliacaoQuest(); });
+  fundo.querySelector('#avalQuestCancelar').onclick = () => fecharComentarioAvaliacaoQuest();
+  fundo.querySelector('#avalQuestSalvar').onclick = () => { const t = area.value.trim(); fecharComentarioAvaliacaoQuest(); salvarAvaliacaoQuest(qid, voto, t); };
+  setTimeout(() => area.focus(), 350);
+}
+function fecharComentarioAvaliacaoQuest(){
+  const m = document.getElementById('avalQuestModal');
+  if(m) m.remove();
+  avalQuestLongo = false;
+}
+
 function renderizarResultado(q,resposta){
   const cor = resposta.correta ? '#3B6D11' : '#A32D2D';
   const textoResultado = `${resposta.correta?'Acertou!':'Errou!'} Gabarito: ${(q.gabarito||'–').toUpperCase()}`;
 
   return `<div class="banco-resultado" style="color:${cor};position:relative;display:flex;align-items:center;justify-content:center">
+    ${htmlAvaliacaoQuest(q.id)}
     <span>${textoResultado}</span>
     <button class="btn-icone-pequeno" style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:9px" onclick="abrirExplicacaoQuestao('${q.id}')" title="Ver explicação">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
